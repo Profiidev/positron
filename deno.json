@@ -1,0 +1,8 @@
+{
+  "fmt": {
+    "exclude": ["src-tauri"]
+  },
+  "lint": {
+    "exclude": ["src-tauri"]
+  }
+}
