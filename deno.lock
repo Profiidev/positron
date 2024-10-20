@@ -1424,6 +1424,7 @@
         "npm:clsx@^2.1.1",
         "npm:lucide-svelte@0.453",
         "npm:mode-watcher@~0.4.1",
+        "npm:paneforge@^0.0.6",
         "npm:svelte-check@^4.0.5",
         "npm:svelte@^4.2.7",
         "npm:tailwind-merge@^2.5.4",
