@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
-  import { Github, LoaderCircle } from "lucide-svelte";
+  import { Key, LoaderCircle } from "lucide-svelte";
   import { Button } from "../ui/button/index";
   import { Input } from "../ui/input/index";
   import { Label } from "../ui/label/index";
@@ -8,8 +8,17 @@
   let className: string | undefined | null = undefined;
   export { className as class };
 
+  let enterEmail = true;
   let isLoading = false;
+  let email = "";
+  let password = "";
+
   const onSubmit = () => {
+    if(enterEmail) {
+      enterEmail = false;
+      return;
+    }
+
     isLoading = true;
     setTimeout(() => {
       isLoading = false;
@@ -21,14 +30,23 @@
   <form on:submit|preventDefault={onSubmit}>
     <div class="grid gap-2">
       <div class="grid gap-1">
-        <Label class="sr-only" for="email">Email</Label>
-        <Input id="email" placeholder="name@example.com" type="email" autocapitalize="none" autocomplete="email" autocorrect="off" disabled={isLoading} />
+        {#if enterEmail}
+          <Label class="sr-only" for="email">Email</Label>
+          <Input id="email" placeholder="name@example.com" type="email" autocapitalize="none" autocomplete="email" autocorrect="off" disabled={isLoading} required bind:value={email} />
+        {:else}
+          <Label class="sr-only" for="password">Password</Label>
+          <Input id="password" placeholder="Password" type="password" autocapitalize="none" autocomplete="current-password" autocorrect="off" disabled={isLoading} required bind:value={password} />
+        {/if}
       </div>
       <Button type="submit" disabled={isLoading}>
         {#if isLoading}
           <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
         {/if}
-        Sign In with Email
+        {#if enterEmail}
+          Sign In with Email
+        {:else}
+          Sign In
+        {/if}
       </Button>
     </div>
   </form>
@@ -44,8 +62,8 @@
     {#if isLoading}
       <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
     {:else}
-      <Github class="mr-2 h-4 w-4" />
+      <Key class="mr-2 h-4 w-4" />
     {/if}
-    Github
+    Passkey
   </Button>
 </div>

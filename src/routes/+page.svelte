@@ -13,3 +13,4 @@
 </Menubar>
 
 <Button>Test</Button>
+<a href="/login">Login</a>
