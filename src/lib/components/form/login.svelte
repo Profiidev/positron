@@ -13,6 +13,13 @@
   let email = "";
   let password = "";
 
+  const reset = () => {
+    enterEmail = true;
+    isLoading = false;
+    email = "";
+    password = "";
+  }
+
   const onSubmit = () => {
     if(enterEmail) {
       enterEmail = false;
@@ -34,6 +41,10 @@
           <Label class="sr-only" for="email">Email</Label>
           <Input id="email" placeholder="name@example.com" type="email" autocapitalize="none" autocomplete="email" autocorrect="off" disabled={isLoading} required bind:value={email} />
         {:else}
+          <div class="flex mb-3 w-full items-center">
+            <span class="text-foreground truncate max-w-36 sm:max-w-72">{email}</span>
+            <Button variant="link" type="button" disabled={isLoading} class="ml-auto p-0" on:click={reset}>Change</Button>
+          </div>
           <Label class="sr-only" for="password">Password</Label>
           <Input id="password" placeholder="Password" type="password" autocapitalize="none" autocomplete="current-password" autocorrect="off" disabled={isLoading} required bind:value={password} />
         {/if}
