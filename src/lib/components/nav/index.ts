@@ -7,6 +7,7 @@ type Option = {
   label?: string;
   selected: boolean;
   icon: ComponentType<Icon>;
+  click: () => void;
 };
 
 export {

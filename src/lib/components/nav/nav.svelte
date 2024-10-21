@@ -6,7 +6,7 @@
 
   let className: string | undefined = undefined;
 
-  export let isCollapsed: boolean;
+  export let isCollapsed: boolean = false;
   export let options: Option[];
   export { className as class };
 </script>
@@ -17,7 +17,7 @@
       {#if isCollapsed}
         <Root openDelay={0}>
           <Trigger asChild let:builder>
-            <Button builders={[builder]} variant={option.selected ? "default": "ghost"} size="icon" class={cn("size-9", option.selected && "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white")}>
+            <Button on:click={option.click} builders={[builder]} variant={option.selected ? "default": "ghost"} size="icon" class={cn("size-9", option.selected && "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white")}>
               <svelte:component this={option.icon} class="size-4" aria-hidden="true" />
               <span class="sr-only">{option.title}</span>
             </Button>
@@ -32,7 +32,7 @@
           </Content>
         </Root>
       {:else}
-        <Button variant={option.selected ? "default": "ghost"} size="sm" class={cn("justify-start", { "dark:bg-muted dark:hover:bg-muted dark:text-white dark:hover:text-white": option.selected, })}>
+        <Button on:click={option.click} variant={option.selected ? "default": "ghost"} size="sm" class={cn("justify-start", { "dark:bg-muted dark:hover:bg-muted dark:text-white dark:hover:text-white": option.selected, })}>
           <svelte:component this={option.icon} class="size-4 mr-2" aria-hidden="true" />
           {option.title}
           {#if option.label}

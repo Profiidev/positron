@@ -2,45 +2,46 @@
   import { ModeWatcher } from "mode-watcher";
   import "../app.css";
   import { page } from "$app/stores";
-  import { Handle, Pane, PaneGroup } from "$lib/components/ui/resizable";
   import { Nav } from "$lib/components/nav";
   import type { Option } from "$lib/components/nav";
-  import { UserRound } from "lucide-svelte";
+  import { UserRound, Menu } from "lucide-svelte";
+  import { Separator } from "$lib/components/ui/separator";
+  import { cn } from "$lib/utils";
+  import { Button } from "$lib/components/ui/button";
 
   const noLayout = ["/login"];
+  const optionsCollapse: Option[] = [{
+    title: "Positron",
+    icon: Menu,
+    selected: false,
+    click: () => isCollapsed = true,
+  }];
   const options: Option[] = [{
     title: "Test",
     icon: UserRound,
-    selected: true,
-  }, {
-    title: "WW",
-    icon: UserRound,
     selected: false,
+    click: () => {},
   }];
 
   let isCollapsed = true;
-
-  const onCollapse = () => {
-    isCollapsed = true;
-  };
-
-  const onExpand = () => {
-    isCollapsed = false;
-  };
 </script>
 
 <ModeWatcher />
 {#if !noLayout.includes($page.url.pathname)}
-  <PaneGroup direction="horizontal" class="h-full w-full items-stretch">
-    <Pane defaultSize={3} collapsedSize={3} collapsible minSize={10} maxSize={10} {onCollapse} {onExpand} class="flex flex-col">
-      <Nav {isCollapsed} {options} />
-      <Nav {isCollapsed} {options} class="mt-auto" />
-    </Pane>
-    <Handle withHandle />
-    <Pane>
-      <slot />
-    </Pane>
-  </PaneGroup>
+  <div class={cn("absolute h-full flex flex-col w-52 bg-background border-r transition-transform duration-500", {
+    "-translate-x-52": isCollapsed
+  })}>
+    <Nav options={optionsCollapse} />
+    <Separator />
+    <Nav {options} />
+    <Nav {options} class="mt-auto" />
+  </div>
+  <div>
+    <Button variant="outline" size="icon" on:click={() => isCollapsed = false}>
+      <Menu />
+    </Button>
+  </div>
+  <slot />
 {:else}
   <slot />
 {/if}
