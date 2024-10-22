@@ -4,7 +4,7 @@
   import { page } from "$app/stores";
   import { Nav } from "$lib/components/nav";
   import type { Option } from "$lib/components/nav";
-  import { UserRound, Menu } from "lucide-svelte";
+  import { UserRound, Atom, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
   import { Separator } from "$lib/components/ui/separator";
   import { cn } from "$lib/utils";
   import { Button } from "$lib/components/ui/button";
@@ -12,9 +12,9 @@
   const noLayout = ["/login"];
   const optionsCollapse: Option[] = [{
     title: "Positron",
-    icon: Menu,
+    icon: Atom,
     selected: false,
-    click: () => isCollapsed = true,
+    click: () => {},
   }];
   const options: Option[] = [{
     title: "Test",
@@ -28,18 +28,27 @@
 
 <ModeWatcher />
 {#if !noLayout.includes($page.url.pathname)}
+  {#if !isCollapsed}
+    <div aria-hidden="true" class="w-full h-full absolute" on:keypress={() => {}} on:click={() => isCollapsed = true} />
+  {/if}
   <div class={cn("absolute h-full flex flex-col w-52 bg-background border-r transition-transform duration-500", {
     "-translate-x-52": isCollapsed
   })}>
+    <div class="relative">
+      <Button variant="outline" size="icon" class={cn("absolute left-48 size-9 top-2 transition-transform duration-500", {
+        "translate-x-4": isCollapsed,
+      })} on:click={() => isCollapsed = !isCollapsed}>
+        {#if isCollapsed}
+          <PanelLeftOpen class="size-5" />
+        {:else}
+          <PanelLeftClose class="size-5" />
+        {/if}
+      </Button>
+    </div>
     <Nav options={optionsCollapse} />
     <Separator />
     <Nav {options} />
     <Nav {options} class="mt-auto" />
-  </div>
-  <div>
-    <Button variant="outline" size="icon" on:click={() => isCollapsed = false}>
-      <Menu />
-    </Button>
   </div>
   <slot />
 {:else}
