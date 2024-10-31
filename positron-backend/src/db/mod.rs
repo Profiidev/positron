@@ -21,8 +21,9 @@ impl DB {
       .expect("Failed to parse Port");
     let username = std::env::var("DB_USERNAME").expect("No DB address found");
     let password = std::env::var("DB_PASSWORD").expect("No DB address found");
+    let database = std::env::var("DB_DATABASE").expect("No DB address found");
 
-    Self::init_db(&address, port, &username, &password).await
+    Self::init_db(&address, port, &username, &password, &database).await
   }
 
   pub async fn init_db(
@@ -30,6 +31,7 @@ impl DB {
     port: u16,
     username: &str,
     password: &str,
+    database: &str,
   ) -> Result<Self, Error> {
     let db = Surreal::new::<Wss>(format!("{}:{}", address, port)).await?;
 
@@ -40,7 +42,12 @@ impl DB {
     })
     .await?;
 
-    db.use_ns("positron").use_db("positron").await?;
+    db.use_ns("positron").await?;
+
+    db.query(format!("DEFINE DATABASE IF NOT EXISTS {}", database))
+      .await?;
+
+    db.use_db(database).await?;
 
     Tables::new(&db).create_tables().await?;
 

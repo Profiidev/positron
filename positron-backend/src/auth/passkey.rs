@@ -45,6 +45,9 @@ async fn start_registration(
   let Some(user) = db.tables().user().get_user_by_email(email).await else {
     return Err(Status::NotFound);
   };
+  let Ok(uuid) = json::from_str(&user.uuid) else {
+    return Err(Status::BadRequest);
+  };
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await;
   let passkeys = passkeys
@@ -54,7 +57,7 @@ async fn start_registration(
     .collect();
 
   let Ok((mut ccr, reg_state)) =
-    webauthn.start_passkey_registration(user.uuid, &user.name, &user.name, Some(passkeys))
+    webauthn.start_passkey_registration(uuid, &user.name, &user.name, Some(passkeys))
   else {
     return Err(Status::BadRequest);
   };
@@ -63,7 +66,7 @@ async fn start_registration(
     test.resident_key = Some(ResidentKeyRequirement::Required);
   }
 
-  state.reg_state.lock().await.insert(user.uuid, reg_state);
+  state.reg_state.lock().await.insert(uuid, reg_state);
   Ok(Json(ccr))
 }
 
@@ -78,16 +81,18 @@ async fn finish_registration(
   let Some(user) = db.tables().user().get_user_by_email(email).await else {
     return Status::NotFound;
   };
+  let Ok(uuid) = json::from_str(&user.uuid) else {
+    return Status::BadRequest;
+  };
 
   let mut states = state.reg_state.lock().await;
-  let Some(reg_state) = states.get(&user.uuid) else {
+  let Some(reg_state) = states.remove(&uuid) else {
     return Status::NotFound;
   };
 
-  let Ok(key) = webauthn.finish_passkey_registration(&reg, reg_state) else {
+  let Ok(key) = webauthn.finish_passkey_registration(&reg, &reg_state) else {
     return Status::BadRequest;
   };
-  states.remove(&user.uuid);
 
   let Ok(json_key) = json::to_string(&key) else {
     return Status::InternalServerError;

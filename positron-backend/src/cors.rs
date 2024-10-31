@@ -2,7 +2,8 @@ use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, Cors};
 
 pub fn cors() -> Cors {
-  let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:1420"]);
+  let allowed_origins =
+    AllowedOrigins::some_exact(&[std::env::var("CORS_ORIGIN").unwrap_or_default()]);
   rocket_cors::CorsOptions {
     allowed_origins,
     allowed_methods: vec![Method::Get, Method::Post]

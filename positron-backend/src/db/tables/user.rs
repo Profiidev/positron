@@ -1,10 +1,10 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Surreal, Uuid};
+use surrealdb::{engine::remote::ws::Client, sql::Thing, Surreal};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserCreate {
-  pub uuid: Uuid,
+  pub uuid: String,
   pub name: String,
   pub email: String,
   pub password: String,
@@ -13,7 +13,7 @@ pub struct UserCreate {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct User {
   pub id: Thing,
-  pub uuid: Uuid,
+  pub uuid: String,
   pub name: String,
   pub email: String,
   pub password: String,
@@ -35,10 +35,11 @@ impl<'db> UserTable<'db> {
         "
     DEFINE TABLE IF NOT EXISTS user SCHEMAFULL;
 
-    DEFINE FIELD IF NOT EXISTS uuid ON TABLE user TYPE bytes;
+    DEFINE FIELD IF NOT EXISTS uuid ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string ASSERT string::is::email($value);
     DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
+    DEFINE FIELD IF NOT EXISTS salt ON TABLE user TYPE string;
 
     DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
   ",
