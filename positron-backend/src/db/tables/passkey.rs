@@ -5,13 +5,15 @@ use surrealdb::{engine::remote::ws::Client, sql::Thing, Surreal};
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PasskeyCreate {
   pub data: String,
+  pub cred_id: String,
   pub user: Thing,
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd)]
 pub struct Passkey {
   pub id: Thing,
   pub data: String,
+  pub cred_id: String,
   pub user: Thing,
 }
 
@@ -38,6 +40,7 @@ impl<'db> PasskeyTable<'db> {
         DEFINE TABLE IF NOT EXISTS passkey SCHEMAFULL;
 
         DEFINE FIELD IF NOT EXISTS data ON TABLE passkey TYPE string;
+        DEFINE FIELD IF NOT EXISTS cred_id ON TABLE passkey TYPE string;
         DEFINE FIELD IF NOT EXISTS user ON TABLE passkey TYPE record<user>;
       ",
       )
@@ -56,6 +59,16 @@ impl<'db> PasskeyTable<'db> {
       return vec![];
     };
     res.take(0).unwrap_or_default()
+  }
+
+  pub async fn get_passkey_by_cred_id(&self, cred_id: String) -> Option<Passkey> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM passkey WHERE cred_id = $cred_id")
+      .bind(("cred_id", cred_id))
+      .await
+      .ok()?;
+    res.take(0).ok()?
   }
 
   pub async fn create_passkey_record(&self, passkey: PasskeyCreate) -> Result<(), Error> {

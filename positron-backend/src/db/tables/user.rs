@@ -48,11 +48,11 @@ impl<'db> UserTable<'db> {
     Ok(())
   }
 
-  pub async fn get_user_by_name(&self, username: &str) -> Option<User> {
+  pub async fn get_user_by_email(&self, email: &str) -> Option<User> {
     let mut res = self
       .db
-      .query("SELECT * FROM user WHERE name = $username LIMIT 1")
-      .bind(("username", username.to_string()))
+      .query("SELECT * FROM user WHERE email = $email LIMIT 1")
+      .bind(("email", email.to_string()))
       .await
       .ok()?;
 

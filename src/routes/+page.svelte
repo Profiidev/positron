@@ -5,7 +5,7 @@
   let text = "No Status";
 
   const begin = async () => {
-    if (await register("1234")) {
+    if (await register("test@profidev.io")) {
       text = "Done";
     } else {
       text = "Error";
@@ -13,7 +13,7 @@
   };
 
   const auth = async () => {
-    if (await authenticate("1234")) {
+    if (await authenticate()) {
       text = "Success";
     } else {
       text = "Error";
