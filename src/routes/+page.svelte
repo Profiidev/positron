@@ -1,57 +1,23 @@
 <script lang="ts">
+  import { authenticate, register } from "$lib/auth/passkey";
   import Button from "$lib/components/ui/button/button.svelte";
-  import { startRegistration, startAuthentication } from "@simplewebauthn/browser";
 
   let text = "No Status";
 
   const begin = async () => {
-    let res = await fetch("http://localhost:8000/auth/passkey/start_registration/1234");
-    let optionsJSON = (await res.json()).publicKey;
-
-    let resp;
-    try {
-      resp = await startRegistration({ optionsJSON });
-    } catch (error) {
-      if(error.name === "InvalidStateError") {
-        text = "Already done";
-      } else {
-        text = error;
-      }
-      throw error;
+    if (await register("1234")) {
+      text = "Done";
+    } else {
+      text = "Error";
     }
-
-    const ver = await fetch("http://localhost:8000/auth/passkey/finish_registration/1234", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resp),
-    });
-    const done = await ver.text();
-    text = "Done";
   };
 
   const auth = async () => {
-    let res = await fetch("http://localhost:8000/auth/passkey/start_authentication/1234");
-    let optionsJSON = (await res.json()).publicKey;
-
-    let resp;
-    try {
-      resp = await startAuthentication({ optionsJSON });
-    } catch(error) {
-      text = error;
-      throw error;
+    if (await authenticate("1234")) {
+      text = "Success";
+    } else {
+      text = "Error";
     }
-
-    const ver = await fetch("http://localhost:8000/auth/passkey/finish_authentication/1234", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resp),
-    });
-    const done = await ver.text();
-    text = "Success";
   }
 </script>
 
