@@ -19,7 +19,10 @@
     } else {
       text = "Error";
     }
-    //await login("test", "1234");
+  }
+
+  const login_ = async () => {
+    await login("test@profidev.io", "test1234");
   }
 </script>
 
@@ -27,5 +30,6 @@
   <a href="/login">Login</a>
   <Button on:click={begin}>Start</Button>
   <Button on:click={auth}>Auth</Button>
+  <Button on:click={login_}>Login</Button>
   <p>{text}</p>
 </div>

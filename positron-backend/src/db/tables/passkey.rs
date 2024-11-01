@@ -48,26 +48,22 @@ impl<'db> PasskeyTable<'db> {
     Ok(())
   }
 
-  pub async fn get_passkeys_for_user(&self, user: Thing) -> Vec<Passkey> {
-    let Ok(mut res) = self
+  pub async fn get_passkeys_for_user(&self, user: Thing) -> Result<Vec<Passkey>, Error> {
+    let mut res = self
       .db
       .query("SELECT * FROM passkey WHERE user = $user")
       .bind(("user", user))
-      .await
-    else {
-      return vec![];
-    };
-    res.take(0).unwrap_or_default()
+      .await?;
+    Ok(res.take(0).unwrap_or_default())
   }
 
-  pub async fn get_passkey_by_cred_id(&self, cred_id: String) -> Option<Passkey> {
+  pub async fn get_passkey_by_cred_id(&self, cred_id: String) -> Result<Passkey, Error> {
     let mut res = self
       .db
       .query("SELECT * FROM passkey WHERE cred_id = $cred_id")
       .bind(("cred_id", cred_id))
-      .await
-      .ok()?;
-    res.take(0).ok()?
+      .await?;
+    res.take::<Option<Passkey>>(0)?.ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
   pub async fn create_passkey_record(&self, passkey: PasskeyCreate) -> Result<(), Error> {

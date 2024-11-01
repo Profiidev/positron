@@ -16,7 +16,7 @@ pub struct PasskeyState {
 pub struct PasswordState {
   key: RsaPrivateKey,
   pub pub_key: String,
-  pub pepper: String,
+  pub pepper: Vec<u8>,
 }
 
 impl PasswordState {
@@ -33,9 +33,9 @@ impl Default for PasswordState {
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export Rsa Public Key");
 
-    let pepper = std::env::var("PEPPER").expect("Failed to read Pepper");
-    if pepper.len() > 48 {
-      panic!("Pepper is longer than 48 characters");
+    let pepper = std::env::var("PEPPER").expect("Failed to read Pepper").as_bytes().to_vec();
+    if pepper.len() > 32 {
+      panic!("Pepper is longer than 32 characters");
     }
 
     Self {

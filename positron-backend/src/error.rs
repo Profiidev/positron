@@ -12,8 +12,6 @@ pub enum Error {
     source: json::serde_json::Error,
   },
   #[error("NotFound")]
-  NotFound,
-  #[error("Webauthn Error {source:?}")]
   Webauthn {
     #[from]
     source: WebauthnError,
@@ -50,7 +48,6 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
       | Self::BadRequest
       | Self::Rsa { .. }
       | Self::Base64 { .. } => Status::BadRequest.respond_to(request),
-      Self::NotFound => Status::NotFound.respond_to(request),
       Self::DB { .. } | Self::Argon2 { .. } => Status::InternalServerError.respond_to(request),
     }
   }

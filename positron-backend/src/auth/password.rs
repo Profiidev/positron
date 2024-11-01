@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use crate::{
   db::DB,
-  error::{Error, Result},
+  error::Result,
 };
 
 use super::state::PasswordState;
@@ -45,10 +45,11 @@ async fn finish_authentication(
     .tables()
     .user()
     .get_user_by_email(&req.email)
-    .await
-    .ok_or(Error::NotFound)?;
+    .await?;
 
-  let salt_string = SaltString::encode_b64(format!("{}{}", user.salt, state.pepper).as_bytes())?;
+  let mut salt = BASE64_STANDARD_NO_PAD.decode(user.salt)?;
+  salt.extend_from_slice(&state.pepper);
+  let salt_string = SaltString::encode_b64(&salt)?;
 
   let argon2 = Argon2::default();
   let hash = argon2.hash_password(password.as_bytes(), salt_string.as_salt())?;

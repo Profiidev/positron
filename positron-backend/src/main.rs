@@ -11,6 +11,7 @@ mod auth;
 mod cors;
 mod db;
 mod error;
+mod test;
 
 #[launch]
 async fn rocket() -> _ {
@@ -30,4 +31,5 @@ async fn rocket() -> _ {
     .manage(PasswordState::default())
     .manage(webauthn)
     .mount("/", auth::routes())
+    .mount("/", rocket::routes![test::test])
 }
