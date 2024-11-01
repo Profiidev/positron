@@ -1,17 +1,23 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { cn } from "$lib/utils";
   import { Key, LoaderCircle } from "lucide-svelte";
   import { Button } from "../ui/button/index";
   import { Input } from "../ui/input/index";
   import { Label } from "../ui/label/index";
 
-  let className: string | undefined | null = undefined;
-  export { className as class };
+  interface Props {
+    class?: string | undefined | null;
+  }
 
-  let enterEmail = true;
-  let isLoading = false;
-  let email = "";
-  let password = "";
+  let { class: className = undefined }: Props = $props();
+  
+
+  let enterEmail = $state(true);
+  let isLoading = $state(false);
+  let email = $state("");
+  let password = $state("");
 
   const reset = () => {
     enterEmail = true;
@@ -34,7 +40,7 @@
 </script>
 
 <div class={cn("grid gap-6", className)}>
-  <form on:submit|preventDefault={onSubmit}>
+  <form onsubmit={preventDefault(onSubmit)}>
     <div class="grid gap-2">
       <div class="grid gap-1">
         {#if enterEmail}
@@ -63,7 +69,7 @@
   </form>
   <div class="relative">
     <div class="absolute inset-0 flex items-center">
-      <span class="w-full border-t" />
+      <span class="w-full border-t"></span>
     </div>
     <div class="relative flex justify-center text-xs uppercase">
       <span class="bg-background text-muted-foreground px-2">Or continue with </span>

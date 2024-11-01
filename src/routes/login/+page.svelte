@@ -4,7 +4,7 @@
 
 <div class="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-0">
   <div class="bg-muted relative hidden h-full flex-col p-10 text-white lg:flex dark:border-r">
-    <div class="absolute inset-0 bg-cover background-img bg-center" />
+    <div class="absolute inset-0 bg-cover background-img bg-center"></div>
     <div class="relative z-20 flex items-center text-2xl">
       Positron
     </div>

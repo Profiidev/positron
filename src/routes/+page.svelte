@@ -3,7 +3,7 @@
   import { login } from "$lib/auth/password";
   import Button from "$lib/components/ui/button/button.svelte";
 
-  let text = "No Status";
+  let text = $state("No Status");
 
   const begin = async () => {
     if (await register("test@profidev.io")) {
@@ -22,14 +22,18 @@
   }
 
   const login_ = async () => {
-    await login("test@profidev.io", "test1234");
+    if(await login("test@profidev.io", "test1234")) {
+      text = "Login";
+    } else {
+      text = "error";
+    }
   }
 </script>
 
 <div class="flex w-full h-full items-center justify-center">
   <a href="/login">Login</a>
-  <Button on:click={begin}>Start</Button>
-  <Button on:click={auth}>Auth</Button>
-  <Button on:click={login_}>Login</Button>
+  <Button onclick={begin}>Start</Button>
+  <Button onclick={auth}>Auth</Button>
+  <Button onclick={login_}>Login</Button>
   <p>{text}</p>
 </div>
