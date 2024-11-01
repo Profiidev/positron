@@ -6,6 +6,7 @@ use webauthn_rs::{prelude::Url, Webauthn, WebauthnBuilder};
 mod passkey;
 mod password;
 pub mod state;
+pub mod jwt;
 
 pub fn routes() -> Vec<Route> {
   passkey::routes()

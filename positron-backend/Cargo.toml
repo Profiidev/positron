@@ -6,7 +6,9 @@ edition = "2021"
 [dependencies]
 argon2 = "0.5.3"
 base64 = "0.22.1"
+chrono = "0.4.38"
 dotenv = "0.15.0"
+jsonwebtoken = "9.3.0"
 rand = "0.8.5"
 rocket = { version = "0.5.1" ,features = ["json", "secrets"] }
 rocket_cors = "0.6.0"

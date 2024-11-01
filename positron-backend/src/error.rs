@@ -6,6 +6,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+  #[error("BadRequest")]
+  BadRequest,
+  #[error("Unauthorized")]
+  Unauthorized,
   #[error("SerdeJson Error {source:?}")]
   SerdeJson {
     #[from]
@@ -16,8 +20,6 @@ pub enum Error {
     #[from]
     source: WebauthnError,
   },
-  #[error("BadRequest")]
-  BadRequest,
   #[error("DB error {source:?}")]
   DB {
     #[from]
@@ -43,10 +45,18 @@ pub enum Error {
     #[from]
     source: uuid::Error,
   },
+  #[error("Jwt Error {source:?}")]
+  Jwt {
+    #[from]
+    source: jsonwebtoken::errors::Error,
+  }
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-    Status::BadRequest.respond_to(request)
+    match self {
+      Self::Unauthorized => Status::Unauthorized.respond_to(request),
+      _ => Status::BadRequest.respond_to(request),
+    }
   }
 }

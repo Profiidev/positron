@@ -1,17 +1,20 @@
+use std::str::FromStr;
+
 use argon2::{
   password_hash::{PasswordHasher, SaltString},
   Argon2,
 };
 use base64::prelude::*;
-use rocket::{get, http::Status, post, serde::json::Json, Route, State};
+use rocket::{get, post, serde::json::Json, Route, State};
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
   db::DB,
-  error::Result,
+  error::{Error, Result},
 };
 
-use super::state::PasswordState;
+use super::{jwt::JWTState, state::PasswordState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![start_authentication, finish_authentication]
@@ -35,8 +38,9 @@ fn start_authentication(state: &State<PasswordState>) -> &str {
 async fn finish_authentication(
   req: Json<LoginReq>,
   state: &State<PasswordState>,
+  jwt: &State<JWTState>,
   db: &State<DB>,
-) -> Result<Status> {
+) -> Result<String> {
   let bytes = BASE64_STANDARD.decode(req.password.clone())?;
   let pw_bytes = state.decrypt(&bytes)?;
   let password = String::from_utf8_lossy(&pw_bytes).to_string();
@@ -55,8 +59,8 @@ async fn finish_authentication(
   let hash = argon2.hash_password(password.as_bytes(), salt_string.as_salt())?;
 
   if hash.to_string() != user.password {
-    return Ok(Status::Unauthorized);
+    return Err(Error::Unauthorized);
   };
 
-  Ok(Status::Ok)
+  Ok(jwt.create_token(Uuid::from_str(&user.uuid)?)?)
 }

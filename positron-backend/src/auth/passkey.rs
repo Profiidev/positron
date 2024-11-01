@@ -24,7 +24,7 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::state::PasskeyState;
+use super::{jwt::JWTState, state::PasskeyState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![
@@ -132,13 +132,14 @@ async fn finish_authentication(
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
-) -> Result<Status> {
+  jwt: &State<JWTState>,
+) -> Result<String> {
   let auth_id = Uuid::from_str(id)?;
 
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
 
-  let (_user, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
+  let (user, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
 
   let passkey_db = db
     .tables()
@@ -160,5 +161,5 @@ async fn finish_authentication(
     }
   }
 
-  Ok(Status::Ok)
+  Ok(jwt.create_token(user)?)
 }

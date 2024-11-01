@@ -33,7 +33,7 @@ impl Default for PasswordState {
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export Rsa Public Key");
 
-    let pepper = std::env::var("PEPPER").expect("Failed to read Pepper").as_bytes().to_vec();
+    let pepper = std::env::var("AUTH_PEPPER").expect("Failed to read Pepper").as_bytes().to_vec();
     if pepper.len() > 32 {
       panic!("Pepper is longer than 32 characters");
     }
