@@ -4196,7 +4196,6 @@ dependencies = [
 name = "positron-backend"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "argon2",
  "base64 0.22.1",
  "dotenv",

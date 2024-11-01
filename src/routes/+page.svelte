@@ -14,7 +14,12 @@
   };
 
   const auth = async () => {
-    await login("test", "1234");
+    if (await authenticate()) {
+      text = "Success";
+    } else {
+      text = "Error";
+    }
+    //await login("test", "1234");
   }
 </script>
 

@@ -1,8 +1,7 @@
-use anyhow::Error;
 use surrealdb::{
   engine::remote::ws::{Client, Wss},
   opt::auth::Namespace,
-  Surreal,
+  Error, Surreal,
 };
 use tables::Tables;
 

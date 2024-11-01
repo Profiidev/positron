@@ -1,6 +1,5 @@
-use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Surreal};
+use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PasskeyCreate {

@@ -1,4 +1,7 @@
-use auth::{state::{PasskeyState, PasswordState}, webauthn};
+use auth::{
+  state::{PasskeyState, PasswordState},
+  webauthn,
+};
 use cors::cors;
 use db::DB;
 use dotenv::dotenv;

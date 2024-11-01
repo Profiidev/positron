@@ -1,6 +1,5 @@
-use anyhow::Error;
 use passkey::PasskeyTable;
-use surrealdb::{engine::remote::ws::Client, Surreal};
+use surrealdb::{engine::remote::ws::Client, Error, Surreal};
 use user::UserTable;
 
 pub mod passkey;

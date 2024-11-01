@@ -1,8 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::Error;
 use rocket::futures::lock::Mutex;
-use rsa::{pkcs1::EncodeRsaPublicKey, pkcs8::LineEnding, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey};
+use rsa::{
+  pkcs1::EncodeRsaPublicKey, pkcs8::LineEnding, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
+};
 use surrealdb::Uuid;
 use webauthn_rs::prelude::{DiscoverableAuthentication, PasskeyRegistration};
 
@@ -19,8 +20,8 @@ pub struct PasswordState {
 }
 
 impl PasswordState {
-  pub fn decrypt(&self, message: &[u8]) -> Result<Vec<u8>, Error> {
-    self.key.decrypt(Pkcs1v15Encrypt, message).map_err(|e| e.into())
+  pub fn decrypt(&self, message: &[u8]) -> Result<Vec<u8>, rsa::errors::Error> {
+    self.key.decrypt(Pkcs1v15Encrypt, message)
   }
 }
 
@@ -28,7 +29,9 @@ impl Default for PasswordState {
   fn default() -> Self {
     let mut rng = rand::thread_rng();
     let key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
-    let pub_key = RsaPublicKey::from(&key).to_pkcs1_pem(LineEnding::CRLF).expect("Failed to export Rsa Public Key");
+    let pub_key = RsaPublicKey::from(&key)
+      .to_pkcs1_pem(LineEnding::CRLF)
+      .expect("Failed to export Rsa Public Key");
 
     let pepper = std::env::var("PEPPER").expect("Failed to read Pepper");
     if pepper.len() > 48 {
