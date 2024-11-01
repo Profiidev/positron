@@ -1,5 +1,6 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import JSEncrypt from "jsencrypt";
+import { set_token } from "./token.svelte";
 
 export const login = async (email: string, password: string) => {
   try {
@@ -21,8 +22,10 @@ export const login = async (email: string, password: string) => {
         password: encrypted_password,
       }),
     });
+    let token = await login_res.text();
+    set_token(token);
 
-    return login_res.status === 200;
+    return true;
   } catch (_) {
     return false;
   }

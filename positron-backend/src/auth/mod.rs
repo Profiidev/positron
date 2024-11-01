@@ -3,10 +3,10 @@ use std::env::var;
 use rocket::Route;
 use webauthn_rs::{prelude::Url, Webauthn, WebauthnBuilder};
 
+pub mod jwt;
 mod passkey;
 mod password;
 pub mod state;
-pub mod jwt;
 
 pub fn routes() -> Vec<Route> {
   passkey::routes()

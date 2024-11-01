@@ -1,18 +1,24 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public"
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/types";
+import { get_token, set_token } from "./token.svelte";
 
-export const register = async (email: string): Promise<boolean> => {
+export const register = async (): Promise<boolean> => {
   try {
-    let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_registration/${email}`);
+    let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_registration`, {
+      headers: {
+        Authorization: get_token() || "",
+      },
+    });
     let optionsJSON = (await start.json()).publicKey as PublicKeyCredentialCreationOptionsJSON;
 
     let ret = await startRegistration({ optionsJSON });
 
-    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_registration/${email}`, {
+    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_registration`, {
       method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        Authorization: get_token() || "",
       },
       body: JSON.stringify(ret),
     });
@@ -31,15 +37,17 @@ export const authenticate = async (): Promise<boolean> => {
 
     let ret = await startAuthentication({ optionsJSON });
 
-    const ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_authentication/${start_json.id}`, {
+    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_authentication/${start_json.id}`, {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(ret),
     });
+    let token = await ver.text();
+    set_token(token);
 
-    return ver.status === 200;
+    return true;
   } catch (_) {
     return false;
   }

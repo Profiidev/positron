@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
+use uuid::Uuid;
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserCreate {
@@ -50,6 +51,18 @@ impl<'db> UserTable<'db> {
     Ok(())
   }
 
+  pub async fn get_user_by_uuid(&self, uuid: Uuid) -> Result<User, Error> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM user WHERE uuid = $uuid LIMIT 1")
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    res
+      .take::<Option<User>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+  }
+
   pub async fn get_user_by_email(&self, email: &str) -> Result<User, Error> {
     let mut res = self
       .db
@@ -57,11 +70,17 @@ impl<'db> UserTable<'db> {
       .bind(("email", email.to_string()))
       .await?;
 
-    res.take::<Option<User>>(0)?.ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+    res
+      .take::<Option<User>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
   pub async fn create_user(&self, user: UserCreate) -> Result<(), Error> {
-    self.db.query("CREATE user CONTENT $user").bind(("user", user)).await?;
+    self
+      .db
+      .query("CREATE user CONTENT $user")
+      .bind(("user", user))
+      .await?;
 
     Ok(())
   }

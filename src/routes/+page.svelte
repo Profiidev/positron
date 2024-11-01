@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { authenticate, register } from "$lib/auth/passkey";
-  import { login } from "$lib/auth/password";
+  import { authenticate, register } from "$lib/auth/passkey.svelte";
+  import { login } from "$lib/auth/password.svelte";
   import Button from "$lib/components/ui/button/button.svelte";
 
   let text = $state("No Status");
 
   const begin = async () => {
-    if (await register("test@profidev.io")) {
+    if (await register()) {
       text = "Done";
     } else {
       text = "Error";

@@ -10,7 +10,7 @@ pub fn cors() -> Cors {
       .into_iter()
       .map(From::from)
       .collect(),
-    allowed_headers: AllowedHeaders::some(&["Accept", "Content-Type"]),
+    allowed_headers: AllowedHeaders::some(&["Accept", "Content-Type", "Authorization"]),
     allow_credentials: true,
     ..Default::default()
   }

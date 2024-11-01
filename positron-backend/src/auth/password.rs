@@ -14,7 +14,7 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{jwt::JWTState, state::PasswordState};
+use super::{jwt::JwtState, state::PasswordState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![start_authentication, finish_authentication]
@@ -38,18 +38,14 @@ fn start_authentication(state: &State<PasswordState>) -> &str {
 async fn finish_authentication(
   req: Json<LoginReq>,
   state: &State<PasswordState>,
-  jwt: &State<JWTState>,
+  jwt: &State<JwtState>,
   db: &State<DB>,
 ) -> Result<String> {
   let bytes = BASE64_STANDARD.decode(req.password.clone())?;
   let pw_bytes = state.decrypt(&bytes)?;
   let password = String::from_utf8_lossy(&pw_bytes).to_string();
 
-  let user = db
-    .tables()
-    .user()
-    .get_user_by_email(&req.email)
-    .await?;
+  let user = db.tables().user().get_user_by_email(&req.email).await?;
 
   let mut salt = BASE64_STANDARD_NO_PAD.decode(user.salt)?;
   salt.extend_from_slice(&state.pepper);

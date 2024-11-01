@@ -49,7 +49,7 @@ pub enum Error {
   Jwt {
     #[from]
     source: jsonwebtoken::errors::Error,
-  }
+  },
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {

@@ -24,7 +24,10 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{jwt::JWTState, state::PasskeyState};
+use super::{
+  jwt::{JwtAuth, JwtState},
+  state::PasskeyState,
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![
@@ -38,19 +41,14 @@ pub fn routes() -> Vec<Route> {
   .collect()
 }
 
-#[get("/start_registration/<email>")]
+#[get("/start_registration")]
 async fn start_registration(
-  email: &str,
+  auth: JwtAuth,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Json<CreationChallengeResponse>> {
-  let user = db
-    .tables()
-    .user()
-    .get_user_by_email(email)
-    .await?;
-  let uuid = Uuid::from_str(&user.uuid)?;
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
@@ -60,29 +58,25 @@ async fn start_registration(
     .collect();
 
   let (mut ccr, reg_state) =
-    webauthn.start_passkey_registration(uuid, &user.name, &user.name, Some(passkeys))?;
+    webauthn.start_passkey_registration(auth.uuid, &user.email, &user.name, Some(passkeys))?;
 
   if let Some(test) = &mut ccr.public_key.authenticator_selection {
     test.resident_key = Some(ResidentKeyRequirement::Required);
   }
 
-  state.reg_state.lock().await.insert(uuid, reg_state);
+  state.reg_state.lock().await.insert(auth.uuid, reg_state);
   Ok(Json(ccr))
 }
 
-#[post("/finish_registration/<email>", data = "<reg>")]
+#[post("/finish_registration", data = "<reg>")]
 async fn finish_registration(
-  email: &str,
+  auth: JwtAuth,
   reg: Json<RegisterPublicKeyCredential>,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Status> {
-  let user = db
-    .tables()
-    .user()
-    .get_user_by_email(email)
-    .await?;
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
 
   let mut states = state.reg_state.lock().await;
@@ -132,7 +126,7 @@ async fn finish_authentication(
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
-  jwt: &State<JWTState>,
+  jwt: &State<JwtState>,
 ) -> Result<String> {
   let auth_id = Uuid::from_str(id)?;
 
