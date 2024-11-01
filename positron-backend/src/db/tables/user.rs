@@ -8,6 +8,7 @@ pub struct UserCreate {
   pub name: String,
   pub email: String,
   pub password: String,
+  pub salt: String,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,6 +18,7 @@ pub struct User {
   pub name: String,
   pub email: String,
   pub password: String,
+  pub salt: String,
 }
 
 pub struct UserTable<'db> {

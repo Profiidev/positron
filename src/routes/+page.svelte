@@ -1,5 +1,6 @@
 <script lang="ts">
   import { authenticate, register } from "$lib/auth/passkey";
+  import { login } from "$lib/auth/password";
   import Button from "$lib/components/ui/button/button.svelte";
 
   let text = "No Status";
@@ -13,11 +14,7 @@
   };
 
   const auth = async () => {
-    if (await authenticate()) {
-      text = "Success";
-    } else {
-      text = "Error";
-    }
+    await login("test", "1234");
   }
 </script>
 

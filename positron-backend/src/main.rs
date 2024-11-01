@@ -1,4 +1,4 @@
-use auth::{state::PasskeyState, webauthn};
+use auth::{state::{PasskeyState, PasswordState}, webauthn};
 use cors::cors;
 use db::DB;
 use dotenv::dotenv;
@@ -7,6 +7,7 @@ use rocket::launch;
 mod auth;
 mod cors;
 mod db;
+mod error;
 
 #[launch]
 async fn rocket() -> _ {
@@ -23,6 +24,7 @@ async fn rocket() -> _ {
     .manage(rocket_cors::catch_all_options_routes())
     .manage(db)
     .manage(PasskeyState::default())
+    .manage(PasswordState::default())
     .manage(webauthn)
     .mount("/", auth::routes())
 }

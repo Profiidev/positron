@@ -1,3 +1,6 @@
 [workspace]
 members = ["src-tauri", "positron-backend"]
 resolver = "2"
+
+[profile.dev.package.num-bigint-dig]
+opt-level = 3

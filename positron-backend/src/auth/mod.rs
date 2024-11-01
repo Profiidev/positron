@@ -4,11 +4,13 @@ use rocket::Route;
 use webauthn_rs::{prelude::Url, Webauthn, WebauthnBuilder};
 
 mod passkey;
+mod password;
 pub mod state;
 
 pub fn routes() -> Vec<Route> {
   passkey::routes()
     .into_iter()
+    .chain(password::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/auth", base)))
     .collect()
 }
