@@ -38,17 +38,15 @@ pub enum Error {
     #[from]
     source: base64::DecodeError,
   },
+  #[error("Uuid Error {source:?}")]
+  Uuid {
+    #[from]
+    source: uuid::Error,
+  },
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-    match self {
-      Self::SerdeJson { .. }
-      | Self::Webauthn { .. }
-      | Self::BadRequest
-      | Self::Rsa { .. }
-      | Self::Base64 { .. } => Status::BadRequest.respond_to(request),
-      Self::DB { .. } | Self::Argon2 { .. } => Status::InternalServerError.respond_to(request),
-    }
+    Status::BadRequest.respond_to(request)
   }
 }

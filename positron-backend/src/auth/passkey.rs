@@ -50,7 +50,7 @@ async fn start_registration(
     .user()
     .get_user_by_email(email)
     .await?;
-  let uuid = json::from_str(&user.uuid)?;
+  let uuid = Uuid::from_str(&user.uuid)?;
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
@@ -83,7 +83,7 @@ async fn finish_registration(
     .user()
     .get_user_by_email(email)
     .await?;
-  let uuid = json::from_str(&user.uuid)?;
+  let uuid = Uuid::from_str(&user.uuid)?;
 
   let mut states = state.reg_state.lock().await;
   let reg_state = states.remove(&uuid).ok_or(Error::BadRequest)?;
@@ -133,7 +133,7 @@ async fn finish_authentication(
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Status> {
-  let auth_id = Uuid::from_str(id).map_err(|_| Error::BadRequest)?;
+  let auth_id = Uuid::from_str(id)?;
 
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
