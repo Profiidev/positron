@@ -20,7 +20,7 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![start_authentication, finish_authentication, special_access]
+  rocket::routes![key, authenticate, special_access]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/password", base)))
     .collect()
@@ -32,13 +32,13 @@ struct LoginReq {
   password: String,
 }
 
-#[get("/start_authentication")]
-fn start_authentication(state: &State<PasswordState>) -> &str {
+#[get("/key")]
+fn key(state: &State<PasswordState>) -> &str {
   &state.pub_key
 }
 
-#[post("/finish_authentication", data = "<req>")]
-async fn finish_authentication(
+#[post("/authenticate", data = "<req>")]
+async fn authenticate(
   req: Json<LoginReq>,
   state: &State<PasswordState>,
   jwt: &State<JwtState>,

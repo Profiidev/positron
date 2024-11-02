@@ -1,18 +1,26 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import JSEncrypt from "jsencrypt";
-import { set_token } from "./token.svelte";
+import { get_token, get_token_type, set_token, TokenType } from "./token.svelte";
+import { AuthError } from "./error.svelte";
 
-export const login = async (email: string, password: string) => {
+let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
+
+export const fetch_key = async (): Promise<AuthError | undefined> => {
   try {
-    let key_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/start_authentication`);
+    let key_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/key`);
     let key_pem = await key_res.text();
 
-
-    let encrypt = new JSEncrypt({ default_key_size: "4096" });
     encrypt.setPublicKey(key_pem);
+  } catch (_) {
+    return AuthError.Other;
+  }
+}
+
+export const login = async (email: string, password: string): Promise<AuthError | boolean> => {
+  try {
     let encrypted_password = encrypt.encrypt(password);
 
-    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/finish_authentication`, {
+    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/authenticate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -22,11 +30,53 @@ export const login = async (email: string, password: string) => {
         password: encrypted_password,
       }),
     });
-    let token = await login_res.text();
-    set_token(token);
 
-    return true;
+    if (login_res.status === 401) {
+      return AuthError.Password;
+    }
+
+    let token = await login_res.text();
+
+    let type = get_token_type(token);
+    set_token(token, type);
+
+    if (type === TokenType.TotpRequired) {
+      return true;
+    } else {
+      return false;
+    }
   } catch (_) {
-    return false;
+    return AuthError.Other;
+  }
+};
+
+export const special_access = async (password: string): Promise<AuthError | undefined> => {
+  let token = get_token(TokenType.Auth);
+  if (!token) {
+    return AuthError.MissingToken;
+  }
+
+  try {
+    let encrypted_password = encrypt.encrypt(password);
+
+    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/special_access`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        password: encrypted_password,
+      }),
+    });
+
+    if (login_res.status === 401) {
+      return AuthError.Password;
+    }
+
+    let special_access = await login_res.text();
+    set_token(special_access, TokenType.SpecialAccess);
+  } catch (_) {
+    return AuthError.Other;
   }
 };

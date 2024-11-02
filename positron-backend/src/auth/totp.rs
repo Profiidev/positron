@@ -13,7 +13,7 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![start_setup_totp, finish_setup_totp, confirm_totp]
+  rocket::routes![start_setup, finish_setup, confirm]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/totp", base)))
     .collect()
@@ -30,8 +30,8 @@ struct TotpSetupRes {
   code: String,
 }
 
-#[get("/start_setup_totp")]
-async fn start_setup_totp(
+#[get("/start_setup")]
+async fn start_setup(
   auth: JwtSpecialAccess,
   db: &State<DB>,
   state: &State<TotpState>,
@@ -66,8 +66,8 @@ async fn start_setup_totp(
   }))
 }
 
-#[post("/finish_setup_totp", data = "<req>")]
-async fn finish_setup_totp(
+#[post("/finish_setup", data = "<req>")]
+async fn finish_setup(
   auth: JwtSpecialAccess,
   req: Json<TotpReq>,
   state: &State<TotpState>,
@@ -92,8 +92,8 @@ async fn finish_setup_totp(
   Ok(Status::Ok)
 }
 
-#[post("/confirm_totp", data = "<req>")]
-async fn confirm_totp(
+#[post("/confirm", data = "<req>")]
+async fn confirm(
   req: Json<TotpReq>,
   auth: JwtTotpRequired,
   db: &State<DB>,
