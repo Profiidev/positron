@@ -17,6 +17,11 @@ export const register = async (): Promise<AuthError | undefined> => {
         Authorization: token,
       },
     });
+
+    if (start.status !== 200) {
+      return AuthError.Other;
+    }
+
     optionsJSON = (await start.json()).publicKey as PublicKeyCredentialCreationOptionsJSON;
   } catch (_) {
     return AuthError.Other;
@@ -51,6 +56,11 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
   let start_json;
   try {
     let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_authentication`);
+
+    if (start.status !== 200) {
+      return AuthError.Other;
+    }
+
     start_json = await start.json();
   } catch (_) {
     return AuthError.Other;
@@ -73,9 +83,14 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
       },
       body: JSON.stringify(ret),
     });
+
+    if (ver.status !== 200) {
+      return AuthError.Other;
+    }
+
     let token = await ver.text();
     set_token(token, TokenType.Auth);
-  } catch (_) {
+  } catch (e) {
     return AuthError.Other;
   }
 }
@@ -93,6 +108,11 @@ export const special_access = async (): Promise<AuthError | undefined> => {
         Authorization: token,
       },
     });
+
+    if (start.status !== 200) {
+      return AuthError.Other;
+    }
+
     optionsJSON = (await start.json()).publicKey as PublicKeyCredentialCreationOptionsJSON;
   } catch (_) {
     return AuthError.Other;
@@ -114,6 +134,11 @@ export const special_access = async (): Promise<AuthError | undefined> => {
       },
       body: JSON.stringify(ret),
     });
+
+    if (ver.status !== 200) {
+      return AuthError.Other;
+    }
+
     let special_access = await ver.text();
     set_token(special_access, TokenType.SpecialAccess);
   } catch (_) {

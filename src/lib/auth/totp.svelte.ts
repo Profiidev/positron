@@ -19,6 +19,11 @@ export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
         Authorization: token,
       }
     });
+
+    if (code_res.status !== 200) {
+      return AuthError.Other;
+    }
+
     let code_json = await code_res.json();
 
     return code_json as TotpCode;
@@ -48,6 +53,10 @@ export const confirm_setup = async (code: string): Promise<AuthError | undefined
     if (done.status === 401) {
       return AuthError.Totp;
     }
+
+    if (done.status !== 200) {
+      return AuthError.Other;
+    }
   } catch (_) {
     return AuthError.Other;
   }
@@ -73,6 +82,10 @@ export const confirm = async (code: string): Promise<AuthError | undefined> => {
 
     if (done.status === 401) {
       return AuthError.Totp;
+    }
+
+    if (done.status !== 200) {
+      return AuthError.Other;
     }
 
     let auth_token = await done.text();

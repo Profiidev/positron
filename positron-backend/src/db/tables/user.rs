@@ -27,6 +27,12 @@ pub struct UserTable<'db> {
   db: &'db Surreal<Client>,
 }
 
+#[derive(Serialize)]
+struct TotpUpdate {
+  uuid: String,
+  totp: String,
+}
+
 impl<'db> UserTable<'db> {
   pub fn new(db: &'db Surreal<Client>) -> Self {
     Self { db }
@@ -92,7 +98,10 @@ impl<'db> UserTable<'db> {
     self
       .db
       .query("UPDATE user SET totp = $totp WHERE uuid = $uuid")
-      .bind(("uuid", uuid, "totp", secret))
+      .bind(TotpUpdate {
+        uuid: uuid.to_string(),
+        totp: secret.unwrap_or("NONE".into())
+      })
       .await?;
 
     Ok(())

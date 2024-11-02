@@ -1,7 +1,7 @@
 export enum AuthError {
-  MissingToken,
-  Other,
-  Passkey,
-  Password,
-  Totp,
+  MissingToken = "MissingToken",
+  Other = "Other",
+  Passkey = "Passkey",
+  Password = "Password",
+  Totp = "Totp",
 }

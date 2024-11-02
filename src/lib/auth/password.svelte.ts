@@ -8,6 +8,11 @@ let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
 export const fetch_key = async (): Promise<AuthError | undefined> => {
   try {
     let key_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/key`);
+
+    if (key_res.status !== 200) {
+      return AuthError.Other;
+    }
+
     let key_pem = await key_res.text();
 
     encrypt.setPublicKey(key_pem);
@@ -33,6 +38,10 @@ export const login = async (email: string, password: string): Promise<AuthError 
 
     if (login_res.status === 401) {
       return AuthError.Password;
+    }
+
+    if (login_res.status !== 200) {
+      return AuthError.Other;
     }
 
     let token = await login_res.text();
@@ -72,6 +81,10 @@ export const special_access = async (password: string): Promise<AuthError | unde
 
     if (login_res.status === 401) {
       return AuthError.Password;
+    }
+
+    if (login_res.status !== 200) {
+      return AuthError.Other;
     }
 
     let special_access = await login_res.text();

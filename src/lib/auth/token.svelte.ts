@@ -1,7 +1,7 @@
 export enum TokenType {
-  Auth,
-  SpecialAccess,
-  TotpRequired,
+  Auth = "Auth",
+  SpecialAccess = "SpecialAccess",
+  TotpRequired = "TotpRequired",
 };
 
 type Claims = {
