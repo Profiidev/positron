@@ -10,6 +10,9 @@ pub enum Error {
   BadRequest,
   #[error("Unauthorized")]
   Unauthorized,
+  #[allow(clippy::enum_variant_names)]
+  #[error("InternalServerError")]
+  InternalServerError,
   #[error("SerdeJson Error {source:?}")]
   SerdeJson {
     #[from]
@@ -56,6 +59,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
     match self {
       Self::Unauthorized => Status::Unauthorized.respond_to(request),
+      Self::InternalServerError => Status::InternalServerError.respond_to(request),
       _ => Status::BadRequest.respond_to(request),
     }
   }

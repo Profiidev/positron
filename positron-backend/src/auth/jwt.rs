@@ -20,6 +20,15 @@ struct Claims {
   exp: u64,
   iss: String,
   sub: Uuid,
+  #[serde(rename = "type")]
+  type_: JwtType,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum JwtType {
+  Auth,
+  TotpRequired,
+  SpecialAccess,
 }
 
 pub struct JwtState {
@@ -29,12 +38,18 @@ pub struct JwtState {
   validation: Validation,
   iss: String,
   exp: i64,
+  short_exp: i64,
 }
 
 impl JwtState {
-  pub fn create_token(&self, uuid: Uuid) -> Result<String, Error> {
+  pub fn create_token(&self, uuid: Uuid, type_: JwtType) -> Result<String, Error> {
+    let duration = match type_ {
+      JwtType::SpecialAccess | JwtType::TotpRequired => self.short_exp,
+      _ => self.exp,
+    };
+
     let exp = Utc::now()
-      .checked_add_signed(Duration::seconds(self.exp))
+      .checked_add_signed(Duration::seconds(duration))
       .ok_or(Error::from(ErrorKind::ExpiredSignature))?
       .timestamp() as u64;
 
@@ -42,6 +57,7 @@ impl JwtState {
       exp,
       iss: self.iss.clone(),
       sub: uuid,
+      type_,
     };
 
     jsonwebtoken::encode(&self.header, &claims, &self.encoding_key)
@@ -55,11 +71,15 @@ impl JwtState {
 impl Default for JwtState {
   fn default() -> Self {
     let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
-    let iss = std::env::var("AUTH_JWT_ISSUER").expect("Failed to load JwtIssuer");
+    let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
     let exp = std::env::var("AUTH_JWT_EXPIRATION")
       .expect("Failed to load JwtExpiration")
       .parse()
       .expect("Failed to parse JwtExpiration");
+    let short_exp = std::env::var("AUTH_JWT_EXPIRATION_SHORT")
+      .expect("Failed to load JwtExpiration short")
+      .parse()
+      .expect("Failed to parse JwtExpiration short");
 
     let header = Header::new(Algorithm::HS512);
     let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
@@ -74,6 +94,7 @@ impl Default for JwtState {
       validation,
       iss,
       exp,
+      short_exp,
     }
   }
 }
@@ -87,29 +108,87 @@ impl<'r> FromRequest<'r> for JwtAuth {
   type Error = ();
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let Some(token) = req.headers().get_one("Authorization") else {
-      return Outcome::Error((Status::BadRequest, ()));
-    };
-
-    let Some(jwt) = req.guard::<&State<JwtState>>().await.succeeded() else {
-      return Outcome::Error((Status::InternalServerError, ()));
-    };
-    let Some(db) = req.guard::<&State<DB>>().await.succeeded() else {
-      return Outcome::Error((Status::InternalServerError, ()));
-    };
-
-    let valid = db
-      .tables()
-      .invalid_jwt()
-      .is_token_valid(token.to_string())
-      .await.unwrap();
-    if !valid {
-      return Outcome::Error((Status::Unauthorized, ()));
+    match jwt_from_request(req).await {
+      Outcome::Success(Claims {
+        type_: JwtType::Auth,
+        sub,
+        ..
+      }) => Outcome::Success(JwtAuth { uuid: sub }),
+      Outcome::Error(error) => Outcome::Error(error),
+      _ => Outcome::Error((Status::Unauthorized, ())),
     }
-
-    let Ok(claims) = jwt.validate_token(token) else {
-      return Outcome::Error((Status::Unauthorized, ()));
-    };
-    Outcome::Success(Self { uuid: claims.sub })
   }
+}
+
+pub struct JwtTotpRequired {
+  pub uuid: Uuid,
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for JwtTotpRequired {
+  type Error = ();
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    match jwt_from_request(req).await {
+      Outcome::Success(Claims {
+        type_: JwtType::TotpRequired,
+        sub,
+        ..
+      }) => Outcome::Success(JwtTotpRequired { uuid: sub }),
+      Outcome::Error(error) => Outcome::Error(error),
+      _ => Outcome::Error((Status::Unauthorized, ())),
+    }
+  }
+}
+
+pub struct JwtSpecialAccess {
+  pub uuid: Uuid,
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for JwtSpecialAccess {
+  type Error = ();
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    match jwt_from_request(req).await {
+      Outcome::Success(Claims {
+        type_: JwtType::SpecialAccess,
+        sub,
+        ..
+      }) => Outcome::Success(JwtSpecialAccess { uuid: sub }),
+      Outcome::Error(error) => Outcome::Error(error),
+      _ => Outcome::Error((Status::Unauthorized, ())),
+    }
+  }
+}
+
+async fn jwt_from_request<'r>(req: &'r Request<'_>) -> Outcome<Claims, ()> {
+  let Some(token) = req.headers().get_one("Authorization") else {
+    return Outcome::Error((Status::BadRequest, ()));
+  };
+
+  let Some(jwt) = req.guard::<&State<JwtState>>().await.succeeded() else {
+    return Outcome::Error((Status::InternalServerError, ()));
+  };
+  let Some(db) = req.guard::<&State<DB>>().await.succeeded() else {
+    return Outcome::Error((Status::InternalServerError, ()));
+  };
+
+  let Ok(valid) = db
+    .tables()
+    .invalid_jwt()
+    .is_token_valid(token.to_string())
+    .await
+  else {
+    return Outcome::Error((Status::InternalServerError, ()));
+  };
+  if !valid {
+    return Outcome::Error((Status::Unauthorized, ()));
+  }
+
+  let Ok(claims) = jwt.validate_token(token) else {
+    return Outcome::Error((Status::Unauthorized, ()));
+  };
+
+  Outcome::Success(claims)
 }

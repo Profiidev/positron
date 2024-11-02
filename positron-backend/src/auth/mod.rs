@@ -7,11 +7,13 @@ pub mod jwt;
 mod passkey;
 mod password;
 pub mod state;
+mod totp;
 
 pub fn routes() -> Vec<Route> {
   passkey::routes()
     .into_iter()
     .chain(password::routes())
+    .chain(totp::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/auth", base)))
     .collect()
 }

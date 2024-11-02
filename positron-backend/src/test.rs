@@ -45,6 +45,7 @@ pub async fn test(db: &State<DB>, state: &State<PasswordState>) -> Result<()> {
       email: "test@profidev.io".into(),
       password,
       salt: salt.as_str().into(),
+      totp: None,
     })
     .await?;
 

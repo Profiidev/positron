@@ -9,6 +9,7 @@ pub struct UserCreate {
   pub email: String,
   pub password: String,
   pub salt: String,
+  pub totp: Option<String>,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -19,6 +20,7 @@ pub struct User {
   pub email: String,
   pub password: String,
   pub salt: String,
+  pub totp: Option<String>,
 }
 
 pub struct UserTable<'db> {
@@ -42,6 +44,7 @@ impl<'db> UserTable<'db> {
     DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string ASSERT string::is::email($value);
     DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS salt ON TABLE user TYPE string;
+    DEFINE FIELD IF NOT EXISTS totp ON TABLE user TYPE option<string>;
 
     DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
   ",
@@ -80,6 +83,16 @@ impl<'db> UserTable<'db> {
       .db
       .query("CREATE user CONTENT $user")
       .bind(("user", user))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn update_totp(&self, uuid: Uuid, secret: Option<String>) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET totp = $totp WHERE uuid = $uuid")
+      .bind(("uuid", uuid, "totp", secret))
       .await?;
 
     Ok(())

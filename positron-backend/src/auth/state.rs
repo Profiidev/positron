@@ -5,18 +5,41 @@ use rsa::{
   pkcs1::EncodeRsaPublicKey, pkcs8::LineEnding, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
 use surrealdb::Uuid;
-use webauthn_rs::prelude::{DiscoverableAuthentication, PasskeyRegistration};
+use totp_rs::TOTP;
+use webauthn_rs::prelude::{
+  DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration,
+};
 
 #[derive(Default)]
 pub struct PasskeyState {
   pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
   pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
+  pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
 
 pub struct PasswordState {
   key: RsaPrivateKey,
   pub pub_key: String,
   pub pepper: Vec<u8>,
+}
+
+pub struct TotpState {
+  pub issuer: String,
+  pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
+}
+
+impl Default for TotpState {
+  fn default() -> Self {
+    let issuer = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
+    if issuer.contains(":") {
+      panic!("Issuer can not contain ':'");
+    }
+
+    Self {
+      issuer,
+      reg_state: Default::default(),
+    }
+  }
 }
 
 impl PasswordState {

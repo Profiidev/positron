@@ -25,7 +25,7 @@ use crate::{
 };
 
 use super::{
-  jwt::{JwtAuth, JwtState},
+  jwt::{JwtAuth, JwtSpecialAccess, JwtState, JwtType},
   state::PasskeyState,
 };
 
@@ -34,7 +34,9 @@ pub fn routes() -> Vec<Route> {
     start_registration,
     finish_registration,
     start_authentication,
-    finish_authentication
+    finish_authentication,
+    start_special_access,
+    finish_special_access
   ]
   .into_iter()
   .flat_map(|route| route.map_base(|base| format!("{}{}", "/passkey", base)))
@@ -43,7 +45,7 @@ pub fn routes() -> Vec<Route> {
 
 #[get("/start_registration")]
 async fn start_registration(
-  auth: JwtAuth,
+  auth: JwtSpecialAccess,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
@@ -70,7 +72,7 @@ async fn start_registration(
 
 #[post("/finish_registration", data = "<reg>")]
 async fn finish_registration(
-  auth: JwtAuth,
+  auth: JwtSpecialAccess,
   reg: Json<RegisterPublicKeyCredential>,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
@@ -155,5 +157,66 @@ async fn finish_authentication(
     }
   }
 
-  Ok(jwt.create_token(user)?)
+  Ok(jwt.create_token(user, JwtType::Auth)?)
+}
+
+#[get("/start_special_access")]
+async fn start_special_access(
+  auth: JwtAuth,
+  webauthn: &State<Webauthn>,
+  state: &State<PasskeyState>,
+  db: &State<DB>,
+) -> Result<Json<RequestChallengeResponse>> {
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let passkey_records = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+  let passkeys = passkey_records
+    .into_iter()
+    .flat_map(|p| json::from_str(&p.data))
+    .collect::<Vec<Passkey>>();
+
+  let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
+
+  state
+    .special_access_state
+    .lock()
+    .await
+    .insert(auth.uuid, auth_state);
+
+  Ok(Json(rcr))
+}
+
+#[post("/finish_special_access", data = "<req>")]
+async fn finish_special_access(
+  req: Json<PublicKeyCredential>,
+  auth: JwtAuth,
+  webauthn: &State<Webauthn>,
+  state: &State<PasskeyState>,
+  db: &State<DB>,
+  jwt: &State<JwtState>,
+) -> Result<String> {
+  let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.uuid) else {
+    return Err(Error::BadRequest);
+  };
+
+  let res = webauthn.finish_passkey_authentication(&req, &auth_state)?;
+
+  if res.needs_update() {
+    let passkey_db = db
+      .tables()
+      .passkey()
+      .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
+      .await?;
+    let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+
+    passkey.update_credential(&res);
+    if let Ok(json_key) = json::to_string(&passkey) {
+      let _ = db
+        .tables()
+        .passkey()
+        .update_passkey_record(passkey_db.id, json_key)
+        .await;
+    }
+  }
+
+  Ok(jwt.create_token(auth.uuid, JwtType::SpecialAccess)?)
 }

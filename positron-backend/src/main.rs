@@ -1,6 +1,6 @@
 use auth::{
   jwt::JwtState,
-  state::{PasskeyState, PasswordState},
+  state::{PasskeyState, PasswordState, TotpState},
   webauthn,
 };
 use cors::cors;
@@ -31,6 +31,7 @@ async fn rocket() -> _ {
     .manage(PasskeyState::default())
     .manage(PasswordState::default())
     .manage(JwtState::default())
+    .manage(TotpState::default())
     .manage(webauthn)
     .mount("/", auth::routes())
     .mount("/", rocket::routes![test::test])
