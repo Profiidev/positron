@@ -30,7 +30,7 @@ pub struct UserTable<'db> {
 #[derive(Serialize)]
 struct TotpUpdate {
   uuid: String,
-  totp: String,
+  totp: Option<String>,
 }
 
 impl<'db> UserTable<'db> {
@@ -100,7 +100,7 @@ impl<'db> UserTable<'db> {
       .query("UPDATE user SET totp = $totp WHERE uuid = $uuid")
       .bind(TotpUpdate {
         uuid: uuid.to_string(),
-        totp: secret.unwrap_or("NONE".into())
+        totp: secret
       })
       .await?;
 

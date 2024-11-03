@@ -107,7 +107,7 @@ async fn confirm(
     return Err(Error::InternalServerError);
   };
 
-  if totp.check_current(&req.code).unwrap() {
+  if !totp.check_current(&req.code).unwrap() {
     Err(Error::Unauthorized)
   } else {
     Ok(jwt.create_token(auth.uuid, JwtType::Auth)?)
