@@ -1,8 +1,19 @@
+<script lang="ts" module>
+  export type Option = {
+    title: string;
+    label?: string;
+    selected: boolean;
+    icon: ComponentType<Icon>;
+    click: () => void;
+  };
+</script>
+
 <script lang="ts">
   import { cn } from "$lib/utils";
-  import type { Option } from ".";
+  import type { ComponentType } from "svelte";
   import { Button } from "../ui/button";
   import { Root, Trigger, Content } from "../ui/tooltip";
+  import type { Icon } from "lucide-svelte";
 
 
   interface Props {
@@ -20,14 +31,14 @@
     {#each options as option}
       {#if isCollapsed}
         <Root openDelay={0}>
-          <Trigger asChild >
+          <Trigger asChild>
             {#snippet children({ builder })}
-                        <Button onclick={option.click} builders={[builder]} variant={option.selected ? "default": "ghost"} size="icon" class={cn("size-9", option.selected && "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white")}>
+              <Button onclick={option.click} builders={[builder]} variant={option.selected ? "default": "ghost"} size="icon" class={cn("size-9", option.selected && "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white")}>
                 <option.icon class="size-4" aria-hidden="true" />
                 <span class="sr-only">{option.title}</span>
               </Button>
-                                  {/snippet}
-                    </Trigger>
+            {/snippet}
+          </Trigger>
           <Content side="right" class="flex items-center gap-4">
             {option.title}
             {#if option.label}

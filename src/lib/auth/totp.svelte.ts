@@ -2,7 +2,7 @@ import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import { AuthError } from "./error.svelte";
 import { get_token, set_token, TokenType } from "./token.svelte";
 
-export type TotpCode = {
+export interface TotpCode {
   qr: string;
   code: string;
 }
