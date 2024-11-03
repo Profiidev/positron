@@ -18,6 +18,8 @@ $effect.root(() => {
   $effect(() => {
     if (auth) {
       localStorage.setItem("token", auth);
+    } else {
+      localStorage.removeItem("token");
     }
   })
 });
@@ -42,6 +44,11 @@ export const set_token = (token: string, type: TokenType) => {
 
 export const get_token_type = (token: string) => {
   return get_claims(token).type;
+}
+
+export const clear_tokens = () => {
+  auth = null;
+  other = undefined;
 }
 
 const get_claims = (token: string) => {

@@ -7,6 +7,10 @@ export interface TotpCode {
   code: string;
 }
 
+export const is_code = (object: any): object is TotpCode => {
+  return "qr" in object;
+}
+
 export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
