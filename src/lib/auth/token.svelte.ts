@@ -15,18 +15,18 @@ let auth = $state(localStorage.getItem("token"));
 let other = $state(undefined as string | undefined);
 
 $effect.root(() => {
-  if (auth) {
-    localStorage.setItem("token", auth);
-  }
+  $effect(() => {
+    if (auth) {
+      localStorage.setItem("token", auth);
+    }
+  })
 });
 
 export const get_token = (type: TokenType) => {
   if (auth && type === TokenType.Auth && get_valid_for(auth) > 0) {
-  console.log(get_valid_for(auth))
     return auth;
   } else {
     if (other && get_token_type(other) === type && get_valid_for(other) > 0) {
-  console.log(get_valid_for(other))
       return other;
     }
   }
