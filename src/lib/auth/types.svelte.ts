@@ -5,3 +5,9 @@ export enum AuthError {
   Password = "Password",
   Totp = "Totp",
 }
+
+export type Passkey = {
+  name: string;
+  created: string;
+  used: string;
+};

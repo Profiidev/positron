@@ -2,21 +2,18 @@
   import { preventDefault } from 'svelte/legacy';
 
   import { cn } from "$lib/utils";
-  import { Key, LoaderCircle } from "lucide-svelte";
+  import { LoaderCircle } from "lucide-svelte";
   import { Button } from "../ui/button/index";
   import { Input } from "../ui/input/index";
   import { Label } from "../ui/label/index";
-  import { fetch_key, login } from '$lib/auth/password.svelte';
-  import { AuthError } from '$lib/auth/error.svelte';
-  import { onMount } from 'svelte';
+  import { login } from '$lib/auth/password.svelte';
+  import { AuthError } from '$lib/auth/types.svelte';
   import { goto } from '$app/navigation';
   import { confirm } from '$lib/auth/totp.svelte';
   import { get_token, TokenType } from '$lib/auth/token.svelte';
-  import { InputOTP } from '../ui/input-otp';
-  import InputOtpGroup from '../ui/input-otp/input-otp-group.svelte';
-  import InputOtpSlot from '../ui/input-otp/input-otp-slot.svelte';
-  import InputOtpSeparator from '../ui/input-otp/input-otp-separator.svelte';
+  import * as InputOtp from '../ui/input-otp';
   import { authenticate } from '$lib/auth/passkey.svelte';
+  import LoginOther from './login-other.svelte';
 
   interface Props {
     class?: string | undefined | null;
@@ -30,21 +27,13 @@
   let password = $state("");
   let totp = $state("");
   let form_error = $state("");
-  let passkey_error = $state("");
-
-  const reset = () => {
-    enterEmail = true;
-    isLoading = false;
-    email = "";
-    password = "";
-    form_error = "";
-  }
+  let passkeyError = $state("");
 
   const onSubmit = async () => {
     if(!enterEmail) {
       isLoading = true;
       form_error = "";
-      passkey_error = "";
+      passkeyError = "";
 
       let ret = await confirm(totp);
 
@@ -64,7 +53,7 @@
 
     isLoading = true;
     form_error = "";
-    passkey_error = "";
+    passkeyError = "";
 
     let ret = await login(email, password);
 
@@ -85,28 +74,30 @@
     }
   }
 
-  const passkey = async () => {
+  const passkeyClick = async () => {
     form_error = "";
-    passkey_error = "";
+    passkeyError = "";
+    isLoading = true;
 
     let ret = await authenticate();
+
+    isLoading = false;
+
     if(ret) {
       if(ret === AuthError.Passkey) {
-        passkey_error = "There was an Error with your passkey";
+        passkeyError = "There was an Error with your passkey";
       } else {
-        passkey_error = "There was an Error while signing in";
+        passkeyError = "There was an Error while signing in";
       }
     } else {
       goto("/");
     }
   }
 
-  onMount(async () => {
-    await fetch_key();
-  });
-
   if(get_token(TokenType.Auth)) {
-    goto("/");
+    goto("/", {
+      replaceState: true
+    });
   }
 </script>
 
@@ -125,21 +116,21 @@
       {:else}
         <div class="grid gap-1">
           <Label class="sr-only" for="email">TOTP</Label>
-          <InputOTP maxlength={6} bind:value={totp} class="flex w-full sm:w-[350px] justify-between" required autofocus>
+          <InputOtp.Root maxlength={6} bind:value={totp} class="flex w-full sm:w-[350px] justify-between" required autofocus>
             {#snippet children({ cells })}
-              <InputOtpGroup>
+              <InputOtp.Group>
                 {#each cells.slice(0, 3) as cell}
-                  <InputOtpSlot {cell} />
+                  <InputOtp.Slot {cell} />
                 {/each}
-              </InputOtpGroup>
-              <InputOtpSeparator />
-              <InputOtpGroup>
+              </InputOtp.Group>
+              <InputOtp.Separator />
+              <InputOtp.Group>
                 {#each cells.slice(3, 6) as cell}
-                  <InputOtpSlot {cell} />
+                  <InputOtp.Slot {cell} />
                 {/each}
-              </InputOtpGroup>
+              </InputOtp.Group>
             {/snippet}
-          </InputOTP>
+          </InputOtp.Root>
         </div>
       {/if}
       <span class="text-destructive truncate text-sm">{form_error}</span>
@@ -155,23 +146,5 @@
       </Button>
     </div>
   </form>
-  <div class="relative">
-    <div class="absolute inset-0 flex items-center">
-      <span class="w-full border-t"></span>
-    </div>
-    <div class="relative flex justify-center text-xs uppercase">
-      <span class="bg-background text-muted-foreground px-2">Or continue with </span>
-    </div>
-  </div>
-  {#if passkey_error !== ""}
-    <span class="text-destructive truncate text-sm">{passkey_error}</span>
-  {/if}
-  <Button variant="outline" type="button" disabled={isLoading} onclick={passkey}>
-    {#if isLoading}
-      <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-    {:else}
-      <Key class="mr-2 h-4 w-4" />
-    {/if}
-    Passkey
-  </Button>
+  <LoginOther {isLoading} {passkeyError} {passkeyClick} />
 </div>

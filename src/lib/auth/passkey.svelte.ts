@@ -2,7 +2,7 @@ import { PUBLIC_BACKEND_URL } from "$env/static/public"
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/types";
 import { get_token, set_token, TokenType } from "./token.svelte";
-import { AuthError } from "./error.svelte";
+import { AuthError, type Passkey } from "./types.svelte";
 
 export const register = async (name: string): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
@@ -146,5 +146,24 @@ export const special_access = async (): Promise<AuthError | undefined> => {
     set_token(special_access, TokenType.SpecialAccess);
   } catch (_) {
     return AuthError.Other;
+  }
+}
+
+export const list = async () => {
+  let token = get_token(TokenType.Auth);
+  if (!token) {
+    return;
+  }
+
+  try {
+    let res = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/list`, {
+      headers: {
+        Authorization: token,
+      },
+    });
+    let keys = await res.json() as Passkey[];
+    return keys;
+  } catch (_) {
+    return;
   }
 }

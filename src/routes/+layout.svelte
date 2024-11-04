@@ -2,14 +2,14 @@
   import { ModeWatcher } from "mode-watcher";
   import "../app.css";
   import { page } from "$app/stores";
-  import { Nav } from "$lib/components/nav";
-  import type { Option } from "$lib/components/nav";
   import { UserRound, Atom, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
   import { Separator } from "$lib/components/ui/separator";
   import { cn } from "$lib/utils";
   import { Button } from "$lib/components/ui/button";
   import { get_token, TokenType } from "$lib/auth/token.svelte";
   import { goto } from "$app/navigation";
+  import type { Option } from "$lib/components/nav/nav.svelte";
+  import Nav from "$lib/components/nav/nav.svelte";
   interface Props {
     children?: import('svelte').Snippet;
   }
@@ -33,7 +33,9 @@
   let isCollapsed = $state(true);
 
   if(!get_token(TokenType.Auth)) {
-    goto("/login");
+    goto("/login", {
+      replaceState: true,
+    });
   }
 </script>
 

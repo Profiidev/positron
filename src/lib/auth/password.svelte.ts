@@ -1,7 +1,7 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import JSEncrypt from "jsencrypt";
 import { get_token, get_token_type, set_token, TokenType } from "./token.svelte";
-import { AuthError } from "./error.svelte";
+import { AuthError } from "./types.svelte";
 
 let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
 
@@ -20,6 +20,8 @@ export const fetch_key = async (): Promise<AuthError | undefined> => {
     return AuthError.Other;
   }
 }
+
+fetch_key();
 
 export const login = async (email: string, password: string): Promise<AuthError | boolean> => {
   try {
@@ -41,6 +43,7 @@ export const login = async (email: string, password: string): Promise<AuthError 
     }
 
     if (login_res.status !== 200) {
+      fetch_key();
       return AuthError.Other;
     }
 
@@ -84,6 +87,7 @@ export const special_access = async (password: string): Promise<AuthError | unde
     }
 
     if (login_res.status !== 200) {
+      fetch_key();
       return AuthError.Other;
     }
 

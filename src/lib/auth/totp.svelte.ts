@@ -1,5 +1,5 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { AuthError } from "./error.svelte";
+import { AuthError } from "./types.svelte";
 import { get_token, set_token, TokenType } from "./token.svelte";
 
 export interface TotpCode {
