@@ -4,7 +4,7 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { get_token, set_token, TokenType } from "./token.svelte";
 import { AuthError } from "./error.svelte";
 
-export const register = async (): Promise<AuthError | undefined> => {
+export const register = async (name: string): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
     return AuthError.MissingToken;
@@ -41,7 +41,10 @@ export const register = async (): Promise<AuthError | undefined> => {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(ret),
+      body: JSON.stringify({
+        reg: ret,
+        name,
+      }),
     });
 
     if (ver.status !== 200) {

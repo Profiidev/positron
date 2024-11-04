@@ -60,10 +60,7 @@ async fn start_setup(
 
   state.reg_state.lock().await.insert(auth.uuid, totp);
 
-  Ok(Json(TotpSetupRes {
-    qr,
-    code,
-  }))
+  Ok(Json(TotpSetupRes { qr, code }))
 }
 
 #[post("/finish_setup", data = "<req>")]

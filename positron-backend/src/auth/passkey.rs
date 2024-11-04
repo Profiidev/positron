@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use base64::prelude::*;
+use chrono::{DateTime, Utc};
 use rocket::{
   get,
   http::Status,
@@ -8,7 +9,7 @@ use rocket::{
   serde::json::{self, Json},
   Route, State,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use surrealdb::Uuid;
 use webauthn_rs::{
   prelude::{
@@ -36,7 +37,9 @@ pub fn routes() -> Vec<Route> {
     start_authentication,
     finish_authentication,
     start_special_access,
-    finish_special_access
+    finish_special_access,
+    list,
+    remove,
   ]
   .into_iter()
   .flat_map(|route| route.map_base(|base| format!("{}{}", "/passkey", base)))
@@ -70,10 +73,16 @@ async fn start_registration(
   Ok(Json(ccr))
 }
 
+#[derive(Deserialize)]
+struct RegFinishReq {
+  reg: RegisterPublicKeyCredential,
+  name: String,
+}
+
 #[post("/finish_registration", data = "<reg>")]
 async fn finish_registration(
   auth: JwtSpecialAccess,
-  reg: Json<RegisterPublicKeyCredential>,
+  reg: Json<RegFinishReq>,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
@@ -84,7 +93,7 @@ async fn finish_registration(
   let mut states = state.reg_state.lock().await;
   let reg_state = states.remove(&uuid).ok_or(Error::BadRequest)?;
 
-  let key = webauthn.finish_passkey_registration(&reg, &reg_state)?;
+  let key = webauthn.finish_passkey_registration(&reg.reg, &reg_state)?;
 
   let json_key = json::to_string(&key)?;
   db.tables()
@@ -93,6 +102,7 @@ async fn finish_registration(
       data: json_key,
       cred_id: BASE64_STANDARD.encode(key.cred_id()),
       user: user.id,
+      name: reg.name.clone(),
     })
     .await?;
 
@@ -148,14 +158,15 @@ async fn finish_authentication(
 
   if res.needs_update() {
     passkey.update_credential(&res);
-    if let Ok(json_key) = json::to_string(&passkey) {
-      let _ = db
-        .tables()
-        .passkey()
-        .update_passkey_record(passkey_db.id, json_key)
-        .await;
-    }
   }
+
+  let json_key = json::to_string(&passkey)?;
+
+    let _ = db
+      .tables()
+      .passkey()
+      .update_passkey_record(passkey_db.id, json_key)
+      .await;
 
   Ok(jwt.create_token(user, JwtType::Auth)?)
 }
@@ -200,23 +211,46 @@ async fn finish_special_access(
 
   let res = webauthn.finish_passkey_authentication(&req, &auth_state)?;
 
+  let passkey_db = db
+    .tables()
+    .passkey()
+    .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
+    .await?;
+  let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+
   if res.needs_update() {
-    let passkey_db = db
+    passkey.update_credential(&res);
+  }
+
+  let json_key = json::to_string(&passkey)?;
+    let _ = db
       .tables()
       .passkey()
-      .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
-      .await?;
-    let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
-
-    passkey.update_credential(&res);
-    if let Ok(json_key) = json::to_string(&passkey) {
-      let _ = db
-        .tables()
-        .passkey()
-        .update_passkey_record(passkey_db.id, json_key)
-        .await;
-    }
-  }
+      .update_passkey_record(passkey_db.id, json_key)
+      .await;
 
   Ok(jwt.create_token(auth.uuid, JwtType::SpecialAccess)?)
 }
+
+#[derive(Serialize)]
+struct PasskeyInfo {
+  name: String,
+  created: DateTime<Utc>,
+  used: DateTime<Utc>,
+}
+
+#[get("/list")]
+async fn list(auth: JwtAuth, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+
+  let ret = passkeys
+    .into_iter()
+    .map(|p| PasskeyInfo { name: p.name, created: p.created, used: p.used })
+    .collect();
+
+  Ok(Json(ret))
+}
+
+#[post("/remove")]
+async fn remove(auth: JwtSpecialAccess) {}

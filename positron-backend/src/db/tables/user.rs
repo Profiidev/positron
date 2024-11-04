@@ -100,7 +100,7 @@ impl<'db> UserTable<'db> {
       .query("UPDATE user SET totp = $totp WHERE uuid = $uuid")
       .bind(TotpUpdate {
         uuid: uuid.to_string(),
-        totp: secret
+        totp: secret,
       })
       .await?;
 

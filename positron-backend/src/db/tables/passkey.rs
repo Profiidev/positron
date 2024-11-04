@@ -1,8 +1,10 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PasskeyCreate {
+  pub name: String,
   pub data: String,
   pub cred_id: String,
   pub user: Thing,
@@ -10,10 +12,13 @@ pub struct PasskeyCreate {
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd)]
 pub struct Passkey {
+  pub name: String,
   pub id: Thing,
   pub data: String,
   pub cred_id: String,
   pub user: Thing,
+  pub created: DateTime<Utc>,
+  pub used: DateTime<Utc>,
 }
 
 #[derive(Serialize)]
@@ -38,9 +43,12 @@ impl<'db> PasskeyTable<'db> {
         "
         DEFINE TABLE IF NOT EXISTS passkey SCHEMAFULL;
 
+        DEFINE FIELD IF NOT EXISTS name ON TABLE passkey TYPE string;
         DEFINE FIELD IF NOT EXISTS data ON TABLE passkey TYPE string;
         DEFINE FIELD IF NOT EXISTS cred_id ON TABLE passkey TYPE string;
         DEFINE FIELD IF NOT EXISTS user ON TABLE passkey TYPE record<user>;
+        DEFINE FIELD IF NOT EXISTS created ON TABLE passkey TYPE datetime DEFAULT time::now();
+        DEFINE FIELD IF NOT EXISTS used ON TABLE passkey TYPE datetime DEFAULT time::now();
       ",
       )
       .await?;
@@ -81,7 +89,7 @@ impl<'db> PasskeyTable<'db> {
   pub async fn update_passkey_record(&self, id: Thing, data: String) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE $id SET data = $data")
+      .query("UPDATE $id SET data = $data, used = time::now()")
       .bind(PasskeyUpdate { id, data })
       .await?;
     Ok(())
