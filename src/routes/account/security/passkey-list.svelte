@@ -7,7 +7,7 @@
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { DateTime } from "luxon";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { AuthError } from "$lib/auth/types.svelte";
+  import { AuthError, type Passkey } from "$lib/auth/types.svelte";
   import { edit_name, list, register, remove } from "$lib/auth/passkey.svelte";
   import { cn } from "$lib/utils";
   import { Separator } from "$lib/components/ui/separator";
@@ -16,7 +16,8 @@
   let createName = $state("");
   let createDialogOpen = $state(false);
   let isLoading = $state(false);
-  let passkeysPromise = $state(list());
+  let passkeys: Passkey[] | undefined = $state();
+  let passkeysPromise = $state(list().then(pks => passkeys = pks));
   let editName = $state("");
   let editError = $state("");
   let editDialogOpen = $state(false);
@@ -45,8 +46,9 @@
         createError = "There was an error while creating passkey";
       }
     } else {
+      createName = "";
       createDialogOpen = false;
-      passkeysPromise = list();
+      list().then(pks => passkeys = pks);
     }
   };
 
@@ -62,7 +64,7 @@
       //error
     } else {
       removeDialogOpen = false;
-      passkeysPromise = list();
+      list().then(pks => passkeys = pks);
     }
   };
 
@@ -93,7 +95,7 @@
       }
     } else {
       editDialogOpen = false;
-      passkeysPromise = list();
+      list().then(pks => passkeys = pks);
     }
   };
 </script>
@@ -171,7 +173,7 @@
       <Skeleton class="m-2 ml-auto size-10" />
       <Skeleton class="m-2 size-10" />
     </div>
-  {:then passkeys}
+  {:then}
     {#if passkeys}
       {#each passkeys as passkey}
         <Separator />
