@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { preventDefault } from 'svelte/legacy';
+  import { preventDefault } from "svelte/legacy";
 
   import { cn } from "$lib/utils";
   import { LoaderCircle } from "lucide-svelte";
-  import { Button } from "../ui/button/index";
-  import { Input } from "../ui/input/index";
-  import { Label } from "../ui/label/index";
-  import { login } from '$lib/auth/password.svelte';
-  import { AuthError } from '$lib/auth/types.svelte';
-  import { goto } from '$app/navigation';
-  import { confirm } from '$lib/auth/totp.svelte';
-  import { get_token, TokenType } from '$lib/auth/token.svelte';
-  import * as InputOtp from '../ui/input-otp';
-  import { authenticate } from '$lib/auth/passkey.svelte';
-  import LoginOther from './login-other.svelte';
+  import { Button } from "../../lib/components/ui/button/index";
+  import { Input } from "../../lib/components/ui/input/index";
+  import { Label } from "../../lib/components/ui/label/index";
+  import { login } from "$lib/auth/password.svelte";
+  import { AuthError } from "$lib/auth/types.svelte";
+  import { goto } from "$app/navigation";
+  import { confirm } from "$lib/auth/totp.svelte";
+  import { get_token, TokenType } from "$lib/auth/token.svelte";
+  import * as InputOtp from "../../lib/components/ui/input-otp";
+  import { authenticate } from "$lib/auth/passkey.svelte";
+  import LoginOther from "../../lib/components/form/login-other-options.svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -30,7 +30,7 @@
   let passkeyError = $state("");
 
   const onSubmit = async () => {
-    if(!enterEmail) {
+    if (!enterEmail) {
       isLoading = true;
       form_error = "";
       passkeyError = "";
@@ -39,8 +39,8 @@
 
       isLoading = false;
 
-      if(ret) {
-        if(ret === AuthError.Totp) {
+      if (ret) {
+        if (ret === AuthError.Totp) {
           form_error = "Wrong TOTP Code";
         } else {
           form_error = "There was and Error while checking TOTP Code";
@@ -60,19 +60,19 @@
     isLoading = false;
 
     if (typeof ret === "boolean") {
-      if(ret) {
+      if (ret) {
         enterEmail = false;
       } else {
         goto("/");
       }
     } else {
-      if(ret === AuthError.Password) {
+      if (ret === AuthError.Password) {
         form_error = "Wrong Email or Password";
       } else {
         form_error = "There was an Error while signing in";
       }
     }
-  }
+  };
 
   const passkeyClick = async () => {
     form_error = "";
@@ -83,8 +83,8 @@
 
     isLoading = false;
 
-    if(ret) {
-      if(ret === AuthError.Passkey) {
+    if (ret) {
+      if (ret === AuthError.Passkey) {
         passkeyError = "There was an Error with your passkey";
       } else {
         passkeyError = "There was an Error while signing in";
@@ -92,11 +92,11 @@
     } else {
       goto("/");
     }
-  }
+  };
 
-  if(get_token(TokenType.Auth)) {
+  if (get_token(TokenType.Auth)) {
     goto("/", {
-      replaceState: true
+      replaceState: true,
     });
   }
 </script>
@@ -107,16 +107,43 @@
       {#if enterEmail}
         <div class="grid gap-1">
           <Label class="sr-only" for="email">Email</Label>
-          <Input id="email" placeholder="name@example.com" type="email" autocapitalize="none" autocomplete="email" autocorrect="off" disabled={isLoading} required autofocus bind:value={email} />
+          <Input
+            id="email"
+            placeholder="name@example.com"
+            type="email"
+            autocapitalize="none"
+            autocomplete="email"
+            autocorrect="off"
+            disabled={isLoading}
+            required
+            autofocus
+            bind:value={email}
+          />
         </div>
         <div class="grid gap-1">
           <Label class="sr-only" for="password">Password</Label>
-          <Input id="password" placeholder="Password" type="password" autocapitalize="none" autocomplete="current-password" autocorrect="off" disabled={isLoading} required bind:value={password} />
+          <Input
+            id="password"
+            placeholder="Password"
+            type="password"
+            autocapitalize="none"
+            autocomplete="current-password"
+            autocorrect="off"
+            disabled={isLoading}
+            required
+            bind:value={password}
+          />
         </div>
       {:else}
         <div class="grid gap-1">
           <Label class="sr-only" for="email">TOTP</Label>
-          <InputOtp.Root maxlength={6} bind:value={totp} class="flex w-full sm:w-[350px] justify-between" required autofocus>
+          <InputOtp.Root
+            maxlength={6}
+            bind:value={totp}
+            class="flex w-full sm:w-[350px] justify-between"
+            required
+            autofocus
+          >
             {#snippet children({ cells })}
               <InputOtp.Group>
                 {#each cells.slice(0, 3) as cell}

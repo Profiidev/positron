@@ -6,13 +6,9 @@
     isLoading: boolean;
     passkeyClick: () => void;
     passkeyError: string;
-  };
+  }
 
-  let {
-    isLoading,
-    passkeyClick,
-    passkeyError,
-  }: Props = $props();
+  let { isLoading, passkeyClick, passkeyError }: Props = $props();
 </script>
 
 <div class="relative">
@@ -20,13 +16,20 @@
     <span class="w-full border-t"></span>
   </div>
   <div class="relative flex justify-center text-xs uppercase">
-    <span class="bg-background text-muted-foreground px-2">Or continue with </span>
+    <span class="bg-background text-muted-foreground px-2"
+      >Or continue with
+    </span>
   </div>
 </div>
 {#if passkeyError !== ""}
   <span class="text-destructive truncate text-sm">{passkeyError}</span>
 {/if}
-<Button variant="outline" type="button" disabled={isLoading} onclick={passkeyClick}>
+<Button
+  variant="outline"
+  type="button"
+  disabled={isLoading}
+  onclick={passkeyClick}
+>
   {#if isLoading}
     <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
   {:else}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Sidebar from "$lib/components/nav/sidebar.svelte";
+  import Sidebar from "$lib/components/nav/simple-sidebar.svelte";
   import Separator from "$lib/components/ui/separator/separator.svelte";
 
   const { children } = $props();

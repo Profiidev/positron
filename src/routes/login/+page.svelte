@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Login from "$lib/components/form/login.svelte";
+  import Login from "./login-form.svelte";
 </script>
 
 <div class="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-0">
