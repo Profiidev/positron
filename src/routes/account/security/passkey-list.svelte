@@ -17,11 +17,12 @@
   let createDialogOpen = $state(false);
   let isLoading = $state(false);
   let passkeys: Passkey[] | undefined = $state();
-  let passkeysPromise = $state(list().then(pks => passkeys = pks));
+  let passkeysPromise = $state(list().then((pks) => (passkeys = pks)));
   let editName = $state("");
   let editError = $state("");
   let editDialogOpen = $state(false);
   let removeDialogOpen = $state(false);
+  let removeError = $state("");
   let editing = $state("");
 
   const createPasskey = async () => {
@@ -48,27 +49,29 @@
     } else {
       createName = "";
       createDialogOpen = false;
-      list().then(pks => passkeys = pks);
+      list().then((pks) => (passkeys = pks));
     }
   };
 
   const startDeletePasskey = (name: string) => {
+    removeError = "";
     editing = name;
     removeDialogOpen = true;
-  }
+  };
 
   const deletePasskey = async () => {
     let ret = await remove(editing);
 
     if (ret) {
-      //error
+      removeError = "There was an error while deleting your passkey";
     } else {
       removeDialogOpen = false;
-      list().then(pks => passkeys = pks);
+      list().then((pks) => (passkeys = pks));
     }
   };
 
   const startEditPasskey = (name: string) => {
+    editError = "";
     editing = name;
     editDialogOpen = true;
     editName = name;
@@ -95,7 +98,7 @@
       }
     } else {
       editDialogOpen = false;
-      list().then(pks => passkeys = pks);
+      list().then((pks) => (passkeys = pks));
     }
   };
 </script>
@@ -115,14 +118,16 @@
             >Enter the name for your new passkey</Dialog.Description
           >
         </Dialog.Header>
-        <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-        <Input id="passkey_name" placeholder="Name" bind:value={createName} />
-        {#if createError !== ""}
-          <span class="text-destructive truncate text-sm">{createError}</span>
-        {/if}
-        <Dialog.Footer>
-          <Button onclick={createPasskey} disabled={isLoading}>Create</Button>
-        </Dialog.Footer>
+        <form onsubmit={createPasskey}>
+          <Label for="passkey_name" class="sr-only">Passkey Name</Label>
+          <Input id="passkey_name" placeholder="Name" bind:value={createName} />
+          {#if createError !== ""}
+            <span class="text-destructive truncate text-sm">{createError}</span>
+          {/if}
+          <Dialog.Footer class="mt-4">
+            <Button type="submit" disabled={isLoading}>Create</Button>
+          </Dialog.Footer>
+        </form>
       </Dialog.Content>
     </Dialog.Root>
     <Dialog.Root bind:open={editDialogOpen}>
@@ -133,25 +138,37 @@
             >Enter a new name for your passkey</Dialog.Description
           >
         </Dialog.Header>
-        <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-        <Input id="passkey_name" placeholder="Name" bind:value={editName} />
-        {#if editError !== ""}
-          <span class="text-destructive truncate text-sm">{editError}</span>
-        {/if}
-        <Dialog.Footer>
-          <Button onclick={editPasskey} disabled={isLoading}>Confirm</Button>
-        </Dialog.Footer>
+        <form onsubmit={editPasskey}>
+          <Label for="passkey_name" class="sr-only">Passkey Name</Label>
+          <Input id="passkey_name" placeholder="Name" bind:value={editName} />
+          {#if editError !== ""}
+            <span class="text-destructive truncate text-sm">{editError}</span>
+          {/if}
+          <Dialog.Footer class="mt-4">
+            <Button type="submit" disabled={isLoading}>Confirm</Button>
+          </Dialog.Footer>
+        </form>
       </Dialog.Content>
     </Dialog.Root>
     <AlertDialog.Root bind:open={removeDialogOpen}>
       <AlertDialog.Content>
         <AlertDialog.Header>
-          <AlertDialog.Title>Do you want to delete this Passkey?</AlertDialog.Title>
-          <AlertDialog.Description>This will permanently remove the "{editing}" passkey from your account</AlertDialog.Description>
+          <AlertDialog.Title
+            >Do you want to delete this Passkey?</AlertDialog.Title
+          >
+          <AlertDialog.Description
+            >This will permanently remove the "{editing}" passkey from your
+            account</AlertDialog.Description
+          >
         </AlertDialog.Header>
+        {#if removeError !== ""}
+          <span class="text-destructive truncate text-sm">{removeError}</span>
+        {/if}
         <AlertDialog.Footer>
           <AlertDialog.Cancel disabled={isLoading}>Cancel</AlertDialog.Cancel>
-          <AlertDialog.Action disabled={isLoading} onclick={deletePasskey}>Confirm</AlertDialog.Action>
+          <AlertDialog.Action disabled={isLoading} onclick={deletePasskey}
+            >Confirm</AlertDialog.Action
+          >
         </AlertDialog.Footer>
       </AlertDialog.Content>
     </AlertDialog.Root>
