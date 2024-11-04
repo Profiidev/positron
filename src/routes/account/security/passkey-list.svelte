@@ -233,9 +233,7 @@
         </div>
       {/each}
     {:else}
-      <div class="hover:bg-transparent">
-        <div class="flex justify-center rounded-lg">No passkeys found</div>
-      </div>
+      <div class="flex justify-center rounded-lg m-5">No passkeys found</div>
     {/if}
   {/await}
 </div>
