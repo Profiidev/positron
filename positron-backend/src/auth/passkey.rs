@@ -91,7 +91,12 @@ async fn finish_registration(
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
 
-  if db.tables().passkey().passkey_name_exists(user.id.clone(), reg.name.clone()).await? {
+  if db
+    .tables()
+    .passkey()
+    .passkey_name_exists(user.id.clone(), reg.name.clone())
+    .await?
+  {
     return Err(Error::Conflict);
   }
 
@@ -167,11 +172,11 @@ async fn finish_authentication(
 
   let json_key = json::to_string(&passkey)?;
 
-    let _ = db
-      .tables()
-      .passkey()
-      .update_passkey_record(passkey_db.id, json_key)
-      .await;
+  let _ = db
+    .tables()
+    .passkey()
+    .update_passkey_record(passkey_db.id, json_key)
+    .await;
 
   Ok(jwt.create_token(user, JwtType::Auth)?)
 }
@@ -228,11 +233,11 @@ async fn finish_special_access(
   }
 
   let json_key = json::to_string(&passkey)?;
-    let _ = db
-      .tables()
-      .passkey()
-      .update_passkey_record(passkey_db.id, json_key)
-      .await;
+  let _ = db
+    .tables()
+    .passkey()
+    .update_passkey_record(passkey_db.id, json_key)
+    .await;
 
   Ok(jwt.create_token(auth.uuid, JwtType::SpecialAccess)?)
 }
@@ -251,7 +256,11 @@ async fn list(auth: JwtAuth, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
 
   let ret = passkeys
     .into_iter()
-    .map(|p| PasskeyInfo { name: p.name, created: p.created, used: p.used })
+    .map(|p| PasskeyInfo {
+      name: p.name,
+      created: p.created,
+      used: p.used,
+    })
     .collect();
 
   Ok(Json(ret))
@@ -266,7 +275,10 @@ struct PasskeyRemove {
 async fn remove(req: Json<PasskeyRemove>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
 
-  db.tables().passkey().remove_passkey_by_name(user.id, req.name.clone()).await?;
+  db.tables()
+    .passkey()
+    .remove_passkey_by_name(user.id, req.name.clone())
+    .await?;
 
   Ok(())
 }
@@ -281,7 +293,19 @@ struct PasskeyEdit {
 async fn edit_name(req: Json<PasskeyEdit>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
 
-  db.tables().passkey().edit_passkey_name(user.id, req.name.clone(), req.old_name.clone()).await?;
-  
+  if db
+    .tables()
+    .passkey()
+    .passkey_name_exists(user.id.clone(), req.name.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
+
+  db.tables()
+    .passkey()
+    .edit_passkey_name(user.id, req.name.clone(), req.old_name.clone())
+    .await?;
+
   Ok(())
 }

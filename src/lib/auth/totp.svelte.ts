@@ -9,7 +9,7 @@ export interface TotpCode {
 
 export const is_code = (object: any): object is TotpCode => {
   return "qr" in object;
-}
+};
 
 export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
   let token = get_token(TokenType.SpecialAccess);
@@ -21,7 +21,7 @@ export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
     let code_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/totp/start_setup`, {
       headers: {
         Authorization: token,
-      }
+      },
     });
 
     if (code_res.status !== 200) {
@@ -34,9 +34,11 @@ export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
-export const confirm_setup = async (code: string): Promise<AuthError | undefined> => {
+export const confirm_setup = async (
+  code: string,
+): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
     return AuthError.MissingToken;
@@ -50,7 +52,7 @@ export const confirm_setup = async (code: string): Promise<AuthError | undefined
         Authorization: token,
       },
       body: JSON.stringify({
-        code
+        code,
       }),
     });
 
@@ -64,7 +66,7 @@ export const confirm_setup = async (code: string): Promise<AuthError | undefined
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
 export const confirm = async (code: string): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.TotpRequired);
@@ -80,7 +82,7 @@ export const confirm = async (code: string): Promise<AuthError | undefined> => {
         Authorization: token,
       },
       body: JSON.stringify({
-        code
+        code,
       }),
     });
 
@@ -97,4 +99,4 @@ export const confirm = async (code: string): Promise<AuthError | undefined> => {
   } catch (_) {
     return AuthError.Other;
   }
-}
+};

@@ -1,6 +1,11 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import JSEncrypt from "jsencrypt";
-import { get_token, get_token_type, set_token, TokenType } from "./token.svelte";
+import {
+  get_token,
+  get_token_type,
+  set_token,
+  TokenType,
+} from "./token.svelte";
 import { AuthError } from "./types.svelte";
 
 let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
@@ -19,24 +24,30 @@ export const fetch_key = async (): Promise<AuthError | undefined> => {
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
 fetch_key();
 
-export const login = async (email: string, password: string): Promise<AuthError | boolean> => {
+export const login = async (
+  email: string,
+  password: string,
+): Promise<AuthError | boolean> => {
   try {
     let encrypted_password = encrypt.encrypt(password);
 
-    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/authenticate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    let login_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/password/authenticate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password: encrypted_password,
+        }),
       },
-      body: JSON.stringify({
-        email,
-        password: encrypted_password,
-      }),
-    });
+    );
 
     if (login_res.status === 401) {
       return AuthError.Password;
@@ -62,7 +73,9 @@ export const login = async (email: string, password: string): Promise<AuthError 
   }
 };
 
-export const special_access = async (password: string): Promise<AuthError | undefined> => {
+export const special_access = async (
+  password: string,
+): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.Auth);
   if (!token) {
     return AuthError.MissingToken;
@@ -71,16 +84,19 @@ export const special_access = async (password: string): Promise<AuthError | unde
   try {
     let encrypted_password = encrypt.encrypt(password);
 
-    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/special_access`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
+    let login_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/password/special_access`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          password: encrypted_password,
+        }),
       },
-      body: JSON.stringify({
-        password: encrypted_password,
-      }),
-    });
+    );
 
     if (login_res.status === 401) {
       return AuthError.Password;

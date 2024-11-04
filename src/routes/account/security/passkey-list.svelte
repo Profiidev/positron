@@ -1,31 +1,38 @@
 <script lang="ts">
   import { Button, buttonVariants } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { DateTime } from "luxon";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { AuthError } from "$lib/auth/types.svelte";
-  import { list, register } from "$lib/auth/passkey.svelte";
+  import { edit_name, list, register, remove } from "$lib/auth/passkey.svelte";
   import { cn } from "$lib/utils";
   import { Separator } from "$lib/components/ui/separator";
 
   let createError = $state("");
-  let name = $state("");
-  let dialogOpen = $state(false);
+  let createName = $state("");
+  let createDialogOpen = $state(false);
   let isLoading = $state(false);
   let passkeysPromise = $state(list());
+  let editName = $state("");
+  let editError = $state("");
+  let editDialogOpen = $state(false);
+  let removeDialogOpen = $state(false);
+  let editing = $state("");
 
   const createPasskey = async () => {
-    if (name === "") {
+    if (createName === "") {
       createError = "No Name provided";
       return;
     }
 
+    createError = "";
     isLoading = true;
 
-    let ret = await register(name);
+    let ret = await register(createName);
 
     isLoading = false;
 
@@ -38,7 +45,54 @@
         createError = "There was an error while creating passkey";
       }
     } else {
-      dialogOpen = false;
+      createDialogOpen = false;
+      passkeysPromise = list();
+    }
+  };
+
+  const startDeletePasskey = (name: string) => {
+    editing = name;
+    removeDialogOpen = true;
+  }
+
+  const deletePasskey = async () => {
+    let ret = await remove(editing);
+
+    if (ret) {
+      //error
+    } else {
+      removeDialogOpen = false;
+      passkeysPromise = list();
+    }
+  };
+
+  const startEditPasskey = (name: string) => {
+    editing = name;
+    editDialogOpen = true;
+    editName = name;
+  };
+
+  const editPasskey = async () => {
+    if (editName === "") {
+      editError = "No Name provided";
+      return;
+    }
+
+    editError = "";
+    isLoading = true;
+
+    let ret = await edit_name(editName, editing);
+
+    isLoading = false;
+
+    if (ret) {
+      if (ret === AuthError.Conflict) {
+        editError = "Name already taken";
+      } else {
+        editError = "There was an error while editing passkey name";
+      }
+    } else {
+      editDialogOpen = false;
       passkeysPromise = list();
     }
   };
@@ -47,7 +101,7 @@
 <div class="border rounded-xl">
   <div class="flex items-center p-3">
     <p class="rounded-lg text-muted-foreground">Your Passkeys</p>
-    <Dialog.Root bind:open={dialogOpen}>
+    <Dialog.Root bind:open={createDialogOpen}>
       <Dialog.Trigger
         class={cn("ml-auto", buttonVariants({ variant: "secondary" }))}
         >Create new</Dialog.Trigger
@@ -60,19 +114,45 @@
           >
         </Dialog.Header>
         <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-        <Input id="passkey_name" placeholder="Name" bind:value={name} />
+        <Input id="passkey_name" placeholder="Name" bind:value={createName} />
         {#if createError !== ""}
-          <span class="text-destructive truncate text-sm"
-            >{createError}</span
-          >
+          <span class="text-destructive truncate text-sm">{createError}</span>
         {/if}
         <Dialog.Footer>
-          <Button onclick={createPasskey} disabled={isLoading}
-            >Create</Button
-          >
+          <Button onclick={createPasskey} disabled={isLoading}>Create</Button>
         </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
+    <Dialog.Root bind:open={editDialogOpen}>
+      <Dialog.Content>
+        <Dialog.Header>
+          <Dialog.Title>Change Passkey Name</Dialog.Title>
+          <Dialog.Description
+            >Enter a new name for your passkey</Dialog.Description
+          >
+        </Dialog.Header>
+        <Label for="passkey_name" class="sr-only">Passkey Name</Label>
+        <Input id="passkey_name" placeholder="Name" bind:value={editName} />
+        {#if editError !== ""}
+          <span class="text-destructive truncate text-sm">{editError}</span>
+        {/if}
+        <Dialog.Footer>
+          <Button onclick={editPasskey} disabled={isLoading}>Confirm</Button>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog.Root>
+    <AlertDialog.Root bind:open={removeDialogOpen}>
+      <AlertDialog.Content>
+        <AlertDialog.Header>
+          <AlertDialog.Title>Do you want to delete this Passkey?</AlertDialog.Title>
+          <AlertDialog.Description>This will permanently remove the "{editing}" passkey from your account</AlertDialog.Description>
+        </AlertDialog.Header>
+        <AlertDialog.Footer>
+          <AlertDialog.Cancel disabled={isLoading}>Cancel</AlertDialog.Cancel>
+          <AlertDialog.Action disabled={isLoading} onclick={deletePasskey}>Confirm</AlertDialog.Action>
+        </AlertDialog.Footer>
+      </AlertDialog.Content>
+    </AlertDialog.Root>
   </div>
   <Separator />
   {#await passkeysPromise}
@@ -115,10 +195,20 @@
               </p>
             </div>
           </div>
-          <Button variant="outline" size="icon" class="m-2 ml-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            class="m-2 ml-auto"
+            onclick={() => startEditPasskey(passkey.name)}
+          >
             <Pencil />
           </Button>
-          <Button variant="destructive" size="icon" class="m-2">
+          <Button
+            variant="destructive"
+            size="icon"
+            class="m-2"
+            onclick={() => startDeletePasskey(passkey.name)}
+          >
             <Trash />
           </Button>
         </div>

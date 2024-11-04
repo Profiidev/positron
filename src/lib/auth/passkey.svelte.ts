@@ -1,10 +1,18 @@
-import { PUBLIC_BACKEND_URL } from "$env/static/public"
-import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
-import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/types";
+import { PUBLIC_BACKEND_URL } from "$env/static/public";
+import {
+  startAuthentication,
+  startRegistration,
+} from "@simplewebauthn/browser";
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from "@simplewebauthn/types";
 import { get_token, set_token, TokenType } from "./token.svelte";
 import { AuthError, type Passkey } from "./types.svelte";
 
-export const register = async (name: string): Promise<AuthError | undefined> => {
+export const register = async (
+  name: string,
+): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
     return AuthError.MissingToken;
@@ -12,17 +20,21 @@ export const register = async (name: string): Promise<AuthError | undefined> => 
 
   let optionsJSON: PublicKeyCredentialCreationOptionsJSON;
   try {
-    let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_registration`, {
-      headers: {
-        Authorization: token,
+    let start = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/start_registration`,
+      {
+        headers: {
+          Authorization: token,
+        },
       },
-    });
+    );
 
     if (start.status !== 200) {
       return AuthError.Other;
     }
 
-    optionsJSON = (await start.json()).publicKey as PublicKeyCredentialCreationOptionsJSON;
+    optionsJSON = (await start.json())
+      .publicKey as PublicKeyCredentialCreationOptionsJSON;
   } catch (_) {
     return AuthError.Other;
   }
@@ -35,17 +47,20 @@ export const register = async (name: string): Promise<AuthError | undefined> => 
   }
 
   try {
-    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_registration`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
+    let ver = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/finish_registration`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          reg: ret,
+          name,
+        }),
       },
-      body: JSON.stringify({
-        reg: ret,
-        name,
-      }),
-    });
+    );
 
     if (ver.status === 409) {
       return AuthError.Conflict;
@@ -57,12 +72,14 @@ export const register = async (name: string): Promise<AuthError | undefined> => 
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
 export const authenticate = async (): Promise<AuthError | undefined> => {
   let start_json;
   try {
-    let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_authentication`);
+    let start = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/start_authentication`,
+    );
 
     if (start.status !== 200) {
       return AuthError.Other;
@@ -73,7 +90,8 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
     return AuthError.Other;
   }
 
-  let optionsJSON = start_json.res.publicKey as PublicKeyCredentialRequestOptionsJSON;
+  let optionsJSON = start_json.res
+    .publicKey as PublicKeyCredentialRequestOptionsJSON;
 
   let ret;
   try {
@@ -83,13 +101,16 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
   }
 
   try {
-    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_authentication/${start_json.id}`, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
+    let ver = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/finish_authentication/${start_json.id}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(ret),
       },
-      body: JSON.stringify(ret),
-    });
+    );
 
     if (ver.status !== 200) {
       return AuthError.Other;
@@ -100,7 +121,7 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
   } catch (e) {
     return AuthError.Other;
   }
-}
+};
 
 export const special_access = async (): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.Auth);
@@ -110,17 +131,21 @@ export const special_access = async (): Promise<AuthError | undefined> => {
 
   let optionsJSON: PublicKeyCredentialRequestOptionsJSON;
   try {
-    let start = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/start_special_access`, {
-      headers: {
-        Authorization: token,
+    let start = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/start_special_access`,
+      {
+        headers: {
+          Authorization: token,
+        },
       },
-    });
+    );
 
     if (start.status !== 200) {
       return AuthError.Other;
     }
 
-    optionsJSON = (await start.json()).publicKey as PublicKeyCredentialCreationOptionsJSON;
+    optionsJSON = (await start.json())
+      .publicKey as PublicKeyCredentialCreationOptionsJSON;
   } catch (_) {
     return AuthError.Other;
   }
@@ -133,14 +158,17 @@ export const special_access = async (): Promise<AuthError | undefined> => {
   }
 
   try {
-    let ver = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/finish_special_access`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
+    let ver = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/passkey/finish_special_access`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(ret),
       },
-      body: JSON.stringify(ret),
-    });
+    );
 
     if (ver.status !== 200) {
       return AuthError.Other;
@@ -151,7 +179,7 @@ export const special_access = async (): Promise<AuthError | undefined> => {
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
 export const list = async () => {
   let token = get_token(TokenType.Auth);
@@ -165,9 +193,64 @@ export const list = async () => {
         Authorization: token,
       },
     });
-    let keys = await res.json() as Passkey[];
+    let keys = (await res.json()) as Passkey[];
     return keys;
   } catch (_) {
     return;
   }
-}
+};
+
+export const remove = async (name: string) => {
+  let token = get_token(TokenType.SpecialAccess);
+  if (!token) {
+    return AuthError.Other;
+  }
+
+  try {
+    let res = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/remove`, {
+      method: "POST",
+      headers: {
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        name,
+      }),
+    });
+
+    if (res.status !== 200) {
+      return AuthError.Other;
+    }
+  } catch (_) {
+    return AuthError.Other;
+  }
+};
+
+export const edit_name = async (name: string, old_name: string) => {
+  let token = get_token(TokenType.SpecialAccess);
+  if (!token) {
+    return AuthError.Other;
+  }
+
+  try {
+    let res = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/edit_name`, {
+      method: "POST",
+      headers: {
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        name,
+        old_name,
+      }),
+    });
+
+    if (res.status === 409) {
+      return AuthError.Conflict;
+    }
+
+    if (res.status !== 200) {
+      return AuthError.Other;
+    }
+  } catch (_) {
+    return AuthError.Other;
+  }
+};

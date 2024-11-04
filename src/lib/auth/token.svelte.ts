@@ -2,7 +2,7 @@ export enum TokenType {
   Auth = "Auth",
   SpecialAccess = "SpecialAccess",
   TotpRequired = "TotpRequired",
-};
+}
 
 type Claims = {
   exp: number;
@@ -21,7 +21,7 @@ $effect.root(() => {
     } else {
       localStorage.removeItem("token");
     }
-  })
+  });
 });
 
 export const get_token = (type: TokenType) => {
@@ -32,7 +32,7 @@ export const get_token = (type: TokenType) => {
       return other;
     }
   }
-}
+};
 
 export const set_token = (token: string, type: TokenType) => {
   if (type === TokenType.Auth) {
@@ -40,27 +40,27 @@ export const set_token = (token: string, type: TokenType) => {
   } else {
     other = token;
   }
-}
+};
 
 export const get_token_type = (token: string) => {
   return get_claims(token).type;
-}
+};
 
 export const clear_tokens = () => {
   auth = null;
   other = undefined;
-}
+};
 
 const get_claims = (token: string) => {
   let claims_part = token.split(".")[1];
   return JSON.parse(atob(claims_part)) as Claims;
-}
+};
 
 const get_valid_for = (token: string) => {
   return get_valid_for_claims(get_claims(token));
-}
+};
 
 const get_valid_for_claims = (token: Claims) => {
   let timestamp = Math.floor(new Date().getTime() / 1000);
   return token.exp - timestamp;
-}
+};

@@ -27,6 +27,19 @@ struct PasskeyUpdate {
   data: String,
 }
 
+#[derive(Serialize)]
+struct PasskeyRemove {
+  name: String,
+  user: Thing,
+}
+
+#[derive(Serialize)]
+struct PasskeyEdit {
+  name: String,
+  old_name: String,
+  user: Thing,
+}
+
 pub struct PasskeyTable<'db> {
   db: &'db Surreal<Client>,
 }
@@ -95,18 +108,39 @@ impl<'db> PasskeyTable<'db> {
     Ok(())
   }
 
-  pub async fn edit_passkey_name(&self, user: Thing, name: String, old_name: String) -> Result<(), Error> {
-    self.db.query("UPDATE passkey SET name = $name WHERE name = $old_name && user = $user").bind(("name", name, "old_name", old_name, "user", user)).await?;
+  pub async fn edit_passkey_name(
+    &self,
+    user: Thing,
+    name: String,
+    old_name: String,
+  ) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE passkey SET name = $name WHERE name = $old_name && user = $user")
+      .bind(PasskeyEdit {
+        name,
+        user,
+        old_name,
+      })
+      .await?;
     Ok(())
   }
 
   pub async fn remove_passkey_by_name(&self, user: Thing, name: String) -> Result<(), Error> {
-    self.db.query("DELETE passkey WHERE name = $name && user = $user").bind(("name", name, "user", user)).await?;
+    self
+      .db
+      .query("DELETE passkey WHERE name = $name && user = $user")
+      .bind(PasskeyRemove { name, user })
+      .await?;
     Ok(())
   }
 
   pub async fn passkey_name_exists(&self, user: Thing, name: String) -> Result<bool, Error> {
-    let mut res = self.db.query("SELECT * FROM passkey WHERE name = $name && user = $user").bind(("name", name, "user", user)).await?;
+    let mut res = self
+      .db
+      .query("SELECT * FROM passkey WHERE name = $name && user = $user")
+      .bind(PasskeyRemove { name, user })
+      .await?;
     let keys: Vec<Passkey> = res.take(0).unwrap_or_default();
     Ok(!keys.is_empty())
   }

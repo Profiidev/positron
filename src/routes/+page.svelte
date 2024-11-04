@@ -1,7 +1,6 @@
 <script lang="ts">
   import { AuthError } from "$lib/auth/types.svelte";
-  import { register } from "$lib/auth/passkey.svelte";
-  import { clear_tokens, get_token, TokenType } from "$lib/auth/token.svelte";
+  import { clear_tokens } from "$lib/auth/token.svelte";
   import { confirm_setup, get_setup_code, is_code } from "$lib/auth/totp.svelte";
   import Button from "$lib/components/ui/button/button.svelte";
 
@@ -47,12 +46,6 @@
   <Button onclick={logout}>Logout</Button>
   <p>Totp</p>
   <input type="text" bind:value={totp} placeholder="TOTP">
-  <p>Auth Token</p>
-  <p>{get_token(TokenType.Auth)}</p>
-  <p>Special Token</p>
-  <p>{get_token(TokenType.SpecialAccess)}</p>
-  <p>Totp Token</p>
-  <p>{get_token(TokenType.TotpRequired)}</p>
   <p>Totp Code</p>
   <p>{code}</p>
   <p>Totp Image</p>
