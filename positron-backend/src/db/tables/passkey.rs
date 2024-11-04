@@ -95,18 +95,18 @@ impl<'db> PasskeyTable<'db> {
     Ok(())
   }
 
-  pub async fn edit_passkey_name(&self, name: String, old_name: String) -> Result<(), Error> {
-    self.db.query("UPDATE passkey SET name = $name WHERE name = $old_name").bind(("name", name, "old_name", old_name)).await?;
+  pub async fn edit_passkey_name(&self, user: Thing, name: String, old_name: String) -> Result<(), Error> {
+    self.db.query("UPDATE passkey SET name = $name WHERE name = $old_name && user = $user").bind(("name", name, "old_name", old_name, "user", user)).await?;
     Ok(())
   }
 
-  pub async fn remove_passkey_by_name(&self, name: String) -> Result<(), Error> {
-    self.db.query("DELETE passkey WHERE name = $name").bind(("name", name)).await?;
+  pub async fn remove_passkey_by_name(&self, user: Thing, name: String) -> Result<(), Error> {
+    self.db.query("DELETE passkey WHERE name = $name && user = $user").bind(("name", name, "user", user)).await?;
     Ok(())
   }
 
-  pub async fn passkey_name_exists(&self, name: String) -> Result<bool, Error> {
-    let mut res = self.db.query("SELECT * FROM passkey WHERE name = $name").bind(("name", name)).await?;
+  pub async fn passkey_name_exists(&self, user: Thing, name: String) -> Result<bool, Error> {
+    let mut res = self.db.query("SELECT * FROM passkey WHERE name = $name && user = $user").bind(("name", name, "user", user)).await?;
     let keys: Vec<Passkey> = res.take(0).unwrap_or_default();
     Ok(!keys.is_empty())
   }

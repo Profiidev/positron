@@ -40,6 +40,7 @@ pub fn routes() -> Vec<Route> {
     finish_special_access,
     list,
     remove,
+    edit_name,
   ]
   .into_iter()
   .flat_map(|route| route.map_base(|base| format!("{}{}", "/passkey", base)))
@@ -90,7 +91,7 @@ async fn finish_registration(
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
 
-  if db.tables().passkey().passkey_name_exists(reg.name.clone()).await? {
+  if db.tables().passkey().passkey_name_exists(user.id.clone(), reg.name.clone()).await? {
     return Err(Error::Conflict);
   }
 
@@ -256,12 +257,31 @@ async fn list(auth: JwtAuth, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
   Ok(Json(ret))
 }
 
-#[post("/remove")]
-async fn remove(auth: JwtSpecialAccess) {
-
+#[derive(Deserialize)]
+struct PasskeyRemove {
+  name: String,
 }
 
-#[post("/edit_name")]
-async fn edit_name(auth: JwtSpecialAccess) {
+#[post("/remove", data = "<req>")]
+async fn remove(req: Json<PasskeyRemove>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
 
+  db.tables().passkey().remove_passkey_by_name(user.id, req.name.clone()).await?;
+
+  Ok(())
+}
+
+#[derive(Deserialize)]
+struct PasskeyEdit {
+  name: String,
+  old_name: String,
+}
+
+#[post("/edit_name", data = "<req>")]
+async fn edit_name(req: Json<PasskeyEdit>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+
+  db.tables().passkey().edit_passkey_name(user.id, req.name.clone(), req.old_name.clone()).await?;
+  
+  Ok(())
 }
