@@ -4,6 +4,7 @@ export enum AuthError {
   Passkey = "Passkey",
   Password = "Password",
   Totp = "Totp",
+  Conflict = "Conflict",
 }
 
 export type Passkey = {

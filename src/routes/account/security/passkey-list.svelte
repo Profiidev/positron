@@ -11,33 +11,35 @@
   import { cn } from "$lib/utils";
   import { Separator } from "$lib/components/ui/separator";
 
-  let passkeyCreateError = $state("");
-  let passkeyName = $state("");
-  let passkeyCreateDialogOpen = $state(false);
-  let passkeyCreateLoading = $state(false);
-  let passkeys_promise = $state(list());
+  let createError = $state("");
+  let name = $state("");
+  let dialogOpen = $state(false);
+  let isLoading = $state(false);
+  let passkeysPromise = $state(list());
 
   const createPasskey = async () => {
-    if (passkeyName === "") {
-      passkeyCreateError = "No Name provided";
+    if (name === "") {
+      createError = "No Name provided";
       return;
     }
 
-    passkeyCreateLoading = true;
+    isLoading = true;
 
-    let ret = await register(passkeyName);
+    let ret = await register(name);
 
-    passkeyCreateLoading = false;
+    isLoading = false;
 
     if (ret) {
       if (ret === AuthError.Passkey) {
-        passkeyCreateError = "There was an error with your passkey";
+        createError = "There was an error with your passkey";
+      } else if (ret === AuthError.Conflict) {
+        createError = "Name already taken";
       } else {
-        passkeyCreateError = "There was an error while creating passkey";
+        createError = "There was an error while creating passkey";
       }
     } else {
-      passkeyCreateDialogOpen = false;
-      passkeys_promise = list();
+      dialogOpen = false;
+      passkeysPromise = list();
     }
   };
 </script>
@@ -45,7 +47,7 @@
 <div class="border rounded-xl">
   <div class="flex items-center p-3">
     <p class="rounded-lg text-muted-foreground">Your Passkeys</p>
-    <Dialog.Root bind:open={passkeyCreateDialogOpen}>
+    <Dialog.Root bind:open={dialogOpen}>
       <Dialog.Trigger
         class={cn("ml-auto", buttonVariants({ variant: "secondary" }))}
         >Create new</Dialog.Trigger
@@ -58,14 +60,14 @@
           >
         </Dialog.Header>
         <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-        <Input id="passkey_name" placeholder="Name" bind:value={passkeyName} />
-        {#if passkeyCreateError !== ""}
+        <Input id="passkey_name" placeholder="Name" bind:value={name} />
+        {#if createError !== ""}
           <span class="text-destructive truncate text-sm"
-            >{passkeyCreateError}</span
+            >{createError}</span
           >
         {/if}
         <Dialog.Footer>
-          <Button onclick={createPasskey} disabled={passkeyCreateLoading}
+          <Button onclick={createPasskey} disabled={isLoading}
             >Create</Button
           >
         </Dialog.Footer>
@@ -73,7 +75,7 @@
     </Dialog.Root>
   </div>
   <Separator />
-  {#await passkeys_promise}
+  {#await passkeysPromise}
     <div class="flex p-2 items-center">
       <div class="space-y-2 p-2">
         <div class="flex space-x-2 items-center">

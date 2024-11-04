@@ -90,6 +90,10 @@ async fn finish_registration(
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
 
+  if db.tables().passkey().passkey_name_exists(reg.name.clone()).await? {
+    return Err(Error::Conflict);
+  }
+
   let mut states = state.reg_state.lock().await;
   let reg_state = states.remove(&uuid).ok_or(Error::BadRequest)?;
 
@@ -253,4 +257,11 @@ async fn list(auth: JwtAuth, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
 }
 
 #[post("/remove")]
-async fn remove(auth: JwtSpecialAccess) {}
+async fn remove(auth: JwtSpecialAccess) {
+
+}
+
+#[post("/edit_name")]
+async fn edit_name(auth: JwtSpecialAccess) {
+
+}

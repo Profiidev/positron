@@ -47,6 +47,10 @@ export const register = async (name: string): Promise<AuthError | undefined> => 
       }),
     });
 
+    if (ver.status === 409) {
+      return AuthError.Conflict;
+    }
+
     if (ver.status !== 200) {
       return AuthError.Other;
     }

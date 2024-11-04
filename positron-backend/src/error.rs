@@ -13,6 +13,8 @@ pub enum Error {
   #[allow(clippy::enum_variant_names)]
   #[error("InternalServerError")]
   InternalServerError,
+  #[error("Conflict")]
+  Conflict,
   #[error("SerdeJson Error {source:?}")]
   SerdeJson {
     #[from]
@@ -60,6 +62,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
     match self {
       Self::Unauthorized => Status::Unauthorized.respond_to(request),
       Self::InternalServerError => Status::InternalServerError.respond_to(request),
+      Self::Conflict => Status::Conflict.respond_to(request),
       _ => Status::BadRequest.respond_to(request),
     }
   }
