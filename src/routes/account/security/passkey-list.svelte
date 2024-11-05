@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Button, buttonVariants } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
-  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
@@ -150,28 +149,27 @@
         </form>
       </Dialog.Content>
     </Dialog.Root>
-    <AlertDialog.Root bind:open={removeDialogOpen}>
-      <AlertDialog.Content>
-        <AlertDialog.Header>
-          <AlertDialog.Title
-            >Do you want to delete this Passkey?</AlertDialog.Title
-          >
-          <AlertDialog.Description
+    <Dialog.Root bind:open={removeDialogOpen}>
+      <Dialog.Content>
+        <Dialog.Header>
+          <Dialog.Title>Do you want to delete this Passkey?</Dialog.Title>
+          <Dialog.Description
             >This will permanently remove the "{editing}" passkey from your
-            account</AlertDialog.Description
+            account</Dialog.Description
           >
-        </AlertDialog.Header>
+        </Dialog.Header>
         {#if removeError !== ""}
           <span class="text-destructive truncate text-sm">{removeError}</span>
         {/if}
-        <AlertDialog.Footer>
-          <AlertDialog.Cancel disabled={isLoading}>Cancel</AlertDialog.Cancel>
-          <AlertDialog.Action disabled={isLoading} onclick={deletePasskey}
-            >Confirm</AlertDialog.Action
+        <Dialog.Footer>
+          <Button
+            variant="destructive"
+            disabled={isLoading}
+            onclick={deletePasskey}>Confirm</Button
           >
-        </AlertDialog.Footer>
-      </AlertDialog.Content>
-    </AlertDialog.Root>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog.Root>
   </div>
   <Separator />
   {#await passkeysPromise}
@@ -192,8 +190,10 @@
     </div>
   {:then}
     {#if passkeys}
-      {#each passkeys as passkey}
-        <Separator />
+      {#each passkeys as passkey, i}
+        {#if i > 0}
+          <Separator />
+        {/if}
         <div class="flex p-2 items-center">
           <div class="space-y-2 p-2">
             <div class="flex space-x-2">

@@ -2,7 +2,13 @@
   import { Separator } from "$lib/components/ui/separator";
   import { DateTime } from "luxon";
   import { KeyRound } from "lucide-svelte";
-  import { confirm_setup, get_setup_code, info, is_code, remove } from "$lib/auth/totp.svelte";
+  import {
+    confirm_setup,
+    get_setup_code,
+    info,
+    is_code,
+    remove,
+  } from "$lib/auth/totp.svelte";
   import { AuthError, type TotpInfo } from "$lib/auth/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { Badge } from "$lib/components/ui/badge";
@@ -48,7 +54,7 @@
 
     isLoading = false;
 
-    if(is_code(code)) {
+    if (is_code(code)) {
       totpQr = code.qr;
       totpCode = code.code;
     } else {
@@ -64,8 +70,8 @@
 
     isLoading = false;
 
-    if(res) {
-      if(res === AuthError.Totp) {
+    if (res) {
+      if (res === AuthError.Totp) {
         totpAddError = "TOTP code invalid";
       } else {
         totpAddError = "Error while adding TOTP";
@@ -77,7 +83,7 @@
   };
 </script>
 
-<div class="rounded border p-2 rounded-xl">
+<div class="border p-2 rounded-xl">
   <div class="flex items-center">
     <div class="flex flex-col space-y-2 p-2">
       <div class="flex space-x-2">
@@ -157,14 +163,20 @@
                 TOTP code</Dialog.Description
               >
             </Dialog.Header>
-            <div class="flex items-center flex-col">
-            {#if totpQr !== ""}
-              <img class="size-60" src={`data:image/png;base64, ${totpQr}`} alt="QR">
-              <p class="text-muted-foreground">Or use the code</p>
-              <p class="bg-muted px-1 rounded">{totpCode}</p>
-            {:else}
-              <Separator class="size-60" />
-            {/if}
+            <div class="flex items-center flex-col space-y-2">
+              {#if totpQr !== ""}
+                <img
+                  class="size-60"
+                  src={`data:image/png;base64, ${totpQr}`}
+                  alt="QR"
+                />
+                <p class="text-muted-foreground">Or use the code</p>
+                <p class="bg-muted px-1 rounded">{totpCode}</p>
+              {:else}
+                <Skeleton class="size-60" />
+                <p class="text-muted-foreground">Or use the code</p>
+                <Skeleton class="h-6 w-80" />
+              {/if}
             </div>
             <form onsubmit={addTotp} class="flex flex-col items-center">
               <p class="mb-2">Totp Code</p>
