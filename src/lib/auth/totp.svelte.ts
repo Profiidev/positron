@@ -1,15 +1,14 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { AuthError } from "./types.svelte";
+import { AuthError, type TotpCode, type TotpInfo } from "./types.svelte";
 import { get_token, set_token, TokenType } from "./token.svelte";
-
-export interface TotpCode {
-  qr: string;
-  code: string;
-}
 
 export const is_code = (object: any): object is TotpCode => {
   return "qr" in object;
 };
+
+export const is_info = (object: any): object is TotpInfo => {
+  return "enabled" in object;
+}
 
 export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
   let token = get_token(TokenType.SpecialAccess);
@@ -100,3 +99,50 @@ export const confirm = async (code: string): Promise<AuthError | undefined> => {
     return AuthError.Other;
   }
 };
+
+export const info = async (): Promise<undefined | TotpInfo> => {
+  let token = get_token(TokenType.Auth);
+  if (!token) {
+    return;
+  }
+
+  try {
+    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/totp/info`, {
+      headers: {
+        Authorization: token,
+      },
+    });
+
+    if (info_res.status !== 200) {
+      return;
+    }
+
+    let info = await info_res.json();
+
+    return info as TotpInfo;
+  } catch (_) {
+    return;
+  }
+}
+
+export const remove = async (): Promise<AuthError | undefined> => {
+  let token = get_token(TokenType.SpecialAccess);
+  if (!token) {
+    return AuthError.MissingToken;
+  }
+
+  try {
+    let remove_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/totp/remove`, {
+      method: "POST",
+      headers: {
+        Authorization: token,
+      },
+    });
+
+    if (remove_res.status !== 200) {
+      return AuthError.Other;
+    }
+  } catch (_) {
+    return AuthError.Other;
+  }
+}

@@ -24,6 +24,7 @@ pub struct User {
   pub last_login: Option<DateTime<Utc>>,
   pub last_special_access: Option<DateTime<Utc>>,
   pub totp: Option<String>,
+  pub totp_created: Option<DateTime<Utc>>,
   pub totp_last_used: Option<DateTime<Utc>>,
 }
 
@@ -34,7 +35,7 @@ pub struct UserTable<'db> {
 #[derive(Serialize)]
 struct TotpUpdate {
   uuid: String,
-  totp: Option<String>,
+  totp: String,
 }
 
 impl<'db> UserTable<'db> {
@@ -57,6 +58,7 @@ impl<'db> UserTable<'db> {
     DEFINE FIELD IF NOT EXISTS last_login ON TABLE user TYPE datetime DEFAULT time::now();
     DEFINE FIELD IF NOT EXISTS last_special_access ON TABLE user TYPE datetime DEFAULT time::now();
     DEFINE FIELD IF NOT EXISTS totp ON TABLE user TYPE option<string>;
+    DEFINE FIELD IF NOT EXISTS totp_created ON TABLE user TYPE option<datetime> DEFAULT NONE;
     DEFINE FIELD IF NOT EXISTS totp_last_used ON TABLE user TYPE option<datetime> DEFAULT NONE;
 
     DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
@@ -113,10 +115,10 @@ impl<'db> UserTable<'db> {
     Ok(())
   }
 
-  pub async fn update_totp(&self, uuid: Uuid, secret: Option<String>) -> Result<(), Error> {
+  pub async fn add_totp(&self, uuid: Uuid, secret: String) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE user SET totp = $totp WHERE uuid = $uuid")
+      .query("UPDATE user SET totp = $totp, totp_created = time::now(), totp_last_used = time::now() WHERE uuid = $uuid")
       .bind(TotpUpdate {
         uuid: uuid.to_string(),
         totp: secret,
@@ -129,7 +131,7 @@ impl<'db> UserTable<'db> {
   pub async fn totp_remove(&self, uuid: Uuid) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE user SET totp = NONE WHERE uuid = $uuid")
+      .query("UPDATE user SET totp = NONE, totp_created = NONE, totp_last_used = NONE WHERE uuid = $uuid")
       .bind(("uuid", uuid.to_string()))
       .await?;
 

@@ -84,7 +84,7 @@ async fn finish_setup(
 
   db.tables()
     .user()
-    .update_totp(auth.uuid, Some(totp.get_secret_base32()))
+    .add_totp(auth.uuid, totp.get_secret_base32())
     .await?;
 
   Ok(Status::Ok)
@@ -119,6 +119,8 @@ struct TotpInfo {
   enabled: bool,
   #[serde(skip_serializing_if = "Option::is_none")]
   last_used: Option<DateTime<Utc>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  created: Option<DateTime<Utc>>,
 }
 
 #[get("/info")]
@@ -128,6 +130,7 @@ async fn info(auth: JwtAuth, db: &State<DB>) -> Result<Json<TotpInfo>> {
   Ok(Json(TotpInfo {
     enabled: user.totp.is_some(),
     last_used: user.totp_last_used,
+    created: user.totp_created,
   }))
 }
 

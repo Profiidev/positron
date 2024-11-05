@@ -11,9 +11,9 @@
   import { goto } from "$app/navigation";
   import { confirm } from "$lib/auth/totp.svelte";
   import { get_token, TokenType } from "$lib/auth/token.svelte";
-  import * as InputOtp from "../../lib/components/ui/input-otp";
   import { authenticate } from "$lib/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
+  import Totp_6 from "$lib/components/form/totp-6.svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -45,6 +45,7 @@
         } else {
           form_error = "There was and Error while checking TOTP Code";
         }
+        return;
       } else {
         goto("/");
         return;
@@ -136,28 +137,8 @@
         </div>
       {:else}
         <div class="grid gap-1">
-          <Label class="sr-only" for="email">TOTP</Label>
-          <InputOtp.Root
-            maxlength={6}
-            bind:value={totp}
-            class="flex w-full sm:w-[350px] justify-between"
-            required
-            autofocus
-          >
-            {#snippet children({ cells })}
-              <InputOtp.Group>
-                {#each cells.slice(0, 3) as cell}
-                  <InputOtp.Slot {cell} />
-                {/each}
-              </InputOtp.Group>
-              <InputOtp.Separator />
-              <InputOtp.Group>
-                {#each cells.slice(3, 6) as cell}
-                  <InputOtp.Slot {cell} />
-                {/each}
-              </InputOtp.Group>
-            {/snippet}
-          </InputOtp.Root>
+          <Label class="sr-only">TOTP</Label>
+          <Totp_6 bind:totp={totp} class="flex w-full sm:w-[350px] justify-between" />
         </div>
       {/if}
       <span class="text-destructive truncate text-sm">{form_error}</span>
