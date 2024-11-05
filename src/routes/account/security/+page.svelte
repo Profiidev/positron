@@ -30,7 +30,7 @@
   <div>
     <h3 class="text-xl font-medium">Security</h3>
     <p class="text-muted-foreground text-sm">
-      Change your authentication settings
+      Change your authentication settings here
     </p>
   </div>
   <Separator />

@@ -210,6 +210,7 @@ export const remove = async (name: string) => {
     let res = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/remove`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Authorization: token,
       },
       body: JSON.stringify({
@@ -235,6 +236,7 @@ export const edit_name = async (name: string, old_name: string) => {
     let res = await fetch(`${PUBLIC_BACKEND_URL}/auth/passkey/edit_name`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Authorization: token,
       },
       body: JSON.stringify({

@@ -71,12 +71,8 @@ async fn finish_setup(
   state: &State<TotpState>,
   db: &State<DB>,
 ) -> Result<Status> {
-  let totp = state
-    .reg_state
-    .lock()
-    .await
-    .remove(&auth.uuid)
-    .ok_or(Error::BadRequest)?;
+  let mut lock = state.reg_state.lock().await;
+  let totp = lock.get(&auth.uuid).ok_or(Error::BadRequest)?;
   let valid = totp.check_current(&req.code).unwrap();
   if !valid {
     return Err(Error::Unauthorized);
@@ -86,6 +82,8 @@ async fn finish_setup(
     .user()
     .add_totp(auth.uuid, totp.get_secret_base32())
     .await?;
+
+  lock.remove(&auth.uuid);
 
   Ok(Status::Ok)
 }

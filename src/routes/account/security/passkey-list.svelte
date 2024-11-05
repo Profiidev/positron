@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { Button, buttonVariants } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
@@ -8,8 +7,9 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { AuthError, type Passkey } from "$lib/auth/types.svelte";
   import { edit_name, list, register, remove } from "$lib/auth/passkey.svelte";
-  import { cn } from "$lib/utils";
   import { Separator } from "$lib/components/ui/separator";
+  import FormDialog from "$lib/components/form/form-dialog.svelte";
+  import type { SvelteComponent } from "svelte";
 
   interface Props {
     valid: boolean;
@@ -18,55 +18,42 @@
 
   let { valid, requestAccess }: Props = $props();
 
-  let createError = $state("");
   let createName = $state("");
-  let createDialogOpen = $state(false);
-  let isLoading = $state(false);
   let passkeys: Passkey[] | undefined = $state();
   let passkeysPromise = $state(list().then((pks) => (passkeys = pks)));
   let editName = $state("");
-  let editError = $state("");
-  let editDialogOpen = $state(false);
-  let removeDialogOpen = $state(false);
-  let removeError = $state("");
   let editing = $state("");
+  let editDialog: SvelteComponent | undefined = $state();
+  let deleteDialog: SvelteComponent | undefined = $state();
 
   const startCreatePasskey = async () => {
     if (!valid) {
       if (!(await requestAccess())) {
-        return;
+        return false;
       }
     }
 
-    createError = "";
     createName = "";
-    createDialogOpen = true;
+    return true;
   };
 
   const createPasskey = async () => {
     if (createName === "") {
-      createError = "No Name provided";
-      return;
+      return "No Name provided";
     }
-
-    createError = "";
-    isLoading = true;
 
     let ret = await register(createName);
 
-    isLoading = false;
-
     if (ret) {
       if (ret === AuthError.Passkey) {
-        createError = "There was an error with your passkey";
+        return "There was an error with your passkey";
       } else if (ret === AuthError.Conflict) {
-        createError = "Name already taken";
+        return "Name already taken";
       } else {
-        createError = "There was an error while creating passkey";
+        return "There was an error while creating passkey";
       }
     } else {
       createName = "";
-      createDialogOpen = false;
       list().then((pks) => (passkeys = pks));
     }
   };
@@ -78,18 +65,16 @@
       }
     }
 
-    removeError = "";
     editing = name;
-    removeDialogOpen = true;
+    deleteDialog?.openFn();
   };
 
   const deletePasskey = async () => {
     let ret = await remove(editing);
 
     if (ret) {
-      removeError = "There was an error while deleting your passkey";
+      return "There was an error while deleting your passkey";
     } else {
-      removeDialogOpen = false;
       list().then((pks) => (passkeys = pks));
     }
   };
@@ -101,33 +86,25 @@
       }
     }
 
-    editError = "";
     editing = name;
-    editDialogOpen = true;
     editName = name;
+    editDialog?.openFn();
   };
 
   const editPasskey = async () => {
     if (editName === "") {
-      editError = "No Name provided";
-      return;
+      return "No Name provided";
     }
-
-    editError = "";
-    isLoading = true;
 
     let ret = await edit_name(editName, editing);
 
-    isLoading = false;
-
     if (ret) {
       if (ret === AuthError.Conflict) {
-        editError = "Name already taken";
+        return "Name already taken";
       } else {
-        editError = "There was an error while editing passkey name";
+        return "There was an error while editing passkey name";
       }
     } else {
-      editDialogOpen = false;
       list().then((pks) => (passkeys = pks));
     }
   };
@@ -136,71 +113,47 @@
 <div class="border rounded-xl">
   <div class="flex items-center p-3">
     <p class="rounded-lg text-muted-foreground">Your Passkeys</p>
-    <Button
-      class={cn("ml-auto", buttonVariants({ variant: "secondary" }))}
-      onclick={startCreatePasskey}>Create new</Button
+    <FormDialog
+      title="Create new Passkey"
+      description="Enter the name for your new passkey"
+      confirm="Create"
+      trigger={{ text: "Create new", variant: "secondary", class: "ml-auto" }}
+      onopen={startCreatePasskey}
+      onsubmit={createPasskey}
     >
-    <Dialog.Root bind:open={createDialogOpen}>
-      <Dialog.Content>
-        <Dialog.Header>
-          <Dialog.Title>Create new Passkey</Dialog.Title>
-          <Dialog.Description
-            >Enter the name for your new passkey</Dialog.Description
-          >
-        </Dialog.Header>
-        <form onsubmit={createPasskey}>
-          <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-          <Input id="passkey_name" placeholder="Name" required bind:value={createName} />
-          {#if createError !== ""}
-            <span class="text-destructive truncate text-sm">{createError}</span>
-          {/if}
-          <Dialog.Footer class="mt-4">
-            <Button type="submit" disabled={isLoading}>Create</Button>
-          </Dialog.Footer>
-        </form>
-      </Dialog.Content>
-    </Dialog.Root>
-    <Dialog.Root bind:open={editDialogOpen}>
-      <Dialog.Content>
-        <Dialog.Header>
-          <Dialog.Title>Change Passkey Name</Dialog.Title>
-          <Dialog.Description
-            >Enter a new name for your passkey</Dialog.Description
-          >
-        </Dialog.Header>
-        <form onsubmit={editPasskey}>
-          <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-          <Input id="passkey_name" placeholder="Name" required bind:value={editName} />
-          {#if editError !== ""}
-            <span class="text-destructive truncate text-sm">{editError}</span>
-          {/if}
-          <Dialog.Footer class="mt-4">
-            <Button type="submit" disabled={isLoading}>Confirm</Button>
-          </Dialog.Footer>
-        </form>
-      </Dialog.Content>
-    </Dialog.Root>
-    <Dialog.Root bind:open={removeDialogOpen}>
-      <Dialog.Content>
-        <Dialog.Header>
-          <Dialog.Title>Do you want to delete this Passkey?</Dialog.Title>
-          <Dialog.Description
-            >This will permanently remove the "{editing}" passkey from your
-            account</Dialog.Description
-          >
-        </Dialog.Header>
-        {#if removeError !== ""}
-          <span class="text-destructive truncate text-sm">{removeError}</span>
-        {/if}
-        <Dialog.Footer>
-          <Button
-            variant="destructive"
-            disabled={isLoading}
-            onclick={deletePasskey}>Confirm</Button
-          >
-        </Dialog.Footer>
-      </Dialog.Content>
-    </Dialog.Root>
+      <Label for="passkey_name" class="sr-only">Passkey Name</Label>
+      <Input
+        id="passkey_name"
+        placeholder="Name"
+        required
+        bind:value={createName}
+      />
+    </FormDialog>
+    <FormDialog
+      title="Change Passkey Name"
+      description="Enter a new name for your passkey"
+      confirm="Confirm"
+      trigger={undefined}
+      onsubmit={editPasskey}
+      bind:this={editDialog}
+    >
+      <Label for="passkey_name" class="sr-only">Passkey Name</Label>
+      <Input
+        id="passkey_name"
+        placeholder="Name"
+        required
+        bind:value={editName}
+      />
+    </FormDialog>
+    <FormDialog
+      title="Delete Passkey"
+      description={`This will permanently remove the passkey "${editing}" from your account`}
+      confirm="Confirm"
+      confirmVariant="destructive"
+      trigger={undefined}
+      onsubmit={deletePasskey}
+      bind:this={deleteDialog}
+    ></FormDialog>
   </div>
   <Separator />
   {#await passkeysPromise}

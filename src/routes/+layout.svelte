@@ -10,6 +10,7 @@
   import { goto } from "$app/navigation";
   import type { Option } from "$lib/components/nav/nav.svelte";
   import Nav from "$lib/components/nav/nav.svelte";
+    import { Toaster } from "$lib/components/ui/sonner";
   interface Props {
     children?: import('svelte').Snippet;
   }
@@ -40,6 +41,8 @@
 </script>
 
 <ModeWatcher />
+<Toaster position="top-right" closeButton={true} richColors={true} />
+
 {#if !noLayout.includes($page.url.pathname)}
   {#if !isCollapsed}
     <div aria-hidden="true" class="w-full h-full absolute" onkeypress={() => {}} onclick={() => isCollapsed = true}></div>

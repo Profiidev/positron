@@ -51,6 +51,13 @@ export const clear_tokens = () => {
   other = undefined;
 };
 
+export const get_uuid = () => {
+  let token = get_token(TokenType.Auth);
+  if (token) {
+    return get_claims(token).sub;
+  }
+}
+
 const get_claims = (token: string) => {
   let claims_part = token.split(".")[1];
   return JSON.parse(atob(claims_part)) as Claims;

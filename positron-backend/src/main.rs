@@ -5,9 +5,11 @@ use auth::{
 };
 use cors::cors;
 use db::DB;
+#[cfg(debug_assertions)]
 use dotenv::dotenv;
 use rocket::launch;
 
+mod account;
 mod auth;
 mod cors;
 mod db;
@@ -16,6 +18,7 @@ mod test;
 
 #[launch]
 async fn rocket() -> _ {
+  #[cfg(debug_assertions)]
   dotenv().ok();
 
   let db = DB::init_db_from_env()
@@ -34,5 +37,6 @@ async fn rocket() -> _ {
     .manage(TotpState::default())
     .manage(webauthn)
     .mount("/", auth::routes())
+    .mount("/", account::routes())
     .mount("/", rocket::routes![test::test])
 }

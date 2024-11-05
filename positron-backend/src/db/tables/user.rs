@@ -7,6 +7,7 @@ use uuid::Uuid;
 pub struct UserCreate {
   pub uuid: String,
   pub name: String,
+  pub image: String,
   pub email: String,
   pub password: String,
   pub salt: String,
@@ -18,6 +19,7 @@ pub struct User {
   pub id: Thing,
   pub uuid: String,
   pub name: String,
+  pub image: String,
   pub email: String,
   pub password: String,
   pub salt: String,
@@ -44,6 +46,11 @@ struct ChangePassword {
   password: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct ProfileUpdate {
+  name: String,
+}
+
 impl<'db> UserTable<'db> {
   pub fn new(db: &'db Surreal<Client>) -> Self {
     Self { db }
@@ -58,6 +65,7 @@ impl<'db> UserTable<'db> {
 
     DEFINE FIELD IF NOT EXISTS uuid ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string;
+    DEFINE FIELD IF NOT EXISTS image ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string ASSERT string::is::email($value);
     DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS salt ON TABLE user TYPE string;
@@ -180,6 +188,18 @@ impl<'db> UserTable<'db> {
       .query("UPDATE $id SET password = $password")
       .bind(ChangePassword { id, password })
       .await?;
+
+    Ok(())
+  }
+
+  pub async fn change_image(&self, uuid: Uuid, image: String) -> Result<(), Error> {
+    self.db.query("UPDATE user SET image = $image WHERE uuid = $uuid").bind(("image", image)).bind(("uuid", uuid.to_string())).await?;
+
+    Ok(())
+  }
+
+  pub async fn update_profile(&self, uuid: Uuid, profile: ProfileUpdate) -> Result<(), Error> {
+    self.db.query("UPDATE user SET name = $name WHERE uuid = $uuid").bind(profile).bind(("uuid", uuid.to_string())).await?;
 
     Ok(())
   }

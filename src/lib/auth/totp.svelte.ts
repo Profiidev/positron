@@ -135,6 +135,7 @@ export const remove = async (): Promise<AuthError | undefined> => {
     let remove_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/totp/remove`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Authorization: token,
       },
     });

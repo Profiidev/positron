@@ -12,9 +12,8 @@
   import { AuthError, type TotpInfo } from "$lib/auth/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { Badge } from "$lib/components/ui/badge";
-  import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
+  import FormDialog from "$lib/components/form/form-dialog.svelte";
 
   interface Props {
     valid: boolean;
@@ -26,11 +25,6 @@
   let totpInfo: TotpInfo | undefined = $state();
   info().then((info) => (totpInfo = info));
 
-  let isLoading = $state(false);
-  let totpRemoveError = $state("");
-  let totpRemoveOpen = $state(false);
-  let totpAddError = $state("");
-  let totpAddOpen = $state(false);
   let totpQr = $state("");
   let totpCode = $state("");
   let totpConfirm = $state("");
@@ -38,26 +32,18 @@
   const startRemoveTotp = async () => {
     if (!valid) {
       if (!(await requestAccess())) {
-        return;
+        return false;
       }
     }
-
-    totpRemoveError = "";
-    totpRemoveOpen = true;
+    return true;
   };
 
   const removeTotp = async () => {
-    totpRemoveError = "";
-    isLoading = true;
-
     let ret = await remove();
 
-    isLoading = false;
-
     if (ret) {
-      totpRemoveError = "Error while removing TOTP";
+      return "Error while removing TOTP";
     } else {
-      totpRemoveOpen = false;
       info().then((info) => (totpInfo = info));
     }
   };
@@ -65,43 +51,35 @@
   const startAddTotp = async () => {
     if (!valid) {
       if (!(await requestAccess())) {
-        return;
+        return false;
       }
     }
 
-    totpAddOpen = true;
-    totpAddError = "";
     totpQr = "";
-    isLoading = true;
 
-    let code = await get_setup_code();
+    const fetch = async () => {
+      let code = await get_setup_code();
 
-    isLoading = false;
+      if (is_code(code)) {
+        totpQr = code.qr;
+        totpCode = code.code;
+      }
+    };
 
-    if (is_code(code)) {
-      totpQr = code.qr;
-      totpCode = code.code;
-    } else {
-      totpAddError = "Error while loading QR-Code";
-    }
+    fetch();
+    return true;
   };
 
   const addTotp = async () => {
-    totpAddError = "";
-    isLoading = true;
-
     let res = await confirm_setup(totpConfirm);
-
-    isLoading = false;
 
     if (res) {
       if (res === AuthError.Totp) {
-        totpAddError = "TOTP code invalid";
+        return "TOTP code invalid";
       } else {
-        totpAddError = "Error while adding TOTP";
+        return "Error while adding TOTP";
       }
     } else {
-      totpAddOpen = false;
       info().then((info) => (totpInfo = info));
     }
   };
@@ -150,73 +128,46 @@
   </div>
   {#if totpInfo}
     {#if totpInfo.enabled}
-      <Button
-        class="m-2 ml-auto"
-        variant="destructive"
-        onclick={startRemoveTotp}>Remove</Button
-      >
-      <Dialog.Root bind:open={totpRemoveOpen}>
-        <Dialog.Content>
-          <Dialog.Header>
-            <Dialog.Title>Remove TOTP</Dialog.Title>
-            <Dialog.Description
-              >Do you really want to remove the TOTP 2FA method</Dialog.Description
-            >
-          </Dialog.Header>
-          <form onsubmit={removeTotp}>
-            {#if totpRemoveError !== ""}
-              <span class="text-destructive truncate text-sm"
-                >{totpRemoveError}</span
-              >
-            {/if}
-            <Dialog.Footer class="mt-4">
-              <Button type="submit" variant="destructive" disabled={isLoading}
-                >Remove</Button
-              >
-            </Dialog.Footer>
-          </form>
-        </Dialog.Content>
-      </Dialog.Root>
+      <FormDialog
+        title="Remove TOTP"
+        description="Do you really want to remove the TOTP 2FA method"
+        confirm="Remove"
+        confirmVariant="destructive"
+        trigger={{
+          text: "Remove",
+          variant: "destructive",
+          class: "m-2 ml-auto",
+        }}
+        onopen={startRemoveTotp}
+        onsubmit={removeTotp}
+      ></FormDialog>
     {:else}
-      <Button class="m-2 ml-auto" onclick={startAddTotp}>Add</Button>
-      <Dialog.Root bind:open={totpAddOpen}>
-        <Dialog.Content>
-          <Dialog.Header>
-            <Dialog.Title>Add TOTP</Dialog.Title>
-            <Dialog.Description
-              >Scan the QR-Code below or enter the code manually and enter the
-              TOTP code</Dialog.Description
-            >
-          </Dialog.Header>
-          <div class="flex items-center flex-col space-y-2">
-            {#if totpQr !== ""}
-              <img
-                class="size-60"
-                src={`data:image/png;base64, ${totpQr}`}
-                alt="QR"
-              />
-              <p class="text-muted-foreground">Or use the code</p>
-              <p class="bg-muted px-1 rounded">{totpCode}</p>
-            {:else}
-              <Skeleton class="size-60" />
-              <p class="text-muted-foreground">Or use the code</p>
-              <Skeleton class="h-6 w-80" />
-            {/if}
-          </div>
-          <form onsubmit={addTotp} class="flex flex-col items-center">
-            <p class="mb-2">Confirm Code</p>
-            <Totp_6 bind:totp={totpConfirm} class="flex justify-center" />
-            {#if totpAddError !== ""}
-              <span class="text-destructive truncate text-sm"
-                >{totpAddError}</span
-              >
-            {/if}
-            <Dialog.Footer class="mt-4 ml-auto">
-              <Button type="submit" disabled={isLoading}>Add</Button>
-            </Dialog.Footer>
-          </form>
-        </Dialog.Content>
-      </Dialog.Root>
+      <FormDialog
+        title="Add TOTP"
+        description="Scan the QR-Code below or enter the code manually and enter the TOTP code"
+        confirm="Add"
+        trigger={{ text: "Add", class: "m-2 ml-auto" }}
+        onopen={startAddTotp}
+        onsubmit={addTotp}
+      >
+        <div class="flex items-center flex-col space-y-2">
+          {#if totpQr !== ""}
+            <img
+              class="size-60"
+              src={`data:image/png;base64, ${totpQr}`}
+              alt="QR"
+            />
+            <p class="text-muted-foreground">Or use the code</p>
+            <p class="bg-muted px-1 rounded">{totpCode}</p>
+          {:else}
+            <Skeleton class="size-60" />
+            <p class="text-muted-foreground">Or use the code</p>
+            <Skeleton class="h-6 w-80" />
+          {/if}
+          <p class="mb-2">Confirm Code</p>
+          <Totp_6 bind:totp={totpConfirm} class="flex justify-center" />
+        </div>
+      </FormDialog>
     {/if}
   {:else}
     <Skeleton class="m-2 ml-auto h-10 w-20" />

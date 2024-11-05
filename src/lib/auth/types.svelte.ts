@@ -15,8 +15,8 @@ export interface Passkey {
 
 export interface TotpInfo {
   enabled: boolean;
-  created: string | undefined;
-  last_used: string | undefined;
+  created?: string;
+  last_used?: string;
 }
 
 export interface TotpCode {

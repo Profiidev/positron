@@ -8,9 +8,10 @@ argon2 = "0.5.3"
 base64 = "0.22.1"
 chrono = { version = "0.4.38", features = ["serde"]}
 dotenv = "0.15.0"
+image = { version = "0.25.4", default-features = false, features = ["webp", "png", "jpeg"]}
 jsonwebtoken = "9.3.0"
 rand = "0.8.5"
-rocket = { version = "0.5.1" ,features = ["json", "secrets"] }
+rocket = { version = "0.5.1" ,features = ["json"] }
 rocket_cors = "0.6.0"
 rsa = "0.9.6"
 serde = { version = "1.0.214", features = ["derive"] }
