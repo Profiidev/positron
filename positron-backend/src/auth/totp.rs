@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use rocket::{get, http::Status, post, serde::json::Json, Route, State};
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
@@ -8,12 +9,12 @@ use crate::{
 };
 
 use super::{
-  jwt::{JwtSpecialAccess, JwtState, JwtTotpRequired, JwtType},
+  jwt::{JwtAuth, JwtSpecialAccess, JwtState, JwtTotpRequired, JwtType},
   state::TotpState,
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![start_setup, finish_setup, confirm]
+  rocket::routes![start_setup, finish_setup, confirm, info, remove]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/totp", base)))
     .collect()
@@ -107,6 +108,32 @@ async fn confirm(
   if !totp.check_current(&req.code).unwrap() {
     Err(Error::Unauthorized)
   } else {
+    db.tables().user().used_totp(auth.uuid).await?;
+    db.tables().user().logged_in(auth.uuid).await?;
     Ok(jwt.create_token(auth.uuid, JwtType::Auth)?)
   }
+}
+
+#[derive(Serialize)]
+struct TotpInfo {
+  enabled: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  last_used: Option<DateTime<Utc>>,
+}
+
+#[get("/info")]
+async fn info(auth: JwtAuth, db: &State<DB>) -> Result<Json<TotpInfo>> {
+  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+
+  Ok(Json(TotpInfo {
+    enabled: user.totp.is_some(),
+    last_used: user.totp_last_used,
+  }))
+}
+
+#[post("/remove")]
+async fn remove(auth: JwtSpecialAccess, db: &State<DB>) -> Result<Status> {
+  db.tables().user().totp_remove(auth.uuid).await?;
+
+  Ok(Status::Ok)
 }

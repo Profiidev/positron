@@ -50,6 +50,10 @@ async fn authenticate(
   let type_ = if user.totp.is_some() {
     JwtType::TotpRequired
   } else {
+
+    let uuid = Uuid::from_str(&user.uuid)?;
+    db.tables().user().logged_in(uuid).await?;
+
     JwtType::Auth
   };
 
@@ -71,6 +75,8 @@ async fn special_access(
 ) -> Result<String> {
   let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
   check_password(state, &user, req.password.clone())?;
+
+  db.tables().user().used_special_access(auth.uuid).await?;
 
   Ok(jwt.create_token(Uuid::from_str(&user.uuid)?, JwtType::SpecialAccess)?)
 }

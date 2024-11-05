@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
@@ -20,7 +21,10 @@ pub struct User {
   pub email: String,
   pub password: String,
   pub salt: String,
+  pub last_login: Option<DateTime<Utc>>,
+  pub last_special_access: Option<DateTime<Utc>>,
   pub totp: Option<String>,
+  pub totp_last_used: Option<DateTime<Utc>>,
 }
 
 pub struct UserTable<'db> {
@@ -50,7 +54,10 @@ impl<'db> UserTable<'db> {
     DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string ASSERT string::is::email($value);
     DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
     DEFINE FIELD IF NOT EXISTS salt ON TABLE user TYPE string;
+    DEFINE FIELD IF NOT EXISTS last_login ON TABLE user TYPE datetime DEFAULT time::now();
+    DEFINE FIELD IF NOT EXISTS last_special_access ON TABLE user TYPE datetime DEFAULT time::now();
     DEFINE FIELD IF NOT EXISTS totp ON TABLE user TYPE option<string>;
+    DEFINE FIELD IF NOT EXISTS totp_last_used ON TABLE user TYPE option<datetime> DEFAULT NONE;
 
     DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
   ",
@@ -58,6 +65,18 @@ impl<'db> UserTable<'db> {
       .await?;
 
     Ok(())
+  }
+
+  pub async fn get_user(&self, id: Thing) -> Result<User, Error> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM $id LIMIT 1")
+      .bind(("id", id))
+      .await?;
+
+    res
+      .take::<Option<User>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
   pub async fn get_user_by_uuid(&self, uuid: Uuid) -> Result<User, Error> {
@@ -102,6 +121,46 @@ impl<'db> UserTable<'db> {
         uuid: uuid.to_string(),
         totp: secret,
       })
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn totp_remove(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET totp = NONE WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn logged_in(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET last_login = time::now() WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn used_special_access(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET last_special_access = time::now() WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn used_totp(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET totp_last_used = time::now() WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
       .await?;
 
     Ok(())

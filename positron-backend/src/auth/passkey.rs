@@ -155,7 +155,7 @@ async fn finish_authentication(
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
 
-  let (user, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
+  let (_, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
 
   let passkey_db = db
     .tables()
@@ -163,6 +163,9 @@ async fn finish_authentication(
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(cred_id))
     .await?;
   let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+
+  let user = db.tables().user().get_user(passkey_db.user).await?;
+  let uuid = Uuid::from_str(&user.uuid)?;
 
   let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
 
@@ -178,7 +181,9 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  Ok(jwt.create_token(user, JwtType::Auth)?)
+  db.tables().user().logged_in(uuid).await?;
+
+  Ok(jwt.create_token(uuid, JwtType::Auth)?)
 }
 
 #[get("/start_special_access")]
@@ -238,6 +243,8 @@ async fn finish_special_access(
     .passkey()
     .update_passkey_record(passkey_db.id, json_key)
     .await;
+
+  db.tables().user().used_special_access(auth.uuid).await?;
 
   Ok(jwt.create_token(auth.uuid, JwtType::SpecialAccess)?)
 }
