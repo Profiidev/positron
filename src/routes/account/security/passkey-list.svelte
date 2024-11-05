@@ -11,6 +11,13 @@
   import { cn } from "$lib/utils";
   import { Separator } from "$lib/components/ui/separator";
 
+  interface Props {
+    valid: boolean;
+    requestAccess: () => Promise<boolean>;
+  }
+
+  let { valid, requestAccess }: Props = $props();
+
   let createError = $state("");
   let createName = $state("");
   let createDialogOpen = $state(false);
@@ -23,6 +30,18 @@
   let removeDialogOpen = $state(false);
   let removeError = $state("");
   let editing = $state("");
+
+  const startCreatePasskey = async () => {
+    if (!valid) {
+      if (!(await requestAccess())) {
+        return;
+      }
+    }
+
+    createError = "";
+    createName = "";
+    createDialogOpen = true;
+  };
 
   const createPasskey = async () => {
     if (createName === "") {
@@ -52,7 +71,13 @@
     }
   };
 
-  const startDeletePasskey = (name: string) => {
+  const startDeletePasskey = async (name: string) => {
+    if (!valid) {
+      if (!(await requestAccess())) {
+        return;
+      }
+    }
+
     removeError = "";
     editing = name;
     removeDialogOpen = true;
@@ -69,7 +94,13 @@
     }
   };
 
-  const startEditPasskey = (name: string) => {
+  const startEditPasskey = async (name: string) => {
+    if (!valid) {
+      if (!(await requestAccess())) {
+        return;
+      }
+    }
+
     editError = "";
     editing = name;
     editDialogOpen = true;
@@ -105,11 +136,11 @@
 <div class="border rounded-xl">
   <div class="flex items-center p-3">
     <p class="rounded-lg text-muted-foreground">Your Passkeys</p>
+    <Button
+      class={cn("ml-auto", buttonVariants({ variant: "secondary" }))}
+      onclick={startCreatePasskey}>Create new</Button
+    >
     <Dialog.Root bind:open={createDialogOpen}>
-      <Dialog.Trigger
-        class={cn("ml-auto", buttonVariants({ variant: "secondary" }))}
-        >Create new</Dialog.Trigger
-      >
       <Dialog.Content>
         <Dialog.Header>
           <Dialog.Title>Create new Passkey</Dialog.Title>
@@ -119,7 +150,7 @@
         </Dialog.Header>
         <form onsubmit={createPasskey}>
           <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-          <Input id="passkey_name" placeholder="Name" bind:value={createName} />
+          <Input id="passkey_name" placeholder="Name" required bind:value={createName} />
           {#if createError !== ""}
             <span class="text-destructive truncate text-sm">{createError}</span>
           {/if}
@@ -139,7 +170,7 @@
         </Dialog.Header>
         <form onsubmit={editPasskey}>
           <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-          <Input id="passkey_name" placeholder="Name" bind:value={editName} />
+          <Input id="passkey_name" placeholder="Name" required bind:value={editName} />
           {#if editError !== ""}
             <span class="text-destructive truncate text-sm">{editError}</span>
           {/if}

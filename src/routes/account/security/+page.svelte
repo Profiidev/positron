@@ -2,9 +2,10 @@
   import { get_token, TokenType } from "$lib/auth/token.svelte";
   import { interval } from "$lib/util/interval.svelte";
   import Separator from "$lib/components/ui/separator/separator.svelte";
+  import PasskeyList from "./passkey-list.svelte";
+  import Totp_2fa from "./totp-2fa.svelte";
   import AccessConfirm from "./access-confirm.svelte";
-    import PasskeyList from "./passkey-list.svelte";
-    import Other_2fa from "./other-2fa.svelte";
+  import Password from "./password.svelte";
 
   let specialAccessWatcher = interval(() => {
     return get_token(TokenType.SpecialAccess);
@@ -13,24 +14,39 @@
   $effect(() => {
     specialAccessValid = specialAccessWatcher.value !== undefined;
   });
+
+  let cb = $state((_: boolean) => {});
+  let accessOpen = $state(false);
+
+  const requestAccess = async () => {
+    return new Promise<boolean>((resolve) => {
+      cb = resolve;
+      accessOpen = true;
+    });
+  };
 </script>
 
-{#if specialAccessValid}
-  <div class="space-y-6">
-    <div>
-      <h3 class="text-xl font-medium">Security</h3>
-      <p class="text-muted-foreground text-sm">Change your login settings</p>
-    </div>
-    <Separator />
-    <div class="space-y-3">
-      <h3 class="text-lg">Passkey</h3>
-      <PasskeyList />
-    </div>
-    <div class="space-y-3">
-      <h3 class="text-lg">Other 2FA Methods</h3>
-      <Other_2fa />
+<div class="space-y-6">
+  <div>
+    <h3 class="text-xl font-medium">Security</h3>
+    <p class="text-muted-foreground text-sm">
+      Change your authentication settings
+    </p>
+  </div>
+  <Separator />
+  <div class="space-y-3">
+    <h3 class="text-lg">Password</h3>
+    <Password valid={specialAccessValid} {requestAccess} />
+  </div>
+  <div class="space-y-3">
+    <h3 class="text-lg">Passkey</h3>
+    <PasskeyList valid={specialAccessValid} {requestAccess} />
+  </div>
+  <div class="space-y-3">
+    <h3 class="text-lg">Other 2FA Methods</h3>
+    <div class="border p-2 rounded-xl">
+      <Totp_2fa valid={specialAccessValid} {requestAccess} />
     </div>
   </div>
-{:else}
-  <AccessConfirm bind:specialAccessValid />
-{/if}
+</div>
+<AccessConfirm {cb} bind:open={accessOpen} />

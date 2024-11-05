@@ -24,3 +24,8 @@ export interface TotpCode {
   code: string;
 }
 
+export interface PasswordInfo {
+  last_login: string;
+  last_special_access: string;
+}
+

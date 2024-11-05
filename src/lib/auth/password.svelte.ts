@@ -6,7 +6,7 @@ import {
   set_token,
   TokenType,
 } from "./token.svelte";
-import { AuthError } from "./types.svelte";
+import { AuthError, type PasswordInfo } from "./types.svelte";
 
 let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
 
@@ -113,3 +113,66 @@ export const special_access = async (
     return AuthError.Other;
   }
 };
+
+export const change = async (password: string, password_confirm: string): Promise<AuthError | undefined> => {
+  let token = get_token(TokenType.SpecialAccess);
+  if (!token) {
+    return AuthError.MissingToken;
+  }
+
+  try {
+    let encrypted_password = encrypt.encrypt(password);
+    let encrypted_password_confirm = encrypt.encrypt(password_confirm);
+
+    let login_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/auth/password/change`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          password: encrypted_password,
+          password_confirm: encrypted_password_confirm,
+        }),
+      },
+    );
+
+    if (login_res.status === 409) {
+      return AuthError.Password;
+    }
+
+    if (login_res.status !== 200) {
+      fetch_key();
+      return AuthError.Other;
+    }
+  } catch (_) {
+    return AuthError.Other;
+  }
+}
+
+export const info = async (): Promise<undefined | PasswordInfo> => {
+  let token = get_token(TokenType.Auth);
+  if (!token) {
+    return;
+  }
+
+  try {
+    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/info`, {
+      headers: {
+        Authorization: token,
+      },
+    });
+
+    if (info_res.status !== 200) {
+      return;
+    }
+
+    let info = await info_res.json();
+
+    return info as PasswordInfo;
+  } catch (_) {
+    return;
+  }
+}

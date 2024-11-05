@@ -21,8 +21,8 @@ pub struct User {
   pub email: String,
   pub password: String,
   pub salt: String,
-  pub last_login: Option<DateTime<Utc>>,
-  pub last_special_access: Option<DateTime<Utc>>,
+  pub last_login: DateTime<Utc>,
+  pub last_special_access: DateTime<Utc>,
   pub totp: Option<String>,
   pub totp_created: Option<DateTime<Utc>>,
   pub totp_last_used: Option<DateTime<Utc>>,
@@ -36,6 +36,12 @@ pub struct UserTable<'db> {
 struct TotpUpdate {
   uuid: String,
   totp: String,
+}
+
+#[derive(Serialize)]
+struct ChangePassword {
+  id: Thing,
+  password: String,
 }
 
 impl<'db> UserTable<'db> {
@@ -163,6 +169,16 @@ impl<'db> UserTable<'db> {
       .db
       .query("UPDATE user SET totp_last_used = time::now() WHERE uuid = $uuid")
       .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn change_password(&self, id: Thing, password: String) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE $id SET password = $password")
+      .bind(ChangePassword { id, password })
       .await?;
 
     Ok(())
