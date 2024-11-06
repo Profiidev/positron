@@ -33,7 +33,7 @@
     "@tailwindcss/typography": "0.5.15",
     "@tauri-apps/cli": "2.0.4",
     "autoprefixer": "10.4.20",
-    "bits-ui": "^1.0.0-next.44",
+    "bits-ui": "^1.0.0-next.45",
     "lucide-svelte": "^0.454.0",
     "mode-watcher": "^0.4.1",
     "prettier": "^3.3.3",

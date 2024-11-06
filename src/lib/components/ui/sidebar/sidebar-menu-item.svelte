@@ -1,16 +1,21 @@
 <script lang="ts">
+	import { cn } from "$lib/utils.js";
 	import type { WithElementRef } from "bits-ui";
 	import type { HTMLAttributes } from "svelte/elements";
-	import { cn } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		children,
 		...restProps
-	}: WithElementRef<HTMLAttributes<HTMLParagraphElement>> = $props();
+	}: WithElementRef<HTMLAttributes<HTMLLIElement>, HTMLLIElement> = $props();
 </script>
 
-<p bind:this={ref} class={cn("text-muted-foreground text-sm", className)} {...restProps}>
+<li
+	bind:this={ref}
+	data-sidebar="menu-item"
+	class={cn("group/menu-item relative", className)}
+	{...restProps}
+>
 	{@render children?.()}
-</p>
+</li>
