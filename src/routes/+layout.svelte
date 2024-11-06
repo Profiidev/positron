@@ -29,7 +29,7 @@
 {#if !noLayout.includes($page.url.pathname)}
   <Sidebar.Provider>
     <SidebarApp />
-    <Sidebar.Trigger class="absolute" />
+    <Sidebar.Trigger class="absolute left-3 top-3 flex md:hidden" />
     <main class="w-full h-full">
       {@render children?.()}
     </main>
