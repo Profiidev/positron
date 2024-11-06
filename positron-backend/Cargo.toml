@@ -8,7 +8,7 @@ argon2 = "0.5.3"
 base64 = "0.22.1"
 chrono = { version = "0.4.38", features = ["serde"]}
 dotenv = "0.15.0"
-image = { version = "0.25.4", default-features = false, features = ["webp", "png", "jpeg"]}
+image = { version = "0.25.5", default-features = false, features = ["webp", "png", "jpeg"]}
 jsonwebtoken = "9.3.0"
 lettre = "0.11.10"
 openssl = { version = "0.10.68", features = ["vendored"] }
