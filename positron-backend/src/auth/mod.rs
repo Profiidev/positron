@@ -1,7 +1,6 @@
-use std::env::var;
-
-use rocket::Route;
-use webauthn_rs::{prelude::Url, Webauthn, WebauthnBuilder};
+use jwt::JwtState;
+use rocket::{Build, Rocket, Route};
+use state::{webauthn, PasskeyState, PasswordState, TotpState};
 
 pub mod jwt;
 mod passkey;
@@ -18,14 +17,11 @@ pub fn routes() -> Vec<Route> {
     .collect()
 }
 
-pub fn webauthn() -> Webauthn {
-  let rp_id = var("WEBAUTHN_ID").expect("Failed to load WEBAUTHN_ID");
-  let rp_origin = Url::parse(&var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
-    .expect("Failed to parse WEBAUTHN_ORIGIN");
-  let rp_name = var("WEBAUTHN_NAME").expect("Failed to load WEBAUTHN_NAME");
-
-  let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
-    .expect("Failed creating WebauthnBuilder")
-    .rp_name(&rp_name);
-  webauthn.build().expect("Failed creating Webauthn")
+pub fn state(server: Rocket<Build>) -> Rocket<Build> {
+  server
+    .manage(PasswordState::default())
+    .manage(PasskeyState::default())
+    .manage(TotpState::default())
+    .manage(JwtState::default())
+    .manage(webauthn())
 }

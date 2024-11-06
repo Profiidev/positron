@@ -1,18 +1,14 @@
-use auth::{
-  jwt::JwtState,
-  state::{PasskeyState, PasswordState, TotpState},
-  webauthn,
-};
 use cors::cors;
 use db::DB;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use rocket::launch;
+use rocket::{launch, Build, Rocket, Route};
 
 mod account;
 mod auth;
 mod cors;
 mod db;
+mod email;
 mod error;
 mod test;
 
@@ -25,18 +21,26 @@ async fn rocket() -> _ {
     .await
     .expect("Failed connecting to DB");
   let cors = cors();
-  let webauthn = webauthn();
 
-  rocket::build()
+  let server = rocket::build()
     .attach(cors)
     .manage(rocket_cors::catch_all_options_routes())
     .manage(db)
-    .manage(PasskeyState::default())
-    .manage(PasswordState::default())
-    .manage(JwtState::default())
-    .manage(TotpState::default())
-    .manage(webauthn)
-    .mount("/", auth::routes())
-    .mount("/", account::routes())
-    .mount("/", rocket::routes![test::test])
+    .mount("/", routes())
+    .mount("/", rocket::routes![test::test]);
+
+  state(server)
+}
+
+fn routes() -> Vec<Route> {
+  auth::routes()
+    .into_iter()
+    .chain(account::routes())
+    .chain(email::routes())
+    .collect()
+}
+
+fn state(server: Rocket<Build>) -> Rocket<Build> {
+  let server = auth::state(server);
+  email::state(server)
 }

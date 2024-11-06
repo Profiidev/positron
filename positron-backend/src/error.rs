@@ -2,6 +2,8 @@ use rocket::{http::Status, response::Responder, serde::json};
 use thiserror::Error;
 use webauthn_rs::prelude::WebauthnError;
 
+use crate::email::state::MailError;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
@@ -64,14 +66,19 @@ pub enum Error {
   IO {
     #[from]
     source: std::io::Error,
-  }
+  },
+  #[error("Mail Error {source:?}")]
+  Mail {
+    #[from]
+    source: MailError,
+  },
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
     match self {
       Self::Unauthorized => Status::Unauthorized.respond_to(request),
-      Self::InternalServerError => Status::InternalServerError.respond_to(request),
+      Self::InternalServerError | Self::Mail { .. } => Status::InternalServerError.respond_to(request),
       Self::Conflict => Status::Conflict.respond_to(request),
       _ => Status::BadRequest.respond_to(request),
     }

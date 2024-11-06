@@ -84,6 +84,7 @@
       text: "Change Password",
       variant: "secondary",
       class: "ml-auto",
+      loadIcon: true,
     }}
     onopen={startChange}
     onsubmit={changeConfirm}

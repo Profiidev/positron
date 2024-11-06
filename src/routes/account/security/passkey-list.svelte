@@ -10,7 +10,7 @@
   import { Separator } from "$lib/components/ui/separator";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
-    import { toast } from "svelte-sonner";
+  import { toast } from "svelte-sonner";
 
   interface Props {
     valid: boolean;
@@ -57,7 +57,7 @@
       createName = "";
       list().then((pks) => (passkeys = pks));
       toast.success("Creation successful", {
-        description: "Passkey was successfully added to your account"
+        description: "Passkey was successfully added to your account",
       });
     }
   };
@@ -81,7 +81,7 @@
     } else {
       list().then((pks) => (passkeys = pks));
       toast.success("Deletion successful", {
-        description: `Passkey "${editing}" was successfully removed from your account`
+        description: `Passkey "${editing}" was successfully removed from your account`,
       });
     }
   };
@@ -114,7 +114,7 @@
     } else {
       list().then((pks) => (passkeys = pks));
       toast.success("Edit successful", {
-        description: `Passkey name was changed successfully from ${editing} to ${editName}`
+        description: `Passkey name was changed successfully from ${editing} to ${editName}`,
       });
     }
   };
@@ -127,7 +127,12 @@
       title="Create new Passkey"
       description="Enter the name for your new passkey"
       confirm="Create"
-      trigger={{ text: "Create new", variant: "secondary", class: "ml-auto" }}
+      trigger={{
+        text: "Create new",
+        variant: "secondary",
+        class: "ml-auto",
+        loadIcon: true,
+      }}
       onopen={startCreatePasskey}
       onsubmit={createPasskey}
     >

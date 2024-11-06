@@ -41,7 +41,7 @@
       } else {
         infoData = await info(uuid);
         toast.success("Upload successful", {
-          description: "Successfully uploaded image to your profile",
+          description: "Your profile profile image was updated successfully",
         });
       }
     }
@@ -83,7 +83,7 @@
     <p class="text-muted-foreground text-sm">Change your personal info here</p>
   </div>
   <Separator />
-  <div class="flex">
+  <div class="flex flex-col sm:flex-row">
     <div class="space-y-3">
       {#if infoData}
         <div class="relative">
@@ -113,15 +113,24 @@
         <Skeleton class="size-52 rounded-full" />
       {/if}
     </div>
-    <form class="space-y-3 pl-10" onsubmit={updateProfile}>
-      <h3 class="text-lg">Username</h3>
-      <Input
-        autocomplete="off"
-        placeholder="Username"
-        required
-        bind:value={name}
-      />
-      <Button type="submit" class="!mt-8" disabled={isLoading}>
+    <form class="mt-5 sm:mt-0 sm:pl-10 flex flex-col" onsubmit={updateProfile}>
+      <Label for="username">Username</Label>
+      <div class="relative">
+        <Input
+          id="username"
+          autocomplete="off"
+          placeholder={infoData ? "Username" : ""}
+          class="sm:min-w-72"
+          required
+          bind:value={name}
+        />
+        {#if !infoData}
+          <div class="absolute inset-0 size-full flex items-center ml-2">
+            <Skeleton class="h-5 w-32" />
+          </div>
+        {/if}
+      </div>
+      <Button type="submit" class="mt-8 ml-auto" disabled={isLoading}>
         {#if isLoading}
           <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
         {/if}

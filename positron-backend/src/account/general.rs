@@ -2,11 +2,17 @@ use std::{io::Cursor, str::FromStr};
 
 use base64::prelude::*;
 use image::{imageops::FilterType, ImageFormat};
-use rocket::{fs::TempFile, get, http::Status, post, serde::json::Json, tokio::io::AsyncReadExt, Route, State};
+use rocket::{
+  fs::TempFile, get, http::Status, post, serde::json::Json, tokio::io::AsyncReadExt, Route, State,
+};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{auth::jwt::JwtAuth, db::{tables::user::ProfileUpdate, DB}, error::Result};
+use crate::{
+  auth::jwt::JwtAuth,
+  db::{tables::user::ProfileUpdate, DB},
+  error::Result,
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![info, change_image, update_profile]
@@ -19,17 +25,18 @@ pub fn routes() -> Vec<Route> {
 struct UserInfo {
   name: String,
   image: String,
+  email: String,
 }
 
 #[get("/info/<uuid>")]
 async fn info(_auth: JwtAuth, uuid: String, db: &State<DB>) -> Result<Json<UserInfo>> {
   let uuid = Uuid::from_str(&uuid)?;
   let user = db.tables().user().get_user_by_uuid(uuid).await?;
-  //std::thread::sleep(std::time::Duration::from_secs(3));
 
   Ok(Json(UserInfo {
     name: user.name,
     image: user.image,
+    email: user.email,
   }))
 }
 

@@ -9,7 +9,13 @@
     description?: string;
     confirm: string;
     confirmVariant?: ButtonVariant;
-    trigger?: { text?: string; variant?: ButtonVariant; class?: string, size?: ButtonSize };
+    trigger?: {
+      text?: string;
+      variant?: ButtonVariant;
+      class?: string;
+      size?: ButtonSize;
+      loadIcon?: boolean;
+    };
     onopen?: () => boolean | Promise<boolean>;
     onsubmit: () => string | undefined | Promise<string | undefined>;
     children?: Snippet;
@@ -33,10 +39,12 @@
   let open = $state(false);
 
   export const openFn = async () => {
+    isLoading = true;
     if (await onopen()) {
       error = "";
       open = true;
     }
+    isLoading = false;
   };
 
   const submit = async () => {
@@ -46,7 +54,7 @@
     let ret = await onsubmit();
 
     isLoading = false;
-    if (!ret) {
+    if (!ret && ret !== "") {
       open = false;
     } else {
       error = ret;
@@ -55,7 +63,16 @@
 </script>
 
 {#if trigger}
-  <Button variant={trigger.variant} onclick={openFn} class={trigger.class} size={trigger.size}>
+  <Button
+    variant={trigger.variant}
+    onclick={openFn}
+    class={trigger.class}
+    size={trigger.size}
+    disabled={isLoading}
+  >
+    {#if isLoading && trigger.loadIcon}
+      <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
+    {/if}
     {trigger.text}
     {@render triggerInner?.()}
   </Button>

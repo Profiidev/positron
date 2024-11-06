@@ -1,29 +1,16 @@
 <script lang="ts">
-  import { get_token, TokenType } from "$lib/auth/token.svelte";
-  import { interval } from "$lib/util/interval.svelte";
   import Separator from "$lib/components/ui/separator/separator.svelte";
   import PasskeyList from "./passkey-list.svelte";
   import Totp_2fa from "./totp-2fa.svelte";
-  import AccessConfirm from "./access-confirm.svelte";
+  import AccessConfirm from "../access-confirm.svelte";
   import Password from "./password.svelte";
+  import type { SvelteComponent } from "svelte";
 
-  let specialAccessWatcher = interval(() => {
-    return get_token(TokenType.SpecialAccess);
-  }, 1000);
-  let specialAccessValid = $state(false);
-  $effect(() => {
-    specialAccessValid = specialAccessWatcher.value !== undefined;
-  });
-
-  let cb = $state((_: boolean) => {});
-  let accessOpen = $state(false);
-
-  const requestAccess = async () => {
-    return new Promise<boolean>((resolve) => {
-      cb = resolve;
-      accessOpen = true;
-    });
-  };
+  let specialAccessValid: boolean = $state(false);
+  let accessConfirm: SvelteComponent | undefined = $state();
+  let requestAccess: () => Promise<boolean> = $derived(
+    accessConfirm?.requestAccess || (() => false),
+  );
 </script>
 
 <div class="space-y-6">
@@ -49,4 +36,4 @@
     </div>
   </div>
 </div>
-<AccessConfirm {cb} bind:open={accessOpen} />
+<AccessConfirm bind:specialAccessValid bind:this={accessConfirm} />

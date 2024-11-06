@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use rocket::futures::lock::Mutex;
 use rsa::{
@@ -6,15 +6,15 @@ use rsa::{
 };
 use surrealdb::Uuid;
 use totp_rs::TOTP;
-use webauthn_rs::prelude::{
-  DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration,
-};
+use webauthn_rs::{prelude::{
+  DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url,
+}, Webauthn, WebauthnBuilder};
 
 #[derive(Default)]
 pub struct PasskeyState {
-  pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
-  pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
-  pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
+  pub reg_state: Mutex<HashMap<Uuid, PasskeyRegistration>>,
+  pub auth_state: Mutex<HashMap<Uuid, DiscoverableAuthentication>>,
+  pub special_access_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
 }
 
 pub struct PasswordState {
@@ -25,7 +25,19 @@ pub struct PasswordState {
 
 pub struct TotpState {
   pub issuer: String,
-  pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
+  pub reg_state: Mutex<HashMap<Uuid, TOTP>>,
+}
+
+pub fn webauthn() -> Webauthn {
+  let rp_id = std::env::var("WEBAUTHN_ID").expect("Failed to load WEBAUTHN_ID");
+  let rp_origin = Url::parse(&std::env::var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
+    .expect("Failed to parse WEBAUTHN_ORIGIN");
+  let rp_name = std::env::var("WEBAUTHN_NAME").expect("Failed to load WEBAUTHN_NAME");
+
+  let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
+    .expect("Failed creating WebauthnBuilder")
+    .rp_name(&rp_name);
+  webauthn.build().expect("Failed creating Webauthn")
 }
 
 impl Default for TotpState {

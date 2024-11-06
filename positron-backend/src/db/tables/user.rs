@@ -193,13 +193,34 @@ impl<'db> UserTable<'db> {
   }
 
   pub async fn change_image(&self, uuid: Uuid, image: String) -> Result<(), Error> {
-    self.db.query("UPDATE user SET image = $image WHERE uuid = $uuid").bind(("image", image)).bind(("uuid", uuid.to_string())).await?;
+    self
+      .db
+      .query("UPDATE user SET image = $image WHERE uuid = $uuid")
+      .bind(("image", image))
+      .bind(("uuid", uuid.to_string()))
+      .await?;
 
     Ok(())
   }
 
   pub async fn update_profile(&self, uuid: Uuid, profile: ProfileUpdate) -> Result<(), Error> {
-    self.db.query("UPDATE user SET name = $name WHERE uuid = $uuid").bind(profile).bind(("uuid", uuid.to_string())).await?;
+    self
+      .db
+      .query("UPDATE user SET name = $name WHERE uuid = $uuid")
+      .bind(profile)
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn change_email(&self, uuid: Uuid, new_email: String) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET email = $email WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .bind(("email", new_email))
+      .await?;
 
     Ok(())
   }

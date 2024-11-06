@@ -8,18 +8,35 @@
   import { special_access } from "$lib/auth/password.svelte";
   import { special_access as special_access_pk } from "$lib/auth/passkey.svelte";
   import { AuthError } from "$lib/auth/types.svelte";
+  import { get_token, TokenType } from "$lib/auth/token.svelte";
+  import { interval } from "$lib/util/interval.svelte";
 
   interface Props {
-    cb: (confirmed: boolean) => void;
-    open: boolean;
+    specialAccessValid: boolean;
   }
 
-  let { cb, open = $bindable() }: Props = $props();
+  let { specialAccessValid = $bindable(false) }: Props = $props();
 
+  let specialAccessWatcher = interval(() => {
+    return get_token(TokenType.SpecialAccess);
+  }, 1000);
+  $effect(() => {
+    specialAccessValid = specialAccessWatcher.value !== undefined;
+  });
+
+  let cb: (value: boolean) => void;
+  let open = $state(false);
   let isLoading = $state(false);
   let password = $state("");
   let formError = $state("");
   let passkeyError = $state("");
+
+  export const requestAccess = async () => {
+    return new Promise<boolean>((resolve) => {
+      cb = resolve;
+      open = true;
+    });
+  };
 
   const confirm = async () => {
     isLoading = true;

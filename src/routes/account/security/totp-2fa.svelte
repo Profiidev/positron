@@ -144,6 +144,7 @@
           text: "Remove",
           variant: "destructive",
           class: "m-2 ml-auto",
+          loadIcon: true,
         }}
         onopen={startRemoveTotp}
         onsubmit={removeTotp}
@@ -153,7 +154,7 @@
         title="Add TOTP"
         description="Scan the QR-Code below or enter the code manually and enter the TOTP code"
         confirm="Add"
-        trigger={{ text: "Add", class: "m-2 ml-auto" }}
+        trigger={{ text: "Add", class: "m-2 ml-auto", loadIcon: true }}
         onopen={startAddTotp}
         onsubmit={addTotp}
       >
