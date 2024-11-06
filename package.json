@@ -24,6 +24,7 @@
     "paneforge": "0.0.6"
   },
   "devDependencies": {
+    "@sveltejs/adapter-node": "^5.2.9",
     "@sveltejs/adapter-static": "3.0.6",
     "@sveltejs/kit": "2.7.7",
     "@sveltejs/vite-plugin-svelte": "4.0.0",

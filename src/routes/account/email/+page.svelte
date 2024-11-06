@@ -90,7 +90,7 @@
     <p class="text-muted-foreground text-sm">Change your email settings here</p>
   </div>
   <Separator />
-  <div class="flex">
+  <div class="flex items-center">
     <div>
       <Label>Current Email</Label>
       {#if infoData}

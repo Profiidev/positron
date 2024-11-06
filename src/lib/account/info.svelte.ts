@@ -9,10 +9,10 @@ export const updateInfo = async () => {
   if (uuid) {
     infoData = await info(uuid);
   }
-}
+};
 
 export const getInfo = () => {
   return infoData;
-}
+};
 
 updateInfo();

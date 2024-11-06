@@ -1,8 +1,10 @@
+use std::net::{IpAddr, Ipv4Addr};
+
 use cors::cors;
 use db::DB;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use rocket::{launch, Build, Rocket, Route};
+use rocket::{launch, Build, Config, Rocket, Route};
 
 mod account;
 mod auth;
@@ -10,7 +12,6 @@ mod cors;
 mod db;
 mod email;
 mod error;
-mod test;
 
 #[launch]
 async fn rocket() -> _ {
@@ -22,12 +23,17 @@ async fn rocket() -> _ {
     .expect("Failed connecting to DB");
   let cors = cors();
 
+  let config = Config {
+    address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+    ..Default::default()
+  };
+
   let server = rocket::build()
+    .configure(config)
     .attach(cors)
     .manage(rocket_cors::catch_all_options_routes())
     .manage(db)
-    .mount("/", routes())
-    .mount("/", rocket::routes![test::test]);
+    .mount("/", routes());
 
   state(server)
 }
