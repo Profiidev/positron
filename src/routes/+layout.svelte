@@ -5,7 +5,9 @@
   import { get_token, TokenType } from "$lib/auth/token.svelte";
   import { goto } from "$app/navigation";
   import { Toaster } from "$lib/components/ui/sonner";
-  import Nav from "$lib/components/nav/nav.svelte";
+  import SidebarApp from "$lib/components/nav/sidebar-app.svelte";
+  import * as Sidebar from "$lib/components/ui/sidebar";
+
   interface Props {
     children?: import("svelte").Snippet;
   }
@@ -25,7 +27,10 @@
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
 {#if !noLayout.includes($page.url.pathname)}
-  <Nav />
+  <Sidebar.Provider>
+    <SidebarApp />
+    <Sidebar.Trigger />
+  </Sidebar.Provider>
   {@render children?.()}
 {:else}
   {@render children?.()}
