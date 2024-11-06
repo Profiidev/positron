@@ -1,5 +1,5 @@
 use surrealdb::{
-  engine::remote::ws::{Client, Wss},
+  engine::remote::ws::{Client, Ws, Wss},
   opt::auth::Namespace,
   Error, Surreal,
 };
@@ -13,6 +13,10 @@ pub struct DB {
 
 impl DB {
   pub async fn init_db_from_env() -> Result<Self, Error> {
+    let secure = std::env::var("DB_SECURE")
+      .expect("No DB_SECURE found")
+      .parse()
+      .expect("Failed to parse Port");
     let address = std::env::var("DB_ADDRESS").expect("No DB address found");
     let port = std::env::var("DB_PORT")
       .expect("No DB address found")
@@ -22,17 +26,23 @@ impl DB {
     let password = std::env::var("DB_PASSWORD").expect("No DB address found");
     let database = std::env::var("DB_DATABASE").expect("No DB address found");
 
-    Self::init_db(&address, port, &username, &password, &database).await
+    Self::init_db(secure, &address, port, &username, &password, &database).await
   }
 
   pub async fn init_db(
+    secure: bool,
     address: &str,
     port: u16,
     username: &str,
     password: &str,
     database: &str,
   ) -> Result<Self, Error> {
-    let db = Surreal::new::<Wss>(format!("{}:{}", address, port)).await?;
+    let address = format!("{}:{}", address, port);
+    let db = if secure {
+      Surreal::new::<Wss>(address).await?
+    } else {
+      Surreal::new::<Ws>(address).await?
+    };
 
     db.signin(Namespace {
       namespace: "positron",
