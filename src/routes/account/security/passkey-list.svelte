@@ -10,6 +10,7 @@
   import { Separator } from "$lib/components/ui/separator";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
+    import { toast } from "svelte-sonner";
 
   interface Props {
     valid: boolean;
@@ -55,6 +56,9 @@
     } else {
       createName = "";
       list().then((pks) => (passkeys = pks));
+      toast.success("Creation successful", {
+        description: "Passkey was successfully added to your account"
+      });
     }
   };
 
@@ -76,6 +80,9 @@
       return "There was an error while deleting your passkey";
     } else {
       list().then((pks) => (passkeys = pks));
+      toast.success("Deletion successful", {
+        description: `Passkey "${editing}" was successfully removed from your account`
+      });
     }
   };
 
@@ -106,6 +113,9 @@
       }
     } else {
       list().then((pks) => (passkeys = pks));
+      toast.success("Edit successful", {
+        description: `Passkey name was changed successfully from ${editing} to ${editName}`
+      });
     }
   };
 </script>

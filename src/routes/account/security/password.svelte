@@ -7,6 +7,7 @@
   import { Separator } from "$lib/components/ui/separator";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { DateTime } from "luxon";
+  import { toast } from "svelte-sonner";
 
   interface Props {
     valid: boolean;
@@ -47,6 +48,10 @@
       } else {
         return "Error while updating password";
       }
+    } else {
+      toast.success("Update successful", {
+        description: "Password was changed successfully",
+      });
     }
   };
 </script>

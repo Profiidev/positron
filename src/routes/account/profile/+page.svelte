@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { change_image, info, update_profile } from "$lib/account/general.svelte";
+  import {
+    change_image,
+    info,
+    update_profile,
+  } from "$lib/account/general.svelte";
   import type { UserInfo } from "$lib/account/types.svelte";
   import { get_uuid } from "$lib/auth/token.svelte";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -20,36 +23,32 @@
     name = info?.name;
   });
 
-  let image: string | undefined = $state();
   let name: string | undefined = $state();
   let isLoading = $state(false);
+  let imageInput: undefined | HTMLElement | null = $state(null);
 
   const updatePreview = async (e: Event) => {
     let input = e.target as HTMLInputElement;
     let file = input.files?.[0];
     if (file) {
-      image = arrayBufferToBase64(await file.arrayBuffer());
+      let image = arrayBufferToBase64(await file.arrayBuffer());
+      let ret = await change_image(image);
+
+      if (ret !== null) {
+        toast.error("Update Error", {
+          description: "Error while uploading image",
+        });
+      } else {
+        infoData = await info(uuid);
+        toast.success("Upload successful", {
+          description: "Successfully uploaded image to your profile",
+        });
+      }
     }
   };
 
   const startImageUpload = () => {
-    image = undefined;
-    return true;
-  };
-
-  const uploadImage = async () => {
-    if (!image) {
-      return "No image provided";
-    }
-
-    let ret = await change_image(image);
-
-    if (ret !== null) {
-      return "Error while uploading Image";
-    }
-
-    info(uuid).then((info) => (infoData = info));
-    return "";
+    imageInput?.click();
   };
 
   const updateProfile = async () => {
@@ -93,44 +92,22 @@
             alt="Profile"
             class="size-52 rounded-full"
           />
-          <FormDialog
-            title="Change Profile Picture"
-            description="Upload a image here to make it your profile picture"
-            confirm="Upload"
-            trigger={{
-              variant: "ghost",
-              class:
-                "group absolute hover:backdrop-blur-sm size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent",
-            }}
-            onopen={startImageUpload}
-            onsubmit={uploadImage}
+          <Button
+            class="group absolute hover:backdrop-blur-sm size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
+            variant="ghost"
+            onclick={startImageUpload}
           >
-            {#snippet triggerInner()}
-              <Upload class="!size-12 hidden group-hover:block" />
-            {/snippet}
+            <Upload class="!size-12 hidden group-hover:block" />
             <Label class="sr-only" for="picture">Picture</Label>
             <Input
+              bind:ref={imageInput}
               type="file"
               id="picture"
               accept="image/png, image/jpeg"
+              class="hidden"
               onchange={updatePreview}
             />
-            <div class="flex justify-center">
-              {#if image}
-                <img
-                  src={`data:image/png;base64, ${image}`}
-                  alt="Profile"
-                  class="size-52 rounded-full border object-cover"
-                />
-              {:else}
-                <div
-                  class="size-52 rounded-full border-2 flex justify-center items-center"
-                >
-                  <p>No Preview available</p>
-                </div>
-              {/if}
-            </div>
-          </FormDialog>
+          </Button>
         </div>
       {:else}
         <Skeleton class="size-52 rounded-full" />
@@ -138,7 +115,12 @@
     </div>
     <form class="space-y-3 pl-10" onsubmit={updateProfile}>
       <h3 class="text-lg">Username</h3>
-      <Input autocomplete="off" placeholder="Username" required bind:value={name} />
+      <Input
+        autocomplete="off"
+        placeholder="Username"
+        required
+        bind:value={name}
+      />
       <Button type="submit" class="!mt-8" disabled={isLoading}>
         {#if isLoading}
           <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />

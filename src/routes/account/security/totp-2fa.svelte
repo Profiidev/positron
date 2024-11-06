@@ -14,6 +14,7 @@
   import { Badge } from "$lib/components/ui/badge";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
+  import { toast } from "svelte-sonner";
 
   interface Props {
     valid: boolean;
@@ -45,6 +46,9 @@
       return "Error while removing TOTP";
     } else {
       info().then((info) => (totpInfo = info));
+      toast.success("Remove successful", {
+        description: "TOTP was removed successfully from your account",
+      });
     }
   };
 
@@ -81,6 +85,9 @@
       }
     } else {
       info().then((info) => (totpInfo = info));
+      toast.success("Addition successful", {
+        description: "TOTP was added successfully to your account",
+      });
     }
   };
 </script>
