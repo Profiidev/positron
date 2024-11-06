@@ -5,7 +5,7 @@
   import { get_token, TokenType } from "$lib/auth/token.svelte";
   import { goto } from "$app/navigation";
   import { Toaster } from "$lib/components/ui/sonner";
-  import SidebarApp from "$lib/components/nav/sidebar-app.svelte";
+  import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
 
   interface Props {
@@ -29,9 +29,11 @@
 {#if !noLayout.includes($page.url.pathname)}
   <Sidebar.Provider>
     <SidebarApp />
-    <Sidebar.Trigger />
+    <Sidebar.Trigger class="absolute" />
+    <main class="w-full h-full">
+      {@render children?.()}
+    </main>
   </Sidebar.Provider>
-  {@render children?.()}
 {:else}
   {@render children?.()}
 {/if}

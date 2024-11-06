@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { info } from "$lib/account/general.svelte";
-  import type { UserInfo } from "$lib/account/types.svelte";
-  import { get_uuid } from "$lib/auth/token.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import type { SvelteComponent } from "svelte";
   import AccessConfirm from "../access-confirm.svelte";
@@ -13,13 +10,9 @@
   import { finish_change, start_change } from "$lib/email/manage.svelte";
   import { Input } from "$lib/components/ui/input";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
+  import { getInfo, updateInfo } from "$lib/account/info.svelte";
 
-  let uuid = get_uuid() || "";
-
-  let infoData: UserInfo | undefined = $state();
-  info(uuid).then((info) => {
-    infoData = info;
-  });
+  let infoData = $derived(getInfo());
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
@@ -82,7 +75,7 @@
         return "There was an error while updating your email";
       }
     } else {
-      infoData = await info(uuid);
+      await updateInfo();
       enteringCodes = false;
       toast.success("Update successful", {
         description: "Your email address was updated successfully",

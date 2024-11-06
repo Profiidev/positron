@@ -1,11 +1,6 @@
 <script lang="ts">
-  import {
-    change_image,
-    info,
-    update_profile,
-  } from "$lib/account/general.svelte";
-  import type { UserInfo } from "$lib/account/types.svelte";
-  import { get_uuid } from "$lib/auth/token.svelte";
+  import { change_image, update_profile } from "$lib/account/general.svelte";
+  import { getInfo, updateInfo } from "$lib/account/info.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -14,13 +9,11 @@
   import { arrayBufferToBase64 } from "$lib/util/convert.svelte";
   import { Upload, LoaderCircle } from "lucide-svelte";
   import { toast } from "svelte-sonner";
+  import * as Avatar from "$lib/components/ui/avatar";
 
-  let uuid = get_uuid() || "";
-
-  let infoData: UserInfo | undefined = $state();
-  info(uuid).then((info) => {
-    infoData = info;
-    name = info?.name;
+  let infoData = $derived(getInfo());
+  $effect(() => {
+    name = infoData?.name;
   });
 
   let name: string | undefined = $state();
@@ -39,7 +32,7 @@
           description: "Error while uploading image",
         });
       } else {
-        infoData = await info(uuid);
+        await updateInfo();
         toast.success("Upload successful", {
           description: "Your profile profile image was updated successfully",
         });
@@ -87,11 +80,13 @@
     <div class="space-y-3">
       {#if infoData}
         <div class="relative">
-          <img
-            src={`data:image/png;base64, ${infoData.image}`}
-            alt="Profile"
-            class="size-52 rounded-full"
-          />
+          <Avatar.Root class="size-52 rounded-full">
+            <Avatar.Image
+              src={`data:image/png;base64, ${infoData.image}`}
+              alt="Profile"
+            />
+            <Avatar.Fallback>?</Avatar.Fallback>
+          </Avatar.Root>
           <Button
             class="group absolute hover:backdrop-blur-sm size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
             variant="ghost"
@@ -113,14 +108,17 @@
         <Skeleton class="size-52 rounded-full" />
       {/if}
     </div>
-    <form class="mt-5 sm:mt-0 sm:pl-10 flex flex-col" onsubmit={updateProfile}>
+    <form
+      class="mt-5 sm:mt-0 sm:pl-10 flex flex-col space-y-2"
+      onsubmit={updateProfile}
+    >
       <Label for="username">Username</Label>
       <div class="relative">
         <Input
           id="username"
           autocomplete="off"
           placeholder={infoData ? "Username" : ""}
-          class="sm:min-w-72"
+          class="sm:max-w-72"
           required
           bind:value={name}
         />
@@ -130,7 +128,7 @@
           </div>
         {/if}
       </div>
-      <Button type="submit" class="mt-8 ml-auto" disabled={isLoading}>
+      <Button type="submit" class="!mt-8 ml-auto" disabled={isLoading}>
         {#if isLoading}
           <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
         {/if}

@@ -56,16 +56,16 @@
   };
 </script>
 
-<div class="flex">
-  <div class="flex h-6 space-x-2">
+<div class="flex items-center">
+  <div class="flex h-6 space-x-2 mr-2">
     {#if lastLogin}
-      <p class="text-muted-foreground">
+      <p class="text-muted-foreground text-sm">
         Last login {DateTime.fromISO(lastLogin.last_login).toLocaleString(
           DateTime.DATE_MED,
         )}
       </p>
       <Separator orientation={"vertical"} />
-      <p class="text-muted-foreground">
+      <p class="text-muted-foreground text-sm">
         Last special access {DateTime.fromISO(
           lastLogin.last_special_access,
         ).toLocaleString(DateTime.DATE_MED)}
