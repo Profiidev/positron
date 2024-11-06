@@ -41,3 +41,8 @@ jobs:
           build-args: URL=${{ secrets.BACKEND_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Update via Webhook
+        uses: newarifrh/portainer-service-webhook@v1
+        with:
+          webhook_url: ${{ secrets.PORTAINER_WEBHOOK }}

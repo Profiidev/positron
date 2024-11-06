@@ -14,6 +14,7 @@
   import { authenticate } from "$lib/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
+    import { updateInfo } from "$lib/account/info.svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -47,6 +48,7 @@
         }
         return;
       } else {
+        await updateInfo();
         goto("/");
         return;
       }
