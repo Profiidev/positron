@@ -119,6 +119,7 @@ impl<'db> UserTable<'db> {
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
+  #[allow(dead_code)]
   pub async fn create_user(&self, user: UserCreate) -> Result<(), Error> {
     self
       .db
