@@ -4,7 +4,7 @@ use cors::cors;
 use db::DB;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use rocket::{launch, Build, Config, Rocket, Route};
+use rocket::{config::LogLevel, launch, Build, Config, Rocket, Route};
 
 mod account;
 mod auth;
@@ -25,6 +25,7 @@ async fn rocket() -> _ {
 
   let config = Config {
     address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+    log_level: LogLevel::Normal,
     ..Default::default()
   };
 

@@ -14,7 +14,7 @@
   import { authenticate } from "$lib/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-    import { updateInfo } from "$lib/account/info.svelte";
+  import { updateInfo } from "$lib/account/info.svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -66,6 +66,7 @@
       if (ret) {
         enterEmail = false;
       } else {
+        await updateInfo();
         goto("/");
       }
     } else {
@@ -93,6 +94,7 @@
         passkeyError = "There was an Error while signing in";
       }
     } else {
+      await updateInfo();
       goto("/");
     }
   };
@@ -140,7 +142,7 @@
       {:else}
         <div class="grid gap-1">
           <Label class="sr-only">TOTP</Label>
-          <Totp_6 bind:totp={totp} class="flex w-full sm:w-[350px] justify-between" />
+          <Totp_6 bind:totp class="flex w-full sm:w-[350px] justify-between" />
         </div>
       {/if}
       <span class="text-destructive truncate text-sm">{form_error}</span>

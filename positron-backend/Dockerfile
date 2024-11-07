@@ -25,6 +25,8 @@ RUN mv ./target/$TARGET/release/positron-backend ./app
 
 FROM scratch
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
 WORKDIR /app
 COPY --from=builder /app/app /usr/local/bin/
 

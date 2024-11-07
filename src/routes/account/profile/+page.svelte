@@ -63,6 +63,7 @@
         description: "There was an error while updating your profile",
       });
     } else {
+      await updateInfo();
       toast.success("Successfully Update", {
         description: "Your profile was updated successfully",
       });
