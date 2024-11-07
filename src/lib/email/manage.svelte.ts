@@ -27,7 +27,7 @@ export const start_change = async (new_email: string) => {
   } catch (_) {
     return;
   }
-}
+};
 
 export const finish_change = async (old_code: string, new_code: string) => {
   let token = get_token(TokenType.SpecialAccess);
@@ -45,7 +45,7 @@ export const finish_change = async (old_code: string, new_code: string) => {
       body: JSON.stringify({
         old_code,
         new_code,
-      })
+      }),
     });
 
     if (res.status === 401) {
@@ -58,4 +58,4 @@ export const finish_change = async (old_code: string, new_code: string) => {
   } catch (_) {
     return EmailError.Other;
   }
-}
+};

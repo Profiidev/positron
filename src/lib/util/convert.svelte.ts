@@ -2,12 +2,12 @@ export const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let byteArray = new Uint8Array(buffer);
 
   let string = "";
-  byteArray.forEach(b => {
+  byteArray.forEach((b) => {
     string += String.fromCharCode(b);
   });
 
   return btoa(string);
-}
+};
 
 export const base64ToArrayBuffer = (base64: string) => {
   let string = atob(base64);
@@ -21,4 +21,4 @@ export const base64ToArrayBuffer = (base64: string) => {
   }
 
   return buffer;
-}
+};

@@ -6,7 +6,7 @@
     class: string | undefined;
   }
 
-  let { totp = $bindable(), class: className}: Props = $props();
+  let { totp = $bindable(), class: className }: Props = $props();
 </script>
 
 <InputOtp.Root

@@ -11,7 +11,7 @@ export interface Passkey {
   name: string;
   created: string;
   used: string;
-};
+}
 
 export interface TotpInfo {
   enabled: boolean;
@@ -28,4 +28,3 @@ export interface PasswordInfo {
   last_login: string;
   last_special_access: string;
 }
-

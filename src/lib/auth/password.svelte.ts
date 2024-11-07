@@ -114,7 +114,10 @@ export const special_access = async (
   }
 };
 
-export const change = async (password: string, password_confirm: string): Promise<AuthError | undefined> => {
+export const change = async (
+  password: string,
+  password_confirm: string,
+): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
     return AuthError.MissingToken;
@@ -124,20 +127,17 @@ export const change = async (password: string, password_confirm: string): Promis
     let encrypted_password = encrypt.encrypt(password);
     let encrypted_password_confirm = encrypt.encrypt(password_confirm);
 
-    let login_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/auth/password/change`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          password: encrypted_password,
-          password_confirm: encrypted_password_confirm,
-        }),
+    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/change`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
       },
-    );
+      body: JSON.stringify({
+        password: encrypted_password,
+        password_confirm: encrypted_password_confirm,
+      }),
+    });
 
     if (login_res.status === 409) {
       return AuthError.Password;
@@ -150,7 +150,7 @@ export const change = async (password: string, password_confirm: string): Promis
   } catch (_) {
     return AuthError.Other;
   }
-}
+};
 
 export const info = async (): Promise<undefined | PasswordInfo> => {
   let token = get_token(TokenType.Auth);
@@ -175,4 +175,4 @@ export const info = async (): Promise<undefined | PasswordInfo> => {
   } catch (_) {
     return;
   }
-}
+};

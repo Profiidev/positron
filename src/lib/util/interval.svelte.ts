@@ -22,13 +22,13 @@ const createKeyedWatcher = () => {
                 entry[1]?.();
                 watchers.delete(setup);
               }
-            })
-          }
-        })
+            });
+          };
+        });
       }
-    }
-  }
-}
+    },
+  };
+};
 
 export const interval = <T>(update: () => T, timeout: number) => {
   let value = $state(update());
@@ -46,6 +46,6 @@ export const interval = <T>(update: () => T, timeout: number) => {
     get value() {
       watcher.watch(setup);
       return value;
-    }
-  }
+    },
+  };
 };
