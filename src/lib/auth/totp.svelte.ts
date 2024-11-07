@@ -8,7 +8,7 @@ export const is_code = (object: any): object is TotpCode => {
 
 export const is_info = (object: any): object is TotpInfo => {
   return "enabled" in object;
-}
+};
 
 export const get_setup_code = async (): Promise<AuthError | TotpCode> => {
   let token = get_token(TokenType.SpecialAccess);
@@ -123,7 +123,7 @@ export const info = async (): Promise<undefined | TotpInfo> => {
   } catch (_) {
     return;
   }
-}
+};
 
 export const remove = async (): Promise<AuthError | undefined> => {
   let token = get_token(TokenType.SpecialAccess);
@@ -146,4 +146,4 @@ export const remove = async (): Promise<AuthError | undefined> => {
   } catch (_) {
     return AuthError.Other;
   }
-}
+};

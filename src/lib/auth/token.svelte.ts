@@ -56,7 +56,7 @@ export const get_uuid = () => {
   if (token) {
     return get_claims(token).sub;
   }
-}
+};
 
 const get_claims = (token: string) => {
   let claims_part = token.split(".")[1];

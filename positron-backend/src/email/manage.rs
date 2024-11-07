@@ -7,7 +7,10 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{state::{EmailState, Mailer}, templates::confirm_code};
+use super::{
+  state::{EmailState, Mailer},
+  templates::confirm_code,
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![start_change, finish_change]
@@ -35,7 +38,11 @@ async fn start_change(
     return Err(Error::InternalServerError);
   };
 
-  state.change_req.lock().await.insert(auth.uuid, code.clone());
+  state
+    .change_req
+    .lock()
+    .await
+    .insert(auth.uuid, code.clone());
 
   mailer.send_mail(
     user.name.clone(),

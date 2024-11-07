@@ -121,7 +121,11 @@ impl Default for Mailer {
 
     let sender = Mailbox::new(Some(sender_name), sender_email);
 
-    Self { transport, sender, site_link }
+    Self {
+      transport,
+      sender,
+      site_link,
+    }
   }
 }
 

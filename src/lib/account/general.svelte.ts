@@ -10,11 +10,14 @@ export const info = async (uuid: string) => {
   }
 
   try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/account/general/info/${uuid}`, {
-      headers: {
-        Authorization: token,
+    let info_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/account/general/info/${uuid}`,
+      {
+        headers: {
+          Authorization: token,
+        },
       },
-    });
+    );
 
     if (info_res.status !== 200) {
       return;
@@ -25,7 +28,7 @@ export const info = async (uuid: string) => {
   } catch (_) {
     return;
   }
-}
+};
 
 export const change_image = async (image: string) => {
   let token = get_token(TokenType.Auth);
@@ -34,14 +37,17 @@ export const change_image = async (image: string) => {
   }
 
   try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/account/general/change_image`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        Authorization: token,
+    let info_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/account/general/change_image`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          Authorization: token,
+        },
+        body: base64ToArrayBuffer(image),
       },
-      body: base64ToArrayBuffer(image),
-    });
+    );
 
     if (info_res.status !== 200) {
       return;
@@ -51,7 +57,7 @@ export const change_image = async (image: string) => {
   } catch (_) {
     return;
   }
-}
+};
 
 export const update_profile = async (profile: ProfileInfo) => {
   let token = get_token(TokenType.Auth);
@@ -60,14 +66,17 @@ export const update_profile = async (profile: ProfileInfo) => {
   }
 
   try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/account/general/update_profile`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
+    let info_res = await fetch(
+      `${PUBLIC_BACKEND_URL}/account/general/update_profile`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(profile),
       },
-      body: JSON.stringify(profile),
-    });
+    );
 
     if (info_res.status !== 200) {
       return;
@@ -77,4 +86,4 @@ export const update_profile = async (profile: ProfileInfo) => {
   } catch (_) {
     return;
   }
-}
+};

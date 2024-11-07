@@ -82,7 +82,6 @@
   };
 
   const onOpenChange = (open: boolean) => {
-    console.log(open);
     if (!open) {
       cb(false);
     }

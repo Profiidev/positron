@@ -6,9 +6,10 @@ use rsa::{
 };
 use surrealdb::Uuid;
 use totp_rs::TOTP;
-use webauthn_rs::{prelude::{
-  DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url,
-}, Webauthn, WebauthnBuilder};
+use webauthn_rs::{
+  prelude::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url},
+  Webauthn, WebauthnBuilder,
+};
 
 #[derive(Default)]
 pub struct PasskeyState {
@@ -30,8 +31,9 @@ pub struct TotpState {
 
 pub fn webauthn() -> Webauthn {
   let rp_id = std::env::var("WEBAUTHN_ID").expect("Failed to load WEBAUTHN_ID");
-  let rp_origin = Url::parse(&std::env::var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
-    .expect("Failed to parse WEBAUTHN_ORIGIN");
+  let rp_origin =
+    Url::parse(&std::env::var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
+      .expect("Failed to parse WEBAUTHN_ORIGIN");
   let rp_name = std::env::var("WEBAUTHN_NAME").expect("Failed to load WEBAUTHN_NAME");
 
   let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
