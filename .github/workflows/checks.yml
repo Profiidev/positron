@@ -15,6 +15,11 @@ jobs:
           token: ${{ secrets.PERSONAL_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install Dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
       - name: Cache cargo and rust files
         id: rust_cache
         uses: Swatinem/rust-cache@v2
