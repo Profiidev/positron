@@ -3,6 +3,7 @@ use state::OAuthState;
 
 mod adapter;
 mod auth;
+mod error;
 mod handler;
 mod state;
 

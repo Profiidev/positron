@@ -32,7 +32,6 @@ impl<'db> InvalidJwtTable<'db> {
     Ok(())
   }
 
-  #[allow(dead_code)]
   pub async fn invalidate_jwt(&self, token: String) -> Result<(), Error> {
     self
       .db

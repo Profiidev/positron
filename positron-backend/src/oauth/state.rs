@@ -1,22 +1,39 @@
-use oxide_auth::frontends::simple::endpoint::{Generic, Vacant};
+use std::sync::Mutex;
+
+use oxide_auth::{
+  endpoint::{Authorizer, Issuer, Registrar},
+  frontends::simple::endpoint::{Generic, Vacant},
+};
 
 use super::handler::{authorizer::JwtAuthorizer, issuer::JwtIssuer, registrar::DBRegistrar};
 
 pub struct OAuthState {
-  pub endpoint: Generic<DBRegistrar, JwtAuthorizer, JwtIssuer, Vacant, Vacant, Vacant>,
+  registrar: Mutex<DBRegistrar>,
+  authorizer: Mutex<JwtAuthorizer>,
+  issuer: Mutex<JwtIssuer>,
+  pub frontend_url: String,
 }
 
 impl OAuthState {
   pub async fn new() -> Self {
+    let frontend_url = std::env::var("FRONTEND_URL").expect("Failed to load OAUTH_LOGIN_URL");
+
     Self {
-      endpoint: Generic {
-        registrar: DBRegistrar::new().await,
-        authorizer: JwtAuthorizer::new(),
-        issuer: JwtIssuer::new().await,
-        solicitor: Vacant,
-        scopes: Vacant,
-        response: Vacant,
-      },
+      registrar: Mutex::new(DBRegistrar::new().await),
+      authorizer: Mutex::new(JwtAuthorizer::new()),
+      issuer: Mutex::new(JwtIssuer::new().await),
+      frontend_url,
+    }
+  }
+
+  pub fn endpoint(&self) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_> {
+    Generic {
+      registrar: self.registrar.lock().unwrap(),
+      authorizer: self.authorizer.lock().unwrap(),
+      issuer: self.issuer.lock().unwrap(),
+      solicitor: Vacant,
+      scopes: Vacant,
+      response: Vacant,
     }
   }
 }

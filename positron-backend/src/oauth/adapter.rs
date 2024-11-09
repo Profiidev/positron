@@ -9,7 +9,7 @@ use rocket::{
   data::{self, DataStream, FromData, Limits},
   http::{hyper::header, ContentType, Header, Status},
   request::{FromRequest, Outcome},
-  response::Responder,
+  response::{self, Responder},
   Data, Request, Response,
 };
 use thiserror::Error;
@@ -88,6 +88,15 @@ impl<'r> OAuthRequest<'r> {
         Err(_) => self.body = Err(WebError::Encoding),
       }
     }
+  }
+
+  pub fn response_type(&self) -> Option<String> {
+    self
+      .query
+      .as_ref()
+      .ok()?
+      .unique_value("response_type")
+      .map(|s| s.to_string())
   }
 }
 
@@ -199,6 +208,13 @@ impl<'r> FromRequest<'r> for OAuthRequest<'r> {
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
     Outcome::Success(Self::new(req))
+  }
+}
+
+#[async_trait]
+impl<'r, 'o: 'r> Responder<'r, 'o> for OAuthResponse<'o> {
+  fn respond_to(self, _: &'r Request<'_>) -> response::Result<'o> {
+    Ok(self.0)
   }
 }
 
