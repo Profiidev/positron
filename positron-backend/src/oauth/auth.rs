@@ -10,10 +10,10 @@ pub fn routes() -> Vec<Route> {
 }
 
 #[get("/authorize")]
-fn authorize<'r>(oauth: OAuthRequest<'r>) {}
+fn authorize(oauth: OAuthRequest<'_>) {}
 
 #[post("/token", data = "<body>")]
-fn token<'r>(mut oauth: OAuthRequest<'r>, body: Data<'_>) {}
+fn token(oauth: OAuthRequest<'_>, body: Data<'_>) {}
 
 #[post("/refresh", data = "<body>")]
-fn refresh<'r>(mut oauth: OAuthRequest<'r>, body: Data<'_>) {}
+fn refresh(oauth: OAuthRequest<'_>, body: Data<'_>) {}
