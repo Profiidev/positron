@@ -9,9 +9,13 @@ use oxide_auth::{
     registrar::{BoundClient, RegisteredUrl, RegistrarError},
   },
 };
-use rocket::futures::executor::block_on;
+use rocket::tokio::{runtime::Handle, task::block_in_place};
+use webauthn_rs::prelude::Url;
 
-use crate::{db::DB, error::Error};
+use crate::{
+  db::{tables::oauth_client::OAuthClient, DB},
+  error::Error,
+};
 
 pub struct DBRegistrar {
   db: DB,
@@ -30,26 +34,43 @@ impl DBRegistrar {
 
     Self { db, pepper }
   }
+
+  async fn get_client_by_id(&self, client_id: String) -> Result<OAuthClient, RegistrarError> {
+    self
+      .db
+      .tables()
+      .oauth_client()
+      .get_client_by_id(client_id)
+      .await
+      .map_err(|_| RegistrarError::Unspecified)
+  }
+
+  fn get_client_blocking(&self, client_id: String) -> Result<OAuthClient, RegistrarError> {
+    block_in_place(|| Handle::current().block_on(self.get_client_by_id(client_id)))
+  }
 }
 
 impl Registrar for DBRegistrar {
   fn bound_redirect<'a>(&self, bound: ClientUrl<'a>) -> Result<BoundClient<'a>, RegistrarError> {
-    let client = block_on(
-      self
-        .db
-        .tables()
-        .oauth_client()
-        .get_client_by_id(bound.client_id.to_string()),
-    )
-    .map_err(|_| RegistrarError::Unspecified)?;
+    let client = self.get_client_blocking(bound.client_id.to_string())?;
 
     let registered_url = match bound.redirect_uri {
-      None => client.redirect_uri,
+      None => RegisteredUrl::Semantic(
+        client
+          .redirect_uri
+          .parse()
+          .map_err(|_| RegistrarError::PrimitiveError)?,
+      ),
       Some(url) => {
-        let mut possibilities =
-          std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
+        let mut possibilities = std::iter::once(&client.redirect_uri)
+          .chain(&client.additional_redirect_uris)
+          .flat_map(|uri| {
+            Ok::<RegisteredUrl, RegistrarError>(RegisteredUrl::Semantic(
+              Url::parse(uri).map_err(|_| RegistrarError::PrimitiveError)?,
+            ))
+          });
 
-        if possibilities.any(|registered| *registered == *url.as_ref()) {
+        if possibilities.any(|registered| registered == *url.as_ref()) {
           RegisteredUrl::Exact((*url).clone())
         } else {
           return Err(RegistrarError::Unspecified);
@@ -64,14 +85,7 @@ impl Registrar for DBRegistrar {
   }
 
   fn check(&self, client_id: &str, passphrase: Option<&[u8]>) -> Result<(), RegistrarError> {
-    let client = block_on(
-      self
-        .db
-        .tables()
-        .oauth_client()
-        .get_client_by_id(client_id.to_string()),
-    )
-    .map_err(|_| RegistrarError::Unspecified)?;
+    let client = self.get_client_blocking(client_id.to_string())?;
 
     let Some(passphrase) = passphrase else {
       return Err(RegistrarError::Unspecified);
@@ -93,14 +107,7 @@ impl Registrar for DBRegistrar {
     client: BoundClient,
     scope: Option<Scope>,
   ) -> Result<PreGrant, RegistrarError> {
-    let client_db = block_on(
-      self
-        .db
-        .tables()
-        .oauth_client()
-        .get_client_by_id(client.client_id.to_string()),
-    )
-    .map_err(|_| RegistrarError::Unspecified)?;
+    let client_db = self.get_client_blocking(client.client_id.to_string())?;
 
     dbg!(scope);
 

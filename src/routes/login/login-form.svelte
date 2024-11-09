@@ -7,7 +7,7 @@
   import { Input } from "../../lib/components/ui/input/index";
   import { Label } from "../../lib/components/ui/label/index";
   import { login } from "$lib/auth/password.svelte";
-  import { AuthError } from "$lib/auth/types.svelte";
+  import { AuthError, type OAuthParams } from "$lib/auth/types.svelte";
   import { goto } from "$app/navigation";
   import { confirm } from "$lib/auth/totp.svelte";
   import { get_token, TokenType } from "$lib/auth/token.svelte";
@@ -16,6 +16,8 @@
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import { updateInfo } from "$lib/account/info.svelte";
   import { onMount } from "svelte";
+  import { page } from "$app/stores";
+  import { get } from "svelte/store";
 
   interface Props {
     class?: string | undefined | null;
@@ -30,6 +32,22 @@
   let totp = $state("");
   let form_error = $state("");
   let passkeyError = $state("");
+
+  let oauth_params: OAuthParams | undefined = $derived.by(() => {
+    let response_type = get(page).url.searchParams.get("response_type");
+    let client_id = get(page).url.searchParams.get("client_id");
+    let redirect_uri = get(page).url.searchParams.get("redirect_uri");
+    let state = get(page).url.searchParams.get("state");
+
+    if (response_type && client_id && redirect_uri) {
+      return {
+        response_type,
+        client_id,
+        redirect_uri,
+        state,
+      } as OAuthParams;
+    }
+  });
 
   const onSubmit = async () => {
     if (!enterEmail) {
@@ -102,9 +120,13 @@
 
   onMount(() => {
     if (get_token(TokenType.Auth)) {
-      goto("/", {
-        replaceState: true,
-      });
+      if (oauth_params) {
+        console.log(oauth_params)
+      } else {
+        goto("/", {
+          replaceState: true,
+        });
+      }
     }
   });
 </script>

@@ -13,6 +13,8 @@ mod db;
 mod email;
 mod error;
 mod oauth;
+#[cfg(debug_assertions)]
+mod test;
 
 #[launch]
 async fn rocket() -> _ {
@@ -35,6 +37,7 @@ async fn rocket() -> _ {
     .attach(cors)
     .manage(rocket_cors::catch_all_options_routes())
     .manage(db)
+    .mount("/", rocket::routes![test::test])
     .mount("/", routes());
 
   state(server).await

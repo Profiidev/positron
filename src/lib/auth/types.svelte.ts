@@ -28,3 +28,10 @@ export interface PasswordInfo {
   last_login: string;
   last_special_access: string;
 }
+
+export interface OAuthParams {
+  response_type: string;
+  client_id: string;
+  redirect_uri: string;
+  state?: string;
+}

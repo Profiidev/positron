@@ -9,7 +9,7 @@ use oxide_auth::{
     issuer::{IssuedToken, RefreshedToken, TokenType},
   },
 };
-use rocket::futures::executor::block_on;
+use rocket::tokio::{runtime::Handle, task::block_in_place};
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::Url;
 
@@ -86,16 +86,22 @@ impl JwtIssuer {
     Ok((access, refresh))
   }
 
-  fn get_claims(&self, token: &str) -> Result<GrantClaims, ()> {
-    let valid = block_on(
-      self
-        .db
-        .tables()
-        .invalid_jwt()
-        .is_token_valid(token.to_string()),
-    )
-    .map_err(|_| ())?;
+  async fn is_token_valid(&self, token: String) -> Result<bool, ()> {
+    self
+      .db
+      .tables()
+      .invalid_jwt()
+      .is_token_valid(token.to_string())
+      .await
+      .map_err(|_| ())
+  }
 
+  fn is_token_valid_blocking(&self, token: String) -> Result<bool, ()> {
+    block_in_place(|| Handle::current().block_on(self.is_token_valid(token)))
+  }
+
+  fn get_claims(&self, token: &str) -> Result<GrantClaims, ()> {
+    let valid = self.is_token_valid_blocking(token.to_string())?;
     if !valid {
       return Err(());
     }

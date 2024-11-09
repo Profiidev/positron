@@ -1,12 +1,22 @@
-use oxide_auth::{endpoint::Scope, primitives::registrar::RegisteredUrl};
-use serde::Deserialize;
+use oxide_auth::endpoint::Scope;
+use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Error, Surreal};
 
-#[derive(Deserialize)]
-pub struct OauthClient {
+#[derive(Serialize)]
+pub struct OAuthClientCreate {
   pub client_id: String,
-  pub redirect_uri: RegisteredUrl,
-  pub additional_redirect_uris: Vec<RegisteredUrl>,
+  pub redirect_uri: String,
+  pub additional_redirect_uris: Vec<String>,
+  pub default_scope: Scope,
+  pub client_secret: String,
+  pub salt: String,
+}
+
+#[derive(Deserialize)]
+pub struct OAuthClient {
+  pub client_id: String,
+  pub redirect_uri: String,
+  pub additional_redirect_uris: Vec<String>,
   pub default_scope: Scope,
   pub client_secret: String,
   pub salt: String,
@@ -41,7 +51,7 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
-  pub async fn get_client_by_id(&self, client_id: String) -> Result<OauthClient, Error> {
+  pub async fn get_client_by_id(&self, client_id: String) -> Result<OAuthClient, Error> {
     let mut res = self
       .db
       .query("SELECT * FROM oauth_client WHERE client_id = $client_id")
@@ -49,7 +59,17 @@ impl<'db> OauthClientTable<'db> {
       .await?;
 
     res
-      .take::<Option<OauthClient>>(0)?
+      .take::<Option<OAuthClient>>(0)?
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+  }
+
+  pub async fn create_client(&self, client: OAuthClientCreate) -> Result<(), Error> {
+    self
+      .db
+      .query("CREATE oauth_client CONTENT $oauth_client")
+      .bind(("oauth_client", client))
+      .await?;
+
+    Ok(())
   }
 }

@@ -13,9 +13,6 @@ use super::{
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![authorize, token, refresh]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/auto", base)))
-    .collect()
 }
 
 #[get("/authorize")]
