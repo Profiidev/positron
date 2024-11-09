@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{
-  decode,
+  decode, encode,
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
@@ -60,7 +60,7 @@ impl JwtState {
       type_,
     };
 
-    jsonwebtoken::encode(&self.header, &claims, &self.encoding_key)
+    encode(&self.header, &claims, &self.encoding_key)
   }
 
   fn validate_token(&self, token: &str) -> Result<Claims, Error> {

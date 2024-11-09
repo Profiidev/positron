@@ -9,6 +9,7 @@ import {
 import { AuthError, type PasswordInfo } from "./types.svelte";
 
 let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
+let keyAvailable = $state(false);
 
 export const fetch_key = async (): Promise<AuthError | undefined> => {
   try {
@@ -21,6 +22,7 @@ export const fetch_key = async (): Promise<AuthError | undefined> => {
     let key_pem = await key_res.text();
 
     encrypt.setPublicKey(key_pem);
+    keyAvailable = true;
   } catch (_) {
     return AuthError.Other;
   }
@@ -32,6 +34,10 @@ export const login = async (
   email: string,
   password: string,
 ): Promise<AuthError | boolean> => {
+  if (!keyAvailable) {
+    return AuthError.Other;
+  }
+
   try {
     let encrypted_password = encrypt.encrypt(password);
 
@@ -76,6 +82,10 @@ export const login = async (
 export const special_access = async (
   password: string,
 ): Promise<AuthError | undefined> => {
+  if (!keyAvailable) {
+    return AuthError.Other;
+  }
+
   let token = get_token(TokenType.Auth);
   if (!token) {
     return AuthError.MissingToken;
@@ -118,6 +128,10 @@ export const change = async (
   password: string,
   password_confirm: string,
 ): Promise<AuthError | undefined> => {
+  if (!keyAvailable) {
+    return AuthError.Other;
+  }
+
   let token = get_token(TokenType.SpecialAccess);
   if (!token) {
     return AuthError.MissingToken;
