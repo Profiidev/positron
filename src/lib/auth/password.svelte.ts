@@ -1,5 +1,5 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import JSEncrypt from "jsencrypt";
+import type JSEncrypt from "jsencrypt";
 import {
   get_token,
   get_token_type,
@@ -7,11 +7,15 @@ import {
   TokenType,
 } from "./token.svelte";
 import { AuthError, type PasswordInfo } from "./types.svelte";
+import { browser } from "$app/environment";
 
-let encrypt = $state(new JSEncrypt({ default_key_size: "4096" }));
-let keyAvailable = $state(false);
+let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
 
 export const fetch_key = async (): Promise<AuthError | undefined> => {
+  if (encrypt === false) {
+    return AuthError.Other;
+  }
+
   try {
     let key_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/key`);
 
@@ -21,8 +25,10 @@ export const fetch_key = async (): Promise<AuthError | undefined> => {
 
     let key_pem = await key_res.text();
 
+    const JSEncrypt = (await import("jsencrypt")).JSEncrypt;
+
+    encrypt = new JSEncrypt({ default_key_size: "4096" });
     encrypt.setPublicKey(key_pem);
-    keyAvailable = true;
   } catch (_) {
     return AuthError.Other;
   }
@@ -34,7 +40,7 @@ export const login = async (
   email: string,
   password: string,
 ): Promise<AuthError | boolean> => {
-  if (!keyAvailable) {
+  if (!encrypt) {
     return AuthError.Other;
   }
 
@@ -82,7 +88,7 @@ export const login = async (
 export const special_access = async (
   password: string,
 ): Promise<AuthError | undefined> => {
-  if (!keyAvailable) {
+  if (!encrypt) {
     return AuthError.Other;
   }
 
@@ -128,7 +134,7 @@ export const change = async (
   password: string,
   password_confirm: string,
 ): Promise<AuthError | undefined> => {
-  if (!keyAvailable) {
+  if (!encrypt) {
     return AuthError.Other;
   }
 

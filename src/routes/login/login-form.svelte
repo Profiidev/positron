@@ -15,6 +15,7 @@
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import { updateInfo } from "$lib/account/info.svelte";
+  import { onMount } from "svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -99,11 +100,13 @@
     }
   };
 
-  if (get_token(TokenType.Auth)) {
-    goto("/", {
-      replaceState: true,
-    });
-  }
+  onMount(() => {
+    if (get_token(TokenType.Auth)) {
+      goto("/", {
+        replaceState: true,
+      });
+    }
+  });
 </script>
 
 <div class={cn("grid gap-6", className)}>

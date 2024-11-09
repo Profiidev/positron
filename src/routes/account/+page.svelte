@@ -1,7 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
 
-  goto("/account/profile", {
-    replaceState: true,
+  onMount(() => {
+    goto("/account/profile", {
+      replaceState: true,
+    });
   });
 </script>

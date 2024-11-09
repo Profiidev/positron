@@ -1,3 +1,5 @@
+import { browser } from "$app/environment";
+
 export enum TokenType {
   Auth = "Auth",
   SpecialAccess = "SpecialAccess",
@@ -11,7 +13,7 @@ type Claims = {
   type: TokenType;
 };
 
-let auth = $state(localStorage.getItem("token"));
+let auth = $state(browser && localStorage.getItem("token"));
 let other = $state(undefined as string | undefined);
 
 $effect.root(() => {

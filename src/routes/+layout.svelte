@@ -7,6 +7,7 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
+  import { onMount } from "svelte";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -16,11 +17,13 @@
 
   const noLayout = ["/login"];
 
-  if (!get_token(TokenType.Auth)) {
-    goto("/login", {
-      replaceState: true,
-    });
-  }
+  onMount(() => {
+    if (!get_token(TokenType.Auth)) {
+      goto("/login", {
+        replaceState: true,
+      });
+    }
+  });
 </script>
 
 <ModeWatcher />
