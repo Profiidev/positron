@@ -5,11 +5,11 @@ use passkey::PasskeyTable;
 use surrealdb::{engine::remote::ws::Client, Error, Surreal};
 use user::UserTable;
 
+pub mod group;
 pub mod invalid_jwt;
 pub mod oauth_client;
 pub mod passkey;
 pub mod user;
-pub mod group;
 
 pub struct Tables<'db> {
   db: &'db Surreal<Client>,

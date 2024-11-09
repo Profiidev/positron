@@ -26,7 +26,9 @@ impl OAuthState {
     }
   }
 
-  pub fn endpoint(&self) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_, Vacant, Vec<Scope>> {
+  pub fn endpoint(
+    &self,
+  ) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_, Vacant, Vec<Scope>> {
     Generic {
       registrar: self.registrar.lock().unwrap(),
       authorizer: self.authorizer.lock().unwrap(),
