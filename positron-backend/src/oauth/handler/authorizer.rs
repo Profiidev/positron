@@ -5,7 +5,7 @@ use oxide_auth::{endpoint::Authorizer, primitives::grant::Grant};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Claims {
   exp: u64,
   iss: String,

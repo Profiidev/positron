@@ -29,8 +29,8 @@ struct UserInfo {
 }
 
 #[get("/info/<uuid>")]
-async fn info(_auth: JwtAuth, uuid: String, db: &State<DB>) -> Result<Json<UserInfo>> {
-  let uuid = Uuid::from_str(&uuid)?;
+async fn info(_auth: JwtAuth, uuid: &str, db: &State<DB>) -> Result<Json<UserInfo>> {
+  let uuid = Uuid::from_str(uuid)?;
   let user = db.tables().user().get_user_by_uuid(uuid).await?;
 
   Ok(Json(UserInfo {

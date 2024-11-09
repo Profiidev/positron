@@ -8,12 +8,11 @@ use rocket::{
   async_trait,
   http::Status,
   request::{FromRequest, Outcome, Request},
-  State,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::db::DB;
+use crate::utils::jwt_from_request;
 
 #[derive(Serialize, Deserialize)]
 struct Claims {
@@ -63,8 +62,8 @@ impl JwtState {
     encode(&self.header, &claims, &self.encoding_key)
   }
 
-  fn validate_token(&self, token: &str) -> Result<Claims, Error> {
-    Ok(decode::<Claims>(token, &self.decoding_key, &self.validation)?.claims)
+  pub fn validate_token<C: DeserializeOwned>(&self, token: &str) -> Result<C, Error> {
+    Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 }
 
@@ -160,35 +159,4 @@ impl<'r> FromRequest<'r> for JwtSpecialAccess {
       _ => Outcome::Error((Status::Unauthorized, ())),
     }
   }
-}
-
-async fn jwt_from_request<'r>(req: &'r Request<'_>) -> Outcome<Claims, ()> {
-  let Some(token) = req.headers().get_one("Authorization") else {
-    return Outcome::Error((Status::BadRequest, ()));
-  };
-
-  let Some(jwt) = req.guard::<&State<JwtState>>().await.succeeded() else {
-    return Outcome::Error((Status::InternalServerError, ()));
-  };
-  let Some(db) = req.guard::<&State<DB>>().await.succeeded() else {
-    return Outcome::Error((Status::InternalServerError, ()));
-  };
-
-  let Ok(valid) = db
-    .tables()
-    .invalid_jwt()
-    .is_token_valid(token.to_string())
-    .await
-  else {
-    return Outcome::Error((Status::InternalServerError, ()));
-  };
-  if !valid {
-    return Outcome::Error((Status::Unauthorized, ()));
-  }
-
-  let Ok(claims) = jwt.validate_token(token) else {
-    return Outcome::Error((Status::Unauthorized, ()));
-  };
-
-  Outcome::Success(claims)
 }

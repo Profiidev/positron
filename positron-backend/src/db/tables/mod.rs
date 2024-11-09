@@ -1,3 +1,4 @@
+use group::GroupTable;
 use invalid_jwt::InvalidJwtTable;
 use oauth_client::OauthClientTable;
 use passkey::PasskeyTable;
@@ -8,6 +9,7 @@ pub mod invalid_jwt;
 pub mod oauth_client;
 pub mod passkey;
 pub mod user;
+pub mod group;
 
 pub struct Tables<'db> {
   db: &'db Surreal<Client>,
@@ -22,6 +24,7 @@ impl<'db> Tables<'db> {
     UserTable::new(self.db).create().await?;
     InvalidJwtTable::new(self.db).create().await?;
     OauthClientTable::new(self.db).create().await?;
+    GroupTable::new(self.db).create().await?;
     PasskeyTable::new(self.db).create().await
   }
 
@@ -39,5 +42,9 @@ impl<'db> Tables<'db> {
 
   pub fn oauth_client(self) -> OauthClientTable<'db> {
     OauthClientTable::new(self.db)
+  }
+
+  pub fn groups(self) -> GroupTable<'db> {
+    GroupTable::new(self.db)
   }
 }

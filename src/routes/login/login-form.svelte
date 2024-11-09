@@ -18,6 +18,8 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { get } from "svelte/store";
+  import { auth } from "$lib/oauth/auth.svelte";
+  import { toast } from "svelte-sonner";
 
   interface Props {
     class?: string | undefined | null;
@@ -67,8 +69,7 @@
         }
         return;
       } else {
-        await updateInfo();
-        goto("/");
+        await login_success();
         return;
       }
     }
@@ -85,8 +86,7 @@
       if (ret) {
         enterEmail = false;
       } else {
-        await updateInfo();
-        goto("/");
+        await login_success();
       }
     } else {
       if (ret === AuthError.Password) {
@@ -113,15 +113,36 @@
         passkeyError = "There was an Error while signing in";
       }
     } else {
+      await login_success();
+    }
+  };
+
+  const login_success = async () => {
+    if (oauth_params) {
+      await oauth_login(oauth_params);
+    } else {
       await updateInfo();
       goto("/");
     }
   };
 
-  onMount(() => {
+  const oauth_login = async (params: OAuthParams) => {
+    isLoading = true;
+
+    let ret = await auth(params);
+
+    isLoading = false;
+    if (ret !== null) {
+      toast.error("Login Error", {
+        description: "There was an error while logging in using SSO",
+      });
+    }
+  };
+
+  onMount(async () => {
     if (get_token(TokenType.Auth)) {
       if (oauth_params) {
-        console.log(oauth_params)
+        await oauth_login(oauth_params);
       } else {
         goto("/", {
           replaceState: true,

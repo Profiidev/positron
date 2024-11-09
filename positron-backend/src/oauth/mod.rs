@@ -6,10 +6,14 @@ mod auth;
 mod error;
 mod handler;
 mod state;
+mod token;
+mod user;
 
 pub fn routes() -> Vec<Route> {
   auth::routes()
     .into_iter()
+    .chain(token::routes())
+    .chain(user::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth", base)))
     .collect()
 }

@@ -1,9 +1,18 @@
 use oxide_auth::{
-  endpoint::{OwnerConsent, Solicitation, WebResponse},
-  frontends::simple::endpoint::FnSolicitor,
+  endpoint::{self, OwnerConsent, Solicitation, WebResponse},
+  frontends::simple::endpoint::{Error, FnSolicitor},
 };
-use rocket::{get, post, Data, Response, Route, State};
+use rocket::{
+  get,
+  http::Status,
+  post,
+  tokio::{runtime::Handle, task::block_in_place},
+  Response, Route, State,
+};
+use surrealdb::sql::Thing;
 use webauthn_rs::prelude::Url;
+
+use crate::{auth::jwt::JwtAuth, db::DB};
 
 use super::{
   adapter::{OAuthRequest, OAuthResponse},
@@ -12,11 +21,11 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize, token, refresh]
+  rocket::routes![authorize_get, authorize_post]
 }
 
 #[get("/authorize")]
-fn authorize<'r>(
+fn authorize_get<'r>(
   oauth: OAuthRequest<'r>,
   state: &State<OAuthState>,
 ) -> Result<OAuthResponse<'r>, OAuthError> {
@@ -30,6 +39,51 @@ fn authorize<'r>(
     .authorization_flow()
     .execute(oauth)
     .map_err(|err| err.pack::<OAuthError>())
+}
+
+#[post("/authorize?<allow>")]
+async fn authorize_post<'r>(
+  auth: JwtAuth,
+  oauth: OAuthRequest<'r>,
+  allow: Option<bool>,
+  state: &State<OAuthState>,
+  db: &State<DB>,
+) -> Result<OAuthResponse<'r>, OAuthError> {
+  let user = db
+    .tables()
+    .user()
+    .get_user_by_uuid(auth.uuid)
+    .await
+    .map_err(|_| {
+      Error::OAuth::<OAuthRequest>(endpoint::OAuthError::BadRequest).pack::<OAuthError>()
+    })?;
+
+  let allowed = allow.unwrap_or(false);
+  let mut res = state
+    .endpoint()
+    .with_solicitor(FnSolicitor(
+      |_: &mut OAuthRequest<'r>, sol: Solicitation<'_>| {
+        if allowed && hash_access(db, user.id.clone(), sol.pre_grant().client_id.clone()) {
+          OwnerConsent::Authorized(auth.uuid.to_string())
+        } else {
+          OwnerConsent::Denied
+        }
+      },
+    ))
+    .authorization_flow()
+    .execute(oauth)
+    .map_err(|err| err.pack::<OAuthError>())?;
+
+  res.set_status(Status::Ok);
+  Ok(res)
+}
+
+fn hash_access(db: &State<DB>, user: Thing, client: String) -> bool {
+  let res = block_in_place(|| {
+    Handle::current().block_on(db.tables().oauth_client().has_user_access(user, client))
+  });
+
+  res.unwrap_or(false)
 }
 
 fn auth_redirect<'r>(
@@ -53,14 +107,10 @@ fn auth_redirect<'r>(
 
   let mut res: OAuthResponse = Response::new().into();
   res
-    .redirect(Url::parse_with_params(login_url, params).expect("Failed to parse Url"))
+    .redirect(
+      Url::parse_with_params(&format!("{}/login", login_url), params).expect("Failed to parse Url"),
+    )
     .unwrap();
 
   OwnerConsent::InProgress(res)
 }
-
-#[post("/token", data = "<body>")]
-fn token<'r>(mut oauth: OAuthRequest<'r>, body: Data<'_>) {}
-
-#[post("/refresh", data = "<body>")]
-fn refresh<'r>(mut oauth: OAuthRequest<'r>, body: Data<'_>) {}

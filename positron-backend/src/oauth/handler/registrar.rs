@@ -10,7 +10,6 @@ use oxide_auth::{
   },
 };
 use rocket::tokio::{runtime::Handle, task::block_in_place};
-use webauthn_rs::prelude::Url;
 
 use crate::{
   db::{tables::oauth_client::OAuthClient, DB},
@@ -55,22 +54,12 @@ impl Registrar for DBRegistrar {
     let client = self.get_client_blocking(bound.client_id.to_string())?;
 
     let registered_url = match bound.redirect_uri {
-      None => RegisteredUrl::Semantic(
-        client
-          .redirect_uri
-          .parse()
-          .map_err(|_| RegistrarError::PrimitiveError)?,
-      ),
+      None => client.redirect_uri,
       Some(url) => {
-        let mut possibilities = std::iter::once(&client.redirect_uri)
-          .chain(&client.additional_redirect_uris)
-          .flat_map(|uri| {
-            Ok::<RegisteredUrl, RegistrarError>(RegisteredUrl::Semantic(
-              Url::parse(uri).map_err(|_| RegistrarError::PrimitiveError)?,
-            ))
-          });
+        let mut possibilities =
+          std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
 
-        if possibilities.any(|registered| registered == *url.as_ref()) {
+        if possibilities.any(|registered| *registered == *url.as_ref()) {
           RegisteredUrl::Exact((*url).clone())
         } else {
           return Err(RegistrarError::Unspecified);
@@ -101,7 +90,6 @@ impl Registrar for DBRegistrar {
     Ok(())
   }
 
-  //TODO understand the scope
   fn negotiate(
     &self,
     client: BoundClient,
@@ -109,12 +97,21 @@ impl Registrar for DBRegistrar {
   ) -> Result<PreGrant, RegistrarError> {
     let client_db = self.get_client_blocking(client.client_id.to_string())?;
 
-    dbg!(scope);
+    //TODO check why scope is non second time
+    dbg!(&scope);
+    let scope = scope.unwrap_or(client_db.default_scope.clone());
+    let requested = scope.iter().collect::<Vec<&str>>();
+    let scope: Vec<&str> = client_db
+      .default_scope
+      .iter()
+      .filter(|item| requested.contains(item))
+      .collect();
+    dbg!(&scope);
 
     Ok(PreGrant {
       client_id: client.client_id.into_owned(),
       redirect_uri: client.redirect_uri.into_owned(),
-      scope: client_db.default_scope,
+      scope: scope.join(" ").parse().unwrap(),
     })
   }
 }

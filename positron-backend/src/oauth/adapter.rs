@@ -129,6 +129,10 @@ impl<'r> OAuthResponse<'r> {
   pub fn from_response(response: Response<'r>) -> Self {
     OAuthResponse(response)
   }
+
+  pub fn set_status(&mut self, status: Status) {
+    self.0.set_status(status);
+  }
 }
 
 impl<'r> WebRequest for OAuthRequest<'r> {
@@ -167,8 +171,11 @@ impl WebResponse for OAuthResponse<'_> {
     self.0.set_status(Status::Found);
     self.0.set_header(Header::new::<&str, String>(
       header::LOCATION.as_str(),
-      url.into(),
+      url.clone().into(),
     ));
+    self
+      .0
+      .set_header(Header::new::<&str, String>("X-Location", url.into()));
     Ok(())
   }
 

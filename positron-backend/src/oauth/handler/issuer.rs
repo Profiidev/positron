@@ -9,11 +9,23 @@ use oxide_auth::{
     issuer::{IssuedToken, RefreshedToken, TokenType},
   },
 };
-use rocket::tokio::{runtime::Handle, task::block_in_place};
+use rocket::{
+  async_trait,
+  request::{FromRequest, Outcome, Request},
+  tokio::{runtime::Handle, task::block_in_place},
+};
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
+use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::db::DB;
+use crate::{
+  db::{
+    tables::{group::Group, user::User},
+    DB,
+  },
+  utils::jwt_from_request,
+};
 
 pub struct JwtIssuer {
   encoding_key: EncodingKey,
@@ -24,26 +36,33 @@ pub struct JwtIssuer {
   db: DB,
 }
 
-#[derive(Serialize, Deserialize)]
-struct GrantClaims {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GrantClaims {
   sub: String,
   exp: u64,
   iss: String,
-  type_: JwtType,
   client_id: String,
+  type_: JwtType,
   scope: Scope,
   redirect_uri: Url,
   extensions: HashMap<String, JwtValue>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  email: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  name: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  preferred_username: Option<String>,
+  groups: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 enum JwtType {
   #[default]
   Access,
   Refresh,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 enum JwtValue {
   Private(Option<String>),
   Public(Option<String>),
@@ -74,14 +93,62 @@ impl JwtIssuer {
     }
   }
 
+  fn get_user(&self, user: Uuid) -> Result<User, ()> {
+    block_in_place(|| Handle::current().block_on(self.db.tables().user().get_user_by_uuid(user)))
+      .map_err(|_| ())
+  }
+
+  fn get_groups(&self, user: Thing) -> Result<Vec<Group>, ()> {
+    block_in_place(|| {
+      Handle::current().block_on(self.db.tables().groups().get_groups_for_user(user))
+    })
+    .map_err(|_| ())
+  }
+
   fn create_tokens(&self, grant: Grant) -> Result<(String, String), ()> {
-    let mut grant: GrantClaims = grant.into();
-    grant.iss = self.iss.clone();
+    let mut extensions = HashMap::new();
+    for (key, value) in grant.extensions.private() {
+      extensions.insert(key.into(), JwtValue::Private(value.map(str::to_string)));
+    }
+    for (key, value) in grant.extensions.public() {
+      extensions.insert(key.into(), JwtValue::Public(value.map(str::to_string)));
+    }
 
-    let access = encode(&self.header, &grant, &self.encoding_key).map_err(|_| ())?;
+    let user = self.get_user(grant.owner_id.parse().unwrap())?;
+    let groups = self.get_groups(user.id)?;
 
-    grant.type_ = JwtType::Refresh;
-    let refresh = encode(&self.header, &grant, &self.encoding_key).map_err(|_| ())?;
+    let groups = groups.into_iter().map(|group| group.name).collect();
+
+    let name = if grant.scope.iter().any(|s| s == "profile") {
+      Some(user.name)
+    } else {
+      None
+    };
+    let email = if grant.scope.iter().any(|s| s == "email") {
+      Some(user.email)
+    } else {
+      None
+    };
+
+    let mut grant_claims = GrantClaims {
+      sub: grant.owner_id,
+      exp: grant.until.timestamp() as u64,
+      client_id: grant.client_id,
+      iss: self.iss.clone(),
+      type_: Default::default(),
+      scope: grant.scope,
+      redirect_uri: grant.redirect_uri,
+      extensions,
+      email,
+      preferred_username: name.clone(),
+      name,
+      groups,
+    };
+
+    let access = encode(&self.header, &grant_claims, &self.encoding_key).map_err(|_| ())?;
+
+    grant_claims.type_ = JwtType::Refresh;
+    let refresh = encode(&self.header, &grant_claims, &self.encoding_key).map_err(|_| ())?;
 
     Ok((access, refresh))
   }
@@ -163,29 +230,6 @@ impl Issuer for JwtIssuer {
   }
 }
 
-impl From<Grant> for GrantClaims {
-  fn from(value: Grant) -> Self {
-    let mut extensions = HashMap::new();
-    for (key, value) in value.extensions.private() {
-      extensions.insert(key.into(), JwtValue::Private(value.map(str::to_string)));
-    }
-    for (key, value) in value.extensions.public() {
-      extensions.insert(key.into(), JwtValue::Public(value.map(str::to_string)));
-    }
-
-    Self {
-      sub: value.owner_id,
-      exp: value.until.timestamp() as u64,
-      iss: "".into(),
-      type_: Default::default(),
-      client_id: value.client_id,
-      scope: value.scope,
-      redirect_uri: value.redirect_uri,
-      extensions,
-    }
-  }
-}
-
 impl From<GrantClaims> for Grant {
   fn from(value: GrantClaims) -> Self {
     let mut extensions = Extensions::new();
@@ -210,5 +254,14 @@ impl From<JwtValue> for Value {
       JwtValue::Private(value) => Self::Private(value),
       JwtValue::Public(value) => Self::Public(value),
     }
+  }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for GrantClaims {
+  type Error = ();
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    jwt_from_request(req).await
   }
 }

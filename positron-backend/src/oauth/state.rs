@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use oxide_auth::{
-  endpoint::{Authorizer, Issuer, Registrar},
+  endpoint::{Authorizer, Issuer, Registrar, Scope},
   frontends::simple::endpoint::{Generic, Vacant},
 };
 
@@ -26,13 +26,13 @@ impl OAuthState {
     }
   }
 
-  pub fn endpoint(&self) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_> {
+  pub fn endpoint(&self) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_, Vacant, Vec<Scope>> {
     Generic {
       registrar: self.registrar.lock().unwrap(),
       authorizer: self.authorizer.lock().unwrap(),
       issuer: self.issuer.lock().unwrap(),
       solicitor: Vacant,
-      scopes: Vacant,
+      scopes: vec!["profile openid email".parse().unwrap()],
       response: Vacant,
     }
   }
