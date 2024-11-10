@@ -1,41 +1,39 @@
-use std::sync::Mutex;
+use std::collections::HashMap;
 
-use oxide_auth::{
-  endpoint::{Authorizer, Issuer, Registrar, Scope},
-  frontends::simple::endpoint::{Generic, Vacant},
-};
+use chrono::{Duration, Utc};
+use rocket::{tokio::sync::Mutex, FromForm};
+use uuid::Uuid;
 
-use super::handler::{authorizer::JwtAuthorizer, issuer::JwtIssuer, registrar::DBRegistrar};
-
-pub struct OAuthState {
-  registrar: Mutex<DBRegistrar>,
-  authorizer: Mutex<JwtAuthorizer>,
-  issuer: Mutex<JwtIssuer>,
-  pub frontend_url: String,
+#[derive(FromForm)]
+pub struct AuthReq {
+  pub response_type: String,
+  pub client_id: String,
+  pub redirect_uri: Option<String>,
+  pub scope: Option<String>,
+  pub state: Option<String>,
 }
 
-impl OAuthState {
-  pub async fn new() -> Self {
-    let frontend_url = std::env::var("FRONTEND_URL").expect("Failed to load OAUTH_LOGIN_URL");
+pub struct AuthorizeState {
+  pub frontend_url: String,
+  pub auth_pending: Mutex<HashMap<Uuid, (i64, AuthReq)>>,
+  pub auth_codes: Mutex<HashMap<Uuid, Uuid>>,
+}
+
+impl Default for AuthorizeState {
+  fn default() -> Self {
+    let frontend_url = std::env::var("FRONTEND_URL").expect("Failed to load FRONTEND_URL");
 
     Self {
-      registrar: Mutex::new(DBRegistrar::new().await),
-      authorizer: Mutex::new(JwtAuthorizer::new()),
-      issuer: Mutex::new(JwtIssuer::new().await),
       frontend_url,
+      auth_pending: Default::default(),
+      auth_codes: Default::default(),
     }
   }
+}
 
-  pub fn endpoint(
-    &self,
-  ) -> Generic<impl Registrar + '_, impl Authorizer + '_, impl Issuer + '_, Vacant, Vec<Scope>> {
-    Generic {
-      registrar: self.registrar.lock().unwrap(),
-      authorizer: self.authorizer.lock().unwrap(),
-      issuer: self.issuer.lock().unwrap(),
-      solicitor: Vacant,
-      scopes: vec!["profile openid email".parse().unwrap()],
-      response: Vacant,
-    }
-  }
+pub fn get_timestamp_10_min() -> i64 {
+  Utc::now()
+    .checked_add_signed(Duration::seconds(600))
+    .unwrap()
+    .timestamp()
 }

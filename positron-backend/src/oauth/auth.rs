@@ -1,119 +1,117 @@
-use oxide_auth::{
-  endpoint::{self, OwnerConsent, Solicitation, WebResponse},
-  frontends::simple::endpoint::{Error, FnSolicitor},
-};
-use rocket::{
-  get,
-  http::Status,
-  post,
-  tokio::{runtime::Handle, task::block_in_place},
-  Response, Route, State,
-};
-use surrealdb::sql::Thing;
+use std::str::FromStr;
+
+use chrono::Utc;
+use rocket::{get, post, response::Redirect, Route, State};
+use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::DB,
+  db::{tables::oauth_client::OAuthClient, DB},
+  error::{Error, Result},
 };
 
-use super::{
-  adapter::{OAuthRequest, OAuthResponse},
-  error::OAuthError,
-  state::OAuthState,
-};
+use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState};
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize_get, authorize_post]
+  rocket::routes![authorize_get, authorize_get_err, authorize_post]
+}
+
+#[get("/authorize?<req..>")]
+async fn authorize_get(req: AuthReq, state: &State<AuthorizeState>) -> Redirect {
+  let uuid = Uuid::new_v4();
+  state
+    .auth_pending
+    .lock()
+    .await
+    .insert(uuid, (get_timestamp_10_min(), req));
+
+  Redirect::found(format!("{}/login?code={}", state.frontend_url, uuid))
 }
 
 #[get("/authorize")]
-fn authorize_get<'r>(
-  oauth: OAuthRequest<'r>,
-  state: &State<OAuthState>,
-) -> Result<OAuthResponse<'r>, OAuthError> {
-  state
-    .endpoint()
-    .with_solicitor(FnSolicitor(
-      |req: &mut OAuthRequest<'r>, sol: Solicitation<'_>| {
-        auth_redirect(&state.frontend_url, req, sol)
-      },
-    ))
-    .authorization_flow()
-    .execute(oauth)
-    .map_err(|err| err.pack::<OAuthError>())
+fn authorize_get_err(state: &State<AuthorizeState>) -> Redirect {
+  Redirect::found(format!("{}/oauth/error", state.frontend_url))
 }
 
-#[post("/authorize?<allow>")]
-async fn authorize_post<'r>(
+#[post("/authorize?<code>&<allow>")]
+async fn authorize_post(
   auth: JwtClaims<JwtBase>,
-  oauth: OAuthRequest<'r>,
-  allow: Option<bool>,
-  state: &State<OAuthState>,
+  state: &State<AuthorizeState>,
   db: &State<DB>,
-) -> Result<OAuthResponse<'r>, OAuthError> {
-  let user = db
-    .tables()
-    .user()
-    .get_user_by_uuid(auth.sub)
-    .await
-    .map_err(|_| {
-      Error::OAuth::<OAuthRequest>(endpoint::OAuthError::BadRequest).pack::<OAuthError>()
-    })?;
+  code: &str,
+  allow: Option<bool>,
+) -> Result<String> {
+  let mut lock = state.auth_pending.lock().await;
+  let code = Uuid::from_str(code)?;
 
-  let allowed = allow.unwrap_or(false);
-  let mut res = state
-    .endpoint()
-    .with_solicitor(FnSolicitor(
-      |_: &mut OAuthRequest<'r>, sol: Solicitation<'_>| {
-        if allowed && hash_access(db, user.id.clone(), sol.pre_grant().client_id.clone()) {
-          OwnerConsent::Authorized(auth.sub.to_string())
-        } else {
-          OwnerConsent::Denied
-        }
-      },
-    ))
-    .authorization_flow()
-    .execute(oauth)
-    .map_err(|err| err.pack::<OAuthError>())?;
-
-  res.set_status(Status::Ok);
-  Ok(res)
-}
-
-fn hash_access(db: &State<DB>, user: Thing, client: String) -> bool {
-  let res = block_in_place(|| {
-    Handle::current().block_on(db.tables().oauth_client().has_user_access(user, client))
-  });
-
-  res.unwrap_or(false)
-}
-
-fn auth_redirect<'r>(
-  login_url: &str,
-  req: &mut OAuthRequest<'r>,
-  solicitation: Solicitation<'_>,
-) -> OwnerConsent<OAuthResponse<'r>> {
-  let grant = solicitation.pre_grant();
-  let state = solicitation.state();
-
-  let response_type = req.response_type().unwrap_or("code".into());
-  let mut params = vec![
-    ("response_type", response_type.as_str()),
-    ("client_id", grant.client_id.as_str()),
-    ("redirect_uri", grant.redirect_uri.as_str()),
-  ];
-
-  if let Some(state) = state {
-    params.push(("state", state));
+  let allow = allow.unwrap_or(false);
+  if !allow {
+    lock.remove(&code);
+    return Ok("".into());
   }
 
-  let mut res: OAuthResponse = Response::new().into();
-  res
-    .redirect(
-      Url::parse_with_params(&format!("{}/login", login_url), params).expect("Failed to parse Url"),
-    )
-    .unwrap();
+  let Some((exp, req)) = lock.get(&code) else {
+    return Err(Error::BadRequest);
+  };
+  if *exp < Utc::now().timestamp() {
+    return Err(Error::BadRequest);
+  }
 
-  OwnerConsent::InProgress(res)
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client_by_id(req.client_id.clone())
+    .await?;
+
+  let (_, mut req) = lock.remove(&code).unwrap();
+  drop(lock);
+
+  if let Some(error) = validate_req(&mut req, &client) {
+    return Ok(format!("{}?error={}", client.redirect_uri, error));
+  }
+
+  let auth_code = Uuid::new_v4();
+  state.auth_codes.lock().await.insert(auth_code, auth.sub);
+
+  let mut query = vec![("code", auth_code.to_string())];
+  if let Some(state) = req.state.as_ref() {
+    query.push(("state", state.clone()));
+  }
+
+  let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
+
+  Ok(url.to_string())
+}
+
+fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str> {
+  if let Some(url) = &req.redirect_uri {
+    let Ok(url) = Url::from_str(url) else {
+      return Some("invalid_request");
+    };
+
+    let mut possibilities =
+      std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
+
+    if !possibilities.any(|reg_url| *reg_url == url) {
+      return Some("invalid_request");
+    }
+  } else {
+    req.redirect_uri = Some(client.redirect_uri.to_string());
+  }
+
+  if &req.response_type != "code" {
+    return Some("unsupported_response_type");
+  }
+
+  if let Some(scope) = &req.scope {
+    let scope = client.default_scope.intersect(&scope.parse().unwrap());
+    if scope.is_empty() {
+      return Some("invalid_scope");
+    }
+  } else {
+    req.scope = Some(client.default_scope.clone().to_string());
+  }
+
+  None
 }

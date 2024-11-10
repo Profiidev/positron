@@ -38,7 +38,7 @@ async fn rocket() -> _ {
     .manage(db)
     .mount("/", routes());
 
-  state(server).await
+  state(server)
 }
 
 fn routes() -> Vec<Route> {
@@ -50,8 +50,8 @@ fn routes() -> Vec<Route> {
     .collect()
 }
 
-async fn state(server: Rocket<Build>) -> Rocket<Build> {
+fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = auth::state(server);
-  let server = oauth::state(server).await;
+  let server = oauth::state(server);
   email::state(server)
 }

@@ -30,8 +30,5 @@ export interface PasswordInfo {
 }
 
 export interface OAuthParams {
-  response_type: string;
-  client_id: string;
-  redirect_uri: string;
-  state?: string;
+  code: string;
 }

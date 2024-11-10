@@ -36,17 +36,11 @@
   let passkeyError = $state("");
 
   let oauth_params: OAuthParams | undefined = $derived.by(() => {
-    let response_type = get(page).url.searchParams.get("response_type");
-    let client_id = get(page).url.searchParams.get("client_id");
-    let redirect_uri = get(page).url.searchParams.get("redirect_uri");
-    let state = get(page).url.searchParams.get("state");
+    let code = get(page).url.searchParams.get("code");
 
-    if (response_type && client_id && redirect_uri) {
+    if (code) {
       return {
-        response_type,
-        client_id,
-        redirect_uri,
-        state,
+        code,
       } as OAuthParams;
     }
   });

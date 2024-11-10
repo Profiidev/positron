@@ -10,7 +10,7 @@ export const auth = async (params: OAuthParams) => {
 
   try {
     let auth_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/oauth/authorize?response_type=${params.response_type}&client_id=${params.client_id}&redirect_uri=${params.redirect_uri}${params.state ? `&state=${params.state}` : ""}&allow=true`,
+      `${PUBLIC_BACKEND_URL}/oauth/authorize?code=${params.code}&allow=true`,
       {
         method: "POST",
         headers: {
@@ -24,9 +24,11 @@ export const auth = async (params: OAuthParams) => {
       return;
     }
 
-    let location = auth_res.headers.get("X-Location");
+    let location = await auth_res.text();
     if (location) {
-      window.location.href = location;
+      if (location !== "") {
+        window.location.href = location;
+      }
       return null;
     }
   } catch (_) {
