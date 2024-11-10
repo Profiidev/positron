@@ -2,7 +2,9 @@ use rocket::{http::Status, post, serde::json::Json, Route, State};
 use serde::Deserialize;
 
 use crate::{
-  auth::jwt::{JwtClaims, JwtSpecial}, db::DB, error::{Error, Result}
+  auth::jwt::{JwtClaims, JwtSpecial},
+  db::DB,
+  error::{Error, Result},
 };
 
 use super::{
@@ -36,11 +38,7 @@ async fn start_change(
     return Err(Error::InternalServerError);
   };
 
-  state
-    .change_req
-    .lock()
-    .await
-    .insert(auth.sub, code.clone());
+  state.change_req.lock().await.insert(auth.sub, code.clone());
 
   mailer.send_mail(
     user.name.clone(),

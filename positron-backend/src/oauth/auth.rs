@@ -12,7 +12,10 @@ use rocket::{
 use surrealdb::sql::Thing;
 use webauthn_rs::prelude::Url;
 
-use crate::{auth::jwt::{JwtBase, JwtClaims}, db::DB};
+use crate::{
+  auth::jwt::{JwtBase, JwtClaims},
+  db::DB,
+};
 
 use super::{
   adapter::{OAuthRequest, OAuthResponse},

@@ -8,7 +8,10 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired}, state::TotpState};
+use super::{
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired},
+  state::TotpState,
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![start_setup, finish_setup, confirm, info, remove]

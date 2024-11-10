@@ -25,7 +25,10 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState}, state::PasskeyState};
+use super::{
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState},
+  state::PasskeyState,
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![
@@ -276,7 +279,11 @@ struct PasskeyRemove {
 }
 
 #[post("/remove", data = "<req>")]
-async fn remove(req: Json<PasskeyRemove>, auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<()> {
+async fn remove(
+  req: Json<PasskeyRemove>,
+  auth: JwtClaims<JwtSpecial>,
+  db: &State<DB>,
+) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   db.tables()
@@ -294,7 +301,11 @@ struct PasskeyEdit {
 }
 
 #[post("/edit_name", data = "<req>")]
-async fn edit_name(req: Json<PasskeyEdit>, auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<()> {
+async fn edit_name(
+  req: Json<PasskeyEdit>,
+  auth: JwtClaims<JwtSpecial>,
+  db: &State<DB>,
+) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   if db
