@@ -12,7 +12,7 @@ use rocket::{
 use surrealdb::sql::Thing;
 use webauthn_rs::prelude::Url;
 
-use crate::{auth::jwt::JwtAuth, db::DB};
+use crate::{auth::jwt::{JwtBase, JwtClaims}, db::DB};
 
 use super::{
   adapter::{OAuthRequest, OAuthResponse},
@@ -43,7 +43,7 @@ fn authorize_get<'r>(
 
 #[post("/authorize?<allow>")]
 async fn authorize_post<'r>(
-  auth: JwtAuth,
+  auth: JwtClaims<JwtBase>,
   oauth: OAuthRequest<'r>,
   allow: Option<bool>,
   state: &State<OAuthState>,
@@ -52,7 +52,7 @@ async fn authorize_post<'r>(
   let user = db
     .tables()
     .user()
-    .get_user_by_uuid(auth.uuid)
+    .get_user_by_uuid(auth.sub)
     .await
     .map_err(|_| {
       Error::OAuth::<OAuthRequest>(endpoint::OAuthError::BadRequest).pack::<OAuthError>()
@@ -64,7 +64,7 @@ async fn authorize_post<'r>(
     .with_solicitor(FnSolicitor(
       |_: &mut OAuthRequest<'r>, sol: Solicitation<'_>| {
         if allowed && hash_access(db, user.id.clone(), sol.pre_grant().client_id.clone()) {
-          OwnerConsent::Authorized(auth.uuid.to_string())
+          OwnerConsent::Authorized(auth.sub.to_string())
         } else {
           OwnerConsent::Denied
         }

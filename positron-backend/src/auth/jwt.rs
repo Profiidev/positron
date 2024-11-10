@@ -6,7 +6,6 @@ use jsonwebtoken::{
 };
 use rocket::{
   async_trait,
-  http::Status,
   request::{FromRequest, Outcome, Request},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -15,19 +14,49 @@ use uuid::Uuid;
 use crate::utils::jwt_from_request;
 
 #[derive(Serialize, Deserialize)]
-struct Claims {
-  exp: u64,
-  iss: String,
-  sub: Uuid,
+pub struct JwtClaims<T: JwtType> {
+  pub exp: u64,
+  pub iss: String,
+  pub sub: Uuid,
   #[serde(rename = "type")]
-  type_: JwtType,
+  pub type_: T,
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum JwtType {
-  Auth,
+pub trait JwtType: Default {
+  fn duration(long: i64, short: i64) -> i64;
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub enum JwtBase {
+  #[default]
+  Base,
+}
+impl JwtType for JwtBase {
+  fn duration(long: i64, _: i64) -> i64 {
+    long
+  }
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub enum JwtSpecial {
+  #[default]
+  Special,
+}
+impl JwtType for JwtSpecial {
+  fn duration(_: i64, short: i64) -> i64 {
+    short
+  }
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub enum JwtTotpRequired {
+  #[default]
   TotpRequired,
-  SpecialAccess,
+}
+impl JwtType for JwtTotpRequired {
+  fn duration(_: i64, short: i64) -> i64 {
+    short
+  }
 }
 
 pub struct JwtState {
@@ -41,22 +70,19 @@ pub struct JwtState {
 }
 
 impl JwtState {
-  pub fn create_token(&self, uuid: Uuid, type_: JwtType) -> Result<String, Error> {
-    let duration = match type_ {
-      JwtType::SpecialAccess | JwtType::TotpRequired => self.short_exp,
-      _ => self.exp,
-    };
+  pub fn create_token<T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<String, Error> {
+    let duration = T::duration(self.exp, self.short_exp);
 
     let exp = Utc::now()
       .checked_add_signed(Duration::seconds(duration))
       .ok_or(Error::from(ErrorKind::ExpiredSignature))?
       .timestamp() as u64;
 
-    let claims = Claims {
+    let claims = JwtClaims {
       exp,
       iss: self.iss.clone(),
       sub: uuid,
-      type_,
+      type_: T::default(),
     };
 
     encode(&self.header, &claims, &self.encoding_key)
@@ -98,65 +124,14 @@ impl Default for JwtState {
   }
 }
 
-pub struct JwtAuth {
-  pub uuid: Uuid,
-}
-
 #[async_trait]
-impl<'r> FromRequest<'r> for JwtAuth {
+impl<'r, T> FromRequest<'r> for JwtClaims<T>
+where
+  for<'de> T: JwtType + Deserialize<'de>,
+{
   type Error = ();
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    match jwt_from_request(req).await {
-      Outcome::Success(Claims {
-        type_: JwtType::Auth,
-        sub,
-        ..
-      }) => Outcome::Success(JwtAuth { uuid: sub }),
-      Outcome::Error(error) => Outcome::Error(error),
-      _ => Outcome::Error((Status::Unauthorized, ())),
-    }
-  }
-}
-
-pub struct JwtTotpRequired {
-  pub uuid: Uuid,
-}
-
-#[async_trait]
-impl<'r> FromRequest<'r> for JwtTotpRequired {
-  type Error = ();
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    match jwt_from_request(req).await {
-      Outcome::Success(Claims {
-        type_: JwtType::TotpRequired,
-        sub,
-        ..
-      }) => Outcome::Success(JwtTotpRequired { uuid: sub }),
-      Outcome::Error(error) => Outcome::Error(error),
-      _ => Outcome::Error((Status::Unauthorized, ())),
-    }
-  }
-}
-
-pub struct JwtSpecialAccess {
-  pub uuid: Uuid,
-}
-
-#[async_trait]
-impl<'r> FromRequest<'r> for JwtSpecialAccess {
-  type Error = ();
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    match jwt_from_request(req).await {
-      Outcome::Success(Claims {
-        type_: JwtType::SpecialAccess,
-        sub,
-        ..
-      }) => Outcome::Success(JwtSpecialAccess { uuid: sub }),
-      Outcome::Error(error) => Outcome::Error(error),
-      _ => Outcome::Error((Status::Unauthorized, ())),
-    }
+    jwt_from_request(req).await
   }
 }

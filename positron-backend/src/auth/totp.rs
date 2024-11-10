@@ -8,10 +8,7 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{
-  jwt::{JwtAuth, JwtSpecialAccess, JwtState, JwtTotpRequired, JwtType},
-  state::TotpState,
-};
+use super::{jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired}, state::TotpState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![start_setup, finish_setup, confirm, info, remove]
@@ -33,11 +30,11 @@ struct TotpSetupRes {
 
 #[get("/start_setup")]
 async fn start_setup(
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
   state: &State<TotpState>,
 ) -> Result<Json<TotpSetupRes>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   if user.totp.is_some() {
     return Err(Error::BadRequest);
   }
@@ -59,20 +56,20 @@ async fn start_setup(
   };
   let code = totp.get_secret_base32();
 
-  state.reg_state.lock().await.insert(auth.uuid, totp);
+  state.reg_state.lock().await.insert(auth.sub, totp);
 
   Ok(Json(TotpSetupRes { qr, code }))
 }
 
 #[post("/finish_setup", data = "<req>")]
 async fn finish_setup(
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   req: Json<TotpReq>,
   state: &State<TotpState>,
   db: &State<DB>,
 ) -> Result<Status> {
   let mut lock = state.reg_state.lock().await;
-  let totp = lock.get(&auth.uuid).ok_or(Error::BadRequest)?;
+  let totp = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
   let valid = totp.check_current(&req.code).unwrap();
   if !valid {
     return Err(Error::Unauthorized);
@@ -80,10 +77,10 @@ async fn finish_setup(
 
   db.tables()
     .user()
-    .add_totp(auth.uuid, totp.get_secret_base32())
+    .add_totp(auth.sub, totp.get_secret_base32())
     .await?;
 
-  lock.remove(&auth.uuid);
+  lock.remove(&auth.sub);
 
   Ok(Status::Ok)
 }
@@ -91,11 +88,11 @@ async fn finish_setup(
 #[post("/confirm", data = "<req>")]
 async fn confirm(
   req: Json<TotpReq>,
-  auth: JwtTotpRequired,
+  auth: JwtClaims<JwtTotpRequired>,
   db: &State<DB>,
   jwt: &State<JwtState>,
 ) -> Result<String> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
     Rfc6238::with_defaults(Secret::Encoded(user.totp.unwrap()).to_bytes().unwrap()).unwrap(),
@@ -106,9 +103,9 @@ async fn confirm(
   if !totp.check_current(&req.code).unwrap() {
     Err(Error::Unauthorized)
   } else {
-    db.tables().user().used_totp(auth.uuid).await?;
-    db.tables().user().logged_in(auth.uuid).await?;
-    Ok(jwt.create_token(auth.uuid, JwtType::Auth)?)
+    db.tables().user().used_totp(auth.sub).await?;
+    db.tables().user().logged_in(auth.sub).await?;
+    Ok(jwt.create_token::<JwtBase>(auth.sub)?)
   }
 }
 
@@ -122,8 +119,8 @@ struct TotpInfo {
 }
 
 #[get("/info")]
-async fn info(auth: JwtAuth, db: &State<DB>) -> Result<Json<TotpInfo>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<TotpInfo>> {
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   Ok(Json(TotpInfo {
     enabled: user.totp.is_some(),
@@ -133,8 +130,8 @@ async fn info(auth: JwtAuth, db: &State<DB>) -> Result<Json<TotpInfo>> {
 }
 
 #[post("/remove")]
-async fn remove(auth: JwtSpecialAccess, db: &State<DB>) -> Result<Status> {
-  db.tables().user().totp_remove(auth.uuid).await?;
+async fn remove(auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<Status> {
+  db.tables().user().totp_remove(auth.sub).await?;
 
   Ok(Status::Ok)
 }

@@ -25,10 +25,7 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::{
-  jwt::{JwtAuth, JwtSpecialAccess, JwtState, JwtType},
-  state::PasskeyState,
-};
+use super::{jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState}, state::PasskeyState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![
@@ -49,12 +46,12 @@ pub fn routes() -> Vec<Route> {
 
 #[get("/start_registration")]
 async fn start_registration(
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Json<CreationChallengeResponse>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
@@ -64,13 +61,13 @@ async fn start_registration(
     .collect();
 
   let (mut ccr, reg_state) =
-    webauthn.start_passkey_registration(auth.uuid, &user.email, &user.name, Some(passkeys))?;
+    webauthn.start_passkey_registration(auth.sub, &user.email, &user.name, Some(passkeys))?;
 
   if let Some(test) = &mut ccr.public_key.authenticator_selection {
     test.resident_key = Some(ResidentKeyRequirement::Required);
   }
 
-  state.reg_state.lock().await.insert(auth.uuid, reg_state);
+  state.reg_state.lock().await.insert(auth.sub, reg_state);
   Ok(Json(ccr))
 }
 
@@ -82,13 +79,13 @@ struct RegFinishReq {
 
 #[post("/finish_registration", data = "<reg>")]
 async fn finish_registration(
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   reg: Json<RegFinishReq>,
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
 
   if db
@@ -183,17 +180,17 @@ async fn finish_authentication(
 
   db.tables().user().logged_in(uuid).await?;
 
-  Ok(jwt.create_token(uuid, JwtType::Auth)?)
+  Ok(jwt.create_token::<JwtBase>(uuid)?)
 }
 
 #[get("/start_special_access")]
 async fn start_special_access(
-  auth: JwtAuth,
+  auth: JwtClaims<JwtBase>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
   db: &State<DB>,
 ) -> Result<Json<RequestChallengeResponse>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let passkey_records = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkey_records
     .into_iter()
@@ -206,7 +203,7 @@ async fn start_special_access(
     .special_access_state
     .lock()
     .await
-    .insert(auth.uuid, auth_state);
+    .insert(auth.sub, auth_state);
 
   Ok(Json(rcr))
 }
@@ -214,13 +211,13 @@ async fn start_special_access(
 #[post("/finish_special_access", data = "<req>")]
 async fn finish_special_access(
   req: Json<PublicKeyCredential>,
-  auth: JwtAuth,
+  auth: JwtClaims<JwtBase>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
   db: &State<DB>,
   jwt: &State<JwtState>,
 ) -> Result<String> {
-  let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.uuid) else {
+  let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
     return Err(Error::BadRequest);
   };
 
@@ -244,9 +241,9 @@ async fn finish_special_access(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.tables().user().used_special_access(auth.uuid).await?;
+  db.tables().user().used_special_access(auth.sub).await?;
 
-  Ok(jwt.create_token(auth.uuid, JwtType::SpecialAccess)?)
+  Ok(jwt.create_token::<JwtSpecial>(auth.sub)?)
 }
 
 #[derive(Serialize)]
@@ -257,8 +254,8 @@ struct PasskeyInfo {
 }
 
 #[get("/list")]
-async fn list(auth: JwtAuth, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
 
   let ret = passkeys
@@ -279,8 +276,8 @@ struct PasskeyRemove {
 }
 
 #[post("/remove", data = "<req>")]
-async fn remove(req: Json<PasskeyRemove>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+async fn remove(req: Json<PasskeyRemove>, auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<()> {
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   db.tables()
     .passkey()
@@ -297,8 +294,8 @@ struct PasskeyEdit {
 }
 
 #[post("/edit_name", data = "<req>")]
-async fn edit_name(req: Json<PasskeyEdit>, auth: JwtSpecialAccess, db: &State<DB>) -> Result<()> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+async fn edit_name(req: Json<PasskeyEdit>, auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<()> {
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   if db
     .tables()
