@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import Button from "$lib/components/ui/button/button.svelte";
-  import { auth } from "$lib/oauth/auth.svelte";
+  import { auth } from "$lib/auth/oauth.svelte";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import * as Card from "$lib/components/ui/card";
@@ -9,7 +9,7 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { getInfo } from "$lib/account/info.svelte";
   import { goto } from "$app/navigation";
-  import type { OAuthParams } from "$lib/auth/types.svelte";
+  import { AuthError, type OAuthParams } from "$lib/auth/types.svelte";
   import { clear_tokens } from "$lib/auth/token.svelte";
 
   let isLoading = $state(false);
@@ -38,13 +38,16 @@
       return;
     }
 
+    error = "";
     isLoading = true;
 
     let ret = await auth(oauth_params, allow);
 
     isLoading = false;
-    if (ret !== null) {
+    if (ret === AuthError.Other) {
       error = "There was an error while login in";
+    } else if(ret === AuthError.Password) {
+      error = "You are not allowed to access this Application";
     }
   };
 

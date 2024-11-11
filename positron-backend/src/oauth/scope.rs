@@ -22,6 +22,10 @@ impl Scope {
     )
   }
 
+  pub fn iter(&self) -> impl Iterator<Item = &str> {
+    self.0.iter().map(AsRef::as_ref)
+  }
+
   #[inline]
   fn to_string_internal(&self) -> String {
     self.0.join(" ")

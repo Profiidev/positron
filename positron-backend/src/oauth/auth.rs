@@ -11,7 +11,7 @@ use crate::{
   error::{Error, Result},
 };
 
-use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState};
+use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![authorize_get, authorize_post]
@@ -75,16 +75,36 @@ async fn authorize_post(
     .oauth_client()
     .get_client_by_id(req.client_id.clone())
     .await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   let (_, mut req) = lock.remove(&code).unwrap();
   drop(lock);
 
+  if !db
+    .tables()
+    .oauth_client()
+    .has_user_access(user.id, req.client_id.clone())
+    .await?
+  {
+    return Err(Error::Unauthorized);
+  }
+
+  let initial_redirect_uri = req.redirect_uri.clone();
   if let Some(error) = validate_req(&mut req, &client) {
     return Ok(format!("{}?error={}", client.redirect_uri, error));
   }
 
   let auth_code = Uuid::new_v4();
-  state.auth_codes.lock().await.insert(auth_code, auth.sub);
+  state.auth_codes.lock().await.insert(
+    auth_code,
+    CodeReq {
+      client_id: client.client_id.parse().unwrap(),
+      redirect_uri: initial_redirect_uri,
+      scope: req.scope.unwrap().parse().unwrap(),
+      user: auth.sub,
+      exp: get_timestamp_10_min(),
+    },
+  );
 
   let mut query = vec![("code", auth_code.to_string())];
   if let Some(state) = req.state.as_ref() {

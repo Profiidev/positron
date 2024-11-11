@@ -8,8 +8,8 @@ use crate::oauth::scope::Scope;
 pub struct OAuthClientCreate {
   pub name: String,
   pub client_id: String,
-  pub redirect_uri: String,
-  pub additional_redirect_uris: Vec<String>,
+  pub redirect_uri: Url,
+  pub additional_redirect_uris: Vec<Url>,
   pub default_scope: Scope,
   pub client_secret: String,
   pub salt: String,
@@ -70,11 +70,9 @@ impl<'db> OauthClientTable<'db> {
       .bind(("client_id", client_id))
       .await?;
 
-    Ok(
-      res
-        .take::<Option<OAuthClient>>(0)?
-        .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))?,
-    )
+    res
+      .take::<Option<OAuthClient>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
   pub async fn create_client(&self, client: OAuthClientCreate) -> Result<(), Error> {
