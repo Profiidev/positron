@@ -2,7 +2,7 @@ import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import { get_token, TokenType } from "$lib/auth/token.svelte";
 import type { OAuthParams } from "$lib/auth/types.svelte";
 
-export const auth = async (params: OAuthParams) => {
+export const auth = async (params: OAuthParams, allow: boolean) => {
   let token = get_token(TokenType.Auth);
   if (!token) {
     return;
@@ -10,7 +10,7 @@ export const auth = async (params: OAuthParams) => {
 
   try {
     let auth_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/oauth/authorize?code=${params.code}&allow=true`,
+      `${PUBLIC_BACKEND_URL}/oauth/authorize?code=${params.code}&allow=${allow}`,
       {
         method: "POST",
         headers: {

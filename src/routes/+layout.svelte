@@ -15,7 +15,7 @@
 
   let { children }: Props = $props();
 
-  const noLayout = ["/login"];
+  const noLayout = ["/login", "/oauth"];
 
   onMount(() => {
     if (!get_token(TokenType.Auth)) {

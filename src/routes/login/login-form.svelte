@@ -18,8 +18,6 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { get } from "svelte/store";
-  import { auth } from "$lib/oauth/auth.svelte";
-  import { toast } from "svelte-sonner";
 
   interface Props {
     class?: string | undefined | null;
@@ -37,11 +35,13 @@
 
   let oauth_params: OAuthParams | undefined = $derived.by(() => {
     let code = get(page).url.searchParams.get("code");
+    let name = get(page).url.searchParams.get("name");
 
-    if (code) {
+    if (code && name) {
       return {
         code,
-      } as OAuthParams;
+        name,
+      };
     }
   });
 
@@ -112,31 +112,22 @@
   };
 
   const login_success = async () => {
+    await updateInfo();
     if (oauth_params) {
-      await oauth_login(oauth_params);
+      goto(
+        `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=true`,
+      );
     } else {
-      await updateInfo();
       goto("/");
-    }
-  };
-
-  const oauth_login = async (params: OAuthParams) => {
-    isLoading = true;
-
-    let ret = await auth(params);
-
-    isLoading = false;
-    if (ret !== null) {
-      toast.error("Login Error", {
-        description: "There was an error while logging in using SSO",
-      });
     }
   };
 
   onMount(async () => {
     if (get_token(TokenType.Auth)) {
       if (oauth_params) {
-        await oauth_login(oauth_params);
+        goto(
+          `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=false`,
+        );
       } else {
         goto("/", {
           replaceState: true,

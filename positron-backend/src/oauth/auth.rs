@@ -14,24 +14,36 @@ use crate::{
 use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState};
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize_get, authorize_get_err, authorize_post]
+  rocket::routes![authorize_get, authorize_post]
 }
 
 #[get("/authorize?<req..>")]
-async fn authorize_get(req: AuthReq, state: &State<AuthorizeState>) -> Redirect {
+async fn authorize_get(
+  req: AuthReq,
+  state: &State<AuthorizeState>,
+  db: &State<DB>,
+) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client_by_id(req.client_id.clone())
+    .await?;
+
   state
     .auth_pending
     .lock()
     .await
     .insert(uuid, (get_timestamp_10_min(), req));
 
-  Redirect::found(format!("{}/login?code={}", state.frontend_url, uuid))
-}
-
-#[get("/authorize")]
-fn authorize_get_err(state: &State<AuthorizeState>) -> Redirect {
-  Redirect::found(format!("{}/oauth/error", state.frontend_url))
+  Ok(Redirect::found(
+    Url::from_str(&format!(
+      "{}/login?code={}&name={}",
+      state.frontend_url, uuid, client.name,
+    ))
+    .unwrap()
+    .to_string(),
+  ))
 }
 
 #[post("/authorize?<code>&<allow>")]

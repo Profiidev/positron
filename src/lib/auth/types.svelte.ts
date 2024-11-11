@@ -31,4 +31,5 @@ export interface PasswordInfo {
 
 export interface OAuthParams {
   code: string;
+  name: string;
 }
