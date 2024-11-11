@@ -2,12 +2,9 @@
   import { ModeWatcher } from "mode-watcher";
   import "../app.css";
   import { page } from "$app/stores";
-  import { get_token, TokenType } from "$lib/auth/token.svelte";
-  import { goto } from "$app/navigation";
   import { Toaster } from "$lib/components/ui/sonner";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
-  import { onMount } from "svelte";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -16,14 +13,6 @@
   let { children }: Props = $props();
 
   const noLayout = ["/login", "/oauth"];
-
-  onMount(() => {
-    if (!get_token(TokenType.Auth)) {
-      goto("/login", {
-        replaceState: true,
-      });
-    }
-  });
 </script>
 
 <ModeWatcher />

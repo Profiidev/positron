@@ -18,6 +18,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { get } from "svelte/store";
+  import { browser } from "$app/environment";
 
   interface Props {
     class?: string | undefined | null;
