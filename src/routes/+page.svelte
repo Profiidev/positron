@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { get_token, TokenType } from "$lib/auth/token.svelte";
+  import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
   import { onMount } from "svelte";
 
   onMount(() => {

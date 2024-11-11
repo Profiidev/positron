@@ -1,6 +1,6 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { get_token, TokenType } from "$lib/auth/token.svelte";
-import { AuthError, type OAuthParams } from "$lib/auth/types.svelte";
+import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
+import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
 
 export const auth = async (params: OAuthParams, allow: boolean) => {
   let token = get_token(TokenType.Auth);

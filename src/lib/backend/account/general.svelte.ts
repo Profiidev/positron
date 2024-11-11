@@ -1,5 +1,5 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { get_token, TokenType } from "$lib/auth/token.svelte";
+import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
 import { base64ToArrayBuffer } from "$lib/util/convert.svelte";
 import type { ProfileInfo, UserInfo } from "./types.svelte";
 

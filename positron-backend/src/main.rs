@@ -12,7 +12,9 @@ mod cors;
 mod db;
 mod email;
 mod error;
+mod management;
 mod oauth;
+mod permissions;
 mod utils;
 
 #[launch]
@@ -47,6 +49,7 @@ fn routes() -> Vec<Route> {
     .chain(account::routes())
     .chain(email::routes())
     .chain(oauth::routes())
+    .chain(management::routes())
     .collect()
 }
 

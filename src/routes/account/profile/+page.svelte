@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { change_image, update_profile } from "$lib/account/general.svelte";
-  import { getInfo, updateInfo } from "$lib/account/info.svelte";
+  import {
+    change_image,
+    update_profile,
+  } from "$lib/backend/account/general.svelte";
+  import { getInfo, updateInfo } from "$lib/backend/account/info.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -9,7 +12,7 @@
   import { arrayBufferToBase64 } from "$lib/util/convert.svelte";
   import { Upload, LoaderCircle } from "lucide-svelte";
   import { toast } from "svelte-sonner";
-  import * as Avatar from "$lib/components/ui/avatar";
+  import Avatar from "$lib/components/util/avatar.svelte";
 
   let infoData = $derived(getInfo());
   $effect(() => {
@@ -81,13 +84,7 @@
     <div class="space-y-3">
       {#if infoData}
         <div class="relative">
-          <Avatar.Root class="size-52 rounded-full">
-            <Avatar.Image
-              src={`data:image/png;base64, ${infoData.image}`}
-              alt="Profile"
-            />
-            <Avatar.Fallback>?</Avatar.Fallback>
-          </Avatar.Root>
+          <Avatar src={infoData.image} class="size-52 rounded-full" />
           <Button
             class="group absolute hover:backdrop-blur-sm size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
             variant="ghost"

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
 
+use crate::permissions::Permission;
+
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserCreate {
   pub uuid: String,
@@ -12,6 +14,7 @@ pub struct UserCreate {
   pub password: String,
   pub salt: String,
   pub totp: Option<String>,
+  pub permissions: Vec<Permission>,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -28,6 +31,7 @@ pub struct User {
   pub totp: Option<String>,
   pub totp_created: Option<DateTime<Utc>>,
   pub totp_last_used: Option<DateTime<Utc>>,
+  pub permissions: Vec<Permission>,
 }
 
 pub struct UserTable<'db> {
@@ -74,6 +78,7 @@ impl<'db> UserTable<'db> {
     DEFINE FIELD IF NOT EXISTS totp ON TABLE user TYPE option<string>;
     DEFINE FIELD IF NOT EXISTS totp_created ON TABLE user TYPE option<datetime> DEFAULT NONE;
     DEFINE FIELD IF NOT EXISTS totp_last_used ON TABLE user TYPE option<datetime> DEFAULT NONE;
+    DEFINE FIELD IF NOT EXISTS permissions ON TABLE user TYPE array<string>;
 
     DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
   ",
@@ -119,7 +124,6 @@ impl<'db> UserTable<'db> {
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
-  #[allow(dead_code)]
   pub async fn create_user(&self, user: UserCreate) -> Result<(), Error> {
     self
       .db
@@ -221,6 +225,69 @@ impl<'db> UserTable<'db> {
       .query("UPDATE user SET email = $email WHERE uuid = $uuid")
       .bind(("uuid", uuid.to_string()))
       .bind(("email", new_email))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn has_permission(&self, uuid: Uuid, permission: Permission) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $user = SELECT * FROM user WHERE permissions CONTAINS $permission AND uuid = $uuid;
+LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
+LET $permissions = $groups.map(|$g| $g.permissions).push($user[0].permissions);
+RETURN $permissions.flatten() CONTAINS $permission",
+      )
+      .bind(("uuid", uuid.to_string()))
+      .bind(("permission", permission))
+      .await?;
+
+    Ok(res.take::<Option<bool>>(3)?.unwrap_or(false))
+  }
+
+  pub async fn list(&self) -> Result<Vec<User>, Error> {
+    let mut res = self.db.query("SELECT * FROM user").await?;
+
+    Ok(res.take(0).unwrap_or_default())
+  }
+
+  pub async fn priority(&self, uuid: Uuid) -> Result<i32, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
+LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
+RETURN $groups.map(|$g| $g.priority).min()",
+      )
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    res
+      .take::<Option<i32>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+  }
+
+  pub async fn set_permissions(
+    &self,
+    uuid: Uuid,
+    permission: Vec<Permission>,
+  ) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET permissions = $permissions WHERE uuid = $uuid")
+      .bind(("uuid", uuid))
+      .bind(("permissions", permission))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn delete_user(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("DELETE user WHERE uuid = $uuid")
+      .bind(("uuid", uuid))
       .await?;
 
     Ok(())

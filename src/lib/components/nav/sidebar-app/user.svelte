@@ -1,12 +1,12 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as Dropdown from "$lib/components/ui/dropdown-menu";
-  import * as Avatar from "$lib/components/ui/avatar";
   import { ChevronsUpDown, LogOut, Settings } from "lucide-svelte";
-  import { getInfo } from "$lib/account/info.svelte";
+  import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
-  import { clear_tokens } from "$lib/auth/token.svelte";
+  import { clear_tokens } from "$lib/backend/auth/token.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
+  import Avatar from "$lib/components/util/avatar.svelte";
 
   let infoData = $derived(getInfo());
   let sidebar = Sidebar.useSidebar();
@@ -32,12 +32,7 @@
             {...props}
           >
             {#if infoData}
-              <Avatar.Root class="size-8">
-                <Avatar.Image
-                  src={`data:image/png;base64, ${infoData.image}`}
-                />
-                <Avatar.Fallback>?</Avatar.Fallback>
-              </Avatar.Root>
+              <Avatar src={infoData.image} class="size-8" />
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{infoData.name}</span>
                 <span class="truncate text-xs">{infoData.email}</span>

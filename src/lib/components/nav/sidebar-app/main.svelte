@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as Collapsible from "$lib/components/ui/collapsible";
-  import { ChevronRight, Settings2 } from "lucide-svelte";
+  import { ChevronRight, Users } from "lucide-svelte";
   import { page } from "$app/stores";
 
   const items = [
@@ -9,13 +9,17 @@
       title: "Management",
       items: [
         {
-          title: "Test",
-          icon: Settings2,
+          title: "User Management",
+          icon: Users,
           isActive: true,
           items: [
             {
-              title: "Sub",
-              url: "/account",
+              title: "Users",
+              url: "/management/users",
+            },
+            {
+              title: "Groups",
+              url: "/management/groups",
             },
           ],
         },

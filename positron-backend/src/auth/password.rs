@@ -1,10 +1,5 @@
 use std::str::FromStr;
 
-use argon2::{
-  password_hash::{PasswordHasher, SaltString},
-  Argon2,
-};
-use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use rocket::{get, http::Status, post, serde::json::Json, Route, State};
 use serde::{Deserialize, Serialize};
@@ -13,6 +8,7 @@ use uuid::Uuid;
 use crate::{
   db::DB,
   error::{Error, Result},
+  utils::hash_password,
 };
 
 use super::{
@@ -85,23 +81,6 @@ async fn special_access(
   db.tables().user().used_special_access(auth.sub).await?;
 
   Ok(jwt.create_token::<JwtSpecial>(Uuid::from_str(&user.uuid)?)?)
-}
-
-fn hash_password(state: &State<PasswordState>, salt: &str, password: &str) -> Result<String> {
-  let bytes = BASE64_STANDARD.decode(password)?;
-  let pw_bytes = state.decrypt(&bytes)?;
-  let password = String::from_utf8_lossy(&pw_bytes).to_string();
-
-  let mut salt = BASE64_STANDARD_NO_PAD.decode(salt)?;
-  salt.extend_from_slice(&state.pepper);
-  let salt_string = SaltString::encode_b64(&salt)?;
-
-  let argon2 = Argon2::default();
-  let hash = argon2
-    .hash_password(password.as_bytes(), salt_string.as_salt())?
-    .to_string();
-
-  Ok(hash)
 }
 
 #[derive(Deserialize)]

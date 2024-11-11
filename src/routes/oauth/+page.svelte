@@ -1,16 +1,16 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import Button from "$lib/components/ui/button/button.svelte";
-  import { auth } from "$lib/auth/oauth.svelte";
+  import { auth } from "$lib/backend/auth/oauth.svelte";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import * as Card from "$lib/components/ui/card";
-  import * as Avatar from "$lib/components/ui/avatar";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { getInfo } from "$lib/account/info.svelte";
+  import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
-  import { AuthError, type OAuthParams } from "$lib/auth/types.svelte";
-  import { clear_tokens } from "$lib/auth/token.svelte";
+  import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
+  import { clear_tokens } from "$lib/backend/auth/token.svelte";
+    import Avatar from "$lib/components/util/avatar.svelte";
 
   let isLoading = $state(false);
   let error = $state("");
@@ -82,10 +82,7 @@
     </Card.Header>
     <Card.Content class="flex items-center">
       {#if infoData}
-        <Avatar.Root class="size-14">
-          <Avatar.Image src={`data:image/png;base64, ${infoData.image}`} />
-          <Avatar.Fallback>?</Avatar.Fallback>
-        </Avatar.Root>
+        <Avatar src={infoData.image} class="size-14" />
         <div class="grid flex-1 text-left text-sm leading-tight ml-2">
           <span class="truncate font-semibold text-lg">{infoData.name}</span>
           <span class="truncate">{infoData.email}</span>

@@ -5,10 +5,10 @@
   import { Label } from "$lib/components/ui/label";
   import { Button } from "$lib/components/ui/button";
   import { LoaderCircle } from "lucide-svelte";
-  import { special_access } from "$lib/auth/password.svelte";
-  import { special_access as special_access_pk } from "$lib/auth/passkey.svelte";
-  import { AuthError } from "$lib/auth/types.svelte";
-  import { get_token, TokenType } from "$lib/auth/token.svelte";
+  import { special_access } from "$lib/backend/auth/password.svelte";
+  import { special_access as special_access_pk } from "$lib/backend/auth/passkey.svelte";
+  import { AuthError } from "$lib/backend/auth/types.svelte";
+  import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
   import { interval } from "$lib/util/interval.svelte";
 
   interface Props {

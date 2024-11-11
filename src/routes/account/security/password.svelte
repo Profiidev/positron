@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { change, info } from "$lib/auth/password.svelte";
-  import { AuthError, type PasswordInfo } from "$lib/auth/types.svelte";
+  import { change, info } from "$lib/backend/auth/password.svelte";
+  import { AuthError, type PasswordInfo } from "$lib/backend/auth/types.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";

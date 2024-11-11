@@ -1,4 +1,4 @@
-import { get_uuid } from "$lib/auth/token.svelte";
+import { get_uuid } from "$lib/backend/auth/token.svelte";
 import { info } from "./general.svelte";
 import type { UserInfo } from "./types.svelte";
 

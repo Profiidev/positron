@@ -5,8 +5,8 @@
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { DateTime } from "luxon";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { AuthError, type Passkey } from "$lib/auth/types.svelte";
-  import { edit_name, list, register, remove } from "$lib/auth/passkey.svelte";
+  import { AuthError, type Passkey } from "$lib/backend/auth/types.svelte";
+  import { edit_name, list, register, remove } from "$lib/backend/auth/passkey.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
