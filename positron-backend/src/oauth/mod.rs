@@ -3,12 +3,12 @@ use rocket::{Build, Rocket, Route};
 use state::{AuthorizeState, ClientState};
 
 mod auth;
-mod state;
-mod token;
 mod client_auth;
 mod jwt;
-mod user;
 pub mod scope;
+mod state;
+mod token;
+mod user;
 
 pub fn routes() -> Vec<Route> {
   auth::routes()

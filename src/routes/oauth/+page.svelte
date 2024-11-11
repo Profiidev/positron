@@ -46,7 +46,7 @@
     isLoading = false;
     if (ret === AuthError.Other) {
       error = "There was an error while login in";
-    } else if(ret === AuthError.Password) {
+    } else if (ret === AuthError.Password) {
       error = "You are not allowed to access this Application";
     }
   };
