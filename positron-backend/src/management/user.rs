@@ -1,8 +1,7 @@
 use argon2::password_hash::SaltString;
-use chrono::{DateTime, Utc};
 use rand::rngs::OsRng;
 use rocket::{get, post, serde::json::Json, Route, State};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
@@ -10,8 +9,11 @@ use crate::{
     jwt::{JwtBase, JwtClaims},
     state::PasswordState,
   },
-  db::{tables::user::UserCreate, DB},
-  error::Result,
+  db::{
+    tables::user::{UserCreate, UserInfo},
+    DB,
+  },
+  error::{Error, Result},
   permissions::Permission,
   utils::hash_password,
 };
@@ -23,33 +25,11 @@ pub fn routes() -> Vec<Route> {
     .collect()
 }
 
-#[derive(Serialize)]
-struct User {
-  uuid: String,
-  name: String,
-  image: String,
-  email: String,
-  last_login: DateTime<Utc>,
-  permissions: Vec<Permission>,
-}
-
 #[get("/list")]
-async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<User>>> {
+async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<UserInfo>>> {
   Permission::check(db, auth.sub, Permission::UserList).await?;
 
   let users = db.tables().user().list().await?;
-
-  let users = users
-    .into_iter()
-    .map(|user| User {
-      uuid: user.uuid,
-      name: user.name,
-      image: user.image,
-      email: user.email,
-      last_login: user.last_login,
-      permissions: user.permissions,
-    })
-    .collect();
 
   Ok(Json(users))
 }
@@ -57,7 +37,8 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<User>
 #[derive(Deserialize)]
 struct UserEdit {
   user: Uuid,
-  permissions: Vec<Permission>,
+  add_permission: Option<Permission>,
+  remove_permission: Option<Permission>,
 }
 
 #[post("/edit", data = "<req>")]
@@ -65,10 +46,24 @@ async fn edit(req: Json<UserEdit>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> 
   Permission::check(db, auth.sub, Permission::UserEdit).await?;
   Permission::is_privileged_enough(db, auth.sub, req.user).await?;
 
-  db.tables()
-    .user()
-    .set_permissions(req.user, req.0.permissions)
-    .await?;
+  let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
+
+  if let Some(add) = req.0.add_permission {
+    if !editor_permissions.contains(&add) {
+      return Err(Error::Unauthorized);
+    }
+
+    db.tables().user().add_permission(req.0.user, add).await?;
+  } else if let Some(remove) = req.0.remove_permission {
+    if !editor_permissions.contains(&remove) {
+      return Err(Error::Unauthorized);
+    }
+
+    db.tables()
+      .user()
+      .remove_permission(req.0.user, remove)
+      .await?;
+  }
 
   Ok(())
 }

@@ -5,6 +5,7 @@ export interface User {
   email: string;
   last_login: string;
   permissions: Permission[];
+  priority: number;
 }
 
 export enum Permission {

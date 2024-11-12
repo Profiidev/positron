@@ -1,20 +1,43 @@
 <script lang="ts">
-  import type { User } from "$lib/backend/management/types.svelte";
-  import { list } from "$lib/backend/management/user.svelte";
-  import FlexRender from "$lib/components/ui/data-table/flex-render.svelte";
-  import { ScrollArea } from "$lib/components/ui/scroll-area";
-  import * as Table from "$lib/components/ui/table";
-  import { columns, createTable } from "./table.svelte";
+  import {
+    getPermissions,
+    getPriority,
+    updatePermissions,
+  } from "$lib/backend/account/info.svelte";
+  import type { Permission, User } from "$lib/backend/management/types.svelte";
+  import {
+    list,
+    update_permissions,
+  } from "$lib/backend/management/user.svelte";
+  import Table from "$lib/components/table/table.svelte";
+    import { toast } from "svelte-sonner";
+  import { createTable } from "./table.svelte";
 
   let users: User[] | undefined = $state();
-  let users_promise = $state(list().then((user) => (users = user)));
-  let table = $state(createTable([]));
+  list().then((user) => (users = user));
+  let table = $state(createTable([], Number.MAX_SAFE_INTEGER, []));
+  let allowed_permissions = $derived(getPermissions());
+  let priority = $derived(getPriority());
 
   $effect(() => {
     if (users) {
-      table = createTable(users);
+      table = createTable(
+        users,
+        priority ?? Number.MAX_SAFE_INTEGER,
+        allowed_permissions || [],
+        permissionSelect,
+      );
     }
   });
+
+  const permissionSelect = (user: string, value: Permission, add: boolean) => {
+    update_permissions(user, value, add).then(ret => {
+      if(ret !== null) {
+        toast.error("Error while updating");
+      }
+    });
+    updatePermissions();
+  };
 </script>
 
 <div class="space-y-3 m-4">
@@ -24,44 +47,5 @@
       Modify, create, delete users and manage their permissions here
     </p>
   </div>
-  <ScrollArea class="rounded-md border grid" orientation="both">
-    <Table.Root class="table-fixed min-w-[1000px]">
-      <Table.Header>
-        {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
-          <Table.Row>
-            {#each headerGroup.headers as header (header.id)}
-              <Table.Head>
-                {#if !header.isPlaceholder}
-                  <FlexRender
-                    content={header.column.columnDef.header}
-                    context={header.getContext()}
-                  />
-                {/if}
-              </Table.Head>
-            {/each}
-          </Table.Row>
-        {/each}
-      </Table.Header>
-      <Table.Body>
-        {#each table.getRowModel().rows as row (row.id)}
-          <Table.Row data-state={row.getIsSelected() && "selected"}>
-            {#each row.getVisibleCells() as cell (cell.id)}
-              <Table.Cell>
-                <FlexRender
-                  content={cell.column.columnDef.cell}
-                  context={cell.getContext()}
-                />
-              </Table.Cell>
-            {/each}
-          </Table.Row>
-        {:else}
-          <Table.Row>
-            <Table.Cell colspan={columns.length} class="h-24 text-center">
-              No results.
-            </Table.Cell>
-          </Table.Row>
-        {/each}
-      </Table.Body>
-    </Table.Root>
-  </ScrollArea>
+  <Table {table} />
 </div>

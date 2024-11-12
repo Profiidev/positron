@@ -34,6 +34,17 @@ pub struct User {
   pub permissions: Vec<Permission>,
 }
 
+#[derive(Serialize)]
+pub struct UserInfo {
+  uuid: String,
+  name: String,
+  image: String,
+  email: String,
+  last_login: DateTime<Utc>,
+  permissions: Vec<Permission>,
+  priority: i32,
+}
+
 pub struct UserTable<'db> {
   db: &'db Surreal<Client>,
 }
@@ -246,10 +257,37 @@ RETURN $permissions.flatten() CONTAINS $permission",
     Ok(res.take::<Option<bool>>(3)?.unwrap_or(false))
   }
 
-  pub async fn list(&self) -> Result<Vec<User>, Error> {
-    let mut res = self.db.query("SELECT * FROM user").await?;
+  pub async fn list(&self) -> Result<Vec<UserInfo>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $users = SELECT * FROM user;
+RETURN $users.map(|$user| {
+    LET $groups = SELECT priority FROM group WHERE users CONTAINS $user.id;
+    $groups.map(|$group| $group.priority).min();
+});
+RETURN $users",
+      )
+      .await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    let users: Vec<User> = res.take(2)?;
+    let priorities: Vec<i32> = res.take(1)?;
+
+    Ok(
+      users
+        .into_iter()
+        .zip(priorities)
+        .map(|(user, priority)| UserInfo {
+          name: user.name,
+          email: user.email,
+          uuid: user.uuid,
+          image: user.image,
+          last_login: user.last_login,
+          permissions: user.permissions,
+          priority,
+        })
+        .collect(),
+    )
   }
 
   pub async fn priority(&self, uuid: Uuid) -> Result<i32, Error> {
@@ -264,20 +302,27 @@ RETURN $groups.map(|$g| $g.priority).min()",
       .await?;
 
     res
-      .take::<Option<i32>>(0)?
+      .take::<Option<i32>>(2)?
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
-  pub async fn set_permissions(
-    &self,
-    uuid: Uuid,
-    permission: Vec<Permission>,
-  ) -> Result<(), Error> {
+  pub async fn add_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE user SET permissions = $permissions WHERE uuid = $uuid")
-      .bind(("uuid", uuid))
-      .bind(("permissions", permission))
+      .query("UPDATE user SET permissions += $permission WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .bind(("permission", permission))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn remove_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE user SET permissions -= $permission WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
+      .bind(("permission", permission))
       .await?;
 
     Ok(())
@@ -287,9 +332,24 @@ RETURN $groups.map(|$g| $g.priority).min()",
     self
       .db
       .query("DELETE user WHERE uuid = $uuid")
-      .bind(("uuid", uuid))
+      .bind(("uuid", uuid.to_string()))
       .await?;
 
     Ok(())
+  }
+
+  pub async fn list_permissions(&self, uuid: Uuid) -> Result<Vec<Permission>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
+LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
+LET $permissions = $groups.map(|$g| $g.permissions).push($user[0].permissions);
+RETURN $permissions.flatten().distinct()",
+      )
+      .bind(("uuid", uuid.to_string()))
+      .await?;
+
+    Ok(res.take(3).unwrap_or_default())
   }
 }
