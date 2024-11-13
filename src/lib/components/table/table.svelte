@@ -58,7 +58,9 @@
     {@render children?.()}
   </div>
   <ScrollArea class="rounded-md border grid" orientation="both">
-    <Table.Root class={`min-w-[${table.getHeaderGroups()[0].headers.length * 100}px]`}>
+    <Table.Root
+      class={`min-w-[${table.getHeaderGroups()[0].headers.length * 100}px]`}
+    >
       <Table.Header>
         {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
           <Table.Row>
