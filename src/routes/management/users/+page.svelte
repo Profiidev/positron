@@ -9,30 +9,31 @@
     list,
     update_permissions,
   } from "$lib/backend/management/user.svelte";
+  import { createTable } from "$lib/components/table/helpers.svelte";
   import Table from "$lib/components/table/table.svelte";
-    import { toast } from "svelte-sonner";
-  import { createTable } from "./table.svelte";
+  import { toast } from "svelte-sonner";
+  import { columns } from "./table.svelte";
 
   let users: User[] | undefined = $state();
   list().then((user) => (users = user));
-  let table = $state(createTable([], Number.MAX_SAFE_INTEGER, []));
+  let table = $state(createTable([], columns([], Number.MAX_SAFE_INTEGER)));
   let allowed_permissions = $derived(getPermissions());
   let priority = $derived(getPriority());
 
   $effect(() => {
-    if (users) {
-      table = createTable(
-        users,
-        priority ?? Number.MAX_SAFE_INTEGER,
+    table = createTable(
+      users || [],
+      columns(
         allowed_permissions || [],
+        priority ?? Number.MAX_SAFE_INTEGER,
         permissionSelect,
-      );
-    }
+      ),
+    );
   });
 
   const permissionSelect = (user: string, value: Permission, add: boolean) => {
-    update_permissions(user, value, add).then(ret => {
-      if(ret !== null) {
+    update_permissions(user, value, add).then((ret) => {
+      if (ret !== null) {
         toast.error("Error while updating");
       }
     });

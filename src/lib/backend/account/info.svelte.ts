@@ -1,5 +1,5 @@
 import { get_uuid } from "$lib/backend/auth/token.svelte";
-import type { Permission } from "../management/types.svelte";
+import { Permission } from "../management/types.svelte";
 import { info } from "./general.svelte";
 import { list, priority as priorityUpdate } from "./permissions.svelte";
 import type { UserInfo } from "./types.svelte";

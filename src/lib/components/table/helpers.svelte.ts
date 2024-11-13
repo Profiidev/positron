@@ -1,5 +1,18 @@
-import type { ColumnDef } from "@tanstack/table-core";
-import { renderComponent, renderSnippet } from "../ui/data-table";
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type Table,
+  type VisibilityState,
+} from "@tanstack/table-core";
+import {
+  createSvelteTable,
+  renderComponent,
+  renderSnippet,
+} from "../ui/data-table";
 import { createRawSnippet } from "svelte";
 import TableHead from "./table-head.svelte";
 
@@ -51,4 +64,53 @@ export const createColumn = <T, C>(
     ...createColumnHeader(key, title),
     ...createColumnCell(key, formatter),
   };
+};
+
+let columnVisibility = $state<VisibilityState>({});
+let sorting = $state<SortingState>([]);
+let columnFilters = $state<ColumnFiltersState>([]);
+
+export const createTable = <C>(
+  data: C[],
+  columns: ColumnDef<C>[],
+): Table<C> => {
+  return createSvelteTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: (updater) => {
+      if (typeof updater === "function") {
+        columnVisibility = updater(columnVisibility);
+      } else {
+        columnVisibility = updater;
+      }
+    },
+    onSortingChange: (updater) => {
+      if (typeof updater === "function") {
+        sorting = updater(sorting);
+      } else {
+        sorting = updater;
+      }
+    },
+    onColumnFiltersChange: (updater) => {
+      if (typeof updater === "function") {
+        columnFilters = updater(columnFilters);
+      } else {
+        columnFilters = updater;
+      }
+    },
+    state: {
+      get columnVisibility() {
+        return columnVisibility;
+      },
+      get sorting() {
+        return sorting;
+      },
+      get columnFilters() {
+        return columnFilters;
+      }
+    },
+  });
 };

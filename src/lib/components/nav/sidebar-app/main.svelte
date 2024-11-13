@@ -3,8 +3,10 @@
   import * as Collapsible from "$lib/components/ui/collapsible";
   import { ChevronRight, Users } from "lucide-svelte";
   import { page } from "$app/stores";
+  import { Permission } from "$lib/backend/management/types.svelte";
+  import { getPermissions } from "$lib/backend/account/info.svelte";
 
-  const items = [
+  const allItems = [
     {
       title: "Management",
       items: [
@@ -16,16 +18,41 @@
             {
               title: "Users",
               url: "/management/users",
+              permission: Permission.UserList,
             },
             {
               title: "Groups",
               url: "/management/groups",
+              permission: Permission.GroupList,
             },
           ],
         },
       ],
     },
   ];
+
+  let permissions = $derived(getPermissions());
+  let items = $derived.by(() => {
+    return permissions
+      ? allItems
+          .map((g) => {
+            g.items = g.items
+              .map((sg) => {
+                sg.items = sg.items.filter((i) => {
+                  return permissions.includes(i.permission);
+                });
+                return sg;
+              })
+              .filter((sg) => {
+                return sg.items.length > 0;
+              });
+            return g;
+          })
+          .filter((g) => {
+            return g.items.length > 0;
+          })
+      : [];
+  });
 </script>
 
 {#each items as group (group.title)}

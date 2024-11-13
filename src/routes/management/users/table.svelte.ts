@@ -4,15 +4,12 @@ import {
   createColumnHeader,
 } from "$lib/components/table/helpers.svelte";
 import Multiselect from "$lib/components/table/multiselect.svelte";
-import {
-  createSvelteTable,
-  renderComponent,
-} from "$lib/components/ui/data-table";
+import { renderComponent } from "$lib/components/ui/data-table";
 import Avatar from "$lib/components/util/avatar.svelte";
-import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, type ColumnDef } from "@tanstack/table-core";
+import type { ColumnDef } from "@tanstack/table-core";
 import { DateTime } from "luxon";
 
-const columns = (
+export const columns = (
   allowed_permissions: Permission[],
   priority: number,
   permission_select?: (user: string, value: Permission, add: boolean) => void,
@@ -61,17 +58,3 @@ const columns = (
   createColumn("uuid", "Uuid"),
   createColumn("priority", "Priority"),
 ];
-
-export const createTable = (
-  data: User[],
-  priority: number,
-  allowed_permissions: Permission[],
-  permission_select?: (user: string, value: Permission, add: boolean) => void,
-) =>
-  createSvelteTable({
-    data,
-    columns: columns(allowed_permissions, priority, permission_select),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
