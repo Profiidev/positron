@@ -9,7 +9,7 @@ COPY package.json package-lock.json postcss.config.js svelte.config.js tailwind.
 COPY src ./src
 COPY static ./static
 
-RUN echo "export const ssr = false;" > src/routes/+layout.ts
+RUN rm src/routes/+layout.ts
 RUN sed -i 's/static/node/g' svelte.config.js
 
 RUN npm i

@@ -6,15 +6,22 @@
   import { Button } from "../../lib/components/ui/button/index";
   import { Input } from "../../lib/components/ui/input/index";
   import { Label } from "../../lib/components/ui/label/index";
-  import { login } from "$lib/auth/password.svelte";
-  import { AuthError } from "$lib/auth/types.svelte";
+  import { login } from "$lib/backend/auth/password.svelte";
+  import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
   import { goto } from "$app/navigation";
-  import { confirm } from "$lib/auth/totp.svelte";
-  import { get_token, TokenType } from "$lib/auth/token.svelte";
-  import { authenticate } from "$lib/auth/passkey.svelte";
+  import { confirm } from "$lib/backend/auth/totp.svelte";
+  import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
+  import { authenticate } from "$lib/backend/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import { updateInfo } from "$lib/account/info.svelte";
+  import {
+    updateAccessLevel,
+    updateInfo,
+    updatePermissions,
+  } from "$lib/backend/account/info.svelte";
+  import { onMount } from "svelte";
+  import { page } from "$app/stores";
+  import { get } from "svelte/store";
 
   interface Props {
     class?: string | undefined | null;
@@ -29,6 +36,18 @@
   let totp = $state("");
   let form_error = $state("");
   let passkeyError = $state("");
+
+  let oauth_params: OAuthParams | undefined = $derived.by(() => {
+    let code = get(page).url.searchParams.get("code");
+    let name = get(page).url.searchParams.get("name");
+
+    if (code && name) {
+      return {
+        code,
+        name,
+      };
+    }
+  });
 
   const onSubmit = async () => {
     if (!enterEmail) {
@@ -48,8 +67,7 @@
         }
         return;
       } else {
-        await updateInfo();
-        goto("/");
+        await login_success();
         return;
       }
     }
@@ -66,8 +84,7 @@
       if (ret) {
         enterEmail = false;
       } else {
-        await updateInfo();
-        goto("/");
+        await login_success();
       }
     } else {
       if (ret === AuthError.Password) {
@@ -94,16 +111,34 @@
         passkeyError = "There was an Error while signing in";
       }
     } else {
-      await updateInfo();
+      await login_success();
+    }
+  };
+
+  const login_success = async () => {
+    await Promise.all([updateInfo(), updateAccessLevel(), updatePermissions()]);
+    if (oauth_params) {
+      goto(
+        `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=true`,
+      );
+    } else {
       goto("/");
     }
   };
 
-  if (get_token(TokenType.Auth)) {
-    goto("/", {
-      replaceState: true,
-    });
-  }
+  onMount(async () => {
+    if (get_token(TokenType.Auth)) {
+      if (oauth_params) {
+        goto(
+          `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=false`,
+        );
+      } else {
+        goto("/", {
+          replaceState: true,
+        });
+      }
+    }
+  });
 </script>
 
 <div class={cn("grid gap-6", className)}>

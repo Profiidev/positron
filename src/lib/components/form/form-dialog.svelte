@@ -15,6 +15,7 @@
       class?: string;
       size?: ButtonSize;
       loadIcon?: boolean;
+      disabled?: boolean;
     };
     onopen?: () => boolean | Promise<boolean>;
     onsubmit: () => string | undefined | Promise<string | undefined>;
@@ -68,7 +69,7 @@
     onclick={openFn}
     class={trigger.class}
     size={trigger.size}
-    disabled={isLoading}
+    disabled={isLoading || trigger.disabled}
   >
     {#if isLoading && trigger.loadIcon}
       <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />

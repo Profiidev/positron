@@ -16,7 +16,8 @@ rand = "0.8.5"
 rocket = { version = "0.5.1" ,features = ["json"] }
 rocket_cors = "0.6.0"
 rsa = "0.9.6"
-serde = { version = "1.0.215", features = ["derive"] }
+serde = { version = "1.0.214", features = ["derive"] }
+serde_urlencoded = "0.7.1"
 surrealdb = "2.0.4"
 thiserror = "2.0.3"
 totp-rs = { version = "5.6.0", features = ["qr", "gen_secret", "otpauth"]}

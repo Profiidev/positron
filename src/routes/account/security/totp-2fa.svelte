@@ -8,8 +8,8 @@
     info,
     is_code,
     remove,
-  } from "$lib/auth/totp.svelte";
-  import { AuthError, type TotpInfo } from "$lib/auth/types.svelte";
+  } from "$lib/backend/auth/totp.svelte";
+  import { AuthError, type TotpInfo } from "$lib/backend/auth/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { Badge } from "$lib/components/ui/badge";
   import Totp_6 from "$lib/components/form/totp-6.svelte";

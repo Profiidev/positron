@@ -2,7 +2,7 @@ use rocket::{http::Status, post, serde::json::Json, Route, State};
 use serde::Deserialize;
 
 use crate::{
-  auth::jwt::JwtSpecialAccess,
+  auth::jwt::{JwtClaims, JwtSpecial},
   db::DB,
   error::{Error, Result},
 };
@@ -27,22 +27,18 @@ struct EmailChange {
 #[post("/start_change", data = "<req>")]
 async fn start_change(
   req: Json<EmailChange>,
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
   mailer: &State<Mailer>,
   state: &State<EmailState>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   let Some(code) = state.gen_info(req.new_email.clone()) else {
     return Err(Error::InternalServerError);
   };
 
-  state
-    .change_req
-    .lock()
-    .await
-    .insert(auth.uuid, code.clone());
+  state.change_req.lock().await.insert(auth.sub, code.clone());
 
   mailer.send_mail(
     user.name.clone(),
@@ -70,12 +66,12 @@ struct EmailCode {
 #[post("/finish_change", data = "<req>")]
 async fn finish_change(
   req: Json<EmailCode>,
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
   state: &State<EmailState>,
 ) -> Result<Status> {
   let mut state_lock = state.change_req.lock().await;
-  let Some(info) = state_lock.get(&auth.uuid) else {
+  let Some(info) = state_lock.get(&auth.sub) else {
     return Err(Error::BadRequest);
   };
 
@@ -85,10 +81,10 @@ async fn finish_change(
 
   db.tables()
     .user()
-    .change_email(auth.uuid, info.new_email.clone())
+    .change_email(auth.sub, info.new_email.clone())
     .await?;
 
-  state_lock.remove(&auth.uuid);
+  state_lock.remove(&auth.sub);
 
   Ok(Status::Ok)
 }

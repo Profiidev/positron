@@ -12,6 +12,10 @@ mod cors;
 mod db;
 mod email;
 mod error;
+mod management;
+mod oauth;
+mod permissions;
+mod utils;
 
 #[launch]
 async fn rocket() -> _ {
@@ -44,10 +48,13 @@ fn routes() -> Vec<Route> {
     .into_iter()
     .chain(account::routes())
     .chain(email::routes())
+    .chain(oauth::routes())
+    .chain(management::routes())
     .collect()
 }
 
 fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = auth::state(server);
+  let server = oauth::state(server);
   email::state(server)
 }

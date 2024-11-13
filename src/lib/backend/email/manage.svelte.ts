@@ -1,5 +1,5 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { get_token, TokenType } from "$lib/auth/token.svelte";
+import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
 import { EmailError } from "./types.svelte";
 
 export const start_change = async (new_email: string) => {

@@ -1,8 +1,4 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import {
-  startAuthentication,
-  startRegistration,
-} from "@simplewebauthn/browser";
 import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
@@ -41,6 +37,8 @@ export const register = async (
 
   let ret;
   try {
+    const startRegistration = (await import("@simplewebauthn/browser"))
+      .startRegistration;
     ret = await startRegistration({ optionsJSON });
   } catch (_) {
     return AuthError.Passkey;
@@ -95,6 +93,8 @@ export const authenticate = async (): Promise<AuthError | undefined> => {
 
   let ret;
   try {
+    const startAuthentication = (await import("@simplewebauthn/browser"))
+      .startAuthentication;
     ret = await startAuthentication({ optionsJSON });
   } catch (_) {
     return AuthError.Passkey;
@@ -152,6 +152,8 @@ export const special_access = async (): Promise<AuthError | undefined> => {
 
   let ret;
   try {
+    const startAuthentication = (await import("@simplewebauthn/browser"))
+      .startAuthentication;
     ret = await startAuthentication({ optionsJSON });
   } catch (_) {
     return AuthError.Passkey;

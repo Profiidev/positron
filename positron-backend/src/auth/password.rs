@@ -1,10 +1,5 @@
 use std::str::FromStr;
 
-use argon2::{
-  password_hash::{PasswordHasher, SaltString},
-  Argon2,
-};
-use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use rocket::{get, http::Status, post, serde::json::Json, Route, State};
 use serde::{Deserialize, Serialize};
@@ -13,10 +8,11 @@ use uuid::Uuid;
 use crate::{
   db::DB,
   error::{Error, Result},
+  utils::hash_password,
 };
 
 use super::{
-  jwt::{JwtAuth, JwtSpecialAccess, JwtState, JwtType},
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired},
   state::PasswordState,
 };
 
@@ -52,16 +48,14 @@ async fn authenticate(
     return Err(Error::Unauthorized);
   }
 
-  let type_ = if user.totp.is_some() {
-    JwtType::TotpRequired
+  if user.totp.is_some() {
+    Ok(jwt.create_token::<JwtTotpRequired>(Uuid::from_str(&user.uuid)?)?)
   } else {
     let uuid = Uuid::from_str(&user.uuid)?;
     db.tables().user().logged_in(uuid).await?;
 
-    JwtType::Auth
-  };
-
-  Ok(jwt.create_token(Uuid::from_str(&user.uuid)?, type_)?)
+    Ok(jwt.create_token::<JwtBase>(Uuid::from_str(&user.uuid)?)?)
+  }
 }
 
 #[derive(Deserialize)]
@@ -72,38 +66,21 @@ struct SpecialAccess {
 #[post("/special_access", data = "<req>")]
 async fn special_access(
   req: Json<SpecialAccess>,
-  auth: JwtAuth,
+  auth: JwtClaims<JwtBase>,
   state: &State<PasswordState>,
   jwt: &State<JwtState>,
   db: &State<DB>,
 ) -> Result<String> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
   if hash != user.password {
     return Err(Error::Unauthorized);
   }
 
-  db.tables().user().used_special_access(auth.uuid).await?;
+  db.tables().user().used_special_access(auth.sub).await?;
 
-  Ok(jwt.create_token(Uuid::from_str(&user.uuid)?, JwtType::SpecialAccess)?)
-}
-
-fn hash_password(state: &State<PasswordState>, salt: &str, password: &str) -> Result<String> {
-  let bytes = BASE64_STANDARD.decode(password)?;
-  let pw_bytes = state.decrypt(&bytes)?;
-  let password = String::from_utf8_lossy(&pw_bytes).to_string();
-
-  let mut salt = BASE64_STANDARD_NO_PAD.decode(salt)?;
-  salt.extend_from_slice(&state.pepper);
-  let salt_string = SaltString::encode_b64(&salt)?;
-
-  let argon2 = Argon2::default();
-  let hash = argon2
-    .hash_password(password.as_bytes(), salt_string.as_salt())?
-    .to_string();
-
-  Ok(hash)
+  Ok(jwt.create_token::<JwtSpecial>(Uuid::from_str(&user.uuid)?)?)
 }
 
 #[derive(Deserialize)]
@@ -115,11 +92,11 @@ struct PasswordChange {
 #[post("/change", data = "<req>")]
 async fn change(
   req: Json<PasswordChange>,
-  auth: JwtSpecialAccess,
+  auth: JwtClaims<JwtSpecial>,
   state: &State<PasswordState>,
   db: &State<DB>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
   let hash_confirm = hash_password(state, &user.salt, &req.password_confirm)?;
 
@@ -139,8 +116,8 @@ struct PasswordInfo {
 }
 
 #[get("/info")]
-async fn info(auth: JwtAuth, db: &State<DB>) -> Result<Json<PasswordInfo>> {
-  let user = db.tables().user().get_user_by_uuid(auth.uuid).await?;
+async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<PasswordInfo>> {
+  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   Ok(Json(PasswordInfo {
     last_login: user.last_login,
