@@ -18,15 +18,31 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { fetch_key } from "$lib/backend/auth/password.svelte";
+  import type { Row } from "@tanstack/table-core";
 
   const updateUsers = async () => {
     await list().then((user) => (users = user));
   };
 
+  const filterFn = (row: Row<User>, id: string, filterValues: any) => {
+    const info = [row.original.email, row.original.name, row.original.uuid]
+      .filter(Boolean)
+      .join(" ");
+
+    let searchTerms = Array.isArray(filterValues)
+      ? filterValues
+      : [filterValues];
+    return searchTerms.some((term) => info.includes(term.toLowerCase()));
+  };
+
   let users: User[] | undefined = $state();
   list().then((user) => (users = user));
   let table = $state(
-    createTable([], columns([], Number.MAX_SAFE_INTEGER, updateUsers)),
+    createTable(
+      [],
+      columns([], Number.MAX_SAFE_INTEGER, updateUsers),
+      filterFn,
+    ),
   );
   let allowed_permissions = $derived(getPermissions());
   let priority = $derived(getPriority());
@@ -44,6 +60,7 @@
         updateUsers,
         permissionSelect,
       ),
+      filterFn,
     );
   });
 
@@ -74,7 +91,7 @@
       Modify, create, delete users and manage their permissions here
     </p>
   </div>
-  <Table {table}>
+  <Table filterColumn="name" {table}>
     {#if allowed_permissions?.includes(Permission.UserCreate)}
       <FormDialog
         title="Create User"

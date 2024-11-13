@@ -193,7 +193,7 @@
       <Skeleton class="m-2 size-10" />
     </div>
   {:then}
-    {#if passkeys}
+    {#if passkeys && passkeys.length > 0}
       {#each passkeys as passkey, i}
         {#if i > 0}
           <Separator />

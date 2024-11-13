@@ -4,6 +4,7 @@ import {
   getSortedRowModel,
   type ColumnDef,
   type ColumnFiltersState,
+  type Row,
   type SortingState,
   type Table,
   type VisibilityState,
@@ -74,10 +75,15 @@ let columnFilters = $state<ColumnFiltersState>([]);
 export const createTable = <C>(
   data: C[],
   columns: ColumnDef<C>[],
+  filterFn: (row: Row<C>, id: string, filterValues: any) => boolean,
 ): Table<C> => {
   return createSvelteTable({
     data,
     columns,
+    defaultColumn: {
+      filterFn,
+      enableSorting: true,
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

@@ -75,6 +75,7 @@ export const columns = (
         trigger: {
           size: "icon",
           variant: "destructive",
+          class: "ml-auto"
         },
         triggerInner: createRawSnippet<[]>(() => {
           return {
@@ -96,5 +97,6 @@ export const columns = (
         },
       });
     },
+    enableHiding: false,
   },
 ];

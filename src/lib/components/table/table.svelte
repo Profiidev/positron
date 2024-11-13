@@ -14,20 +14,21 @@
   interface Props {
     table: TableType<T>;
     children?: Snippet;
+    filterColumn: string;
   }
 
-  let { table, children }: Props = $props();
+  let { table, children, filterColumn }: Props = $props();
 </script>
 
 <div class="w-full">
   <div class="flex items-center py-4">
     <Input
       placeholder="Filter entries"
-      value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+      value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
       oninput={(e) =>
-        table.getColumn("email")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn(filterColumn)?.setFilterValue(e.currentTarget.value)}
       onchange={(e) =>
-        table.getColumn("email")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn(filterColumn)?.setFilterValue(e.currentTarget.value)}
       class="max-w-full mr-2"
     />
     <Dropdown.Root>
@@ -57,7 +58,7 @@
     {@render children?.()}
   </div>
   <ScrollArea class="rounded-md border grid" orientation="both">
-    <Table.Root class="table-fixed min-w-[1000px] block">
+    <Table.Root class={`min-w-[${table.getHeaderGroups()[0].headers.length * 100}px]`}>
       <Table.Header>
         {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
           <Table.Row>
