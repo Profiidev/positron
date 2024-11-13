@@ -1,8 +1,7 @@
 <script lang="ts">
   import {
     getPermissions,
-    getPriority,
-    updatePermissions,
+    getAccessLevel,
   } from "$lib/backend/account/info.svelte";
   import { Permission, type User } from "$lib/backend/management/types.svelte";
   import {
@@ -45,7 +44,7 @@
     ),
   );
   let allowed_permissions = $derived(getPermissions());
-  let priority = $derived(getPriority());
+  let access_level = $derived(getAccessLevel());
   let name = $state("");
   let email = $state("");
   let password = $state("");
@@ -56,7 +55,7 @@
       users || [],
       columns(
         allowed_permissions || [],
-        priority ?? Number.MAX_SAFE_INTEGER,
+        access_level ?? Number.MAX_SAFE_INTEGER,
         updateUsers,
         permissionSelect,
       ),

@@ -29,7 +29,7 @@ export const list = async () => {
   }
 };
 
-export const priority = async () => {
+export const access_level = async () => {
   let token = get_token(TokenType.Auth);
   if (!token) {
     return;
@@ -37,7 +37,7 @@ export const priority = async () => {
 
   try {
     let info_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/account/permissions/priority`,
+      `${PUBLIC_BACKEND_URL}/account/permissions/access_level`,
       {
         headers: {
           Authorization: token,

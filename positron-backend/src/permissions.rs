@@ -35,10 +35,10 @@ impl Permission {
   }
 
   pub async fn is_privileged_enough(db: &State<DB>, user: Uuid, target: Uuid) -> Result<()> {
-    let priority = db.tables().user().priority(user).await?;
-    let priority_edit = db.tables().user().priority(target).await?;
+    let access_level = db.tables().user().access_level(user).await?;
+    let access_level_edit = db.tables().user().access_level(target).await?;
 
-    if priority <= priority_edit {
+    if access_level < access_level_edit {
       Ok(())
     } else {
       Err(Error::Unauthorized)

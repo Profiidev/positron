@@ -1,12 +1,12 @@
 import { get_uuid } from "$lib/backend/auth/token.svelte";
 import { Permission } from "../management/types.svelte";
 import { info } from "./general.svelte";
-import { list, priority as priorityUpdate } from "./permissions.svelte";
+import { list, access_level as accessLevelUpdate } from "./permissions.svelte";
 import type { UserInfo } from "./types.svelte";
 
 let infoData: UserInfo | undefined = $state();
 let permissions: Permission[] | undefined = $state();
-let priority: number | undefined = $state();
+let access_level: number | undefined = $state();
 
 export const updateInfo = async () => {
   let uuid = get_uuid();
@@ -27,14 +27,14 @@ export const getPermissions = () => {
   return permissions;
 };
 
-export const updatePriority = async () => {
-  priority = await priorityUpdate();
+export const updateAccessLevel = async () => {
+  access_level = await accessLevelUpdate();
 };
 
-export const getPriority = () => {
-  return priority;
+export const getAccessLevel = () => {
+  return access_level;
 };
 
 updateInfo();
 updatePermissions();
-updatePriority();
+updateAccessLevel();

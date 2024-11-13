@@ -42,7 +42,7 @@ pub struct UserInfo {
   email: String,
   last_login: DateTime<Utc>,
   permissions: Vec<Permission>,
-  priority: i32,
+  access_level: i32,
 }
 
 pub struct UserTable<'db> {
@@ -263,40 +263,40 @@ RETURN $permissions.flatten() CONTAINS $permission",
       .query(
         "LET $users = SELECT * FROM user;
 RETURN $users.map(|$user| {
-    LET $groups = SELECT priority FROM group WHERE users CONTAINS $user.id;
-    $groups.map(|$group| $group.priority).min();
+    LET $groups = SELECT access_level FROM group WHERE users CONTAINS $user.id;
+    $groups.map(|$group| $group.access_level).min();
 });
 RETURN $users",
       )
       .await?;
 
     let users: Vec<User> = res.take(2)?;
-    let priorities: Vec<Option<i32>> = res.take(1)?;
+    let access_levels: Vec<Option<i32>> = res.take(1)?;
 
     Ok(
       users
         .into_iter()
-        .zip(priorities)
-        .map(|(user, priority)| UserInfo {
+        .zip(access_levels)
+        .map(|(user, access_level)| UserInfo {
           name: user.name,
           email: user.email,
           uuid: user.uuid,
           image: user.image,
           last_login: user.last_login,
           permissions: user.permissions,
-          priority: priority.unwrap_or(i32::MAX),
+          access_level: access_level.unwrap_or(i32::MAX),
         })
         .collect(),
     )
   }
 
-  pub async fn priority(&self, uuid: Uuid) -> Result<i32, Error> {
+  pub async fn access_level(&self, uuid: Uuid) -> Result<i32, Error> {
     let mut res = self
       .db
       .query(
         "LET $user = SELECT * FROM user WHERE uuid = $uuid;
 LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-RETURN $groups.map(|$g| $g.priority).min()",
+RETURN $groups.map(|$g| $g.access_level).min()",
       )
       .bind(("uuid", uuid.to_string()))
       .await?;

@@ -9,7 +9,7 @@ pub struct Group {
   pub id: Thing,
   pub name: String,
   pub uuid: String,
-  pub priority: i32,
+  pub access_level: i32,
   pub permissions: Vec<Permission>,
   pub users: Vec<Thing>,
 }
@@ -32,7 +32,7 @@ impl<'db> GroupTable<'db> {
 
       DEFINE FIELD IF NOT EXISTS name ON TABLE group TYPE string;
       DEFINE FIELD IF NOT EXISTS uuid ON TABLE group TYPE string;
-      DEFINE FIELD IF NOT EXISTS priority ON TABLE group TYPE int;
+      DEFINE FIELD IF NOT EXISTS access_level ON TABLE group TYPE int;
       DEFINE FIELD IF NOT EXISTS permissions ON TABLE group TYPE array<string>;
       DEFINE FIELD IF NOT EXISTS users ON TABLE group TYPE array<record<user>>;
     ",

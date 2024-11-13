@@ -15,7 +15,7 @@ import { createRawSnippet, mount, unmount } from "svelte";
 
 export const columns = (
   allowed_permissions: Permission[],
-  priority: number,
+  access_level: number,
   updateUser: () => Promise<void>,
   permission_select?: (user: string, value: Permission, add: boolean) => void,
 ): ColumnDef<User>[] => [
@@ -55,14 +55,14 @@ export const columns = (
           allowed_permissions.includes(value.value as Permission),
         disabled:
           !allowed_permissions.includes(Permission.UserEdit) ||
-          row.getValue<number>("priority") < priority,
+          row.getValue<number>("access_level") <= access_level,
         onSelect,
       });
     },
     ...createColumnHeader("permissions", "Permissions"),
   },
+  createColumn("access_level", "Access Level"),
   createColumn("uuid", "Uuid"),
-  createColumn("priority", "Priority"),
   {
     accessorKey: "actions",
     header: () => {},
@@ -76,6 +76,9 @@ export const columns = (
           size: "icon",
           variant: "destructive",
           class: "ml-auto",
+          disabled:
+            !allowed_permissions.includes(Permission.UserDelete) ||
+            row.getValue<number>("access_level") <= access_level,
         },
         triggerInner: createRawSnippet<[]>(() => {
           return {

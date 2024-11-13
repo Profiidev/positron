@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![list, priority]
+  rocket::routes![list, access_level]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/permissions", base)))
     .collect()
@@ -21,7 +21,7 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<Permi
   Ok(Json(permissions))
 }
 
-#[get("/priority")]
-async fn priority(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<i32>> {
-  Ok(Json(db.tables().user().priority(auth.sub).await?))
+#[get("/access_level")]
+async fn access_level(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<i32>> {
+  Ok(Json(db.tables().user().access_level(auth.sub).await?))
 }
