@@ -10,7 +10,7 @@
   import { goto } from "$app/navigation";
   import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
   import { clear_tokens } from "$lib/backend/auth/token.svelte";
-    import Avatar from "$lib/components/util/avatar.svelte";
+  import Avatar from "$lib/components/util/avatar.svelte";
 
   let isLoading = $state(false);
   let error = $state("");

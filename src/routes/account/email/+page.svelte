@@ -7,7 +7,10 @@
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
   import { EmailError } from "$lib/backend/email/types.svelte";
-  import { finish_change, start_change } from "$lib/backend/email/manage.svelte";
+  import {
+    finish_change,
+    start_change,
+  } from "$lib/backend/email/manage.svelte";
   import { Input } from "$lib/components/ui/input";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import { getInfo, updateInfo } from "$lib/backend/account/info.svelte";
