@@ -4,8 +4,9 @@
     getPriority,
     updatePermissions,
   } from "$lib/backend/account/info.svelte";
-  import type { Permission, User } from "$lib/backend/management/types.svelte";
+  import { Permission, type User } from "$lib/backend/management/types.svelte";
   import {
+    create,
     list,
     update_permissions,
   } from "$lib/backend/management/user.svelte";
@@ -13,12 +14,26 @@
   import Table from "$lib/components/table/table.svelte";
   import { toast } from "svelte-sonner";
   import { columns } from "./table.svelte";
+  import FormDialog from "$lib/components/form/form-dialog.svelte";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { fetch_key } from "$lib/backend/auth/password.svelte";
+
+  const updateUsers = async () => {
+    await list().then((user) => (users = user));
+  };
 
   let users: User[] | undefined = $state();
   list().then((user) => (users = user));
-  let table = $state(createTable([], columns([], Number.MAX_SAFE_INTEGER)));
+  let table = $state(
+    createTable([], columns([], Number.MAX_SAFE_INTEGER, updateUsers)),
+  );
   let allowed_permissions = $derived(getPermissions());
   let priority = $derived(getPriority());
+  let name = $state("");
+  let email = $state("");
+  let password = $state("");
+  let isLoading = $state(false);
 
   $effect(() => {
     table = createTable(
@@ -26,6 +41,7 @@
       columns(
         allowed_permissions || [],
         priority ?? Number.MAX_SAFE_INTEGER,
+        updateUsers,
         permissionSelect,
       ),
     );
@@ -37,7 +53,17 @@
         toast.error("Error while updating");
       }
     });
-    updatePermissions();
+  };
+
+  const createUser = async () => {
+    let ret = await create(name, email, password);
+    if (ret !== null) {
+      await fetch_key();
+      return "Error while creating user";
+    } else {
+      await list().then((user) => (users = user));
+      toast.success("Created User");
+    }
   };
 </script>
 
@@ -48,5 +74,44 @@
       Modify, create, delete users and manage their permissions here
     </p>
   </div>
-  <Table {table} />
+  <Table {table}>
+    {#if allowed_permissions?.includes(Permission.UserCreate)}
+      <FormDialog
+        title="Create User"
+        description="Enter the details for the new user below"
+        confirm="Create"
+        trigger={{
+          text: "Create User",
+          variant: "secondary",
+          class: "ml-2",
+        }}
+        onsubmit={createUser}
+      >
+        <Label for="name" class="sr-only">Name</Label>
+        <Input
+          id="name"
+          placeholder="Name"
+          required
+          disabled={isLoading}
+          bind:value={name}
+        />
+        <Label for="email" class="sr-only">Email</Label>
+        <Input
+          id="email"
+          placeholder="Email"
+          required
+          disabled={isLoading}
+          bind:value={email}
+        />
+        <Label for="password" class="sr-only">Password</Label>
+        <Input
+          id="passowrd"
+          placeholder="Password"
+          required
+          disabled={isLoading}
+          bind:value={password}
+        />
+      </FormDialog>
+    {/if}
+  </Table>
 </div>

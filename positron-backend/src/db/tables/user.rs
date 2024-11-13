@@ -271,7 +271,7 @@ RETURN $users",
       .await?;
 
     let users: Vec<User> = res.take(2)?;
-    let priorities: Vec<i32> = res.take(1)?;
+    let priorities: Vec<Option<i32>> = res.take(1)?;
 
     Ok(
       users
@@ -284,7 +284,7 @@ RETURN $users",
           image: user.image,
           last_login: user.last_login,
           permissions: user.permissions,
-          priority,
+          priority: priority.unwrap_or(i32::MAX),
         })
         .collect(),
     )
@@ -301,9 +301,7 @@ RETURN $groups.map(|$g| $g.priority).min()",
       .bind(("uuid", uuid.to_string()))
       .await?;
 
-    res
-      .take::<Option<i32>>(2)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+    Ok(res.take::<Option<i32>>(2)?.unwrap_or(i32::MAX))
   }
 
   pub async fn add_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {

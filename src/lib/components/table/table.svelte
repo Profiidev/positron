@@ -7,14 +7,16 @@
   import type { Table as TableType } from "@tanstack/table-core";
   import { Button } from "../ui/button";
   import { ChevronDown } from "lucide-svelte";
+  import type { Snippet } from "svelte";
 
   type T = $$Generic;
 
   interface Props {
     table: TableType<T>;
+    children?: Snippet;
   }
 
-  let { table }: Props = $props();
+  let { table, children }: Props = $props();
 </script>
 
 <div class="w-full">
@@ -26,12 +28,12 @@
         table.getColumn("email")?.setFilterValue(e.currentTarget.value)}
       onchange={(e) =>
         table.getColumn("email")?.setFilterValue(e.currentTarget.value)}
-      class="max-w-sm mr-2"
+      class="max-w-full mr-2"
     />
     <Dropdown.Root>
       <Dropdown.Trigger>
         {#snippet child({ props })}
-          <Button {...props} variant="outline" class="ml-auto">
+          <Button {...props} variant="outline">
             Columns
             <ChevronDown class="ml-2 size-4" />
           </Button>
@@ -52,9 +54,10 @@
         {/each}
       </Dropdown.Content>
     </Dropdown.Root>
+    {@render children?.()}
   </div>
   <ScrollArea class="rounded-md border grid" orientation="both">
-    <Table.Root class="table-fixed min-w-[1000px]">
+    <Table.Root class="table-fixed min-w-[1000px] block">
       <Table.Header>
         {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
           <Table.Row>

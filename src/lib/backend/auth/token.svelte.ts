@@ -1,8 +1,8 @@
 import { browser } from "$app/environment";
 
 export enum TokenType {
-  Auth = "Auth",
-  SpecialAccess = "SpecialAccess",
+  Auth = "Base",
+  SpecialAccess = "Special",
   TotpRequired = "TotpRequired",
 }
 

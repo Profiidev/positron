@@ -106,15 +106,15 @@ async fn create(
 
 #[derive(Deserialize)]
 struct UserDelete {
-  user: Uuid,
+  uuid: Uuid,
 }
 
 #[post("/delete", data = "<req>")]
 async fn delete(req: Json<UserDelete>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserDelete).await?;
-  Permission::is_privileged_enough(db, auth.sub, req.user).await?;
+  Permission::is_privileged_enough(db, auth.sub, req.uuid).await?;
 
-  db.tables().user().delete_user(req.user).await?;
+  db.tables().user().delete_user(req.uuid).await?;
 
   Ok(())
 }

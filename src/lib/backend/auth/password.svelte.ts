@@ -11,6 +11,10 @@ import { browser } from "$app/environment";
 
 let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
 
+export const getEncrypt = () => {
+  return encrypt;
+}
+
 export const fetch_key = async (): Promise<AuthError | undefined> => {
   if (encrypt === false) {
     return AuthError.Other;

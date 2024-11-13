@@ -1,4 +1,6 @@
 import { Permission, type User } from "$lib/backend/management/types.svelte";
+import { remove } from "$lib/backend/management/user.svelte";
+import FormDialog from "$lib/components/form/form-dialog.svelte";
 import {
   createColumn,
   createColumnHeader,
@@ -7,11 +9,14 @@ import Multiselect from "$lib/components/table/multiselect.svelte";
 import { renderComponent } from "$lib/components/ui/data-table";
 import Avatar from "$lib/components/util/avatar.svelte";
 import type { ColumnDef } from "@tanstack/table-core";
+import { Trash } from "lucide-svelte";
 import { DateTime } from "luxon";
+import { createRawSnippet, mount, unmount } from "svelte";
 
 export const columns = (
   allowed_permissions: Permission[],
   priority: number,
+  updateUser: () => Promise<void>,
   permission_select?: (user: string, value: Permission, add: boolean) => void,
 ): ColumnDef<User>[] => [
   {
@@ -23,6 +28,7 @@ export const columns = (
         class: "size-8",
       });
     },
+    size: 10,
   },
   createColumn("name", "Name"),
   createColumn("email", "Email"),
@@ -57,4 +63,38 @@ export const columns = (
   },
   createColumn("uuid", "Uuid"),
   createColumn("priority", "Priority"),
+  {
+    accessorKey: "actions",
+    header: () => {},
+    cell: ({ row }) => {
+      return renderComponent(FormDialog, {
+        title: "Delete User",
+        description: `Do you really want to delete the user ${row.getValue("name")}`,
+        confirm: "Delete",
+        confirmVariant: "destructive",
+        trigger: {
+          size: "icon",
+          variant: "destructive",
+        },
+        triggerInner: createRawSnippet<[]>(() => {
+          return {
+            render: () => "<div></div>",
+            setup: (target) => {
+              const comp = mount(Trash, { target, props: {} });
+              return () => unmount(comp);
+            },
+          };
+        }),
+        onsubmit: async () => {
+          let ret = await remove(row.getValue("uuid"));
+
+          if (ret !== null) {
+            return "Error while deleting user";
+          } else {
+            await updateUser();
+          }
+        },
+      });
+    },
+  },
 ];

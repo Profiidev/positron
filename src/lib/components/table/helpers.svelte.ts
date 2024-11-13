@@ -46,7 +46,8 @@ export const createColumnCell = <T, C>(
         }
 
         return {
-          render: () => `<div class="ml-4">${value}</div>`,
+          render: () =>
+            `<div class="ml-4 truncate h-full w-full text-wrap">${value}</div>`,
         };
       });
 
@@ -110,7 +111,7 @@ export const createTable = <C>(
       },
       get columnFilters() {
         return columnFilters;
-      }
+      },
     },
   });
 };
