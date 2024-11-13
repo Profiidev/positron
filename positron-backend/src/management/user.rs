@@ -114,6 +114,16 @@ async fn delete(req: Json<UserDelete>, auth: JwtClaims<JwtBase>, db: &State<DB>)
   Permission::check(db, auth.sub, Permission::UserDelete).await?;
   Permission::is_privileged_enough(db, auth.sub, req.uuid).await?;
 
+  let user = db.tables().user().get_user_by_uuid(req.uuid).await?;
+  db.tables()
+    .passkey()
+    .remove_passkeys_for_user(user.id.clone())
+    .await?;
+  db.tables()
+    .oauth_client()
+    .remove_user_everywhere(user.id.clone())
+    .await?;
+  db.tables().groups().remove_user_everywhere(user.id).await?;
   db.tables().user().delete_user(req.uuid).await?;
 
   Ok(())

@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::permissions::Permission;
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Group {
   pub id: Thing,
@@ -42,6 +43,7 @@ impl<'db> GroupTable<'db> {
     Ok(())
   }
 
+  #[allow(dead_code)]
   pub async fn get_group(&self, uuid: Uuid) -> Result<Group, Error> {
     let mut res = self
       .db
@@ -62,5 +64,15 @@ impl<'db> GroupTable<'db> {
       .await?;
 
     Ok(res.take(0).unwrap_or_default())
+  }
+
+  pub async fn remove_user_everywhere(&self, user: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE group SET users -= $user")
+      .bind(("user", user))
+      .await?;
+
+    Ok(())
   }
 }

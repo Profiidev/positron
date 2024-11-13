@@ -17,6 +17,7 @@ pub struct OAuthClientCreate {
   pub user_access: Vec<Thing>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct OAuthClient {
   pub id: Thing,
@@ -75,6 +76,7 @@ impl<'db> OauthClientTable<'db> {
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
+  #[allow(dead_code)]
   pub async fn create_client(&self, client: OAuthClientCreate) -> Result<(), Error> {
     self
       .db
@@ -94,5 +96,15 @@ impl<'db> OauthClientTable<'db> {
       .await?;
 
     Ok(res.take::<Option<OAuthClient>>(0)?.is_some())
+  }
+
+  pub async fn remove_user_everywhere(&self, user: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE oauth_client SET user_access -= $user")
+      .bind(("user", user))
+      .await?;
+
+    Ok(())
   }
 }

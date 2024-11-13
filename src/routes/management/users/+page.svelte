@@ -115,6 +115,7 @@
         <Input
           id="email"
           placeholder="Email"
+          type="email"
           required
           disabled={isLoading}
           bind:value={email}
@@ -123,6 +124,7 @@
         <Input
           id="passowrd"
           placeholder="Password"
+          type="password"
           required
           disabled={isLoading}
           bind:value={password}

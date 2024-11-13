@@ -307,7 +307,7 @@ RETURN $groups.map(|$g| $g.access_level).min()",
   pub async fn add_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE user SET permissions += $permission WHERE uuid = $uuid")
+      .query("UPDATE user SET permissions += $permission WHERE uuid = $uuid AND permissions CONTAINSNOT $permission")
       .bind(("uuid", uuid.to_string()))
       .bind(("permission", permission))
       .await?;

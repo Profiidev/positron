@@ -144,4 +144,14 @@ impl<'db> PasskeyTable<'db> {
     let keys: Vec<Passkey> = res.take(0).unwrap_or_default();
     Ok(!keys.is_empty())
   }
+
+  pub async fn remove_passkeys_for_user(&self, user: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("DELETE passkey WHERE user = $user")
+      .bind(("user", user))
+      .await?;
+
+    Ok(())
+  }
 }

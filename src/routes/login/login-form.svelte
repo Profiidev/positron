@@ -14,11 +14,14 @@
   import { authenticate } from "$lib/backend/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import { updateInfo } from "$lib/backend/account/info.svelte";
+  import {
+    updateAccessLevel,
+    updateInfo,
+    updatePermissions,
+  } from "$lib/backend/account/info.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { get } from "svelte/store";
-  import { browser } from "$app/environment";
 
   interface Props {
     class?: string | undefined | null;
@@ -113,7 +116,7 @@
   };
 
   const login_success = async () => {
-    await updateInfo();
+    await Promise.all([updateInfo(), updateAccessLevel(), updatePermissions()]);
     if (oauth_params) {
       goto(
         `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=true`,

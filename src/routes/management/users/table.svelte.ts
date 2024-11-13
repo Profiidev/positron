@@ -12,6 +12,7 @@ import type { ColumnDef } from "@tanstack/table-core";
 import { Trash } from "lucide-svelte";
 import { DateTime } from "luxon";
 import { createRawSnippet, mount, unmount } from "svelte";
+import { toast } from "svelte-sonner";
 
 export const columns = (
   allowed_permissions: Permission[],
@@ -96,6 +97,7 @@ export const columns = (
             return "Error while deleting user";
           } else {
             await updateUser();
+            toast.success("Deleted User");
           }
         },
       });
