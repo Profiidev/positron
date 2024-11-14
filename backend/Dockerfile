@@ -21,7 +21,7 @@ RUN cargo chef cook --release --target $TARGET
 COPY backend/Cargo.toml ./Cargo.lock ./
 COPY backend/src ./src
 RUN cargo build --release --target $TARGET
-RUN mv ./target/$TARGET/release/backend ./app
+RUN mv ./target/$TARGET/release/positron-backend ./app
 
 FROM scratch
 
