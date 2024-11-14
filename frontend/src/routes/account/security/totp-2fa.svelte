@@ -111,7 +111,7 @@
       {#if totpInfo}
         <p class="text-muted-foreground text-sm">
           Created on {totpInfo.enabled
-            ? DateTime?.fromISO(totpInfo.created!).toLocaleString(
+            ? DateTime.fromISO(totpInfo.created!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}
@@ -119,7 +119,7 @@
         <Separator orientation={"vertical"} />
         <p class="text-muted-foreground text-sm">
           Last used on {totpInfo.enabled
-            ? DateTime?.fromISO(totpInfo.last_used!).toLocaleString(
+            ? DateTime.fromISO(totpInfo.last_used!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}

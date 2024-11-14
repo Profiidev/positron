@@ -206,13 +206,13 @@
             </div>
             <div class="flex space-x-2">
               <p class="text-muted-foreground text-sm">
-                Created on {DateTime?.fromISO(passkey.created).toLocaleString(
+                Created on {DateTime.fromISO(passkey.created).toLocaleString(
                   DateTime.DATE_MED,
                 )}
               </p>
               <Separator orientation={"vertical"} />
               <p class="text-muted-foreground text-sm">
-                Last used on {DateTime?.fromISO(passkey.used).toLocaleString(
+                Last used on {DateTime.fromISO(passkey.used).toLocaleString(
                   DateTime.DATE_MED,
                 )}
               </p>
