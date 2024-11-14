@@ -1,6 +1,6 @@
 src-tauri/
-positron-backend/
 build/
 node_modules/
 .svelte-kit/
 target/
+backend/

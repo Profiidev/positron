@@ -13,8 +13,8 @@ jobs:
       matrix:
         item:
           [
-            { df_path: ., image: positron },
-            { df_path: ./positron-backend, image: positron-backend },
+            { wd: ./frontend, df_path: ./frontend, image: positron },
+            { wd: ., df_path: ./backend, image: positron-backend },
           ]
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./
+          context: ${{ matrix.item.wd }}
           file: ${{ matrix.item.df_path }}/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.item.image }}:latest
