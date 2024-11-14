@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Separator } from "$lib/components/ui/separator";
-  import { DateTime } from "luxon";
   import { Clock9 } from "lucide-svelte";
   import {
     confirm_setup,
@@ -15,6 +14,7 @@
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
+  import { DateTime } from "$lib/util/time.svelte";
 
   interface Props {
     valid: boolean;
@@ -111,7 +111,7 @@
       {#if totpInfo}
         <p class="text-muted-foreground text-sm">
           Created on {totpInfo.enabled
-            ? DateTime.fromISO(totpInfo.created!).toLocaleString(
+            ? DateTime?.fromISO(totpInfo.created!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}
@@ -119,7 +119,7 @@
         <Separator orientation={"vertical"} />
         <p class="text-muted-foreground text-sm">
           Last used on {totpInfo.enabled
-            ? DateTime.fromISO(totpInfo.last_used!).toLocaleString(
+            ? DateTime?.fromISO(totpInfo.last_used!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}

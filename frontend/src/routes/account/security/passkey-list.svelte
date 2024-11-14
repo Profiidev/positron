@@ -3,7 +3,6 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
-  import { DateTime } from "luxon";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { AuthError, type Passkey } from "$lib/backend/auth/types.svelte";
   import {
@@ -16,6 +15,7 @@
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
   import { toast } from "svelte-sonner";
+  import { DateTime } from "$lib/util/time.svelte";
 
   interface Props {
     valid: boolean;
@@ -206,13 +206,13 @@
             </div>
             <div class="flex space-x-2">
               <p class="text-muted-foreground text-sm">
-                Created on {DateTime.fromISO(passkey.created).toLocaleString(
+                Created on {DateTime?.fromISO(passkey.created).toLocaleString(
                   DateTime.DATE_MED,
                 )}
               </p>
               <Separator orientation={"vertical"} />
               <p class="text-muted-foreground text-sm">
-                Last used on {DateTime.fromISO(passkey.used).toLocaleString(
+                Last used on {DateTime?.fromISO(passkey.used).toLocaleString(
                   DateTime.DATE_MED,
                 )}
               </p>

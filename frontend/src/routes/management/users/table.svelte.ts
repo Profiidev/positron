@@ -8,9 +8,9 @@ import {
 import Multiselect from "$lib/components/table/multiselect.svelte";
 import { renderComponent } from "$lib/components/ui/data-table";
 import Avatar from "$lib/components/util/avatar.svelte";
+import { DateTime } from "$lib/util/time.svelte";
 import type { ColumnDef } from "@tanstack/table-core";
 import { Trash } from "lucide-svelte";
-import { DateTime } from "luxon";
 import { createRawSnippet, mount, unmount } from "svelte";
 import { toast } from "svelte-sonner";
 

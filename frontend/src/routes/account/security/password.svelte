@@ -6,7 +6,7 @@
   import { Label } from "$lib/components/ui/label";
   import { Separator } from "$lib/components/ui/separator";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { DateTime } from "luxon";
+  import { DateTime } from "$lib/util/time.svelte";
   import { toast } from "svelte-sonner";
 
   interface Props {
@@ -60,13 +60,13 @@
   <div class="flex h-6 space-x-2 mr-2">
     {#if lastLogin}
       <p class="text-muted-foreground text-sm">
-        Last login {DateTime.fromISO(lastLogin.last_login).toLocaleString(
+        Last login {DateTime?.fromISO(lastLogin.last_login).toLocaleString(
           DateTime.DATE_MED,
         )}
       </p>
       <Separator orientation={"vertical"} />
       <p class="text-muted-foreground text-sm">
-        Last special access {DateTime.fromISO(
+        Last special access {DateTime?.fromISO(
           lastLogin.last_special_access,
         ).toLocaleString(DateTime.DATE_MED)}
       </p>
