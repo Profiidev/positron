@@ -16,14 +16,14 @@ async fn logout(
   cookies: &CookieJar<'_>,
   state: &State<JwtInvalidState>,
 ) -> Result<TokenRes> {
-  let cookie = cookies.get("token").unwrap().value();
-  cookies.remove("token");
+  let cookie = cookies.get("token").unwrap();
+  cookies.remove(cookie.clone());
 
   let mut count = state.count.lock().await;
   db.tables()
     .invalid_jwt()
     .invalidate_jwt(
-      cookie.to_string(),
+      cookie.value().to_string(),
       DateTime::from_timestamp(auth.exp, 0).unwrap(),
       &mut count,
     )

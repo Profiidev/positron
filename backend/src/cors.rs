@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, Cors};
 
@@ -10,8 +8,6 @@ pub fn cors() -> Cors {
       .split(",")
       .collect::<Vec<&str>>(),
   );
-  let mut expose_headers = HashSet::new();
-  expose_headers.insert("X-Location".into());
 
   rocket_cors::CorsOptions {
     allowed_origins,
@@ -21,7 +17,6 @@ pub fn cors() -> Cors {
       .collect(),
     allowed_headers: AllowedHeaders::some(&["Accept", "Content-Type", "Authorization"]),
     allow_credentials: true,
-    expose_headers,
     ..Default::default()
   }
   .to_cors()
