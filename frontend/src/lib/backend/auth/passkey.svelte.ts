@@ -9,7 +9,7 @@ import type { Passkey } from "./types.svelte";
 const isKeyCredCreate = (
   object: any,
 ): object is { publicKey: PublicKeyCredentialCreationOptionsJSON } => {
-  return "publicKey" in object;
+  return typeof object === "object" && object !== null && "publicKey" in object;
 };
 
 const isKeyCredRequest = (
@@ -18,7 +18,7 @@ const isKeyCredRequest = (
   res: { publicKey: PublicKeyCredentialRequestOptionsJSON };
   id: string;
 } => {
-  return "res" in object;
+  return typeof object === "object" && object !== null && "res" in object;
 };
 
 const isKeyCredRequestSpecial = (
@@ -26,7 +26,7 @@ const isKeyCredRequestSpecial = (
 ): object is {
   publicKey: PublicKeyCredentialRequestOptionsJSON;
 } => {
-  return "publicKey" in object;
+  return typeof object === "object" && object !== null && "publicKey" in object;
 };
 
 export const passkey_register = async (name: string) => {

@@ -3,7 +3,7 @@ import { get, post } from "../util.svelte";
 import type { TotpCode } from "./types.svelte";
 
 export const is_code = (object: any): object is TotpCode => {
-  return "qr" in object;
+  return typeof object === "object" && object !== null && "qr" in object;
 };
 
 export const totp_get_setup_code = async () => {

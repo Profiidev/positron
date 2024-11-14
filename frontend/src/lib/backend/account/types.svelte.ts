@@ -1,11 +1,11 @@
 import type { Permission } from "../management/types.svelte";
 
 export const isProfileInfo = (object: any): object is ProfileInfo => {
-  return "name" in object;
+  return typeof object === 'object' && object !== null && "name" in object;
 };
 
 export const isUserInfo = (object: any): object is UserInfo => {
-  return "uuid" in object;
+  return typeof object === 'object' && object !== null && "uuid" in object;
 };
 
 export interface ProfileInfo {
