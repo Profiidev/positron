@@ -1,54 +1,41 @@
-import { Permission } from "../management/types.svelte";
-import { get_uuid, info } from "./general.svelte";
-import { list, access_level as accessLevelUpdate } from "./permissions.svelte";
-import type { UserInfo } from "./types.svelte";
+import { profile_info, user_info } from "./general.svelte";
+import {
+  isProfileInfo,
+  isUserInfo,
+  type ProfileInfo,
+  type UserInfo,
+} from "./types.svelte";
 
-let infoData: UserInfo | undefined = $state();
-let permissions: Permission[] | undefined = $state();
-let access_level: number | undefined = $state();
-let uuid: string | undefined = $state();
+let profileInfo: ProfileInfo | undefined = $state();
+let userInfo: UserInfo | undefined = $state();
 
 export const updateInfo = async () => {
-  await updateUuid();
-  await Promise.all([
-    updatePermissions(),
-    updateAccessLevel(),
-    updateUserInfo(),
-  ]);
+  await updateUserInfo();
+  await updateProfileInfo();
 };
 
 const updateUserInfo = async () => {
-  if (uuid) {
-    infoData = await info(uuid);
+  let ret = await user_info();
+  if (isUserInfo(ret)) {
+    userInfo = ret;
   }
 };
 
-export const getInfo = () => {
-  return infoData;
+export const getUserInfo = () => {
+  return userInfo;
 };
 
-const updatePermissions = async () => {
-  permissions = await list();
+const updateProfileInfo = async () => {
+  if (userInfo) {
+    let ret = await profile_info(userInfo.uuid);
+    if (isProfileInfo(ret)) {
+      profileInfo = ret;
+    }
+  }
 };
 
-export const getPermissions = () => {
-  return permissions;
-};
-
-const updateAccessLevel = async () => {
-  access_level = await accessLevelUpdate();
-};
-
-export const getAccessLevel = () => {
-  return access_level;
-};
-
-export const getUuid = () => {
-  return uuid;
-};
-
-const updateUuid = async () => {
-  uuid = await get_uuid();
+export const getProfileInfo = () => {
+  return profileInfo;
 };
 
 updateInfo();

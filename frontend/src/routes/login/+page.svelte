@@ -8,11 +8,7 @@
   }
 
   let { data }: Props = $props();
-  let oauth_params: OAuthParams | undefined = $derived.by(() => {
-    if (data.code && data.name) {
-      return oauth_params;
-    }
-  });
+  let oauth_params: OAuthParams | undefined = $derived(data.oauth_params);
 </script>
 
 <div

@@ -1,6 +1,6 @@
-import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import type JSEncrypt from "jsencrypt";
-import { AuthError, type PasswordInfo } from "./types.svelte";
+import { ContentType, RequestError, ResponseType } from "../types.svelte";
+import { get, post } from "../util.svelte";
 import { browser } from "$app/environment";
 
 let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
@@ -9,160 +9,93 @@ export const getEncrypt = () => {
   return encrypt;
 };
 
-export const fetch_key = async (): Promise<AuthError | undefined> => {
+export const fetch_key = async () => {
   if (encrypt === false) {
-    return AuthError.Other;
+    RequestError.Other;
   }
 
-  try {
-    let key_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/key`);
+  let key = await get<string>("/auth/password/key", ResponseType.Text);
 
-    if (key_res.status !== 200) {
-      return AuthError.Other;
-    }
-
-    let key_pem = await key_res.text();
-
-    const JSEncrypt = (await import("jsencrypt")).JSEncrypt;
-
-    encrypt = new JSEncrypt({ default_key_size: "4096" });
-    encrypt.setPublicKey(key_pem);
-  } catch (_) {
-    return AuthError.Other;
+  if (typeof key !== "string") {
+    return key;
   }
+
+  const JSEncrypt = (await import("jsencrypt")).JSEncrypt;
+
+  encrypt = new JSEncrypt({ default_key_size: "4096" });
+  encrypt.setPublicKey(key);
 };
-
 fetch_key();
 
-export const login = async (
-  email: string,
-  password: string,
-): Promise<AuthError | boolean> => {
+export const password_login = async (email: string, password: string) => {
   if (!encrypt) {
-    return AuthError.Other;
+    return RequestError.Other;
   }
 
-  try {
-    let encrypted_password = encrypt.encrypt(password);
+  let encrypted_password = encrypt.encrypt(password);
+  let res = await post<string>(
+    "/auth/password/authenticate",
+    ResponseType.Text,
+    ContentType.Json,
+    JSON.stringify({
+      email,
+      password: encrypted_password,
+    }),
+  );
 
-    let login_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/auth/password/authenticate`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password: encrypted_password,
-        }),
-      },
-    );
-
-    if (login_res.status === 401) {
-      return AuthError.Password;
-    }
-
-    if (login_res.status !== 200) {
+  if (typeof res !== "string") {
+    if (res === RequestError.Unauthorized) {
       fetch_key();
-      return AuthError.Other;
     }
-
-    let totp = Boolean(await login_res.text());
-    if (totp) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (_) {
-    return AuthError.Other;
+    return res;
   }
+
+  return Boolean(res);
 };
 
-export const special_access = async (
-  password: string,
-): Promise<AuthError | undefined> => {
+export const password_special_access = async (password: string) => {
   if (!encrypt) {
-    return AuthError.Other;
+    return RequestError.Other;
   }
 
-  try {
-    let encrypted_password = encrypt.encrypt(password);
+  let encrypted_password = encrypt.encrypt(password);
+  let res = await post<undefined>(
+    "/auth/password/special_access",
+    ResponseType.None,
+    ContentType.Json,
+    JSON.stringify({
+      password: encrypted_password,
+    }),
+  );
 
-    let login_res = await fetch(
-      `${PUBLIC_BACKEND_URL}/auth/password/special_access`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          password: encrypted_password,
-        }),
-      },
-    );
-
-    if (login_res.status === 401) {
-      return AuthError.Password;
-    }
-
-    if (login_res.status !== 200) {
-      fetch_key();
-      return AuthError.Other;
-    }
-  } catch (_) {
-    return AuthError.Other;
+  if (res && res === RequestError.Unauthorized) {
+    fetch_key();
   }
+  return res;
 };
 
-export const change = async (
+export const password_change = async (
   password: string,
   password_confirm: string,
-): Promise<AuthError | undefined> => {
+) => {
   if (!encrypt) {
-    return AuthError.Other;
+    return RequestError.Other;
   }
 
-  try {
-    let encrypted_password = encrypt.encrypt(password);
-    let encrypted_password_confirm = encrypt.encrypt(password_confirm);
+  let encrypted_password = encrypt.encrypt(password);
+  let encrypted_password_confirm = encrypt.encrypt(password_confirm);
+  let res = await post<undefined>(
+    "/auth/password/change",
+    ResponseType.None,
+    ContentType.Json,
+    JSON.stringify({
+      password: encrypted_password,
+      password_confirm: encrypted_password_confirm,
+    }),
+  );
 
-    let login_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/change`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        password: encrypted_password,
-        password_confirm: encrypted_password_confirm,
-      }),
-    });
-
-    if (login_res.status === 409) {
-      return AuthError.Password;
-    }
-
-    if (login_res.status !== 200) {
-      fetch_key();
-      return AuthError.Other;
-    }
-  } catch (_) {
-    return AuthError.Other;
+  if (res && res === RequestError.Unauthorized) {
+    fetch_key();
   }
-};
-
-export const info = async (): Promise<undefined | PasswordInfo> => {
-  try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/info`);
-
-    if (info_res.status !== 200) {
-      return;
-    }
-
-    let info = await info_res.json();
-
-    return info as PasswordInfo;
-  } catch (_) {
-    return;
-  }
+  return res;
 };

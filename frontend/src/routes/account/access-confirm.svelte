@@ -5,10 +5,10 @@
   import { Label } from "$lib/components/ui/label";
   import { Button } from "$lib/components/ui/button";
   import { LoaderCircle } from "lucide-svelte";
-  import { special_access } from "$lib/backend/auth/password.svelte";
-  import { special_access as special_access_pk } from "$lib/backend/auth/passkey.svelte";
-  import { AuthError } from "$lib/backend/auth/types.svelte";
   import { interval } from "$lib/util/interval.svelte";
+  import { password_special_access } from "$lib/backend/auth/password.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import { passkey_special_access } from "$lib/backend/auth/passkey.svelte";
 
   interface Props {
     specialAccessValid: boolean;
@@ -46,12 +46,12 @@
     formError = "";
     passkeyError = "";
 
-    let ret = await special_access(password);
+    let ret = await password_special_access(password);
 
     isLoading = false;
 
     if (ret) {
-      if (ret === AuthError.Password) {
+      if (ret === RequestError.Unauthorized) {
         formError = "Wrong Password";
       } else {
         formError = "There was an error while confirming access";
@@ -68,12 +68,12 @@
     formError = "";
     passkeyError = "";
 
-    let ret = await special_access_pk();
+    let ret = await passkey_special_access();
 
     isLoading = false;
 
     if (ret) {
-      if (ret === AuthError.Passkey) {
+      if (ret === RequestError.Unauthorized) {
         passkeyError = "There was an error with your passkey";
       } else {
         passkeyError = "There was an error while signing in";

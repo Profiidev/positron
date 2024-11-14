@@ -1,20 +1,21 @@
 <script lang="ts">
   import { Separator } from "$lib/components/ui/separator";
   import { Clock9 } from "lucide-svelte";
-  import {
-    confirm_setup,
-    get_setup_code,
-    info,
-    is_code,
-    remove,
-  } from "$lib/backend/auth/totp.svelte";
-  import { AuthError, type TotpInfo } from "$lib/backend/auth/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { Badge } from "$lib/components/ui/badge";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
   import { DateTime } from "$lib/util/time.svelte";
+  import type { UserInfo } from "$lib/backend/account/types.svelte";
+  import { getUserInfo, updateInfo } from "$lib/backend/account/info.svelte";
+  import {
+    is_code,
+    totp_confirm_setup,
+    totp_get_setup_code,
+    totp_remove,
+  } from "$lib/backend/auth/totp.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
 
   interface Props {
     valid: boolean;
@@ -23,8 +24,7 @@
 
   let { valid, requestAccess }: Props = $props();
 
-  let totpInfo: TotpInfo | undefined = $state();
-  info().then((info) => (totpInfo = info));
+  let userInfo: UserInfo | undefined = $derived(getUserInfo());
 
   let totpQr = $state("");
   let totpCode = $state("");
@@ -40,12 +40,12 @@
   };
 
   const removeTotp = async () => {
-    let ret = await remove();
+    let ret = await totp_remove();
 
     if (ret) {
       return "Error while removing TOTP";
     } else {
-      info().then((info) => (totpInfo = info));
+      updateInfo();
       toast.success("Remove successful", {
         description: "TOTP was removed successfully from your account",
       });
@@ -62,7 +62,7 @@
     totpQr = "";
 
     const fetch = async () => {
-      let code = await get_setup_code();
+      let code = await totp_get_setup_code();
 
       if (is_code(code)) {
         totpQr = code.qr;
@@ -75,16 +75,16 @@
   };
 
   const addTotp = async () => {
-    let res = await confirm_setup(totpConfirm);
+    let res = await totp_confirm_setup(totpConfirm);
 
     if (res) {
-      if (res === AuthError.Totp) {
+      if (res === RequestError.Unauthorized) {
         return "TOTP code invalid";
       } else {
         return "Error while adding TOTP";
       }
     } else {
-      info().then((info) => (totpInfo = info));
+      updateInfo();
       toast.success("Addition successful", {
         description: "TOTP was added successfully to your account",
       });
@@ -97,8 +97,8 @@
     <div class="flex space-x-2">
       <Clock9 class="size-5" />
       <h4>TOTP</h4>
-      {#if totpInfo}
-        {#if totpInfo.enabled}
+      {#if userInfo}
+        {#if userInfo.totp_enabled}
           <Badge>Enabled</Badge>
         {:else}
           <Badge variant="destructive">Disabled</Badge>
@@ -108,18 +108,18 @@
       {/if}
     </div>
     <div class="flex space-x-2">
-      {#if totpInfo}
+      {#if userInfo}
         <p class="text-muted-foreground text-sm">
-          Created on {totpInfo.enabled
-            ? DateTime.fromISO(totpInfo.created!).toLocaleString(
+          Created on {userInfo.totp_enabled
+            ? DateTime.fromISO(userInfo.totp_created!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}
         </p>
         <Separator orientation={"vertical"} />
         <p class="text-muted-foreground text-sm">
-          Last used on {totpInfo.enabled
-            ? DateTime.fromISO(totpInfo.last_used!).toLocaleString(
+          Last used on {userInfo.totp_enabled
+            ? DateTime.fromISO(userInfo.totp_last_used!).toLocaleString(
                 DateTime.DATE_MED,
               )
             : "-"}
@@ -133,8 +133,8 @@
       {/if}
     </div>
   </div>
-  {#if totpInfo}
-    {#if totpInfo.enabled}
+  {#if userInfo}
+    {#if userInfo.totp_enabled}
       <FormDialog
         title="Remove TOTP"
         description="Do you really want to remove the TOTP 2FA method"

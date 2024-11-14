@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { change, info } from "$lib/backend/auth/password.svelte";
-  import { AuthError, type PasswordInfo } from "$lib/backend/auth/types.svelte";
+  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import type { UserInfo } from "$lib/backend/account/types.svelte";
+  import { password_change } from "$lib/backend/auth/password.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -19,9 +21,7 @@
   let newPassword = $state("");
   let newPasswordConfirm = $state("");
   let isLoading = $state(false);
-  let lastLogin: PasswordInfo | undefined = $state();
-
-  info().then((info) => (lastLogin = info));
+  let userInfo: UserInfo | undefined = $derived(getUserInfo());
 
   const startChange = async () => {
     if (!valid) {
@@ -40,10 +40,10 @@
       return "Passwords are not equal";
     }
 
-    let ret = await change(newPassword, newPasswordConfirm);
+    let ret = await password_change(newPassword, newPasswordConfirm);
 
     if (ret) {
-      if (ret === AuthError.Password) {
+      if (ret === RequestError.Unauthorized) {
         return "Passwords are not equal";
       } else {
         return "Error while updating password";
@@ -58,16 +58,16 @@
 
 <div class="flex items-center">
   <div class="flex h-6 space-x-2 mr-2">
-    {#if lastLogin}
+    {#if userInfo}
       <p class="text-muted-foreground text-sm">
-        Last login {DateTime.fromISO(lastLogin.last_login).toLocaleString(
+        Last login {DateTime.fromISO(userInfo.last_login).toLocaleString(
           DateTime.DATE_MED,
         )}
       </p>
       <Separator orientation={"vertical"} />
       <p class="text-muted-foreground text-sm">
         Last special access {DateTime.fromISO(
-          lastLogin.last_special_access,
+          userInfo.last_special_access,
         ).toLocaleString(DateTime.DATE_MED)}
       </p>
     {:else}

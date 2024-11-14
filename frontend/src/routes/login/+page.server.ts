@@ -8,14 +8,17 @@ export const load = ({ cookies, url }) => {
 
   if (cookie) {
     if (code && name) {
-      redirect(302, `/oauth?code=${code}&name=${name}&just_logged_in=false`);
+      redirect(302, `/oauth?code=${code}&name=${name}`);
     } else {
       redirect(302, "/");
     }
   } else if (code && name) {
     return {
-      code,
-      name,
-    } as OAuthParams;
+      oauth_params: {
+        code,
+        name,
+      } as OAuthParams,
+    };
   }
+  return {};
 };

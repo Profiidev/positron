@@ -6,16 +6,16 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
-  import { EmailError } from "$lib/backend/email/types.svelte";
-  import {
-    finish_change,
-    start_change,
-  } from "$lib/backend/email/manage.svelte";
   import { Input } from "$lib/components/ui/input";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import { getInfo, updateInfo } from "$lib/backend/account/info.svelte";
+  import { getProfileInfo, updateInfo } from "$lib/backend/account/info.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import {
+    email_finish_change,
+    email_start_change,
+  } from "$lib/backend/email.svelte";
 
-  let infoData = $derived(getInfo());
+  let infoData = $derived(getProfileInfo());
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
@@ -54,9 +54,9 @@
       return "No email provided";
     }
 
-    let ret = await start_change(newEmail);
+    let ret = await email_start_change(newEmail);
 
-    if (ret !== null) {
+    if (ret) {
       return "There was an error while sending your emails";
     } else {
       enteringCodes = true;
@@ -69,10 +69,10 @@
       return "No code provided";
     }
 
-    let ret = await finish_change(oldCode, newCode);
+    let ret = await email_finish_change(oldCode, newCode);
 
     if (ret) {
-      if (ret === EmailError.Code) {
+      if (ret === RequestError.Unauthorized) {
         return "Invalid confirm code";
       } else {
         return "There was an error while updating your email";
