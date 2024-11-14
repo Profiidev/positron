@@ -7,8 +7,8 @@ RUN cargo install cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
-COPY positron-backend/Cargo.toml ./Cargo.lock ./
-COPY positron-backend/src ./src
+COPY backend/Cargo.toml ./Cargo.lock ./
+COPY backend/src ./src
 RUN cargo chef prepare
 
 FROM chef AS builder
@@ -18,10 +18,10 @@ ENV TARGET=$TARGET
 
 COPY --from=planner /app/recipe.json .
 RUN cargo chef cook --release --target $TARGET
-COPY positron-backend/Cargo.toml ./Cargo.lock ./
-COPY positron-backend/src ./src
+COPY backend/Cargo.toml ./Cargo.lock ./
+COPY backend/src ./src
 RUN cargo build --release --target $TARGET
-RUN mv ./target/$TARGET/release/positron-backend ./app
+RUN mv ./target/$TARGET/release/backend ./app
 
 FROM scratch
 

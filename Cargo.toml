@@ -1,5 +1,5 @@
 [workspace]
-members = ["src-tauri", "positron-backend"]
+members = ["frontend/src-tauri", "backend"]
 resolver = "2"
 
 [profile.dev.package.num-bigint-dig]
