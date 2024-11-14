@@ -5,9 +5,9 @@ ENV PUBLIC_BACKEND_URL=${URL}
 
 WORKDIR /app
 
-COPY package.json package-lock.json postcss.config.js svelte.config.js tailwind.config.ts tsconfig.json vite.config.js ./
-COPY src ./src
-COPY static ./static
+COPY package.json package-lock.json frontend/postcss.config.js frontend/svelte.config.js frontend/tailwind.config.ts frontend/tsconfig.json frontend/vite.config.js ./
+COPY frontend/src ./src
+COPY frontend/static ./static
 
 RUN rm src/routes/+layout.ts
 RUN sed -i 's/static/node/g' svelte.config.js
