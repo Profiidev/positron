@@ -6,14 +6,15 @@
   import { Button } from "../../lib/components/ui/button/index";
   import { Input } from "../../lib/components/ui/input/index";
   import { Label } from "../../lib/components/ui/label/index";
-  import { login } from "$lib/backend/auth/password.svelte";
-  import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
   import { goto } from "$app/navigation";
-  import { confirm } from "$lib/backend/auth/totp.svelte";
-  import { authenticate } from "$lib/backend/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import { updateInfo } from "$lib/backend/account/info.svelte";
+  import type { OAuthParams } from "$lib/backend/auth/types.svelte";
+  import { totp_confirm } from "$lib/backend/auth/totp.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import { password_login } from "$lib/backend/auth/password.svelte";
+  import { passkey_authenticate } from "$lib/backend/auth/passkey.svelte";
 
   interface Props {
     class?: string | undefined | null;
@@ -36,12 +37,12 @@
       form_error = "";
       passkeyError = "";
 
-      let ret = await confirm(totp);
+      let ret = await totp_confirm(totp);
 
       isLoading = false;
 
       if (ret) {
-        if (ret === AuthError.Totp) {
+        if (ret === RequestError.Unauthorized) {
           form_error = "Wrong TOTP Code";
         } else {
           form_error = "There was and Error while checking TOTP Code";
@@ -57,7 +58,7 @@
     form_error = "";
     passkeyError = "";
 
-    let ret = await login(email, password);
+    let ret = await password_login(email, password);
 
     isLoading = false;
 
@@ -68,7 +69,7 @@
         await login_success();
       }
     } else {
-      if (ret === AuthError.Password) {
+      if (ret === RequestError.Unauthorized) {
         form_error = "Wrong Email or Password";
       } else {
         form_error = "There was an Error while signing in";
@@ -81,12 +82,12 @@
     passkeyError = "";
     isLoading = true;
 
-    let ret = await authenticate();
+    let ret = await passkey_authenticate();
 
     isLoading = false;
 
     if (ret) {
-      if (ret === AuthError.Passkey) {
+      if (ret === RequestError.Unauthorized) {
         passkeyError = "There was an Error with your passkey";
       } else {
         passkeyError = "There was an Error while signing in";
@@ -99,9 +100,7 @@
   const login_success = async () => {
     await updateInfo();
     if (oauth_params) {
-      goto(
-        `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=true`,
-      );
+      goto(`/oauth?code=${oauth_params.code}&name=${oauth_params.name}`);
     } else {
       goto("/");
     }

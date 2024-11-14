@@ -1,5 +1,5 @@
 import { Permission, type User } from "$lib/backend/management/types.svelte";
-import { remove } from "$lib/backend/management/user.svelte";
+import { remove_user } from "$lib/backend/management/user.svelte";
 import FormDialog from "$lib/components/form/form-dialog.svelte";
 import {
   createColumn,
@@ -91,7 +91,7 @@ export const columns = (
           };
         }),
         onsubmit: async () => {
-          let ret = await remove(row.getValue("uuid"));
+          let ret = await remove_user(row.getValue("uuid"));
 
           if (ret !== null) {
             return "Error while deleting user";

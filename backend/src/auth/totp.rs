@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use rocket::{
   get,
   http::{CookieJar, Status},
@@ -20,7 +19,7 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![start_setup, finish_setup, confirm, info, remove]
+  rocket::routes![start_setup, finish_setup, confirm, remove]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/totp", base)))
     .collect()
@@ -121,26 +120,6 @@ async fn confirm(
 
     Ok(TokenRes::default())
   }
-}
-
-#[derive(Serialize)]
-struct TotpInfo {
-  enabled: bool,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  last_used: Option<DateTime<Utc>>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  created: Option<DateTime<Utc>>,
-}
-
-#[get("/info")]
-async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<TotpInfo>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
-
-  Ok(Json(TotpInfo {
-    enabled: user.totp.is_some(),
-    last_used: user.totp_last_used,
-    created: user.totp_created,
-  }))
 }
 
 #[post("/remove")]

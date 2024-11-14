@@ -1,9 +1,5 @@
 <script lang="ts">
-  import {
-    change_image,
-    update_profile,
-  } from "$lib/backend/account/general.svelte";
-  import { getInfo, updateInfo } from "$lib/backend/account/info.svelte";
+  import { getProfileInfo, updateInfo } from "$lib/backend/account/info.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -13,8 +9,12 @@
   import { Upload, LoaderCircle } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import Avatar from "$lib/components/util/avatar.svelte";
+  import {
+    profile_change_image,
+    profile_update,
+  } from "$lib/backend/account/general.svelte";
 
-  let infoData = $derived(getInfo());
+  let infoData = $derived(getProfileInfo());
   $effect(() => {
     name = infoData?.name;
   });
@@ -28,9 +28,9 @@
     let file = input.files?.[0];
     if (file) {
       let image = arrayBufferToBase64(await file.arrayBuffer());
-      let ret = await change_image(image);
+      let ret = await profile_change_image(image);
 
-      if (ret !== null) {
+      if (ret) {
         toast.error("Update Error", {
           description: "Error while uploading image",
         });
@@ -55,13 +55,11 @@
 
     isLoading = true;
 
-    let ret = await update_profile({
-      name,
-    });
+    let ret = await profile_update(name);
 
     isLoading = false;
 
-    if (ret !== null) {
+    if (ret) {
       toast.error("Update Error", {
         description: "There was an error while updating your profile",
       });

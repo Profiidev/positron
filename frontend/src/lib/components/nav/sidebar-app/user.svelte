@@ -2,13 +2,13 @@
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as Dropdown from "$lib/components/ui/dropdown-menu";
   import { ChevronsUpDown, LogOut, Settings } from "lucide-svelte";
-  import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Avatar from "$lib/components/util/avatar.svelte";
-  import { logout } from "$lib/backend/auth/logout.svelte";
+  import { logout } from "$lib/backend/auth/other.svelte";
+  import { getProfileInfo } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(getInfo());
+  let infoData = $derived(getProfileInfo());
   let sidebar = Sidebar.useSidebar();
 
   const settings = () => {

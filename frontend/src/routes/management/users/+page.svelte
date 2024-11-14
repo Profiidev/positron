@@ -1,14 +1,5 @@
 <script lang="ts">
-  import {
-    getPermissions,
-    getAccessLevel,
-  } from "$lib/backend/account/info.svelte";
   import { Permission, type User } from "$lib/backend/management/types.svelte";
-  import {
-    create,
-    list,
-    update_permissions,
-  } from "$lib/backend/management/user.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
   import Table from "$lib/components/table/table.svelte";
   import { toast } from "svelte-sonner";
@@ -18,9 +9,15 @@
   import { Label } from "$lib/components/ui/label";
   import { fetch_key } from "$lib/backend/auth/password.svelte";
   import type { Row } from "@tanstack/table-core";
+  import {
+    create_user,
+    list_users,
+    user_update_permissions,
+  } from "$lib/backend/management/user.svelte";
+  import { getUserInfo } from "$lib/backend/account/info.svelte";
 
   const updateUsers = async () => {
-    await list().then((user) => (users = user));
+    await list_users().then((user) => (users = user));
   };
 
   const filterFn = (row: Row<User>, id: string, filterValues: any) => {
@@ -35,7 +32,7 @@
   };
 
   let users: User[] | undefined = $state();
-  list().then((user) => (users = user));
+  list_users().then((user) => (users = user));
   let table = $state(
     createTable(
       [],
@@ -43,8 +40,7 @@
       filterFn,
     ),
   );
-  let allowed_permissions = $derived(getPermissions());
-  let access_level = $derived(getAccessLevel());
+  let userInfo = $derived(getUserInfo());
   let name = $state("");
   let email = $state("");
   let password = $state("");
@@ -54,8 +50,8 @@
     table = createTable(
       users || [],
       columns(
-        allowed_permissions || [],
-        access_level ?? Number.MAX_SAFE_INTEGER,
+        userInfo?.permissions || [],
+        userInfo?.access_level ?? Number.MAX_SAFE_INTEGER,
         updateUsers,
         permissionSelect,
       ),
@@ -64,20 +60,20 @@
   });
 
   const permissionSelect = (user: string, value: Permission, add: boolean) => {
-    update_permissions(user, value, add).then((ret) => {
-      if (ret !== null) {
+    user_update_permissions(user, value, add).then((ret) => {
+      if (ret) {
         toast.error("Error while updating");
       }
     });
   };
 
   const createUser = async () => {
-    let ret = await create(name, email, password);
-    if (ret !== null) {
+    let ret = await create_user(name, email, password);
+    if (ret) {
       await fetch_key();
       return "Error while creating user";
     } else {
-      await list().then((user) => (users = user));
+      await list_users().then((user) => (users = user));
       toast.success("Created User");
     }
   };
@@ -91,7 +87,7 @@
     </p>
   </div>
   <Table filterColumn="name" {table}>
-    {#if allowed_permissions?.includes(Permission.UserCreate)}
+    {#if userInfo?.permissions.includes(Permission.UserCreate)}
       <FormDialog
         title="Create User"
         description="Enter the details for the new user below"

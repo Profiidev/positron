@@ -4,18 +4,19 @@
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { AuthError, type Passkey } from "$lib/backend/auth/types.svelte";
-  import {
-    edit_name,
-    list,
-    register,
-    remove,
-  } from "$lib/backend/auth/passkey.svelte";
+  import type { Passkey } from "$lib/backend/auth/types.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
   import { toast } from "svelte-sonner";
   import { DateTime } from "$lib/util/time.svelte";
+  import {
+    passkey_edit_name,
+    passkey_list,
+    passkey_register,
+    passkey_remove,
+  } from "$lib/backend/auth/passkey.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
 
   interface Props {
     valid: boolean;
@@ -26,7 +27,7 @@
 
   let createName = $state("");
   let passkeys: Passkey[] | undefined = $state();
-  let passkeysPromise = $state(list().then((pks) => (passkeys = pks)));
+  let passkeysPromise = $state(passkey_list().then((pks) => (passkeys = pks)));
   let editName = $state("");
   let editing = $state("");
   let editDialog: SvelteComponent | undefined = $state();
@@ -48,19 +49,19 @@
       return "No Name provided";
     }
 
-    let ret = await register(createName);
+    let ret = await passkey_register(createName);
 
     if (ret) {
-      if (ret === AuthError.Passkey) {
+      if (ret === RequestError.Unauthorized) {
         return "There was an error with your passkey";
-      } else if (ret === AuthError.Conflict) {
+      } else if (ret === RequestError.Conflict) {
         return "Name already taken";
       } else {
         return "There was an error while creating passkey";
       }
     } else {
       createName = "";
-      list().then((pks) => (passkeys = pks));
+      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Creation successful", {
         description: "Passkey was successfully added to your account",
       });
@@ -79,12 +80,12 @@
   };
 
   const deletePasskey = async () => {
-    let ret = await remove(editing);
+    let ret = await passkey_remove(editing);
 
     if (ret) {
       return "There was an error while deleting your passkey";
     } else {
-      list().then((pks) => (passkeys = pks));
+      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Deletion successful", {
         description: `Passkey "${editing}" was successfully removed from your account`,
       });
@@ -108,16 +109,16 @@
       return "No Name provided";
     }
 
-    let ret = await edit_name(editName, editing);
+    let ret = await passkey_edit_name(editName, editing);
 
     if (ret) {
-      if (ret === AuthError.Conflict) {
+      if (ret === RequestError.Conflict) {
         return "Name already taken";
       } else {
         return "There was an error while editing passkey name";
       }
     } else {
-      list().then((pks) => (passkeys = pks));
+      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Edit successful", {
         description: `Passkey name was changed successfully from ${editing} to ${editName}`,
       });

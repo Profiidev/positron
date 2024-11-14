@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use chrono::{DateTime, Utc};
 use rocket::{
   get,
   http::{CookieJar, Status},
@@ -8,7 +7,7 @@ use rocket::{
   serde::json::Json,
   Route, State,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
@@ -23,7 +22,7 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![key, authenticate, special_access, change, info]
+  rocket::routes![key, authenticate, special_access, change]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/password", base)))
     .collect()
@@ -131,20 +130,4 @@ async fn change(
   db.tables().user().change_password(user.id, hash).await?;
 
   Ok(Status::Ok)
-}
-
-#[derive(Serialize)]
-struct PasswordInfo {
-  last_login: DateTime<Utc>,
-  last_special_access: DateTime<Utc>,
-}
-
-#[get("/info")]
-async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<PasswordInfo>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
-
-  Ok(Json(PasswordInfo {
-    last_login: user.last_login,
-    last_special_access: user.last_special_access,
-  }))
 }

@@ -1,36 +1,24 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import Button from "$lib/components/ui/button/button.svelte";
-  import { auth } from "$lib/backend/auth/oauth.svelte";
-  import { onMount } from "svelte";
-  import { get } from "svelte/store";
   import * as Card from "$lib/components/ui/card";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
-  import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
   import Avatar from "$lib/components/util/avatar.svelte";
-  import { logout } from "$lib/backend/auth/logout.svelte";
+  import { logout, oauth_auth } from "$lib/backend/auth/other.svelte";
+  import { getProfileInfo } from "$lib/backend/account/info.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import type { PageServerData } from "./$types";
+
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
+  let oauth_params = $derived(data.oauth_params);
 
   let isLoading = $state(false);
   let error = $state("");
-  let infoData = $derived(getInfo());
-
-  let oauth_params: OAuthParams | undefined = $derived.by(() => {
-    let code = get(page).url.searchParams.get("code");
-    let name = get(page).url.searchParams.get("name");
-
-    if (code && name) {
-      return {
-        code,
-        name,
-      };
-    }
-  });
-
-  let just_logged_in: string = $derived(
-    get(page).url.searchParams.get("just_logged_in") || "",
-  );
+  let infoData = $derived(getProfileInfo());
 
   const login = async (allow: boolean) => {
     if (!oauth_params) {
@@ -41,12 +29,12 @@
     error = "";
     isLoading = true;
 
-    let ret = await auth(oauth_params, allow);
+    let ret = await oauth_auth(oauth_params, allow);
 
     isLoading = false;
-    if (ret === AuthError.Other) {
+    if (ret === RequestError.Other) {
       error = "There was an error while login in";
-    } else if (ret === AuthError.Password) {
+    } else if (ret === RequestError.Unauthorized) {
       error = "You are not allowed to access this Application";
     }
   };
@@ -64,12 +52,6 @@
     await logout();
     goto(`/login?code=${oauth_params?.code}&name=${oauth_params?.name}`);
   };
-
-  onMount(() => {
-    if (just_logged_in === "true") {
-      login(true);
-    }
-  });
 </script>
 
 <div class="flex items-center justify-center h-full">
