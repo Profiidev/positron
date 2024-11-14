@@ -6,7 +6,7 @@ use rocket::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::jwt_from_request;
+use crate::{auth::jwt::JwtBase, utils::jwt_from_request};
 
 use super::scope::Scope;
 
@@ -59,6 +59,6 @@ impl<'r> FromRequest<'r> for OAuthClaims {
   type Error = ();
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    jwt_from_request(req).await
+    jwt_from_request::<OAuthClaims, JwtBase>(req).await
   }
 }

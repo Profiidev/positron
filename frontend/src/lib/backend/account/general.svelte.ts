@@ -1,22 +1,11 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
 import { base64ToArrayBuffer } from "$lib/util/convert.svelte";
 import type { ProfileInfo, UserInfo } from "./types.svelte";
 
 export const info = async (uuid: string) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
     let info_res = await fetch(
       `${PUBLIC_BACKEND_URL}/account/general/info/${uuid}`,
-      {
-        headers: {
-          Authorization: token,
-        },
-      },
     );
 
     if (info_res.status !== 200) {
@@ -30,12 +19,21 @@ export const info = async (uuid: string) => {
   }
 };
 
-export const change_image = async (image: string) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
+export const get_uuid = async () => {
+  try {
+    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/account/general/uuid`);
+
+    if (info_res.status !== 200) {
+      return;
+    }
+
+    return await info_res.text();
+  } catch (_) {
     return;
   }
+};
 
+export const change_image = async (image: string) => {
   try {
     let info_res = await fetch(
       `${PUBLIC_BACKEND_URL}/account/general/change_image`,
@@ -43,7 +41,6 @@ export const change_image = async (image: string) => {
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
-          Authorization: token,
         },
         body: base64ToArrayBuffer(image),
       },
@@ -60,11 +57,6 @@ export const change_image = async (image: string) => {
 };
 
 export const update_profile = async (profile: ProfileInfo) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
     let info_res = await fetch(
       `${PUBLIC_BACKEND_URL}/account/general/update_profile`,
@@ -72,7 +64,6 @@ export const update_profile = async (profile: ProfileInfo) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token,
         },
         body: JSON.stringify(profile),
       },

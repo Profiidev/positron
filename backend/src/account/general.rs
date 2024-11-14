@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![info, change_image, update_profile]
+  rocket::routes![info, change_image, update_profile, uuid_get]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/general", base)))
     .collect()
@@ -38,6 +38,11 @@ async fn info(_auth: JwtClaims<JwtBase>, uuid: &str, db: &State<DB>) -> Result<J
     image: user.image,
     email: user.email,
   }))
+}
+
+#[get("/uuid")]
+fn uuid_get(auth: JwtClaims<JwtBase>) -> String {
+  auth.sub.to_string()
 }
 
 #[post("/change_image", data = "<req>")]

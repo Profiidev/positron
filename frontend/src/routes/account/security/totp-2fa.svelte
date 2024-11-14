@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Separator } from "$lib/components/ui/separator";
-  import { DateTime } from "luxon";
   import { Clock9 } from "lucide-svelte";
   import {
     confirm_setup,
@@ -15,6 +14,7 @@
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
+  import { DateTime } from "$lib/util/time.svelte";
 
   interface Props {
     valid: boolean;

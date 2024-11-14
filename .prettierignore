@@ -1,6 +1,6 @@
 src-tauri/
-build/
+frontend/build/
 node_modules/
 .svelte-kit/
 target/
-backend/
+/backend/

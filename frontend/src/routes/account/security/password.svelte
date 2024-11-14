@@ -6,7 +6,7 @@
   import { Label } from "$lib/components/ui/label";
   import { Separator } from "$lib/components/ui/separator";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { DateTime } from "luxon";
+  import { DateTime } from "$lib/util/time.svelte";
   import { toast } from "svelte-sonner";
 
   interface Props {

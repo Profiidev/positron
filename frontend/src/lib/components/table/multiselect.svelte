@@ -46,7 +46,7 @@
         variant={disabled ? "ghost" : "outline"}
         {...props}
         role="combobox"
-        class="w-full h-full text-wrap !opacity-100"
+        class="h-full text-wrap !opacity-100"
         {disabled}
       >
         {#if selected.length === 0}

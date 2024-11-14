@@ -4,9 +4,9 @@
   import { ChevronsUpDown, LogOut, Settings } from "lucide-svelte";
   import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
-  import { clear_tokens } from "$lib/backend/auth/token.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Avatar from "$lib/components/util/avatar.svelte";
+  import { logout } from "$lib/backend/auth/logout.svelte";
 
   let infoData = $derived(getInfo());
   let sidebar = Sidebar.useSidebar();
@@ -15,8 +15,8 @@
     goto("/account");
   };
 
-  const logout = () => {
-    clear_tokens();
+  const logoutFn = async () => {
+    await logout();
     goto("/login");
   };
 </script>
@@ -64,7 +64,7 @@
         </Dropdown.Group>
         <Dropdown.Separator />
         <Dropdown.Group>
-          <Dropdown.Item onclick={logout}>
+          <Dropdown.Item onclick={logoutFn}>
             <LogOut />
             Log out
           </Dropdown.Item>

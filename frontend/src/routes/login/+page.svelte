@@ -1,5 +1,18 @@
 <script lang="ts">
+  import type { OAuthParams } from "$lib/backend/auth/types.svelte";
+  import type { PageServerData } from "./$types";
   import Login from "./login-form.svelte";
+
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
+  let oauth_params: OAuthParams | undefined = $derived.by(() => {
+    if (data.code && data.name) {
+      return oauth_params;
+    }
+  });
 </script>
 
 <div
@@ -21,7 +34,7 @@
           Enter your login details below
         </p>
       </div>
-      <Login />
+      <Login {oauth_params} />
     </div>
   </div>
 </div>

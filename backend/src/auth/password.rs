@@ -1,7 +1,13 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use rocket::{get, http::Status, post, serde::json::Json, Route, State};
+use rocket::{
+  get,
+  http::{CookieJar, Status},
+  post,
+  serde::json::Json,
+  Route, State,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +18,7 @@ use crate::{
 };
 
 use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired},
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes},
   state::PasswordState,
 };
 
@@ -40,7 +46,8 @@ async fn authenticate(
   state: &State<PasswordState>,
   jwt: &State<JwtState>,
   db: &State<DB>,
-) -> Result<String> {
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
@@ -48,14 +55,26 @@ async fn authenticate(
     return Err(Error::Unauthorized);
   }
 
-  if user.totp.is_some() {
-    Ok(jwt.create_token::<JwtTotpRequired>(Uuid::from_str(&user.uuid)?)?)
+  let (cookie, totp) = if user.totp.is_some() {
+    (
+      jwt.create_token::<JwtTotpRequired>(Uuid::from_str(&user.uuid)?)?,
+      "true",
+    )
   } else {
     let uuid = Uuid::from_str(&user.uuid)?;
     db.tables().user().logged_in(uuid).await?;
 
-    Ok(jwt.create_token::<JwtBase>(Uuid::from_str(&user.uuid)?)?)
-  }
+    (
+      jwt.create_token::<JwtBase>(Uuid::from_str(&user.uuid)?)?,
+      "false",
+    )
+  };
+
+  cookies.add(cookie);
+
+  Ok(TokenRes {
+    body: totp.as_bytes().to_vec(),
+  })
 }
 
 #[derive(Deserialize)]
@@ -70,7 +89,8 @@ async fn special_access(
   state: &State<PasswordState>,
   jwt: &State<JwtState>,
   db: &State<DB>,
-) -> Result<String> {
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
@@ -80,7 +100,11 @@ async fn special_access(
 
   db.tables().user().used_special_access(auth.sub).await?;
 
-  Ok(jwt.create_token::<JwtSpecial>(Uuid::from_str(&user.uuid)?)?)
+  let cookie = jwt.create_token::<JwtSpecial>(Uuid::from_str(&user.uuid)?)?;
+  cookies.add(cookie);
+  cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
+
+  Ok(TokenRes::default())
 }
 
 #[derive(Deserialize)]

@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use chrono::{Duration, Utc};
 use jsonwebtoken::{
   decode, encode,
@@ -6,7 +8,11 @@ use jsonwebtoken::{
 };
 use rocket::{
   async_trait,
+  http::{Cookie, SameSite},
   request::{FromRequest, Outcome, Request},
+  response::Responder,
+  tokio::sync::Mutex,
+  Response,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
@@ -15,15 +21,21 @@ use crate::utils::jwt_from_request;
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
-  pub exp: u64,
+  pub exp: i64,
   pub iss: String,
   pub sub: Uuid,
   #[serde(rename = "type")]
   pub type_: T,
 }
 
+#[derive(Default)]
+pub struct TokenRes {
+  pub body: Vec<u8>,
+}
+
 pub trait JwtType: Default {
   fn duration(long: i64, short: i64) -> i64;
+  fn cookie_name() -> &'static str;
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -34,6 +46,10 @@ pub enum JwtBase {
 impl JwtType for JwtBase {
   fn duration(long: i64, _: i64) -> i64 {
     long
+  }
+
+  fn cookie_name() -> &'static str {
+    "token"
   }
 }
 
@@ -46,6 +62,10 @@ impl JwtType for JwtSpecial {
   fn duration(_: i64, short: i64) -> i64 {
     short
   }
+
+  fn cookie_name() -> &'static str {
+    "special"
+  }
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -57,6 +77,15 @@ impl JwtType for JwtTotpRequired {
   fn duration(_: i64, short: i64) -> i64 {
     short
   }
+
+  fn cookie_name() -> &'static str {
+    "totp_required"
+  }
+}
+
+#[derive(Default)]
+pub struct JwtInvalidState {
+  pub count: Mutex<i32>,
 }
 
 pub struct JwtState {
@@ -70,13 +99,13 @@ pub struct JwtState {
 }
 
 impl JwtState {
-  pub fn create_token<T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<String, Error> {
+  pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>, Error> {
     let duration = T::duration(self.exp, self.short_exp);
 
     let exp = Utc::now()
       .checked_add_signed(Duration::seconds(duration))
       .ok_or(Error::from(ErrorKind::ExpiredSignature))?
-      .timestamp() as u64;
+      .timestamp();
 
     let claims = JwtClaims {
       exp,
@@ -85,7 +114,27 @@ impl JwtState {
       type_: T::default(),
     };
 
-    encode(&self.header, &claims, &self.encoding_key)
+    let token = encode(&self.header, &claims, &self.encoding_key)?;
+
+    Ok(self.create_cookie::<T>(T::cookie_name(), token, true))
+  }
+
+  pub fn create_cookie<'c, T: JwtType>(
+    &self,
+    name: &'static str,
+    value: String,
+    http: bool,
+  ) -> Cookie<'c> {
+    Cookie::build((name, value))
+      .domain(self.iss.clone())
+      .http_only(http)
+      .max_age(rocket::time::Duration::seconds(T::duration(
+        self.exp,
+        self.short_exp,
+      )))
+      .same_site(SameSite::Lax)
+      .secure(true)
+      .build()
   }
 
   pub fn validate_token<C: DeserializeOwned>(&self, token: &str) -> Result<C, Error> {
@@ -132,6 +181,18 @@ where
   type Error = ();
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    jwt_from_request(req).await
+    jwt_from_request::<JwtClaims<T>, T>(req).await
+  }
+}
+
+#[async_trait]
+impl<'r, 'o: 'r> Responder<'r, 'o> for TokenRes {
+  fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+    let response = Response::build()
+      .header(rocket::http::Header::new("Cache-Control", "no-store"))
+      .header(rocket::http::Header::new("Pragma", "no-cache"))
+      .sized_body(self.body.len(), Cursor::new(self.body))
+      .finalize();
+    Ok(response)
   }
 }

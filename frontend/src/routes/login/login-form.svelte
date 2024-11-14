@@ -10,24 +10,17 @@
   import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
   import { goto } from "$app/navigation";
   import { confirm } from "$lib/backend/auth/totp.svelte";
-  import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
   import { authenticate } from "$lib/backend/auth/passkey.svelte";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import {
-    updateAccessLevel,
-    updateInfo,
-    updatePermissions,
-  } from "$lib/backend/account/info.svelte";
-  import { onMount } from "svelte";
-  import { page } from "$app/stores";
-  import { get } from "svelte/store";
+  import { updateInfo } from "$lib/backend/account/info.svelte";
 
   interface Props {
     class?: string | undefined | null;
+    oauth_params: OAuthParams | undefined;
   }
 
-  let { class: className = undefined }: Props = $props();
+  let { class: className = undefined, oauth_params }: Props = $props();
 
   let enterEmail = $state(true);
   let isLoading = $state(false);
@@ -36,18 +29,6 @@
   let totp = $state("");
   let form_error = $state("");
   let passkeyError = $state("");
-
-  let oauth_params: OAuthParams | undefined = $derived.by(() => {
-    let code = get(page).url.searchParams.get("code");
-    let name = get(page).url.searchParams.get("name");
-
-    if (code && name) {
-      return {
-        code,
-        name,
-      };
-    }
-  });
 
   const onSubmit = async () => {
     if (!enterEmail) {
@@ -116,7 +97,7 @@
   };
 
   const login_success = async () => {
-    await Promise.all([updateInfo(), updateAccessLevel(), updatePermissions()]);
+    await updateInfo();
     if (oauth_params) {
       goto(
         `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=true`,
@@ -125,20 +106,6 @@
       goto("/");
     }
   };
-
-  onMount(async () => {
-    if (get_token(TokenType.Auth)) {
-      if (oauth_params) {
-        goto(
-          `/oauth?code=${oauth_params.code}&name=${oauth_params.name}&just_logged_in=false`,
-        );
-      } else {
-        goto("/", {
-          replaceState: true,
-        });
-      }
-    }
-  });
 </script>
 
 <div class={cn("grid gap-6", className)}>

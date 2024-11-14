@@ -7,15 +7,28 @@ use rocket::{http::Status, request::Outcome, Request, State};
 use serde::de::DeserializeOwned;
 
 use crate::{
-  auth::{jwt::JwtState, state::PasswordState},
+  auth::{
+    jwt::{JwtState, JwtType},
+    state::PasswordState,
+  },
   db::DB,
   error::Result,
 };
 
-pub async fn jwt_from_request<'r, C: DeserializeOwned>(req: &'r Request<'_>) -> Outcome<C, ()> {
-  let Some(mut token) = req.headers().get_one("Authorization") else {
-    return Outcome::Error((Status::BadRequest, ()));
+pub async fn jwt_from_request<'r, C: DeserializeOwned, T: JwtType>(
+  req: &'r Request<'_>,
+) -> Outcome<C, ()> {
+  let mut token = match req.headers().get_one("Authorization") {
+    Some(token) => token,
+    None => {
+      let Some(token) = req.cookies().get(T::cookie_name()) else {
+        return Outcome::Error((Status::BadRequest, ()));
+      };
+
+      token.value()
+    }
   };
+
   if let Some(stripped) = token.strip_prefix("Bearer ") {
     token = stripped;
   }

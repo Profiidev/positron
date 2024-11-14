@@ -1,11 +1,5 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import type JSEncrypt from "jsencrypt";
-import {
-  get_token,
-  get_token_type,
-  set_token,
-  TokenType,
-} from "./token.svelte";
 import { AuthError, type PasswordInfo } from "./types.svelte";
 import { browser } from "$app/environment";
 
@@ -74,12 +68,8 @@ export const login = async (
       return AuthError.Other;
     }
 
-    let token = await login_res.text();
-
-    let type = get_token_type(token);
-    set_token(token, type);
-
-    if (type === TokenType.TotpRequired) {
+    let totp = Boolean(await login_res.text());
+    if (totp) {
       return true;
     } else {
       return false;
@@ -96,11 +86,6 @@ export const special_access = async (
     return AuthError.Other;
   }
 
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return AuthError.MissingToken;
-  }
-
   try {
     let encrypted_password = encrypt.encrypt(password);
 
@@ -110,7 +95,6 @@ export const special_access = async (
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token,
         },
         body: JSON.stringify({
           password: encrypted_password,
@@ -126,9 +110,6 @@ export const special_access = async (
       fetch_key();
       return AuthError.Other;
     }
-
-    let special_access = await login_res.text();
-    set_token(special_access, TokenType.SpecialAccess);
   } catch (_) {
     return AuthError.Other;
   }
@@ -142,11 +123,6 @@ export const change = async (
     return AuthError.Other;
   }
 
-  let token = get_token(TokenType.SpecialAccess);
-  if (!token) {
-    return AuthError.MissingToken;
-  }
-
   try {
     let encrypted_password = encrypt.encrypt(password);
     let encrypted_password_confirm = encrypt.encrypt(password_confirm);
@@ -155,7 +131,6 @@ export const change = async (
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: token,
       },
       body: JSON.stringify({
         password: encrypted_password,
@@ -177,17 +152,8 @@ export const change = async (
 };
 
 export const info = async (): Promise<undefined | PasswordInfo> => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/info`, {
-      headers: {
-        Authorization: token,
-      },
-    });
+    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/auth/password/info`);
 
     if (info_res.status !== 200) {
       return;

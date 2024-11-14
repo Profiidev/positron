@@ -9,8 +9,8 @@
   import { getInfo } from "$lib/backend/account/info.svelte";
   import { goto } from "$app/navigation";
   import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
-  import { clear_tokens } from "$lib/backend/auth/token.svelte";
   import Avatar from "$lib/components/util/avatar.svelte";
+  import { logout } from "$lib/backend/auth/logout.svelte";
 
   let isLoading = $state(false);
   let error = $state("");
@@ -60,8 +60,8 @@
     goto("/");
   };
 
-  const change = () => {
-    clear_tokens();
+  const change = async () => {
+    await logout();
     goto(`/login?code=${oauth_params?.code}&name=${oauth_params?.name}`);
   };
 
