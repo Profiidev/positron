@@ -5,7 +5,7 @@ ENV PUBLIC_BACKEND_URL=${URL}
 
 WORKDIR /app
 
-COPY package.json package-lock.json frontend/postcss.config.js frontend/svelte.config.js frontend/tailwind.config.ts frontend/tsconfig.json frontend/vite.config.js ./
+COPY frontend/package.json package-lock.json frontend/postcss.config.js frontend/svelte.config.js frontend/tailwind.config.ts frontend/tsconfig.json frontend/vite.config.js ./
 COPY frontend/src ./src
 COPY frontend/static ./static
 
