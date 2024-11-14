@@ -8,7 +8,6 @@
   import { special_access } from "$lib/backend/auth/password.svelte";
   import { special_access as special_access_pk } from "$lib/backend/auth/passkey.svelte";
   import { AuthError } from "$lib/backend/auth/types.svelte";
-  import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
   import { interval } from "$lib/util/interval.svelte";
 
   interface Props {
@@ -18,10 +17,14 @@
   let { specialAccessValid = $bindable(false) }: Props = $props();
 
   let specialAccessWatcher = interval(() => {
-    return get_token(TokenType.SpecialAccess);
+    let match = document.cookie.match(
+      new RegExp("(^| )" + "special_valid" + "=([^;]+)"),
+    );
+    if (match) return Boolean(match[2]);
   }, 1000);
   $effect(() => {
-    specialAccessValid = specialAccessWatcher.value !== undefined;
+    specialAccessValid =
+      specialAccessWatcher.value !== undefined && specialAccessWatcher.value;
   });
 
   let cb: (value: boolean) => void;

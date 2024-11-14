@@ -1,20 +1,10 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import { getEncrypt } from "../auth/password.svelte";
-import { get_token, TokenType } from "../auth/token.svelte";
 import type { Permission, User } from "./types.svelte";
 
 export const list = async () => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
-    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/management/user/list`, {
-      headers: {
-        Authorization: token,
-      },
-    });
+    let info_res = await fetch(`${PUBLIC_BACKEND_URL}/management/user/list`);
 
     if (info_res.status !== 200) {
       return;
@@ -32,16 +22,11 @@ export const update_permissions = async (
   permission: Permission,
   add: boolean,
 ) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
     let info_res = await fetch(`${PUBLIC_BACKEND_URL}/management/user/edit`, {
       method: "POST",
       headers: {
-        Authorization: token,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         user,
@@ -61,9 +46,8 @@ export const update_permissions = async (
 };
 
 export const create = async (name: string, email: string, password: string) => {
-  let token = get_token(TokenType.Auth);
   let encrypt = getEncrypt();
-  if (!token || !encrypt) {
+  if (!encrypt) {
     return;
   }
 
@@ -73,7 +57,7 @@ export const create = async (name: string, email: string, password: string) => {
     let info_res = await fetch(`${PUBLIC_BACKEND_URL}/management/user/create`, {
       method: "POST",
       headers: {
-        Authorization: token,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name,
@@ -93,16 +77,11 @@ export const create = async (name: string, email: string, password: string) => {
 };
 
 export const remove = async (uuid: string) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return;
-  }
-
   try {
     let info_res = await fetch(`${PUBLIC_BACKEND_URL}/management/user/delete`, {
       method: "POST",
       headers: {
-        Authorization: token,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         uuid,

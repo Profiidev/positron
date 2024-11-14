@@ -4,7 +4,7 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use rocket::{
   get,
-  http::Status,
+  http::{CookieJar, Status},
   post,
   serde::json::{self, Json},
   Route, State,
@@ -26,7 +26,7 @@ use crate::{
 };
 
 use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState},
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, TokenRes},
   state::PasskeyState,
 };
 
@@ -149,7 +149,8 @@ async fn finish_authentication(
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
   jwt: &State<JwtState>,
-) -> Result<String> {
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
   let auth_id = Uuid::from_str(id)?;
 
   let mut states = state.auth_state.lock().await;
@@ -183,7 +184,10 @@ async fn finish_authentication(
 
   db.tables().user().logged_in(uuid).await?;
 
-  Ok(jwt.create_token::<JwtBase>(uuid)?)
+  let cookie = jwt.create_token::<JwtBase>(uuid)?;
+  cookies.add(cookie);
+
+  Ok(TokenRes::default())
 }
 
 #[get("/start_special_access")]
@@ -219,7 +223,8 @@ async fn finish_special_access(
   state: &State<PasskeyState>,
   db: &State<DB>,
   jwt: &State<JwtState>,
-) -> Result<String> {
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
     return Err(Error::BadRequest);
   };
@@ -246,7 +251,11 @@ async fn finish_special_access(
 
   db.tables().user().used_special_access(auth.sub).await?;
 
-  Ok(jwt.create_token::<JwtSpecial>(auth.sub)?)
+  let cookie = jwt.create_token::<JwtSpecial>(auth.sub)?;
+  cookies.add(cookie);
+  cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
+
+  Ok(TokenRes::default())
 }
 
 #[derive(Serialize)]

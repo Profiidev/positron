@@ -1,20 +1,13 @@
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
-import { get_token, TokenType } from "$lib/backend/auth/token.svelte";
 import { AuthError, type OAuthParams } from "$lib/backend/auth/types.svelte";
 
 export const auth = async (params: OAuthParams, allow: boolean) => {
-  let token = get_token(TokenType.Auth);
-  if (!token) {
-    return AuthError.Other;
-  }
-
   try {
     let auth_res = await fetch(
       `${PUBLIC_BACKEND_URL}/oauth/authorize?code=${params.code}&allow=${allow}`,
       {
         method: "POST",
         headers: {
-          Authorization: token,
           "Content-Type": "x-www-form-urlencoded",
         },
       },

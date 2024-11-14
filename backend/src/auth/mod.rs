@@ -1,8 +1,9 @@
-use jwt::JwtState;
+use jwt::{JwtInvalidState, JwtState};
 use rocket::{Build, Rocket, Route};
 use state::{webauthn, PasskeyState, PasswordState, TotpState};
 
 pub mod jwt;
+mod logout;
 mod passkey;
 mod password;
 pub mod state;
@@ -13,6 +14,7 @@ pub fn routes() -> Vec<Route> {
     .into_iter()
     .chain(password::routes())
     .chain(totp::routes())
+    .chain(logout::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/auth", base)))
     .collect()
 }
@@ -23,5 +25,6 @@ pub fn state(server: Rocket<Build>) -> Rocket<Build> {
     .manage(PasskeyState::default())
     .manage(TotpState::default())
     .manage(JwtState::default())
+    .manage(JwtInvalidState::default())
     .manage(webauthn())
 }

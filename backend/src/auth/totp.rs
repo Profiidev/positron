@@ -1,5 +1,11 @@
 use chrono::{DateTime, Utc};
-use rocket::{get, http::Status, post, serde::json::Json, Route, State};
+use rocket::{
+  get,
+  http::{CookieJar, Status},
+  post,
+  serde::json::Json,
+  Route, State,
+};
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
 
@@ -9,7 +15,7 @@ use crate::{
 };
 
 use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired},
+  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes},
   state::TotpState,
 };
 
@@ -94,7 +100,8 @@ async fn confirm(
   auth: JwtClaims<JwtTotpRequired>,
   db: &State<DB>,
   jwt: &State<JwtState>,
-) -> Result<String> {
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
@@ -108,7 +115,11 @@ async fn confirm(
   } else {
     db.tables().user().used_totp(auth.sub).await?;
     db.tables().user().logged_in(auth.sub).await?;
-    Ok(jwt.create_token::<JwtBase>(auth.sub)?)
+
+    let cookie = jwt.create_token::<JwtBase>(auth.sub)?;
+    cookies.add(cookie);
+
+    Ok(TokenRes::default())
   }
 }
 
