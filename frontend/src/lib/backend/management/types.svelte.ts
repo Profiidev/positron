@@ -21,3 +21,22 @@ export enum Permission {
   GroupCreate = "GroupCreate",
   GroupDelete = "GroupDelete",
 }
+
+enum PermissionGroups {
+  User = "User",
+  Group = "Group",
+}
+
+export const getPermissionGroups = () => {
+  return Object.keys(PermissionGroups).map((g) => {
+    return {
+      label: g,
+      items: Object.keys(Permission)
+        .filter((p) => p.startsWith(g))
+        .map((p) => ({
+          label: p,
+          value: p as Permission,
+        })),
+    };
+  });
+};

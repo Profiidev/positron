@@ -1,4 +1,8 @@
-import { Permission, type User } from "$lib/backend/management/types.svelte";
+import {
+  getPermissionGroups,
+  Permission,
+  type User,
+} from "$lib/backend/management/types.svelte";
 import { remove_user } from "$lib/backend/management/user.svelte";
 import FormDialog from "$lib/components/form/form-dialog.svelte";
 import {
@@ -47,10 +51,7 @@ export const columns = (
       }
 
       return renderComponent(Multiselect<Permission>, {
-        data: Object.keys(Permission).map((p) => ({
-          label: p.toString(),
-          value: p as Permission,
-        })),
+        data: getPermissionGroups(),
         selected: row.getValue<Permission[]>("permissions"),
         filter: (value) =>
           allowed_permissions.includes(value.value as Permission),
