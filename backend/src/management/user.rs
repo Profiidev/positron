@@ -84,6 +84,11 @@ async fn create(
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserCreate).await?;
 
+  let exists = db.tables().user().user_exists(req.name.clone()).await?;
+  if exists {
+    return Err(Error::Conflict);
+  }
+
   let salt = SaltString::generate(OsRng {}).to_string();
   let password = hash_password(pw, &salt, &req.password)?;
 

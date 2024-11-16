@@ -350,4 +350,14 @@ RETURN $permissions.flatten().distinct()",
 
     Ok(res.take(3).unwrap_or_default())
   }
+
+  pub async fn user_exists(&self, email: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM user WHERE email = $email")
+      .bind(("email", email))
+      .await?;
+
+    Ok(res.take::<Option<User>>(0)?.is_some())
+  }
 }
