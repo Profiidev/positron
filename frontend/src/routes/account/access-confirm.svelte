@@ -9,6 +9,7 @@
   import { password_special_access } from "$lib/backend/auth/password.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import { passkey_special_access } from "$lib/backend/auth/passkey.svelte";
+  import { browser } from "$app/environment";
 
   interface Props {
     specialAccessValid: boolean;
@@ -17,6 +18,10 @@
   let { specialAccessValid = $bindable(false) }: Props = $props();
 
   let specialAccessWatcher = interval(() => {
+    if (!browser) {
+      return;
+    }
+
     let match = document.cookie.match(
       new RegExp("(^| )" + "special_valid" + "=([^;]+)"),
     );

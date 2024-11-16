@@ -1,9 +1,10 @@
+import { delete_group } from "$lib/backend/management/group.svelte";
 import {
   getPermissionGroups,
   Permission,
-  type User,
+  type Group,
+  type UserInfo,
 } from "$lib/backend/management/types.svelte";
-import { remove_user } from "$lib/backend/management/user.svelte";
 import FormDialog from "$lib/components/form/form-dialog.svelte";
 import {
   createColumn,
@@ -11,8 +12,6 @@ import {
 } from "$lib/components/table/helpers.svelte";
 import Multiselect from "$lib/components/table/multiselect.svelte";
 import { renderComponent } from "$lib/components/ui/data-table";
-import Avatar from "$lib/components/util/avatar.svelte";
-import { DateTime } from "$lib/util/time.svelte";
 import type { ColumnDef } from "@tanstack/table-core";
 import { Trash } from "lucide-svelte";
 import { createRawSnippet, mount, unmount } from "svelte";
@@ -20,28 +19,14 @@ import { toast } from "svelte-sonner";
 
 export const columns = (
   allowed_permissions: Permission[],
+  possibleUsers: UserInfo[],
   access_level: number,
-  updateUser: () => Promise<void>,
-  permission_select?: (user: string, value: Permission, add: boolean) => void,
-): ColumnDef<User>[] => [
-  {
-    accessorKey: "image",
-    header: () => {},
-    cell: ({ row }) => {
-      return renderComponent(Avatar, {
-        src: row.getValue("image") as string,
-        class: "size-8",
-      });
-    },
-    size: 10,
-  },
+  updateGroups: () => Promise<void>,
+  permission_select?: (group: string, value: Permission, add: boolean) => void,
+  user_select?: (group: string, value: UserInfo, add: boolean) => void,
+): ColumnDef<Group>[] => [
   createColumn("name", "Name"),
-  createColumn("email", "Email"),
-  createColumn("last_login", "Last Login", (date: string) => {
-    return DateTime.fromISO(date)
-      .setLocale("de")
-      .toLocaleString(DateTime.DATETIME_SHORT);
-  }),
+  createColumn("access_level", "Access Level"),
   {
     cell: ({ row }) => {
       let onSelect;
@@ -56,7 +41,7 @@ export const columns = (
         filter: (value) =>
           allowed_permissions.includes(value.value as Permission),
         disabled:
-          !allowed_permissions.includes(Permission.UserEdit) ||
+          !allowed_permissions.includes(Permission.GroupEdit) ||
           row.getValue<number>("access_level") <= access_level,
         onSelect,
         label: "permissions",
@@ -64,15 +49,39 @@ export const columns = (
     },
     ...createColumnHeader("permissions", "Permissions"),
   },
-  createColumn("access_level", "Access Level"),
+  {
+    cell: ({ row }) => {
+      let onSelect;
+      if (user_select) {
+        onSelect = (value: UserInfo, add: boolean) =>
+          user_select(row.getValue<string>("uuid"), value, add);
+      }
+
+      return renderComponent(Multiselect<UserInfo>, {
+        data: possibleUsers.map((u) => ({
+          label: u.name,
+          value: u,
+        })),
+        selected: row.getValue<UserInfo[]>("users"),
+        disabled:
+          !allowed_permissions.includes(Permission.GroupEdit) ||
+          row.getValue<number>("access_level") <= access_level,
+        onSelect,
+        label: "users",
+        display: (u) => u.name,
+        compare: (a, b) => a.uuid === b.uuid,
+      });
+    },
+    ...createColumnHeader("users", "Users"),
+  },
   createColumn("uuid", "Uuid"),
   {
     accessorKey: "actions",
     header: () => {},
     cell: ({ row }) => {
       return renderComponent(FormDialog, {
-        title: "Delete User",
-        description: `Do you really want to delete the user ${row.getValue("name")}`,
+        title: "Delete Group",
+        description: `Do you really want to delete the group ${row.getValue("name")}`,
         confirm: "Delete",
         confirmVariant: "destructive",
         trigger: {
@@ -80,7 +89,7 @@ export const columns = (
           variant: "destructive",
           class: "ml-auto",
           disabled:
-            !allowed_permissions.includes(Permission.UserDelete) ||
+            !allowed_permissions.includes(Permission.GroupDelete) ||
             row.getValue<number>("access_level") <= access_level,
         },
         triggerInner: createRawSnippet<[]>(() => {
@@ -93,13 +102,13 @@ export const columns = (
           };
         }),
         onsubmit: async () => {
-          let ret = await remove_user(row.getValue("uuid"));
+          let ret = await delete_group(row.getValue("uuid"));
 
           if (ret) {
-            return "Error while deleting user";
+            return "Error while deleting group";
           } else {
-            await updateUser();
-            toast.success("Deleted User");
+            await updateGroups();
+            toast.success("Deleted Group");
           }
         },
       });

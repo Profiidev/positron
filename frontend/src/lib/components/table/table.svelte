@@ -81,11 +81,15 @@
         {#each table.getRowModel().rows as row (row.id)}
           <Table.Row data-state={row.getIsSelected() && "selected"}>
             {#each row.getVisibleCells() as cell (cell.id)}
-              <Table.Cell>
-                <FlexRender
-                  content={cell.column.columnDef.cell}
-                  context={cell.getContext()}
-                />
+              <Table.Cell class="group">
+                <div
+                  class="group-last:flex last-group:justify-end last-group:text-center last-group:h-full"
+                >
+                  <FlexRender
+                    content={cell.column.columnDef.cell}
+                    context={cell.getContext()}
+                  />
+                </div>
               </Table.Cell>
             {/each}
           </Table.Row>

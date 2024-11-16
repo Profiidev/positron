@@ -4,8 +4,23 @@
   import { Button } from "../ui/button";
   import { cn } from "$lib/utils";
   import { Check } from "lucide-svelte";
+  import { ScrollArea } from "../ui/scroll-area";
 
   type T = $$Generic;
+
+  interface Group {
+    label: string;
+    items: Item[];
+  }
+
+  const isGroups = (object: any[]): object is Group[] => {
+    return (
+      object.length > 0 &&
+      typeof object[0] === "object" &&
+      object[0] !== null &&
+      "items" in object[0]
+    );
+  };
 
   interface Item {
     label: string;
@@ -13,23 +28,29 @@
   }
 
   interface Props {
-    data: Item[];
+    data: Group[] | Item[];
     filter?: (data: Item) => boolean;
     selected: T[];
+    label: string;
     disabled?: boolean;
     onSelect?: (selected: T, add: boolean) => void;
+    display?: (item: T) => string;
+    compare?: (a: T, b: T) => boolean;
   }
 
   let {
     data,
     selected = $bindable(),
     filter = () => true,
+    label,
     disabled = true,
     onSelect = () => {},
+    display = (i) => i as string,
+    compare = (a, b) => a === b,
   }: Props = $props();
 
   const select = (value: T) => {
-    if (selected.includes(value)) {
+    if (selected.some((i) => compare(value, i))) {
       selected = selected.filter((e) => e !== value);
       onSelect(value, false);
     } else {
@@ -37,6 +58,24 @@
       onSelect(value, true);
     }
   };
+
+  let filtered = $derived.by(() => {
+    if (isGroups(data)) {
+      return data
+        .map((g) => {
+          g.items = g.items.filter(filter);
+          return g;
+        })
+        .filter((g) => g.items.length > 0);
+    } else {
+      return [
+        {
+          label: "",
+          items: data.filter(filter),
+        },
+      ];
+    }
+  });
 </script>
 
 <Popover.Root>
@@ -50,9 +89,9 @@
         {disabled}
       >
         {#if selected.length === 0}
-          No permissions
+          No {label}
         {:else}
-          {selected.join(", ")}
+          {selected.map(display).join(", ")}
         {/if}
       </Button>
     {/snippet}
@@ -60,25 +99,30 @@
   <Popover.Content>
     <Command.Root>
       <Command.Input placeholder="Search permissions..." />
-      <Command.List>
-        <Command.Empty>No permissions found</Command.Empty>
-        <Command.Group>
-          {#each data.filter(filter) as entry}
-            <Command.Item
-              value={entry.label}
-              onSelect={() => select(entry.value)}
-            >
-              <Check
-                class={cn(
-                  "mr-2 size-4",
-                  !selected.includes(entry.value) && "text-transparent",
-                )}
-              />
-              {entry.label}
-            </Command.Item>
+      <ScrollArea orientation="vertical" class="h-full w-full">
+        <Command.List class="overflow-visible">
+          <Command.Empty>No {label} found</Command.Empty>
+          {#each filtered as group}
+            <Command.Group heading={group.label}>
+              {#each group.items as item}
+                <Command.Item
+                  value={item.label}
+                  onSelect={() => select(item.value)}
+                >
+                  <Check
+                    class={cn(
+                      "mr-2 size-4",
+                      !selected.some((i) => compare(i, item.value)) &&
+                        "text-transparent",
+                    )}
+                  />
+                  {item.label}
+                </Command.Item>
+              {/each}
+            </Command.Group>
           {/each}
-        </Command.Group>
-      </Command.List>
+        </Command.List>
+      </ScrollArea>
     </Command.Root>
   </Popover.Content>
 </Popover.Root>

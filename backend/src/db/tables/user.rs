@@ -45,6 +45,12 @@ pub struct UserInfo {
   access_level: i32,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct BasicUserInfo {
+  name: String,
+  uuid: String,
+}
+
 pub struct UserTable<'db> {
   db: &'db Surreal<Client>,
 }
@@ -349,5 +355,21 @@ RETURN $permissions.flatten().distinct()",
       .await?;
 
     Ok(res.take(3).unwrap_or_default())
+  }
+
+  pub async fn user_exists(&self, email: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM user WHERE email = $email")
+      .bind(("email", email))
+      .await?;
+
+    Ok(res.take::<Option<User>>(0)?.is_some())
+  }
+
+  pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, Error> {
+    let mut res = self.db.query("SELECT name, uuid FROM user").await?;
+
+    Ok(res.take(0).unwrap_or_default())
   }
 }

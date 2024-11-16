@@ -8,6 +8,19 @@ export interface User {
   access_level: number;
 }
 
+export interface Group {
+  uuid: string;
+  name: string;
+  permission: Permission[];
+  access_level: number;
+  users: UserInfo[];
+}
+
+export interface UserInfo {
+  name: string;
+  uuid: string;
+}
+
 export enum Permission {
   //user page
   UserList = "UserList",
@@ -21,3 +34,22 @@ export enum Permission {
   GroupCreate = "GroupCreate",
   GroupDelete = "GroupDelete",
 }
+
+enum PermissionGroups {
+  User = "User",
+  Group = "Group",
+}
+
+export const getPermissionGroups = () => {
+  return Object.keys(PermissionGroups).map((g) => {
+    return {
+      label: g,
+      items: Object.keys(Permission)
+        .filter((p) => p.startsWith(g))
+        .map((p) => ({
+          label: p,
+          value: p as Permission,
+        })),
+    };
+  });
+};

@@ -11,7 +11,7 @@ export const getEncrypt = () => {
 
 export const fetch_key = async () => {
   if (encrypt === false) {
-    RequestError.Other;
+    return RequestError.Other;
   }
 
   let key = await get<string>("/auth/password/key", ResponseType.Text);
