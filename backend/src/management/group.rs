@@ -5,7 +5,10 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::group::{GroupCreate, GroupInfo},
+    tables::{
+      group::{GroupCreate, GroupInfo},
+      user::BasicUserInfo,
+    },
     DB,
   },
   error::{Error, Result},
@@ -15,6 +18,7 @@ use crate::{
 pub fn routes() -> Vec<Route> {
   rocket::routes![
     list,
+    user_list,
     edit_users,
     edit_permissions,
     edit_meta,
@@ -34,10 +38,18 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<Group
   Ok(Json(groups))
 }
 
+#[get("/user_list")]
+async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<BasicUserInfo>>> {
+  Permission::check(db, auth.sub, Permission::GroupList).await?;
+  let users = db.tables().user().basic_user_list().await?;
+
+  Ok(Json(users))
+}
+
 #[derive(Deserialize)]
 struct GroupUserEdit {
-  uuid: Uuid,
-  user: Uuid,
+  uuid: String,
+  user: String,
   add: bool,
 }
 
@@ -47,18 +59,18 @@ async fn edit_users(
   db: &State<DB>,
   req: Json<GroupUserEdit>,
 ) -> Result<()> {
+  let uuid = Uuid::parse_str(&req.uuid)?;
+  let user = Uuid::parse_str(&req.user)?;
+
   Permission::check(db, auth.sub, Permission::GroupEdit).await?;
 
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.tables().groups().get_group_by_uuid(uuid).await?;
   Permission::is_access_level_high_enough(db, auth.sub, group.access_level).await?;
 
   if req.add {
-    db.tables().groups().add_user(group.id, req.0.user).await?;
+    db.tables().groups().add_user(group.id, user).await?;
   } else {
-    db.tables()
-      .groups()
-      .remove_user(group.id, req.0.user)
-      .await?;
+    db.tables().groups().remove_user(group.id, user).await?;
   }
 
   Ok(())
@@ -66,7 +78,7 @@ async fn edit_users(
 
 #[derive(Deserialize)]
 struct GroupPermissionEdit {
-  uuid: Uuid,
+  uuid: String,
   permission: Permission,
   add: bool,
 }
@@ -77,9 +89,11 @@ async fn edit_permissions(
   db: &State<DB>,
   req: Json<GroupPermissionEdit>,
 ) -> Result<()> {
+  let uuid = Uuid::parse_str(&req.uuid)?;
+
   Permission::check(db, auth.sub, Permission::GroupEdit).await?;
 
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.tables().groups().get_group_by_uuid(uuid).await?;
   Permission::is_access_level_high_enough(db, auth.sub, group.access_level).await?;
 
   let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
@@ -106,20 +120,22 @@ async fn edit_permissions(
 struct MetaReq {
   name: String,
   access_level: i32,
-  uuid: Uuid,
+  uuid: String,
 }
 
 #[post("/edit_meta", data = "<req>")]
 async fn edit_meta(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<MetaReq>) -> Result<()> {
+  let uuid = Uuid::parse_str(&req.uuid)?;
+
   Permission::check(db, auth.sub, Permission::GroupEdit).await?;
 
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.tables().groups().get_group_by_uuid(uuid).await?;
   Permission::is_access_level_high_enough(db, auth.sub, group.access_level).await?;
   Permission::is_access_level_high_enough(db, auth.sub, req.access_level).await?;
 
   db.tables()
     .groups()
-    .edit_meta(req.uuid, req.0.name, req.0.access_level)
+    .edit_meta(uuid, req.0.name, req.0.access_level)
     .await?;
 
   Ok(())
@@ -157,17 +173,19 @@ async fn create(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupCreateR
 
 #[derive(Deserialize)]
 struct GroupDelete {
-  uuid: Uuid,
+  uuid: String,
 }
 
 #[post("/delete", data = "<req>")]
 async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupDelete>) -> Result<()> {
+  let uuid = Uuid::parse_str(&req.uuid)?;
+
   Permission::check(db, auth.sub, Permission::GroupDelete).await?;
 
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.tables().groups().get_group_by_uuid(uuid).await?;
   Permission::is_access_level_high_enough(db, auth.sub, group.access_level).await?;
 
-  db.tables().groups().delete_group(req.uuid).await?;
+  db.tables().groups().delete_group(uuid).await?;
 
   Ok(())
 }

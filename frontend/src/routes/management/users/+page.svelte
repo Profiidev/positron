@@ -75,6 +75,9 @@
     } else {
       await list_users().then((user) => (users = user));
       toast.success("Created User");
+      email = "";
+      name = "";
+      password = "";
     }
   };
 </script>

@@ -170,7 +170,7 @@ RETURN $groups ",
 UPDATE $group SET users += $users[0].id WHERE users CONTAINSNOT $users[0].id;",
       )
       .bind(("group", group))
-      .bind(("user", user))
+      .bind(("uuid", user.to_string()))
       .await?;
 
     Ok(())
@@ -184,7 +184,7 @@ UPDATE $group SET users += $users[0].id WHERE users CONTAINSNOT $users[0].id;",
 UPDATE $group SET users -= $users[0].id;",
       )
       .bind(("group", group))
-      .bind(("user", user))
+      .bind(("uuid", user.to_string()))
       .await?;
 
     Ok(())
@@ -218,7 +218,7 @@ UPDATE $group SET users -= $users[0].id;",
     self
       .db
       .query("UPDATE group SET name = $name, access_level = $access_level WHERE uuid = $uuid")
-      .bind(("uuid", uuid))
+      .bind(("uuid", uuid.to_string()))
       .bind(("name", name))
       .bind(("access_level", access_level))
       .await?;

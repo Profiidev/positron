@@ -48,7 +48,7 @@ impl Permission {
   ) -> Result<()> {
     let access_level_user = db.tables().user().access_level(user).await?;
 
-    if access_level < access_level_user {
+    if access_level > access_level_user {
       Ok(())
     } else {
       Err(Error::Unauthorized)

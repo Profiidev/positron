@@ -8,6 +8,19 @@ export interface User {
   access_level: number;
 }
 
+export interface Group {
+  uuid: string;
+  name: string;
+  permission: Permission[];
+  access_level: number;
+  users: UserInfo[];
+}
+
+export interface UserInfo {
+  name: string;
+  uuid: string;
+}
+
 export enum Permission {
   //user page
   UserList = "UserList",

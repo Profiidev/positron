@@ -31,20 +31,26 @@
     data: Group[] | Item[];
     filter?: (data: Item) => boolean;
     selected: T[];
+    label: string;
     disabled?: boolean;
     onSelect?: (selected: T, add: boolean) => void;
+    display?: (item: T) => string;
+    compare?: (a: T, b: T) => boolean;
   }
 
   let {
     data,
     selected = $bindable(),
     filter = () => true,
+    label,
     disabled = true,
     onSelect = () => {},
+    display = (i) => i as string,
+    compare = (a, b) => a === b,
   }: Props = $props();
 
   const select = (value: T) => {
-    if (selected.includes(value)) {
+    if (selected.some((i) => compare(value, i))) {
       selected = selected.filter((e) => e !== value);
       onSelect(value, false);
     } else {
@@ -83,9 +89,9 @@
         {disabled}
       >
         {#if selected.length === 0}
-          No permissions
+          No {label}
         {:else}
-          {selected.join(", ")}
+          {selected.map(display).join(", ")}
         {/if}
       </Button>
     {/snippet}
@@ -95,7 +101,7 @@
       <Command.Input placeholder="Search permissions..." />
       <ScrollArea orientation="vertical" class="h-full w-full">
         <Command.List class="overflow-visible">
-          <Command.Empty>No permissions found</Command.Empty>
+          <Command.Empty>No {label} found</Command.Empty>
           {#each filtered as group}
             <Command.Group heading={group.label}>
               {#each group.items as item}
@@ -106,7 +112,8 @@
                   <Check
                     class={cn(
                       "mr-2 size-4",
-                      !selected.includes(item.value) && "text-transparent",
+                      !selected.some((i) => compare(i, item.value)) &&
+                        "text-transparent",
                     )}
                   />
                   {item.label}
