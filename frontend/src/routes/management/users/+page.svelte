@@ -33,13 +33,7 @@
 
   let users: User[] | undefined = $state();
   list_users().then((user) => (users = user));
-  let table = $state(
-    createTable(
-      [],
-      columns([], Number.MAX_SAFE_INTEGER, updateUsers),
-      filterFn,
-    ),
-  );
+  let table = $state(createTable([], columns([], 0, updateUsers), filterFn));
   let userInfo = $derived(getUserInfo());
   let name = $state("");
   let email = $state("");
@@ -51,7 +45,7 @@
       users || [],
       columns(
         userInfo?.permissions || [],
-        userInfo?.access_level ?? Number.MAX_SAFE_INTEGER,
+        userInfo?.access_level ?? 0,
         updateUsers,
         permissionSelect,
       ),

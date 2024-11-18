@@ -48,11 +48,7 @@
   };
 
   let table = $state(
-    createTable(
-      [],
-      columns([], [], Number.MAX_SAFE_INTEGER, updateGroups),
-      filterFn,
-    ),
+    createTable([], columns([], [], 0, updateGroups), filterFn),
   );
 
   $effect(() => {
@@ -61,7 +57,7 @@
       columns(
         userInfo?.permissions || [],
         users || [],
-        userInfo?.access_level ?? Number.MAX_SAFE_INTEGER,
+        userInfo?.access_level ?? 0,
         updateGroups,
         permissionSelect,
         userSelect,
@@ -71,7 +67,7 @@
   });
 
   const createGroup = async () => {
-    let ret = await create_group(name, access_level);
+    let ret = await create_group(name, Number(access_level));
     if (ret) {
       if (ret === RequestError.Unauthorized) {
         return "You can only use access levels above yours";

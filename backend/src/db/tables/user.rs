@@ -290,7 +290,7 @@ RETURN $users",
           image: user.image,
           last_login: user.last_login,
           permissions: user.permissions,
-          access_level: access_level.unwrap_or(i32::MAX),
+          access_level: access_level.unwrap_or(0).max(0),
         })
         .collect(),
     )
@@ -307,7 +307,7 @@ RETURN $groups.map(|$g| $g.access_level).min()",
       .bind(("uuid", uuid.to_string()))
       .await?;
 
-    Ok(res.take::<Option<i32>>(2)?.unwrap_or(i32::MAX))
+    Ok(res.take::<Option<i32>>(2)?.unwrap_or(0).max(0))
   }
 
   pub async fn add_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
