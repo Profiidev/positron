@@ -185,6 +185,7 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupDelete>
   let group = db.tables().groups().get_group_by_uuid(uuid).await?;
   Permission::is_access_level_high_enough(db, auth.sub, group.access_level).await?;
 
+  db.tables().oauth_client().remove_group_everywhere(group.id).await?;
   db.tables().groups().delete_group(uuid).await?;
 
   Ok(())

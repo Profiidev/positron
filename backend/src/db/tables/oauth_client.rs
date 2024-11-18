@@ -107,4 +107,14 @@ impl<'db> OauthClientTable<'db> {
 
     Ok(())
   }
+
+  pub async fn remove_group_everywhere(&self, group: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE oauth_client SET group_access -= $group")
+      .bind(("group", group))
+      .await?;
+
+    Ok(())
+  }
 }
