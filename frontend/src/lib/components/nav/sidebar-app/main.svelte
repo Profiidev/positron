@@ -51,11 +51,11 @@
           .filter((g) => {
             return g.items.length > 0;
           })
-      : [];
+      : undefined;
   });
 </script>
 
-{#if items.length === 0}
+{#if !items}
   <Sidebar.Group>
     <Sidebar.Menu>
       <Sidebar.MenuSkeleton />
