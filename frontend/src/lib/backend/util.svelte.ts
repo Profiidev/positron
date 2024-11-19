@@ -1,5 +1,16 @@
-import { PUBLIC_BACKEND_URL } from "$env/static/public";
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
+import { wait_for } from "$lib/util/interval.svelte";
 import { ContentType, RequestError, ResponseType } from "./types.svelte";
+
+let fetchFn: typeof fetch | undefined = undefined;
+const set_fetch = async () => {
+  if (PUBLIC_IS_APP === "true") {
+    fetchFn = (await import("@tauri-apps/plugin-http")).fetch;
+  } else {
+    fetchFn = fetch;
+  }
+};
+set_fetch();
 
 export const post = async <T>(
   path: string,
@@ -31,8 +42,17 @@ const request = async <T>(
     };
   }
 
+  if (PUBLIC_IS_APP === "true") {
+    headers = {
+      ...headers,
+      Cookie: document.cookie,
+    };
+  }
+
   try {
-    let res = await fetch(`${PUBLIC_BACKEND_URL}${path}`, {
+    await wait_for(() => fetchFn !== undefined);
+
+    let res = await fetchFn!(`${PUBLIC_BACKEND_URL}${path}`, {
       method,
       headers,
       body,
@@ -47,6 +67,17 @@ const request = async <T>(
         return RequestError.Conflict;
       default:
         return RequestError.Other;
+    }
+
+    if (PUBLIC_IS_APP === "true") {
+      let cookie = res.headers.get("Set-Cookie");
+      if (cookie) {
+        const updatedCookie = cookie
+          .replace(/Domain=[^;]*;?\s*/i, "")
+          .replace(/Secure;?\s*/i, "")
+          .replace(/HttpOnly;?\s*/i, "");
+        document.cookie = updatedCookie;
+      }
     }
 
     switch (res_type) {
