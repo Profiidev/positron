@@ -1,6 +1,16 @@
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
+use serde::{Deserialize, Serialize};
+use surrealdb::{
+  engine::remote::ws::Client,
+  sql::{Thing, Value},
+  Error, Surreal,
+};
+
+#[derive(Serialize)]
+struct InvalidJwtCreate {
+  token: String,
+  exp: Value,
+}
 
 #[allow(unused)]
 #[derive(Deserialize)]
@@ -43,9 +53,14 @@ impl<'db> InvalidJwtTable<'db> {
   ) -> Result<(), Error> {
     self
       .db
-      .query("CREATE invalid_jwt SET token = $to_add, exp = $exp")
-      .bind(("to_add", token))
-      .bind(("exp", exp))
+      .query("CREATE invalid_jwt CONTENT $content")
+      .bind((
+        "content",
+        InvalidJwtCreate {
+          token,
+          exp: Value::Datetime(exp.into()),
+        },
+      ))
       .await?;
 
     if *invalid_count > 1000 {

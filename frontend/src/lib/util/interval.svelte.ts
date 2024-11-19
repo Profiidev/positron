@@ -49,3 +49,14 @@ export const interval = <T>(update: () => T, timeout: number) => {
     },
   };
 };
+
+export const wait_for = (condition: () => boolean, intervalTime = 100) => {
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (condition()) {
+        clearInterval(interval);
+        resolve(undefined);
+      }
+    }, intervalTime);
+  });
+};

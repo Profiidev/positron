@@ -1,13 +1,16 @@
 use rocket::http::Method;
-use rocket_cors::{AllowedHeaders, AllowedOrigins, Cors};
+use rocket_cors::{AllOrSome, AllowedHeaders, AllowedOrigins, Cors};
 
 pub fn cors() -> Cors {
-  let allowed_origins = AllowedOrigins::some_exact(
+  let mut allowed_origins = AllowedOrigins::some_exact(
     &std::env::var("CORS_ORIGIN")
       .unwrap_or_default()
       .split(",")
       .collect::<Vec<&str>>(),
   );
+  if let AllOrSome::Some(origin) = &mut allowed_origins {
+    origin.allow_null = true;
+  }
 
   rocket_cors::CorsOptions {
     allowed_origins,

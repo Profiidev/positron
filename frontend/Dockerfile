@@ -2,6 +2,7 @@ FROM node:22-alpine AS build
 
 ARG URL
 ENV PUBLIC_BACKEND_URL=${URL}
+ENV PUBLIC_IS_APP=false
 
 WORKDIR /app
 
