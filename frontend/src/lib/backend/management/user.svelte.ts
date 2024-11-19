@@ -1,7 +1,7 @@
 import { getEncrypt } from "../auth/password.svelte";
 import { ContentType, ResponseType } from "../types.svelte";
 import { get, post } from "../util.svelte";
-import type { User } from "./types.svelte";
+import type { Permission, User } from "./types.svelte";
 
 export const list_users = async () => {
   let ret = await get<User[]>("/management/user/list", ResponseType.Json);
@@ -10,10 +10,10 @@ export const list_users = async () => {
   }
 };
 
-export const user_update_permissions = async (
+export const user_edit = async (
   user: string,
-  permission: string,
-  add: boolean,
+  name: string,
+  permissions: Permission[],
 ) => {
   return await post<undefined>(
     "/management/user/edit",
@@ -21,8 +21,8 @@ export const user_update_permissions = async (
     ContentType.Json,
     JSON.stringify({
       user,
-      add_permission: add ? permission : undefined,
-      remove_permission: !add ? permission : undefined,
+      name,
+      permissions,
     }),
   );
 };

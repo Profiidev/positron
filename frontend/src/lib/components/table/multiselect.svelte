@@ -32,30 +32,25 @@
     filter?: (data: Item) => boolean;
     selected: T[];
     label: string;
-    disabled?: boolean;
-    onSelect?: (selected: T, add: boolean) => void;
     display?: (item: T) => string;
     compare?: (a: T, b: T) => boolean;
   }
 
   let {
     data,
-    selected = $bindable(),
+    selected = $bindable([]),
     filter = () => true,
     label,
-    disabled = true,
-    onSelect = () => {},
     display = (i) => i as string,
     compare = (a, b) => a === b,
   }: Props = $props();
 
   const select = (value: T) => {
-    if (selected.some((i) => compare(value, i))) {
-      selected = selected.filter((e) => e !== value);
-      onSelect(value, false);
+    let index = selected.findIndex((i) => compare(i, value));
+    if (index !== -1) {
+      selected.splice(index, 1);
     } else {
       selected.push(value);
-      onSelect(value, true);
     }
   };
 
@@ -82,11 +77,10 @@
   <Popover.Trigger>
     {#snippet child({ props })}
       <Button
-        variant={disabled ? "ghost" : "outline"}
+        variant="outline"
         {...props}
         role="combobox"
         class="h-full text-wrap !opacity-100"
-        {disabled}
       >
         {#if selected.length === 0}
           No {label}

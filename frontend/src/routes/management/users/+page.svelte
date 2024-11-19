@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Permission, type User } from "$lib/backend/management/types.svelte";
+  import {
+    getPermissionGroups,
+    Permission,
+    type User,
+  } from "$lib/backend/management/types.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
   import Table from "$lib/components/table/table.svelte";
   import { toast } from "svelte-sonner";
@@ -12,13 +16,11 @@
   import {
     create_user,
     list_users,
-    user_update_permissions,
+    remove_user,
+    user_edit,
   } from "$lib/backend/management/user.svelte";
   import { getUserInfo } from "$lib/backend/account/info.svelte";
-
-  const updateUsers = async () => {
-    await list_users().then((user) => (users = user));
-  };
+  import Multiselect from "$lib/components/table/multiselect.svelte";
 
   const filterFn = (row: Row<User>, id: string, filterValues: any) => {
     const info = [row.original.email, row.original.name, row.original.uuid]
@@ -33,12 +35,26 @@
 
   let users: User[] | undefined = $state();
   list_users().then((user) => (users = user));
-  let table = $state(createTable([], columns([], 0, updateUsers), filterFn));
+  let table = $state(
+    createTable(
+      [],
+      columns(
+        [],
+        0,
+        () => {},
+        () => {},
+      ),
+      filterFn,
+    ),
+  );
   let userInfo = $derived(getUserInfo());
   let name = $state("");
   let email = $state("");
   let password = $state("");
   let isLoading = $state(false);
+  let user: User | undefined = $state();
+  let editOpen = $state(false);
+  let deleteOpen = $state(false);
 
   $effect(() => {
     table = createTable(
@@ -46,20 +62,12 @@
       columns(
         userInfo?.permissions || [],
         userInfo?.access_level ?? 0,
-        updateUsers,
-        permissionSelect,
+        editUser,
+        deleteUser,
       ),
       filterFn,
     );
   });
-
-  const permissionSelect = (user: string, value: Permission, add: boolean) => {
-    user_update_permissions(user, value, add).then((ret) => {
-      if (ret) {
-        toast.error("Error while updating");
-      }
-    });
-  };
 
   const createUser = async () => {
     let ret = await create_user(name, email, password);
@@ -67,15 +75,86 @@
       await fetch_key();
       return "Error while creating user";
     } else {
-      await list_users().then((user) => (users = user));
+      updateUsers();
       toast.success("Created User");
       email = "";
       name = "";
       password = "";
     }
   };
+
+  const updateUsers = async () => {
+    await list_users().then((user) => (users = user));
+  };
+
+  const editUser = (uuid: string) => {
+    user = users?.find((user) => user.uuid === uuid);
+    editOpen = true;
+  };
+
+  const deleteUser = (uuid: string) => {
+    user = users?.find((user) => user.uuid === uuid);
+    deleteOpen = true;
+  };
+
+  const editUserConfirm = async () => {
+    if (!user) {
+      return;
+    }
+
+    let ret = await user_edit(user.uuid, user.name, user.permissions);
+
+    if (ret) {
+      return "Error while updating user";
+    } else {
+      updateUsers();
+      toast.success("User updated");
+    }
+  };
+
+  const deleteUserConfirm = async () => {
+    if (!user) {
+      return;
+    }
+
+    let ret = await remove_user(user.uuid);
+
+    if (ret) {
+      return "Error while deleting user";
+    } else {
+      updateUsers();
+      toast.success("User deleted");
+    }
+  };
 </script>
 
+<FormDialog
+  title="Delete User"
+  description={`Do you really want to delete the user ${user?.name}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteUserConfirm}
+  bind:open={deleteOpen}
+></FormDialog>
+<FormDialog
+  title="Edit User"
+  description={`Edit the user info for ${user?.name} below`}
+  confirm="Confirm"
+  onsubmit={editUserConfirm}
+  bind:open={editOpen}
+>
+  {#if user && userInfo}
+    <Label for="name">Name</Label>
+    <Input id="name" placeholder="name" bind:value={user.name} />
+    <Label for="permissions">Permissions</Label>
+    <Multiselect
+      label="Permissions"
+      data={getPermissionGroups()}
+      filter={(i) => userInfo.permissions.includes(i.label as Permission)}
+      selected={user.permissions}
+    />
+  {/if}
+</FormDialog>
 <div class="space-y-3 m-4">
   <div class="ml-7 md:m-0">
     <h3 class="text-xl font-medium">Users</h3>
@@ -96,7 +175,7 @@
         }}
         onsubmit={createUser}
       >
-        <Label for="name" class="sr-only">Name</Label>
+        <Label for="name">Name</Label>
         <Input
           id="name"
           placeholder="Name"
@@ -104,7 +183,7 @@
           disabled={isLoading}
           bind:value={name}
         />
-        <Label for="email" class="sr-only">Email</Label>
+        <Label for="email">Email</Label>
         <Input
           id="email"
           placeholder="Email"
@@ -113,7 +192,7 @@
           disabled={isLoading}
           bind:value={email}
         />
-        <Label for="password" class="sr-only">Password</Label>
+        <Label for="password">Password</Label>
         <Input
           id="passowrd"
           placeholder="Password"

@@ -46,7 +46,7 @@ async fn authenticate(
   jwt: &State<JwtState>,
   db: &State<DB>,
   cookies: &CookieJar<'_>,
-) -> Result<TokenRes> {
+) -> Result<TokenRes<bool>> {
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
@@ -57,7 +57,7 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (
       jwt.create_token::<JwtTotpRequired>(Uuid::from_str(&user.uuid)?)?,
-      "true",
+      true,
     )
   } else {
     let uuid = Uuid::from_str(&user.uuid)?;
@@ -65,15 +65,13 @@ async fn authenticate(
 
     (
       jwt.create_token::<JwtBase>(Uuid::from_str(&user.uuid)?)?,
-      "false",
+      false,
     )
   };
 
   cookies.add(cookie);
 
-  Ok(TokenRes {
-    body: totp.as_bytes().to_vec(),
-  })
+  Ok(TokenRes { body: totp })
 }
 
 #[derive(Deserialize)]
