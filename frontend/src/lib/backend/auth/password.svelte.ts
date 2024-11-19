@@ -50,7 +50,7 @@ export const password_login = async (email: string, password: string) => {
     return res;
   }
 
-  return Boolean(res);
+  return res === "true";
 };
 
 export const password_special_access = async (password: string) => {

@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::permissions::Permission;
 
+use super::user::BasicUserInfo;
+
 #[derive(Serialize)]
 pub struct GroupCreate {
   pub name: String,
@@ -26,17 +28,11 @@ pub struct Group {
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
-  name: String,
-  uuid: String,
-  access_level: i32,
-  permissions: Vec<Permission>,
-  users: Vec<UserInfo>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct UserInfo {
-  name: String,
-  uuid: String,
+  pub name: String,
+  pub uuid: String,
+  pub access_level: i32,
+  pub permissions: Vec<Permission>,
+  pub users: Vec<BasicUserInfo>,
 }
 
 pub struct GroupTable<'db> {
@@ -83,7 +79,7 @@ RETURN $groups ",
       .await?;
 
     let groups = res.take::<Vec<Group>>(2).unwrap_or_default();
-    let users = res.take::<Vec<Vec<UserInfo>>>(1).unwrap_or_default();
+    let users = res.take::<Vec<Vec<BasicUserInfo>>>(1).unwrap_or_default();
 
     Ok(
       groups
@@ -162,65 +158,18 @@ RETURN $groups ",
     Ok(())
   }
 
-  pub async fn add_user(&self, group: Thing, user: Uuid) -> Result<(), Error> {
+  pub async fn edit(
+    &self,
+    id: Thing,
+    group: GroupInfo,
+    users_mapped: Vec<Thing>,
+  ) -> Result<(), Error> {
     self
       .db
-      .query(
-        "LET $users = SELECT * FROM user WHERE uuid = $uuid;
-UPDATE $group SET users += $users[0].id WHERE users CONTAINSNOT $users[0].id;",
-      )
-      .bind(("group", group))
-      .bind(("uuid", user.to_string()))
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn remove_user(&self, group: Thing, user: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "LET $users = SELECT * FROM user WHERE uuid = $uuid;
-UPDATE $group SET users -= $users[0].id;",
-      )
-      .bind(("group", group))
-      .bind(("uuid", user.to_string()))
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn add_permission(&self, group: Thing, permission: Permission) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "UPDATE $group SET permissions += $permission WHERE permissions CONTAINSNOT $permission;",
-      )
-      .bind(("group", group))
-      .bind(("permission", permission))
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn remove_permission(&self, group: Thing, permission: Permission) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE $group SET permissions -= $permission;")
-      .bind(("group", group))
-      .bind(("permission", permission))
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn edit_meta(&self, uuid: Uuid, name: String, access_level: i32) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE group SET name = $name, access_level = $access_level WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .bind(("name", name))
-      .bind(("access_level", access_level))
+      .query("UPDATE $id SET name = $name, permissions = $permissions, access_level = $access_level, users = $users_mapped")
+      .bind(group)
+      .bind(("id", id))
+      .bind(("users_mapped", users_mapped))
       .await?;
 
     Ok(())

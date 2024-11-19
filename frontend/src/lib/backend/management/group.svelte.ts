@@ -19,54 +19,12 @@ export const list_groups_user = async () => {
   }
 };
 
-export const edit_group_users = async (
-  group: string,
-  user: string,
-  add: boolean,
-) => {
+export const edit_group = async (group: Group) => {
   return await post<undefined>(
-    "/management/group/edit_users",
+    "/management/group/edit",
     ResponseType.None,
     ContentType.Json,
-    JSON.stringify({
-      uuid: group,
-      user,
-      add,
-    }),
-  );
-};
-
-export const edit_group_permissions = async (
-  group: string,
-  permission: Permission,
-  add: boolean,
-) => {
-  return await post<undefined>(
-    "/management/group/edit_permissions",
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      uuid: group,
-      permission,
-      add,
-    }),
-  );
-};
-
-export const edit_group_meta = async (
-  group: string,
-  name: string,
-  access_level: number,
-) => {
-  return await post<undefined>(
-    "/management/group/edit_meta",
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      uuid: group,
-      name,
-      access_level,
-    }),
+    JSON.stringify(group),
   );
 };
 

@@ -34,18 +34,18 @@ pub struct User {
   pub permissions: Vec<Permission>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct UserInfo {
-  uuid: String,
-  name: String,
-  image: String,
-  email: String,
-  last_login: DateTime<Utc>,
-  permissions: Vec<Permission>,
-  access_level: i32,
+  pub uuid: String,
+  pub name: String,
+  pub image: String,
+  pub email: String,
+  pub last_login: DateTime<Utc>,
+  pub permissions: Vec<Permission>,
+  pub access_level: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BasicUserInfo {
   name: String,
   uuid: String,
@@ -290,7 +290,7 @@ RETURN $users",
           image: user.image,
           last_login: user.last_login,
           permissions: user.permissions,
-          access_level: access_level.unwrap_or(i32::MAX),
+          access_level: access_level.unwrap_or(0).max(0),
         })
         .collect(),
     )
@@ -302,31 +302,26 @@ RETURN $users",
       .query(
         "LET $user = SELECT * FROM user WHERE uuid = $uuid;
 LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-RETURN $groups.map(|$g| $g.access_level).min()",
+RETURN $groups.map(|$g| $g.access_level).max()",
       )
       .bind(("uuid", uuid.to_string()))
       .await?;
 
-    Ok(res.take::<Option<i32>>(2)?.unwrap_or(i32::MAX))
+    Ok(res.take::<Option<i32>>(2)?.unwrap_or(0).max(0))
   }
 
-  pub async fn add_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
+  pub async fn edit_user(
+    &self,
+    user: Thing,
+    permissions: Vec<Permission>,
+    name: String,
+  ) -> Result<(), Error> {
     self
       .db
-      .query("UPDATE user SET permissions += $permission WHERE uuid = $uuid AND permissions CONTAINSNOT $permission")
-      .bind(("uuid", uuid.to_string()))
-      .bind(("permission", permission))
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn remove_permission(&self, uuid: Uuid, permission: Permission) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET permissions -= $permission WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .bind(("permission", permission))
+      .query("UPDATE $user SET permissions = $permissions, name = $name")
+      .bind(("permissions", permissions))
+      .bind(("user", user))
+      .bind(("name", name))
       .await?;
 
     Ok(())
@@ -369,6 +364,21 @@ RETURN $permissions.flatten().distinct()",
 
   pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, Error> {
     let mut res = self.db.query("SELECT name, uuid FROM user").await?;
+
+    Ok(res.take(0).unwrap_or_default())
+  }
+
+  pub async fn get_users_by_info(&self, users: Vec<BasicUserInfo>) -> Result<Vec<Thing>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "$users.map(|$user| {
+    LET $found = SELECT id FROM user WHERE uuid = $user.uuid;
+    RETURN $found[0].id;
+})",
+      )
+      .bind(("users", users))
+      .await?;
 
     Ok(res.take(0).unwrap_or_default())
   }

@@ -9,7 +9,7 @@ use crate::{
   error::{Error, Result},
 };
 
-#[derive(Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Permission {
   //user page
   UserList,
@@ -48,7 +48,7 @@ impl Permission {
   ) -> Result<()> {
     let access_level_user = db.tables().user().access_level(user).await?;
 
-    if access_level > access_level_user {
+    if access_level < access_level_user {
       Ok(())
     } else {
       Err(Error::Unauthorized)

@@ -9,6 +9,7 @@
     description?: string;
     confirm: string;
     confirmVariant?: ButtonVariant;
+    open?: boolean;
     trigger?: {
       text?: string;
       variant?: ButtonVariant;
@@ -28,6 +29,7 @@
     description = "",
     confirm,
     confirmVariant = "default",
+    open = $bindable(false),
     trigger,
     onopen = () => true,
     onsubmit,
@@ -37,7 +39,6 @@
 
   let error = $state("");
   let isLoading = $state(false);
-  let open = $state(false);
 
   export const openFn = async () => {
     isLoading = true;
@@ -84,7 +85,7 @@
       <Dialog.Title>{title}</Dialog.Title>
       <Dialog.Description>{description}</Dialog.Description>
     </Dialog.Header>
-    <form onsubmit={submit} class="grid gap-2">
+    <form onsubmit={submit} class="grid gap-3">
       {@render children?.()}
       {#if error}
         <span class="text-destructive truncate text-sm">{error}</span>

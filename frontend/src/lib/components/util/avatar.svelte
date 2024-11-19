@@ -5,6 +5,6 @@
 </script>
 
 <Avatar.Root class={className}>
-  <Avatar.Image src={`data:image/webp;base64, ${src}`} />
+  <Avatar.Image src={`data:image/webp;base64, ${src}`} alt="Avatar" />
   <Avatar.Fallback>?</Avatar.Fallback>
 </Avatar.Root>

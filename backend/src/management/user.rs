@@ -1,3 +1,5 @@
+use std::{collections::HashSet, str::FromStr};
+
 use argon2::password_hash::SaltString;
 use rand::rngs::OsRng;
 use rocket::{get, post, serde::json::Json, Route, State};
@@ -36,34 +38,32 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<UserI
 
 #[derive(Deserialize)]
 struct UserEdit {
-  user: Uuid,
-  add_permission: Option<Permission>,
-  remove_permission: Option<Permission>,
+  user: String,
+  name: String,
+  permissions: Vec<Permission>,
 }
 
 #[post("/edit", data = "<req>")]
 async fn edit(req: Json<UserEdit>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<()> {
+  let user = Uuid::from_str(&req.user)?;
   Permission::check(db, auth.sub, Permission::UserEdit).await?;
-  Permission::is_privileged_enough(db, auth.sub, req.user).await?;
+  Permission::is_privileged_enough(db, auth.sub, user).await?;
 
   let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
+  let user = db.tables().user().get_user_by_uuid(user).await?;
 
-  if let Some(add) = req.0.add_permission {
-    if !editor_permissions.contains(&add) {
-      return Err(Error::Unauthorized);
-    }
+  let new_perm: HashSet<_> = req.permissions.clone().into_iter().collect();
+  let old_perm: HashSet<_> = user.permissions.into_iter().collect();
+  let diff: Vec<_> = new_perm.symmetric_difference(&old_perm).cloned().collect();
 
-    db.tables().user().add_permission(req.0.user, add).await?;
-  } else if let Some(remove) = req.0.remove_permission {
-    if !editor_permissions.contains(&remove) {
-      return Err(Error::Unauthorized);
-    }
-
-    db.tables()
-      .user()
-      .remove_permission(req.0.user, remove)
-      .await?;
+  if diff.iter().any(|p| !editor_permissions.contains(p)) {
+    return Err(Error::Unauthorized);
   }
+
+  db.tables()
+    .user()
+    .edit_user(user.id, req.0.permissions, req.0.name)
+    .await?;
 
   Ok(())
 }

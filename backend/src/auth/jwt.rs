@@ -8,9 +8,10 @@ use jsonwebtoken::{
 };
 use rocket::{
   async_trait,
-  http::{Cookie, SameSite},
+  http::{Cookie, SameSite, Status},
   request::{FromRequest, Outcome, Request},
   response::Responder,
+  serde::json,
   tokio::sync::Mutex,
   Response,
 };
@@ -29,8 +30,8 @@ pub struct JwtClaims<T: JwtType> {
 }
 
 #[derive(Default)]
-pub struct TokenRes {
-  pub body: Vec<u8>,
+pub struct TokenRes<T: Serialize = ()> {
+  pub body: T,
 }
 
 pub trait JwtType: Default {
@@ -186,12 +187,18 @@ where
 }
 
 #[async_trait]
-impl<'r, 'o: 'r> Responder<'r, 'o> for TokenRes {
+impl<'r, 'o: 'r, T: Serialize> Responder<'r, 'o> for TokenRes<T> {
   fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+    let body = json::to_string(&self.body).map_err(|_| Status::InternalServerError)?;
+
     let response = Response::build()
       .header(rocket::http::Header::new("Cache-Control", "no-store"))
       .header(rocket::http::Header::new("Pragma", "no-cache"))
-      .sized_body(self.body.len(), Cursor::new(self.body))
+      .header(rocket::http::Header::new(
+        "Content-Type",
+        "application/json",
+      ))
+      .sized_body(body.len(), Cursor::new(body))
       .finalize();
     Ok(response)
   }
