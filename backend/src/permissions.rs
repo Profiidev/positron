@@ -22,6 +22,12 @@ pub enum Permission {
   GroupEdit,
   GroupCreate,
   GroupDelete,
+
+  //OAuth Client
+  OAuthClientCreate,
+  OAuthClientDelete,
+  OAuthClientList,
+  OAuthClientEdit,
 }
 
 impl Permission {

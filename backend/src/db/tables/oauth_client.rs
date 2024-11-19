@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
+use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::oauth::scope::Scope;
+
+use super::{group::BasicGroupInfo, user::BasicUserInfo};
 
 #[derive(Serialize)]
 pub struct OAuthClientCreate {
@@ -30,6 +33,17 @@ pub struct OAuthClient {
   pub salt: String,
   pub group_access: Vec<Thing>,
   pub user_access: Vec<Thing>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OAuthClientInfo {
+  pub name: String,
+  pub client_id: String,
+  pub redirect_uri: Url,
+  pub additional_redirect_uris: Vec<Url>,
+  pub default_scope: Scope,
+  pub group_access: Vec<BasicGroupInfo>,
+  pub user_access: Vec<BasicUserInfo>,
 }
 
 pub struct OauthClientTable<'db> {
@@ -76,12 +90,21 @@ impl<'db> OauthClientTable<'db> {
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
-  #[allow(dead_code)]
   pub async fn create_client(&self, client: OAuthClientCreate) -> Result<(), Error> {
     self
       .db
       .query("CREATE oauth_client CONTENT $oauth_client")
       .bind(("oauth_client", client))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn remove_client(&self, uuid: Uuid) -> Result<(), Error> {
+    self
+      .db
+      .query("DELETE oauth_client WHERE uuid = $uuid")
+      .bind(("uuid", uuid.to_string()))
       .await?;
 
     Ok(())
@@ -114,6 +137,68 @@ impl<'db> OauthClientTable<'db> {
       .query("UPDATE oauth_client SET group_access -= $group")
       .bind(("group", group))
       .await?;
+
+    Ok(())
+  }
+
+  pub async fn list_client(&self) -> Result<Vec<OAuthClientInfo>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $clients = SELECT * FROM oauth_client;
+$clients.map(|$client| {
+    RETURN $client.user_access.map(|$u| {
+        name: $u.name,
+        uuid: $u.uuid
+    });
+});
+$clients.map(|$client| {
+    RETURN $client.group_access.map(|$u| {
+        name: $u.name,
+        uuid: $u.uuid
+    });
+});
+RETURN $clients;",
+      )
+      .await?;
+
+    let clients = res.take::<Vec<OAuthClient>>(3).unwrap_or_default();
+    let groups = res.take::<Vec<Vec<BasicGroupInfo>>>(2).unwrap_or_default();
+    let users = res.take::<Vec<Vec<BasicUserInfo>>>(1).unwrap_or_default();
+
+    Ok(
+      clients
+        .into_iter()
+        .zip(groups)
+        .zip(users)
+        .map(|((client, group_access), user_access)| OAuthClientInfo {
+          name: client.name,
+          client_id: client.client_id,
+          redirect_uri: client.redirect_uri,
+          additional_redirect_uris: client.additional_redirect_uris,
+          default_scope: client.default_scope,
+          group_access,
+          user_access,
+        })
+        .collect(),
+    )
+  }
+
+  pub async fn edit_client(
+    &self,
+    client: OAuthClientInfo,
+    id: Thing,
+    users_mapped: Vec<Thing>,
+    groups_mapped: Vec<Thing>,
+  ) -> Result<(), Error> {
+    self
+    .db
+    .query("UPDATE $id SET name = $name, user_access = $users_mapped, group_access = $groups_access, default_scope = $default_scope, redirect_uri = $redirect_uri, additional_redirect_uri = $additional_redirect_uri")
+    .bind(client)
+    .bind(("id", id))
+    .bind(("users_mapped", users_mapped))
+    .bind(("groups_mapped", groups_mapped))
+    .await?;
 
     Ok(())
   }

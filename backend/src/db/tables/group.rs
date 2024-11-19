@@ -35,6 +35,12 @@ pub struct GroupInfo {
   pub users: Vec<BasicUserInfo>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BasicGroupInfo {
+  pub name: String,
+  pub uuid: String,
+}
+
 pub struct GroupTable<'db> {
   db: &'db Surreal<Client>,
 }
@@ -173,5 +179,20 @@ RETURN $groups ",
       .await?;
 
     Ok(())
+  }
+
+  pub async fn get_groups_by_info(&self, groups: Vec<BasicGroupInfo>) -> Result<Vec<Thing>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "$groups.map(|$group| {
+    LET $found = SELECT id FROM group WHERE uuid = $group.uuid;
+    RETURN $found[0].id;
+})",
+      )
+      .bind(("groups", groups))
+      .await?;
+
+    Ok(res.take(0).unwrap_or_default())
   }
 }
