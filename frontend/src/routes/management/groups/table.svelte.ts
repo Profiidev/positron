@@ -33,11 +33,11 @@ export const columns = (
     cell: ({ row }) => {
       return renderComponent(Actions, {
         edit_disabled:
-          access_level <= row.getValue<number>("access_level") &&
-          allowed_permissions.includes(Permission.GroupEdit),
+          access_level <= row.getValue<number>("access_level") ||
+          !allowed_permissions.includes(Permission.GroupEdit),
         delete_disabled:
-          access_level <= row.getValue<number>("access_level") &&
-          allowed_permissions.includes(Permission.GroupDelete),
+          access_level <= row.getValue<number>("access_level") ||
+          !allowed_permissions.includes(Permission.GroupDelete),
         edit: () => edit(row.getValue("uuid")),
         remove: () => remove(row.getValue("uuid")),
       });

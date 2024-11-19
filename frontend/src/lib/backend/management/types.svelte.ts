@@ -53,6 +53,12 @@ export enum Permission {
   GroupEdit = "GroupEdit",
   GroupCreate = "GroupCreate",
   GroupDelete = "GroupDelete",
+
+  //oauth client page
+  OAuthClientCreate = "OAuthClientCreate",
+  OAuthClientDelete = "OAuthClientDelete",
+  OAuthClientList = "OAuthClientList",
+  OAuthClientEdit = "OAuthClientEdit",
 }
 
 enum PermissionGroups {

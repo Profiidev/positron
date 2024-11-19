@@ -195,4 +195,10 @@ RETURN $groups ",
 
     Ok(res.take(0).unwrap_or_default())
   }
+
+  pub async fn basic_group_list(&self) -> Result<Vec<BasicGroupInfo>, Error> {
+    let mut res = self.db.query("SELECT name, uuid FROM group").await?;
+
+    Ok(res.take(0).unwrap_or_default())
+  }
 }

@@ -10,7 +10,11 @@ use webauthn_rs::prelude::Url;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::oauth_client::{OAuthClientCreate, OAuthClientInfo},
+    tables::{
+      group::BasicGroupInfo,
+      oauth_client::{OAuthClientCreate, OAuthClientInfo},
+      user::BasicUserInfo,
+    },
     DB,
   },
   error::{Error, Result},
@@ -22,10 +26,18 @@ use crate::{
 use super::state::{ClientCreateStart, ClientState};
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![list, edit, start_create, create, delete]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth_client", base)))
-    .collect()
+  rocket::routes![
+    list,
+    group_list,
+    user_list,
+    edit,
+    start_create,
+    create,
+    delete
+  ]
+  .into_iter()
+  .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth_client", base)))
+  .collect()
 }
 
 #[get("/list")]
@@ -33,6 +45,22 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<OAuth
   Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
 
   Ok(Json(db.tables().oauth_client().list_client().await?))
+}
+
+#[get("/group_list")]
+async fn group_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<BasicGroupInfo>>> {
+  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+  let group = db.tables().groups().basic_group_list().await?;
+
+  Ok(Json(group))
+}
+
+#[get("/user_list")]
+async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<BasicUserInfo>>> {
+  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+  let user = db.tables().user().basic_user_list().await?;
+
+  Ok(Json(user))
 }
 
 #[post("/edit", data = "<req>")]

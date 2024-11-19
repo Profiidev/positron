@@ -158,7 +158,7 @@
 >
   {#if group && userInfo}
     <Label for="name">Name</Label>
-    <Input id="name" placeholder="name" bind:value={group.name} />
+    <Input id="name" placeholder="Name" bind:value={group.name} />
     <Label for="access_level">Access Level</Label>
     <Input
       id="access_level"

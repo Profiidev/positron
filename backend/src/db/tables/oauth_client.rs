@@ -103,7 +103,7 @@ impl<'db> OauthClientTable<'db> {
   pub async fn remove_client(&self, uuid: Uuid) -> Result<(), Error> {
     self
       .db
-      .query("DELETE oauth_client WHERE uuid = $uuid")
+      .query("DELETE oauth_client WHERE client_id = $uuid")
       .bind(("uuid", uuid.to_string()))
       .await?;
 
@@ -193,7 +193,7 @@ RETURN $clients;",
   ) -> Result<(), Error> {
     self
     .db
-    .query("UPDATE $id SET name = $name, user_access = $users_mapped, group_access = $groups_access, default_scope = $default_scope, redirect_uri = $redirect_uri, additional_redirect_uri = $additional_redirect_uri")
+    .query("UPDATE $id SET name = $name, user_access = $users_mapped, group_access = $groups_mapped, default_scope = $default_scope, redirect_uri = $redirect_uri, additional_redirect_uris = $additional_redirect_uris")
     .bind(client)
     .bind(("id", id))
     .bind(("users_mapped", users_mapped))

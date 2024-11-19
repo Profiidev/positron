@@ -1,6 +1,11 @@
 import { ContentType, ResponseType } from "../types.svelte";
 import { get, post } from "../util.svelte";
-import type { OAuthClientCreate, OAuthClientInfo } from "./types.svelte";
+import type {
+  GroupInfo,
+  OAuthClientCreate,
+  OAuthClientInfo,
+  UserInfo,
+} from "./types.svelte";
 
 const isCreate = (object: any): object is OAuthClientCreate => {
   return typeof object === "object" && object !== null && "secret" in object;
@@ -9,6 +14,28 @@ const isCreate = (object: any): object is OAuthClientCreate => {
 export const list_clients = async () => {
   let ret = await get<OAuthClientInfo[]>(
     "/management/oauth_client/list",
+    ResponseType.Json,
+  );
+
+  if (Array.isArray(ret)) {
+    return ret;
+  }
+};
+
+export const list_clients_group = async () => {
+  let ret = await get<GroupInfo[]>(
+    "/management/oauth_client/group_list",
+    ResponseType.Json,
+  );
+
+  if (Array.isArray(ret)) {
+    return ret;
+  }
+};
+
+export const list_clients_user = async () => {
+  let ret = await get<UserInfo[]>(
+    "/management/oauth_client/user_list",
     ResponseType.Json,
   );
 

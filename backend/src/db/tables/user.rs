@@ -251,7 +251,7 @@ impl<'db> UserTable<'db> {
     let mut res = self
       .db
       .query(
-        "LET $user = SELECT * FROM user WHERE permissions CONTAINS $permission AND uuid = $uuid;
+        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
 LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
 LET $permissions = $groups.map(|$g| $g.permissions).push($user[0].permissions);
 RETURN $permissions.flatten() CONTAINS $permission",
