@@ -139,8 +139,6 @@
       toast.success("Group deleted");
     }
   };
-
-  $inspect(group?.users).with(console.log);
 </script>
 
 <FormDialog

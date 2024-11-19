@@ -34,10 +34,10 @@ export const columns = (
       return renderComponent(Actions, {
         edit_disabled:
           access_level <= row.getValue<number>("access_level") &&
-          allowed_permissions.includes(Permission.UserEdit),
+          allowed_permissions.includes(Permission.GroupEdit),
         delete_disabled:
           access_level <= row.getValue<number>("access_level") &&
-          allowed_permissions.includes(Permission.UserDelete),
+          allowed_permissions.includes(Permission.GroupDelete),
         edit: () => edit(row.getValue("uuid")),
         remove: () => remove(row.getValue("uuid")),
       });
