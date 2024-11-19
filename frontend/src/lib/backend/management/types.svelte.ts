@@ -11,7 +11,7 @@ export interface User {
 export interface Group {
   uuid: string;
   name: string;
-  permission: Permission[];
+  permissions: Permission[];
   access_level: number;
   users: UserInfo[];
 }

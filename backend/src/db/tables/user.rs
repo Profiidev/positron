@@ -45,7 +45,7 @@ pub struct UserInfo {
   pub access_level: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BasicUserInfo {
   name: String,
   uuid: String,
@@ -302,7 +302,7 @@ RETURN $users",
       .query(
         "LET $user = SELECT * FROM user WHERE uuid = $uuid;
 LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-RETURN $groups.map(|$g| $g.access_level).min()",
+RETURN $groups.map(|$g| $g.access_level).max()",
       )
       .bind(("uuid", uuid.to_string()))
       .await?;
@@ -364,6 +364,21 @@ RETURN $permissions.flatten().distinct()",
 
   pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, Error> {
     let mut res = self.db.query("SELECT name, uuid FROM user").await?;
+
+    Ok(res.take(0).unwrap_or_default())
+  }
+
+  pub async fn get_users_by_info(&self, users: Vec<BasicUserInfo>) -> Result<Vec<Thing>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "$users.map(|$user| {
+    LET $found = SELECT id FROM user WHERE uuid = $user.uuid;
+    RETURN $found[0].id;
+})",
+      )
+      .bind(("users", users))
+      .await?;
 
     Ok(res.take(0).unwrap_or_default())
   }
