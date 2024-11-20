@@ -3,6 +3,7 @@
   import {
     Permission,
     type GroupInfo,
+    type OAuthClientCreate,
     type OAuthClientInfo,
     type UserInfo,
   } from "$lib/backend/management/types.svelte";
@@ -26,6 +27,9 @@
   import Multiselect from "$lib/components/table/multiselect.svelte";
   import Table from "$lib/components/table/table.svelte";
   import { isUrl } from "$lib/util/other.svelte";
+  import { Separator } from "$lib/components/ui/separator";
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
+  import { ScrollArea } from "$lib/components/ui/scroll-area";
 
   let isLoading = $state(false);
   let clients: OAuthClientInfo[] | undefined = $state();
@@ -44,6 +48,36 @@
   let additional_redirect_uri = $state("");
   let additional_redirect_uri_edit = $state("");
   let scope = $state("");
+  let startCreate: OAuthClientCreate | undefined = $state();
+
+  let clientInfo = $derived([
+    {
+      name: "Client ID",
+      value: startCreate?.client_id,
+    },
+    {
+      name: "Client Secret <span class='text-destructive ml-14'>WILL NOT BE VISIBLE AGAIN</span>",
+      value: startCreate?.secret,
+    },
+  ]);
+  let backendURLs = $derived([
+    {
+      name: "Authorization URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/authorize`,
+    },
+    {
+      name: "Token URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/token`,
+    },
+    {
+      name: "Userinfo URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/user`,
+    },
+    {
+      name: "Logout URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id}`,
+    },
+  ]);
 
   const filterFn = (
     row: Row<OAuthClientInfo>,
@@ -88,6 +122,7 @@
     let ret = await start_create_client();
 
     if (ret) {
+      startCreate = ret;
       return true;
     } else {
       toast.error("Error while starting client creation");
@@ -194,47 +229,70 @@
   confirm="Confirm"
   onsubmit={editClientConfirm}
   bind:open={editOpen}
+  class="md:max-w-[750px]"
 >
   {#if client && userInfo}
-    <Label for="name">Name</Label>
-    <Input id="name" placeholder="Name" bind:value={client.name} />
-    <Label for="scope">Scope</Label>
-    <Input id="scope" placeholder="Scope" bind:value={client.default_scope} />
-    <Label for="uri">Default Redirect URI</Label>
-    <Input
-      id="uri"
-      placeholder="Redirect URI"
-      required
-      bind:value={client.redirect_uri}
-    />
-    <Label for="add_uri">Additional Redirect URIs (space separated)</Label>
-    <Input
-      id="add_uri"
-      placeholder="Additional Redirect URIs"
-      bind:value={additional_redirect_uri_edit}
-    />
-    <Label>Groups</Label>
-    <Multiselect
-      label="Groups"
-      data={groups?.map((g) => ({
-        label: g.name,
-        value: g,
-      })) || []}
-      selected={client.group_access}
-      display={(u) => u.name}
-      compare={(a, b) => a.uuid === b.uuid}
-    />
-    <Label>Users</Label>
-    <Multiselect
-      label="Users"
-      data={users?.map((u) => ({
-        label: u.name,
-        value: u,
-      })) || []}
-      selected={client.user_access}
-      display={(u) => u.name}
-      compare={(a, b) => a.uuid === b.uuid}
-    />
+    <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
+      <div class="space-y-1 grid gap-1">
+        <Label for="id">Client ID</Label>
+        <Input id="id" class="text-nowrap" value={client.client_id} readonly />
+        {#each backendURLs as info}
+          <Label for={info.name}>{info.name}</Label>
+          <Input
+            id={info.name}
+            class="text-nowrap"
+            value={info.value}
+            readonly
+          />
+        {/each}
+      </div>
+      <Separator orientation="vertical" class="mx-[30px]" />
+      <div class="h-full space-y-1 grid gap-1">
+        <Label for="name">Name</Label>
+        <Input id="name" placeholder="Name" bind:value={client.name} />
+        <Label for="scope">Scope</Label>
+        <Input
+          id="scope"
+          placeholder="Scope"
+          bind:value={client.default_scope}
+        />
+        <Label for="uri">Default Redirect URI</Label>
+        <Input
+          id="uri"
+          placeholder="Redirect URI"
+          required
+          bind:value={client.redirect_uri}
+        />
+        <Label for="add_uri">Additional Redirect URIs (space separated)</Label>
+        <Input
+          id="add_uri"
+          placeholder="Additional Redirect URIs"
+          bind:value={additional_redirect_uri_edit}
+        />
+        <Label>Groups</Label>
+        <Multiselect
+          label="Groups"
+          data={groups?.map((g) => ({
+            label: g.name,
+            value: g,
+          })) || []}
+          selected={client.group_access}
+          display={(u) => u.name}
+          compare={(a, b) => a.uuid === b.uuid}
+        />
+        <Label>Users</Label>
+        <Multiselect
+          label="Users"
+          data={users?.map((u) => ({
+            label: u.name,
+            value: u,
+          })) || []}
+          selected={client.user_access}
+          display={(u) => u.name}
+          compare={(a, b) => a.uuid === b.uuid}
+        />
+      </div>
+    </div>
   {/if}
 </FormDialog>
 <div class="space-y-3 m-4">
@@ -258,36 +316,64 @@
         }}
         onsubmit={createClient}
         onopen={startCreateClient}
+        class="md:max-w-[750px]"
       >
-        <Label for="name">Name</Label>
-        <Input
-          id="name"
-          placeholder="Name"
-          required
-          disabled={isLoading}
-          bind:value={name}
-        />
-        <Label for="scope">Scope</Label>
-        <Input
-          id="scope"
-          placeholder="Scope"
-          required
-          disabled={isLoading}
-          bind:value={scope}
-        />
-        <Label for="uri">Default Redirect URI</Label>
-        <Input
-          id="uri"
-          placeholder="Redirect URI"
-          required
-          bind:value={redirect_uri}
-        />
-        <Label for="add_uri">Additional Redirect URIs (space separated)</Label>
-        <Input
-          id="add_uri"
-          placeholder="Additional Redirect URIs"
-          bind:value={additional_redirect_uri}
-        />
+        <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
+          <div class="space-y-1">
+            {#each backendURLs as info}
+              <Label for={info.name}>{info.name}</Label>
+              <Input
+                id={info.name}
+                class="text-nowrap"
+                value={info.value}
+                readonly
+              />
+            {/each}
+          </div>
+          <Separator orientation="vertical" class="mx-[30px]" />
+          <div class="h-full space-y-1">
+            {#each clientInfo as info}
+              <Label for={info.name}>{@html info.name}</Label>
+              <Input
+                id={info.name}
+                class="text-nowrap"
+                value={info.value}
+                readonly
+              />
+            {/each}
+            <Label for="name">Name</Label>
+            <Input
+              id="name"
+              placeholder="Name"
+              required
+              disabled={isLoading}
+              bind:value={name}
+            />
+            <Label for="scope">Scope</Label>
+            <Input
+              id="scope"
+              placeholder="Scope"
+              required
+              disabled={isLoading}
+              bind:value={scope}
+            />
+            <Label for="uri">Default Redirect URI</Label>
+            <Input
+              id="uri"
+              placeholder="Redirect URI"
+              required
+              bind:value={redirect_uri}
+            />
+            <Label for="add_uri"
+              >Additional Redirect URIs (space separated)</Label
+            >
+            <Input
+              id="add_uri"
+              placeholder="Additional Redirect URIs"
+              bind:value={additional_redirect_uri}
+            />
+          </div>
+        </div>
       </FormDialog>
     {/if}
   </Table>

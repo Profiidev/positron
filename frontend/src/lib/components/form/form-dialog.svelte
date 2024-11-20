@@ -10,6 +10,7 @@
     confirm: string;
     confirmVariant?: ButtonVariant;
     open?: boolean;
+    class?: string;
     trigger?: {
       text?: string;
       variant?: ButtonVariant;
@@ -30,6 +31,7 @@
     confirm,
     confirmVariant = "default",
     open = $bindable(false),
+    class: className,
     trigger,
     onopen = () => true,
     onsubmit,
@@ -80,7 +82,7 @@
   </Button>
 {/if}
 <Dialog.Root bind:open>
-  <Dialog.Content>
+  <Dialog.Content class={className}>
     <Dialog.Header>
       <Dialog.Title>{title}</Dialog.Title>
       <Dialog.Description>{description}</Dialog.Description>

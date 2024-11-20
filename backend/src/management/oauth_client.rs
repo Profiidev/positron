@@ -103,7 +103,7 @@ async fn start_create(
   let mut lock = state.create.lock().await;
 
   let mut rng = rand::thread_rng();
-  let secret: String = (0..50).map(|_| rng.sample(Alphanumeric) as char).collect();
+  let secret: String = (0..32).map(|_| rng.sample(Alphanumeric) as char).collect();
   let client_id = Uuid::new_v4();
 
   lock.insert(

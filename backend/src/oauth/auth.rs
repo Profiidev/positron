@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::Utc;
-use rocket::{get, post, response::Redirect, Route, State};
+use rocket::{form::Form, get, post, response::Redirect, Route, State};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
@@ -14,11 +14,28 @@ use crate::{
 use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq};
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize_get, authorize_post]
+  rocket::routes![authorize_get, authorize_confirm, authorize_post]
 }
 
 #[get("/authorize?<req..>")]
 async fn authorize_get(
+  req: AuthReq,
+  state: &State<AuthorizeState>,
+  db: &State<DB>,
+) -> Result<Redirect> {
+  authorize_start(req, state, db).await
+}
+
+#[post("/authorize", data = "<req>")]
+async fn authorize_post(
+  req: Form<AuthReq>,
+  state: &State<AuthorizeState>,
+  db: &State<DB>,
+) -> Result<Redirect> {
+  authorize_start(req.into_inner(), state, db).await
+}
+
+async fn authorize_start(
   req: AuthReq,
   state: &State<AuthorizeState>,
   db: &State<DB>,
@@ -46,8 +63,8 @@ async fn authorize_get(
   ))
 }
 
-#[post("/authorize?<code>&<allow>")]
-async fn authorize_post(
+#[post("/authorize_confirm?<code>&<allow>")]
+async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
   state: &State<AuthorizeState>,
   db: &State<DB>,
