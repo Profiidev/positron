@@ -14,7 +14,7 @@ use crate::{
 use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq};
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize_get, authorize_confirm, authorize_post]
+  rocket::routes![authorize_get, authorize_confirm, authorize_post, logout]
 }
 
 #[get("/authorize?<req..>")]
@@ -163,4 +163,29 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
   }
 
   None
+}
+
+#[get("/logout/<client_id>")]
+async fn logout(
+  db: &State<DB>,
+  client_id: String,
+  state: &State<AuthorizeState>,
+) -> Result<Redirect> {
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client_by_id(client_id)
+    .await?;
+
+  Ok(Redirect::found(
+    Url::parse_with_params(
+      &format!("{}/oauth/logout", state.frontend_url),
+      &[
+        ("name", client.name),
+        ("url", client.redirect_uri.to_string()),
+      ],
+    )
+    .unwrap()
+    .to_string(),
+  ))
 }

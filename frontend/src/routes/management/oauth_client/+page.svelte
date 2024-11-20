@@ -29,7 +29,6 @@
   import { isUrl } from "$lib/util/other.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import { PUBLIC_BACKEND_URL } from "$env/static/public";
-  import { ScrollArea } from "$lib/components/ui/scroll-area";
 
   let isLoading = $state(false);
   let clients: OAuthClientInfo[] | undefined = $state();
@@ -75,7 +74,7 @@
     },
     {
       name: "Logout URL",
-      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id}`,
+      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id || client?.client_id || ""}`,
     },
   ]);
 
