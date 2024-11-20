@@ -21,6 +21,26 @@ export interface UserInfo {
   uuid: string;
 }
 
+export interface GroupInfo {
+  name: string;
+  uuid: string;
+}
+
+export interface OAuthClientInfo {
+  name: string;
+  client_id: string;
+  redirect_uri: string;
+  additional_redirect_uris: string[];
+  default_scope: string;
+  group_access: GroupInfo[];
+  user_access: UserInfo[];
+}
+
+export interface OAuthClientCreate {
+  secret: string;
+  client_id: string;
+}
+
 export enum Permission {
   //user page
   UserList = "UserList",
@@ -33,6 +53,12 @@ export enum Permission {
   GroupEdit = "GroupEdit",
   GroupCreate = "GroupCreate",
   GroupDelete = "GroupDelete",
+
+  //oauth client page
+  OAuthClientCreate = "OAuthClientCreate",
+  OAuthClientDelete = "OAuthClientDelete",
+  OAuthClientList = "OAuthClientList",
+  OAuthClientEdit = "OAuthClientEdit",
 }
 
 enum PermissionGroups {

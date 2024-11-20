@@ -13,3 +13,8 @@ export interface OAuthParams {
   code: string;
   name: string;
 }
+
+export interface OAuthLogout {
+  name: string;
+  url: string;
+}

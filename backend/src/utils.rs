@@ -62,16 +62,21 @@ pub async fn jwt_from_request<'r, C: DeserializeOwned, T: JwtType>(
 pub fn hash_password(state: &State<PasswordState>, salt: &str, password: &str) -> Result<String> {
   let bytes = BASE64_STANDARD.decode(password)?;
   let pw_bytes = state.decrypt(&bytes)?;
-  let password = String::from_utf8_lossy(&pw_bytes).to_string();
+
+  hash_secret(&state.pepper, salt, &pw_bytes)
+}
+
+pub fn hash_secret(pepper: &[u8], salt: &str, passphrase: &[u8]) -> Result<String> {
+  let password = String::from_utf8_lossy(passphrase).to_string();
 
   let mut salt = BASE64_STANDARD_NO_PAD.decode(salt)?;
-  salt.extend_from_slice(&state.pepper);
+  salt.extend_from_slice(pepper);
   let salt_string = SaltString::encode_b64(&salt)?;
 
   let argon2 = Argon2::default();
-  let hash = argon2
-    .hash_password(password.as_bytes(), salt_string.as_salt())?
-    .to_string();
-
-  Ok(hash)
+  Ok(
+    argon2
+      .hash_password(password.as_bytes(), salt_string.as_salt())?
+      .to_string(),
+  )
 }

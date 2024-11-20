@@ -1,6 +1,5 @@
 use std::io::Cursor;
 
-use argon2::{password_hash::SaltString, Argon2, PasswordHasher};
 use base64::prelude::*;
 use rocket::{
   async_trait,
@@ -13,7 +12,7 @@ use rocket::{
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{db::DB, error::Result};
+use crate::{db::DB, utils::hash_secret};
 
 use super::state::ClientState;
 
@@ -107,19 +106,4 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for Error<'r> {
 
     Ok(response)
   }
-}
-
-fn hash_secret(pepper: &[u8], salt: &str, passphrase: &[u8]) -> Result<String> {
-  let password = String::from_utf8_lossy(passphrase).to_string();
-
-  let mut salt = BASE64_STANDARD_NO_PAD.decode(salt)?;
-  salt.extend_from_slice(pepper);
-  let salt_string = SaltString::encode_b64(&salt)?;
-
-  let argon2 = Argon2::default();
-  Ok(
-    argon2
-      .hash_password(password.as_bytes(), salt_string.as_salt())?
-      .to_string(),
-  )
 }

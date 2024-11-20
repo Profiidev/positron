@@ -13,7 +13,7 @@ export const logout = async () => {
 
 export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
   let res = await post<string>(
-    `/oauth/authorize?code=${params.code}&allow=${allow}`,
+    `/oauth/authorize_confirm?code=${params.code}&allow=${allow}`,
     ResponseType.Text,
     ContentType.UrlFrom,
     undefined,

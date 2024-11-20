@@ -12,7 +12,7 @@
 
   let { children }: Props = $props();
 
-  const noLayout = ["/login", "/oauth"];
+  const noLayout = ["/login", "/oauth", "/oauth/logout"];
 </script>
 
 <ModeWatcher />

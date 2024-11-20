@@ -35,7 +35,6 @@ export const passkey_register = async (name: string) => {
     ResponseType.Json,
   );
 
-  console.log(ret);
   if (!isKeyCredCreate(ret)) {
     return ret;
   }

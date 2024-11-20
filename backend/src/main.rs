@@ -56,5 +56,6 @@ fn routes() -> Vec<Route> {
 fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = auth::state(server);
   let server = oauth::state(server);
+  let server = management::state(server);
   email::state(server)
 }

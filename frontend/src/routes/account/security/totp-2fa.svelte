@@ -60,6 +60,7 @@
     }
 
     totpQr = "";
+    totpConfirm = "";
 
     const fetch = async () => {
       let code = await totp_get_setup_code();

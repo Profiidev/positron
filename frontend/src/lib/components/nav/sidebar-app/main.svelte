@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as Collapsible from "$lib/components/ui/collapsible";
-  import { ChevronRight, Users } from "lucide-svelte";
+  import { ChevronRight, KeyRound, Users } from "lucide-svelte";
   import { page } from "$app/stores";
   import { Permission } from "$lib/backend/management/types.svelte";
   import { getUserInfo } from "$lib/backend/account/info.svelte";
@@ -24,6 +24,18 @@
               title: "Groups",
               url: "/management/groups",
               permission: Permission.GroupList,
+            },
+          ],
+        },
+        {
+          title: "Auth Provider",
+          icon: KeyRound,
+          isActive: true,
+          items: [
+            {
+              title: "OAuth / OpenID Clients",
+              url: "/management/oauth_client",
+              permission: Permission.OAuthClientList,
             },
           ],
         },
