@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use rocket::futures::lock::Mutex;
 use rsa::{
-  pkcs1::EncodeRsaPublicKey, pkcs8::LineEnding, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
+  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
+  pkcs8::LineEnding,
+  Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
 use surrealdb::Uuid;
 use totp_rs::TOTP;
@@ -64,8 +66,22 @@ impl PasswordState {
 
 impl Default for PasswordState {
   fn default() -> Self {
-    let mut rng = rand::thread_rng();
-    let key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
+    let key = if let Ok(key) = std::fs::read("./keys/password.pem") {
+      RsaPrivateKey::from_pkcs1_pem(&String::from_utf8(key).expect("Failed parsing private key"))
+        .expect("Failed to load password key")
+    } else {
+      let mut rng = rand::thread_rng();
+      let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
+      let key = private_key
+        .to_pkcs1_pem(LineEnding::CRLF)
+        .expect("Failed to export private key")
+        .to_string();
+
+      std::fs::create_dir_all("./keys").expect("Failed to create folder");
+      std::fs::write("./keys/password.pem", key.as_bytes()).expect("Failed to save public key");
+      private_key
+    };
+
     let pub_key = RsaPublicKey::from(&key)
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export Rsa Public Key");

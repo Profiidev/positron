@@ -26,7 +26,7 @@ services:
       - ./frontend/src-tauri:/app/frontend/src-tauri
     networks:
       - nginx
-    command: cargo watch -x run
+    command: cargo watch -x run -i keys
 
   nginx:
     image: nginx:latest

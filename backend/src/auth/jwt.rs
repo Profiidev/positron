@@ -15,6 +15,11 @@ use rocket::{
   tokio::sync::Mutex,
   Response,
 };
+use rsa::{
+  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
+  pkcs8::LineEnding,
+  RsaPrivateKey, RsaPublicKey,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -94,12 +99,16 @@ pub struct JwtState {
   encoding_key: EncodingKey,
   decoding_key: DecodingKey,
   validation: Validation,
-  iss: String,
+  pub iss: String,
   exp: i64,
   short_exp: i64,
 }
 
 impl JwtState {
+  pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
+    encode(&self.header, claims, &self.encoding_key)
+  }
+
   pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>, Error> {
     let duration = T::duration(self.exp, self.short_exp);
 
@@ -145,7 +154,6 @@ impl JwtState {
 
 impl Default for JwtState {
   fn default() -> Self {
-    let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
     let exp = std::env::var("AUTH_JWT_EXPIRATION")
       .expect("Failed to load JwtExpiration")
@@ -156,10 +164,33 @@ impl Default for JwtState {
       .parse()
       .expect("Failed to parse JwtExpiration short");
 
-    let header = Header::new(Algorithm::HS512);
-    let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
-    let decoding_key = DecodingKey::from_secret(key_string.as_bytes());
-    let mut validation = Validation::new(Algorithm::HS512);
+    let key = if let Ok(key) = std::fs::read("./keys/jwt.pem") {
+      String::from_utf8(key).expect("Failed parsing private key")
+    } else {
+      let mut rng = rand::thread_rng();
+      let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
+      let key = private_key
+        .to_pkcs1_pem(LineEnding::CRLF)
+        .expect("Failed to export private key")
+        .to_string();
+
+      std::fs::create_dir_all("./keys").expect("Failed to create folder");
+      std::fs::write("./keys/jwt.pem", key.as_bytes()).expect("Failed to save public key");
+      key
+    };
+
+    let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
+    let public_key = RsaPublicKey::from(private_key);
+    let public_key_pem = public_key
+      .to_pkcs1_pem(LineEnding::CRLF)
+      .expect("Failed to export public key");
+
+    let header = Header::new(Algorithm::RS256);
+    let encoding_key =
+      EncodingKey::from_rsa_pem(key.as_bytes()).expect("Failed to create encoding key");
+    let decoding_key =
+      DecodingKey::from_rsa_pem(public_key_pem.as_bytes()).expect("Failed to create decoding key");
+    let mut validation = Validation::new(Algorithm::RS256);
     validation.set_issuer(&[iss.as_str()]);
     validation.validate_aud = false;
 

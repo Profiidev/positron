@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
   client_auth::{ClientAuth, Error},
-  jwt::{OAuthClaims, OAuthJwtState},
+  jwt::OAuthClaims,
   scope::Scope,
   state::{get_timestamp_10_min, AuthorizeState},
 };
@@ -44,7 +44,7 @@ async fn token<'r>(
   req_b: Option<Form<TokenReq>>,
   auth: ClientAuth,
   state: &State<AuthorizeState>,
-  jwt: &State<OAuthJwtState>,
+  jwt: &State<JwtState>,
   db: &State<DB>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
   let req = if let Some(req) = req_p {
@@ -120,7 +120,7 @@ async fn token<'r>(
     groups,
   };
 
-  let Ok(token) = jwt.create_token(claims) else {
+  let Ok(token) = jwt.create_generic_token(&claims) else {
     return Err(Error::from_str("unauthorized_client"));
   };
 

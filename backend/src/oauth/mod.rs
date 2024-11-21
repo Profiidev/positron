@@ -1,4 +1,3 @@
-use jwt::OAuthJwtState;
 use rocket::{Build, Rocket, Route};
 use state::{AuthorizeState, ClientState, ConfigurationState};
 
@@ -10,6 +9,7 @@ pub mod scope;
 mod state;
 mod token;
 mod user;
+mod jwk;
 
 pub fn routes() -> Vec<Route> {
   auth::routes()
@@ -17,6 +17,7 @@ pub fn routes() -> Vec<Route> {
     .chain(token::routes())
     .chain(user::routes())
     .chain(config::routes())
+    .chain(jwk::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth", base)))
     .collect()
 }
@@ -25,6 +26,5 @@ pub fn state(server: Rocket<Build>) -> Rocket<Build> {
   server
     .manage(AuthorizeState::default())
     .manage(ClientState::default())
-    .manage(OAuthJwtState::default())
     .manage(ConfigurationState::default())
 }
