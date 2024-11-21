@@ -12,16 +12,16 @@ export const logout = async () => {
 };
 
 export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
-  let res = await post<string>(
+  let res = await post<{ location: string }>(
     `/oauth/authorize_confirm?code=${params.code}&allow=${allow}`,
-    ResponseType.Text,
+    ResponseType.Json,
     ContentType.UrlFrom,
     undefined,
   );
 
-  if (typeof res === "string") {
-    if (res !== "") {
-      window.location.href = res;
+  if (typeof res === "object") {
+    if (res.location !== "") {
+      window.location.href = res.location;
     }
     return;
   } else {
