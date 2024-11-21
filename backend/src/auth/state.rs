@@ -27,7 +27,6 @@ pub struct PasswordState {
   key: RsaPrivateKey,
   pub pub_key: String,
   pub pepper: Vec<u8>,
-  pub kid: String,
 }
 
 pub struct TotpState {
@@ -68,12 +67,8 @@ impl PasswordState {
   }
 
   pub async fn init(db: &DB) -> Self {
-    let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("password".into()).await {
-      (
-        RsaPrivateKey::from_pkcs1_pem(&key.private_key)
-          .expect("Failed to parse private password key"),
-        key.uuid,
-      )
+    let key = if let Ok(key) = db.tables().key().get_key_by_name("password".into()).await {
+      RsaPrivateKey::from_pkcs1_pem(&key.private_key).expect("Failed to parse private password key")
     } else {
       let mut rng = OsRng {};
       let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
@@ -90,7 +85,7 @@ impl PasswordState {
         .await
         .expect("Failed to save key");
 
-      (private_key, uuid)
+      private_key
     };
 
     let pub_key = RsaPublicKey::from(&key)
@@ -109,7 +104,6 @@ impl PasswordState {
       key,
       pub_key,
       pepper,
-      kid,
     }
   }
 }

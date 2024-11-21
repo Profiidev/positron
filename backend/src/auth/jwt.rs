@@ -103,6 +103,8 @@ pub struct JwtState {
   pub iss: String,
   exp: i64,
   short_exp: i64,
+  pub kid: String,
+  pub public_key: RsaPublicKey,
 }
 
 impl JwtState {
@@ -163,8 +165,8 @@ impl JwtState {
       .parse()
       .expect("Failed to parse JwtExpiration short");
 
-    let key = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
-      key.private_key
+    let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
+      (key.private_key, key.uuid)
     } else {
       let mut rng = OsRng {};
       let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
@@ -177,10 +179,11 @@ impl JwtState {
 
       db.tables()
         .key()
-        .create_key("jwt".into(), key.clone(), uuid)
+        .create_key("jwt".into(), key.clone(), uuid.clone())
         .await
         .expect("Failed to save key");
-      key
+
+      (key, uuid)
     };
 
     let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
@@ -189,7 +192,9 @@ impl JwtState {
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export public key");
 
-    let header = Header::new(Algorithm::RS256);
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some(kid.clone());
+
     let encoding_key =
       EncodingKey::from_rsa_pem(key.as_bytes()).expect("Failed to create encoding key");
     let decoding_key =
@@ -206,6 +211,8 @@ impl JwtState {
       iss,
       exp,
       short_exp,
+      kid,
+      public_key,
     }
   }
 }

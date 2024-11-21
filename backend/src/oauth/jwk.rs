@@ -1,9 +1,9 @@
 use base64::prelude::*;
 use rocket::{get, serde::json::Json, Route, State};
-use rsa::{pkcs1::DecodeRsaPublicKey, traits::PublicKeyParts, RsaPublicKey};
+use rsa::traits::PublicKeyParts;
 use serde::Serialize;
 
-use crate::auth::state::PasswordState;
+use crate::auth::jwt::JwtState;
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![jwks]
@@ -26,10 +26,9 @@ struct Key {
 }
 
 #[get("/jwks")]
-fn jwks(state: &State<PasswordState>) -> Json<JwtRes> {
-  let public_key = RsaPublicKey::from_pkcs1_pem(&state.pub_key).unwrap();
-  let n = BASE64_URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be());
-  let e = BASE64_URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be());
+fn jwks(state: &State<JwtState>) -> Json<JwtRes> {
+  let n = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.n().to_bytes_be());
+  let e = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.e().to_bytes_be());
 
   Json(JwtRes {
     keys: vec![Key {
