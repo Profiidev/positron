@@ -4,12 +4,12 @@ use state::{AuthorizeState, ClientState, ConfigurationState};
 mod auth;
 mod client_auth;
 mod config;
+mod jwk;
 mod jwt;
 pub mod scope;
 mod state;
 mod token;
 mod user;
-mod jwk;
 
 pub fn routes() -> Vec<Route> {
   auth::routes()
