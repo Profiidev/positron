@@ -2,6 +2,8 @@ use jwt::{JwtInvalidState, JwtState};
 use rocket::{Build, Rocket, Route};
 use state::{webauthn, PasskeyState, PasswordState, TotpState};
 
+use crate::db::DB;
+
 pub mod jwt;
 mod logout;
 mod passkey;
@@ -19,12 +21,12 @@ pub fn routes() -> Vec<Route> {
     .collect()
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
+pub async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
   server
-    .manage(PasswordState::default())
+    .manage(PasswordState::init(db).await)
     .manage(PasskeyState::default())
     .manage(TotpState::default())
-    .manage(JwtState::default())
+    .manage(JwtState::init(db).await)
     .manage(JwtInvalidState::default())
     .manage(webauthn())
 }

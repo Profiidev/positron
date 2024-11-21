@@ -1,5 +1,6 @@
 use group::GroupTable;
 use invalid_jwt::InvalidJwtTable;
+use key::KeyTable;
 use oauth_client::OauthClientTable;
 use passkey::PasskeyTable;
 use surrealdb::{engine::remote::ws::Client, Error, Surreal};
@@ -7,6 +8,7 @@ use user::UserTable;
 
 pub mod group;
 pub mod invalid_jwt;
+pub mod key;
 pub mod oauth_client;
 pub mod passkey;
 pub mod user;
@@ -25,7 +27,8 @@ impl<'db> Tables<'db> {
     InvalidJwtTable::new(self.db).create().await?;
     OauthClientTable::new(self.db).create().await?;
     GroupTable::new(self.db).create().await?;
-    PasskeyTable::new(self.db).create().await
+    PasskeyTable::new(self.db).create().await?;
+    KeyTable::new(self.db).create().await
   }
 
   pub fn user(self) -> UserTable<'db> {
@@ -46,5 +49,9 @@ impl<'db> Tables<'db> {
 
   pub fn groups(self) -> GroupTable<'db> {
     GroupTable::new(self.db)
+  }
+
+  pub fn key(self) -> KeyTable<'db> {
+    KeyTable::new(self.db)
   }
 }

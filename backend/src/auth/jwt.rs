@@ -6,6 +6,7 @@ use jsonwebtoken::{
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
+use rand::rngs::OsRng;
 use rocket::{
   async_trait,
   http::{Cookie, SameSite, Status},
@@ -23,7 +24,7 @@ use rsa::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::jwt_from_request;
+use crate::{db::DB, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -150,10 +151,8 @@ impl JwtState {
   pub fn validate_token<C: DeserializeOwned>(&self, token: &str) -> Result<C, Error> {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
-}
 
-impl Default for JwtState {
-  fn default() -> Self {
+  pub async fn init(db: &DB) -> Self {
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
     let exp = std::env::var("AUTH_JWT_EXPIRATION")
       .expect("Failed to load JwtExpiration")
@@ -164,18 +163,21 @@ impl Default for JwtState {
       .parse()
       .expect("Failed to parse JwtExpiration short");
 
-    let key = if let Ok(key) = std::fs::read("./keys/jwt.pem") {
-      String::from_utf8(key).expect("Failed parsing private key")
+    let key = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
+      key.private_key
     } else {
-      let mut rng = rand::thread_rng();
+      let mut rng = OsRng {};
       let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
       let key = private_key
         .to_pkcs1_pem(LineEnding::CRLF)
         .expect("Failed to export private key")
         .to_string();
 
-      std::fs::create_dir_all("./keys").expect("Failed to create folder");
-      std::fs::write("./keys/jwt.pem", key.as_bytes()).expect("Failed to save public key");
+      db.tables()
+        .key()
+        .create_key("jwt".into(), key.clone())
+        .await
+        .expect("Failed to save key");
       key
     };
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use rand::rngs::OsRng;
 use rocket::futures::lock::Mutex;
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -12,6 +13,8 @@ use webauthn_rs::{
   prelude::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url},
   Webauthn, WebauthnBuilder,
 };
+
+use crate::db::DB;
 
 #[derive(Default)]
 pub struct PasskeyState {
@@ -62,23 +65,23 @@ impl PasswordState {
   pub fn decrypt(&self, message: &[u8]) -> Result<Vec<u8>, rsa::errors::Error> {
     self.key.decrypt(Pkcs1v15Encrypt, message)
   }
-}
 
-impl Default for PasswordState {
-  fn default() -> Self {
-    let key = if let Ok(key) = std::fs::read("./keys/password.pem") {
-      RsaPrivateKey::from_pkcs1_pem(&String::from_utf8(key).expect("Failed parsing private key"))
-        .expect("Failed to load password key")
+  pub async fn init(db: &DB) -> Self {
+    let key = if let Ok(key) = db.tables().key().get_key_by_name("password".into()).await {
+      RsaPrivateKey::from_pkcs1_pem(&key.private_key).expect("Failed to parse private password key")
     } else {
-      let mut rng = rand::thread_rng();
+      let mut rng = OsRng {};
       let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
       let key = private_key
         .to_pkcs1_pem(LineEnding::CRLF)
         .expect("Failed to export private key")
         .to_string();
 
-      std::fs::create_dir_all("./keys").expect("Failed to create folder");
-      std::fs::write("./keys/password.pem", key.as_bytes()).expect("Failed to save public key");
+      db.tables()
+        .key()
+        .create_key("password".into(), key.clone())
+        .await
+        .expect("Failed to save key");
       private_key
     };
 
