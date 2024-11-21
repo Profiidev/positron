@@ -28,6 +28,7 @@
           size="lg"
           class="size-12 ml-auto"
           onclick={sidebar.toggle}
+          aria-label="Open/Close Sidebar"
         >
           {#snippet tooltipContent()}
             Positron

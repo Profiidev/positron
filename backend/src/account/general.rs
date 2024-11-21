@@ -88,7 +88,7 @@ async fn change_image(
 
   let image = image::load_from_memory(&bytes)?;
 
-  let scaled = image.resize_to_fill(512, 512, FilterType::Lanczos3);
+  let scaled = image.resize_to_fill(256, 256, FilterType::Lanczos3);
 
   let mut cursor = Cursor::new(Vec::new());
   scaled.write_to(&mut cursor, ImageFormat::WebP)?;

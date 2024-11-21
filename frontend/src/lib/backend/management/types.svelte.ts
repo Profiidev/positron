@@ -64,6 +64,7 @@ export enum Permission {
 enum PermissionGroups {
   User = "User",
   Group = "Group",
+  OAuthClient = "OAuthClient",
 }
 
 export const getPermissionGroups = () => {
