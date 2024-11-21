@@ -1,11 +1,14 @@
 use std::str::FromStr;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rocket::{form::Form, post, serde::json::Json, FromForm, Route, State};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::db::DB;
+use crate::{
+  auth::jwt::{JwtInvalidState, JwtState},
+  db::DB,
+};
 
 use super::{
   client_auth::{ClientAuth, Error},
@@ -15,7 +18,7 @@ use super::{
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![token]
+  rocket::routes![token, revoke]
 }
 
 #[derive(FromForm, Debug)]
@@ -28,6 +31,8 @@ struct TokenReq {
 #[derive(Serialize)]
 struct TokenRes {
   access_token: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  id_token: Option<String>,
   token_type: String,
   expires_in: u64,
   scope: Scope,
@@ -88,22 +93,26 @@ async fn token<'r>(
 
   let groups = groups.into_iter().map(|group| group.name).collect();
 
-  let name = if code_info.scope.iter().any(|s| s == "profile") {
+  let name = if code_info.scope.contains("profile") {
     Some(user.name)
   } else {
     None
   };
-  let email = if code_info.scope.iter().any(|s| s == "email") {
+  let email = if code_info.scope.contains("email") {
     Some(user.email)
   } else {
     None
   };
 
+  let time = Utc::now().timestamp();
   let claims = OAuthClaims {
     sub: code_info.user,
     exp: get_timestamp_10_min(),
     iss: jwt.iss.clone(),
-    client_id: code_info.client_id,
+    aud: code_info.client_id,
+    iat: time,
+    auth_time: time,
+    nonce: code_info.nonce,
     scope: code_info.scope.clone(),
     email,
     preferred_username: name.clone(),
@@ -115,10 +124,51 @@ async fn token<'r>(
     return Err(Error::from_str("unauthorized_client"));
   };
 
+  let id_token = if code_info.scope.contains("openid") {
+    Some(token.clone())
+  } else {
+    None
+  };
+
   Ok(Json(TokenRes {
     access_token: token,
+    id_token,
     token_type: "Bearer".into(),
     scope: code_info.scope,
     expires_in: 600,
   }))
+}
+
+#[derive(FromForm)]
+struct RevokeReq {
+  token: String,
+}
+
+#[post("/revoke?<req_p..>", data = "<req_b>")]
+async fn revoke(
+  req_p: Option<RevokeReq>,
+  req_b: Option<Form<RevokeReq>>,
+  db: &State<DB>,
+  state: &State<JwtState>,
+  invalidate: &State<JwtInvalidState>,
+) -> crate::error::Result<()> {
+  let req = if let Some(req) = req_p {
+    req
+  } else if let Some(req) = req_b {
+    req.into_inner()
+  } else {
+    return Err(crate::error::Error::BadRequest);
+  };
+
+  let claims = state.validate_token::<OAuthClaims>(&req.token)?;
+  let exp = DateTime::from_timestamp(claims.exp, 0).unwrap();
+
+  let mut lock = invalidate.count.lock().await;
+
+  db.tables()
+    .invalid_jwt()
+    .invalidate_jwt(req.token, exp, &mut lock)
+    .await?;
+
+  Ok(())
 }

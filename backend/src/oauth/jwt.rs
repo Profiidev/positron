@@ -15,7 +15,11 @@ pub struct OAuthClaims {
   pub sub: Uuid,
   pub exp: i64,
   pub iss: String,
-  pub client_id: Uuid,
+  pub aud: Uuid,
+  pub iat: i64,
+  pub auth_time: i64,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub nonce: Option<String>,
   pub scope: Scope,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub email: Option<String>,
@@ -43,7 +47,7 @@ impl Default for OAuthJwtState {
     let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
 
-    let header = Header::new(Algorithm::HS512);
+    let header = Header::new(Algorithm::RS256);
     let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
 
     Self {

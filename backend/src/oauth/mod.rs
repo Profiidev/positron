@@ -4,6 +4,7 @@ use state::{AuthorizeState, ClientState};
 
 mod auth;
 mod client_auth;
+mod config;
 mod jwt;
 pub mod scope;
 mod state;
@@ -15,6 +16,7 @@ pub fn routes() -> Vec<Route> {
     .into_iter()
     .chain(token::routes())
     .chain(user::routes())
+    .chain(config::routes())
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth", base)))
     .collect()
 }

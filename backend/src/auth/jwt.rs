@@ -156,11 +156,12 @@ impl Default for JwtState {
       .parse()
       .expect("Failed to parse JwtExpiration short");
 
-    let header = Header::new(Algorithm::HS512);
+    let header = Header::new(Algorithm::RS256);
     let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
     let decoding_key = DecodingKey::from_secret(key_string.as_bytes());
-    let mut validation = Validation::new(Algorithm::HS512);
+    let mut validation = Validation::new(Algorithm::RS256);
     validation.set_issuer(&[iss.as_str()]);
+    validation.validate_aud = false;
 
     Self {
       header,

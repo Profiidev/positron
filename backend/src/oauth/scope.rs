@@ -22,10 +22,6 @@ impl Scope {
     )
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = &str> {
-    self.0.iter().map(AsRef::as_ref)
-  }
-
   #[inline]
   fn to_string_internal(&self) -> String {
     self.0.join(" ")
@@ -34,11 +30,6 @@ impl Scope {
   #[inline]
   fn overlapping_count(&self, other: &Self) -> usize {
     self.0.iter().filter(|&s| other.0.contains(s)).count()
-  }
-
-  #[inline]
-  pub fn is_empty(&self) -> bool {
-    self.0.is_empty()
   }
 
   #[inline]
@@ -54,6 +45,11 @@ impl Scope {
   #[inline]
   fn greater(&self, other: &Self) -> bool {
     self.greater_eq(other) && self.len() > other.len()
+  }
+
+  #[inline]
+  pub fn contains(&self, scope: &str) -> bool {
+    self.0.iter().any(|s| s == scope)
   }
 }
 

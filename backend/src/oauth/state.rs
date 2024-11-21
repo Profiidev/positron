@@ -13,6 +13,7 @@ pub struct AuthReq {
   pub redirect_uri: Option<String>,
   pub scope: Option<String>,
   pub state: Option<String>,
+  pub nonce: Option<String>,
 }
 
 pub struct CodeReq {
@@ -21,12 +22,30 @@ pub struct CodeReq {
   pub scope: Scope,
   pub user: Uuid,
   pub exp: i64,
+  pub nonce: Option<String>,
 }
 
 pub struct AuthorizeState {
   pub frontend_url: String,
   pub auth_pending: Mutex<HashMap<Uuid, (i64, AuthReq)>>,
   pub auth_codes: Mutex<HashMap<Uuid, CodeReq>>,
+}
+
+pub struct ConfigurationState {
+  pub issuer: String,
+  pub backend_url: String,
+}
+
+impl Default for ConfigurationState {
+  fn default() -> Self {
+    let issuer = std::env::var("OIDC_ISSUER").expect("Failed to load OIDC_ISSUER");
+    let backend_url = std::env::var("OIDC_BACKEND_URL").expect("Failed to load OIDC_BACKEND_URL");
+
+    Self {
+      issuer,
+      backend_url,
+    }
+  }
 }
 
 impl Default for AuthorizeState {

@@ -120,6 +120,7 @@ async fn authorize_confirm(
       scope: req.scope.unwrap().parse().unwrap(),
       user: auth.sub,
       exp: get_timestamp_10_min(),
+      nonce: req.nonce,
     },
   );
 
@@ -153,8 +154,11 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
     return Some("unsupported_response_type");
   }
 
-  if let Some(scope) = &req.scope {
-    let scope = client.default_scope.intersect(&scope.parse().unwrap());
+  if let Some(scope) = &mut req.scope {
+    *scope = client
+      .default_scope
+      .intersect(&scope.parse().unwrap())
+      .to_string();
     if scope.is_empty() {
       return Some("invalid_scope");
     }
