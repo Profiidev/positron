@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
-use uuid::Uuid;
 
+#[allow(unused)]
 #[derive(Deserialize)]
 pub struct Key {
   pub id: Thing,
@@ -48,13 +48,13 @@ impl<'db> KeyTable<'db> {
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
-  pub async fn create_key(&self, name: String, key: String) -> Result<(), Error> {
+  pub async fn create_key(&self, name: String, key: String, uuid: String) -> Result<(), Error> {
     self
       .db
       .query("CREATE key SET name = $name, private_key = $key, uuid = $uuid")
       .bind(("name", name))
       .bind(("key", key))
-      .bind(("uuid", Uuid::new_v4().to_string()))
+      .bind(("uuid", uuid))
       .await?;
 
     Ok(())

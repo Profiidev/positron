@@ -34,7 +34,7 @@ fn jwks(state: &State<PasswordState>) -> Json<JwtRes> {
   Json(JwtRes {
     keys: vec![Key {
       alg: "RS256".into(),
-      kid: "".into(),
+      kid: state.kid.clone(),
       kty: "RSA".into(),
       use_: "sig".into(),
       n,

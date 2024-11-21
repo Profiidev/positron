@@ -173,9 +173,11 @@ impl JwtState {
         .expect("Failed to export private key")
         .to_string();
 
+      let uuid = Uuid::new_v4().to_string();
+
       db.tables()
         .key()
-        .create_key("jwt".into(), key.clone())
+        .create_key("jwt".into(), key.clone(), uuid)
         .await
         .expect("Failed to save key");
       key
