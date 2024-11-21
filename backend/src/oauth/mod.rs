@@ -1,6 +1,6 @@
 use jwt::OAuthJwtState;
 use rocket::{Build, Rocket, Route};
-use state::{AuthorizeState, ClientState};
+use state::{AuthorizeState, ClientState, ConfigurationState};
 
 mod auth;
 mod client_auth;
@@ -26,4 +26,5 @@ pub fn state(server: Rocket<Build>) -> Rocket<Build> {
     .manage(AuthorizeState::default())
     .manage(ClientState::default())
     .manage(OAuthJwtState::default())
+    .manage(ConfigurationState::default())
 }

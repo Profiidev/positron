@@ -76,6 +76,14 @@
       name: "Logout URL",
       value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id || client?.client_id || ""}`,
     },
+    {
+      name: "Revoke URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/revoke`,
+    },
+    {
+      name: "OIDC Configuration URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/${startCreate?.client_id || client?.client_id || ""}/.well-known/openid-configuration`,
+    },
   ]);
 
   const filterFn = (
@@ -233,8 +241,6 @@
   {#if client && userInfo}
     <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
       <div class="space-y-1 grid gap-1">
-        <Label for="id">Client ID</Label>
-        <Input id="id" class="text-nowrap" value={client.client_id} readonly />
         {#each backendURLs as info}
           <Label for={info.name}>{info.name}</Label>
           <Input
@@ -247,6 +253,8 @@
       </div>
       <Separator orientation="vertical" class="mx-[30px]" />
       <div class="h-full space-y-1 grid gap-1">
+        <Label for="id">Client ID</Label>
+        <Input id="id" class="text-nowrap" value={client.client_id} readonly />
         <Label for="name">Name</Label>
         <Input id="name" placeholder="Name" bind:value={client.name} />
         <Label for="scope">Scope</Label>

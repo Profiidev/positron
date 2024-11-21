@@ -47,7 +47,7 @@ impl Default for OAuthJwtState {
     let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
 
-    let header = Header::new(Algorithm::RS256);
+    let header = Header::new(Algorithm::HS512);
     let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
 
     Self {
