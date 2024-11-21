@@ -3,7 +3,7 @@ use std::str::FromStr;
 use argon2::password_hash::SaltString;
 use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use rocket::{get, post, serde::json::Json, Route, State};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
@@ -33,7 +33,8 @@ pub fn routes() -> Vec<Route> {
     edit,
     start_create,
     create,
-    delete
+    delete,
+    reset
   ]
   .into_iter()
   .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth_client", base)))
@@ -173,4 +174,39 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<ClientDelete
   db.tables().oauth_client().remove_client(uuid).await?;
 
   Ok(())
+}
+
+#[derive(Deserialize)]
+struct ResetReq {
+  client_id: String,
+}
+
+#[derive(Serialize)]
+struct ResetRes {
+  secret: String,
+}
+
+#[post("/reset", data = "<req>")]
+async fn reset(
+  _auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<ResetReq>,
+  state: &State<ClientState>,
+) -> Result<Json<ResetRes>> {
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client_by_id(req.client_id.clone())
+    .await?;
+
+  let mut rng = OsRng {};
+  let secret: String = (0..32).map(|_| rng.sample(Alphanumeric) as char).collect();
+  let client_secret = hash_secret(&state.pepper, &client.salt, secret.as_bytes())?;
+
+  db.tables()
+    .oauth_client()
+    .set_secret_hash(client.id, client_secret)
+    .await?;
+
+  Ok(Json(ResetRes { secret }))
 }

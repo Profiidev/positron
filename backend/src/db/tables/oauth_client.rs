@@ -202,4 +202,15 @@ RETURN $clients;",
 
     Ok(())
   }
+
+  pub async fn set_secret_hash(&self, client: Thing, hash: String) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE $id SET client_secret = $hash")
+      .bind(("id", client))
+      .bind(("hash", hash))
+      .await?;
+
+    Ok(())
+  }
 }

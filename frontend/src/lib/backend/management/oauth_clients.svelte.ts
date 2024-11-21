@@ -95,3 +95,18 @@ export const delete_client = async (client_id: string) => {
     }),
   );
 };
+
+export const reset_client_secret = async (client_id: string) => {
+  let ret = await post<{ secret: string }>(
+    "/management/oauth_client/reset",
+    ResponseType.Json,
+    ContentType.Json,
+    JSON.stringify({
+      client_id,
+    }),
+  );
+
+  if (typeof ret === "object") {
+    return ret;
+  }
+};
