@@ -1,18 +1,35 @@
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 
 use crate::db::tables::user::group::Group;
 
-use super::oauth_policy::OAuthPolicy;
+use super::oauth_policy::{BasicOAuthPolicyInfo, OAuthPolicy};
 
+#[derive(Serialize, Deserialize)]
+pub struct OAuthScopeCreate {
+  pub name: String,
+  pub scope: String,
+  pub policy: Vec<BasicOAuthPolicyInfo>,
+}
+
+#[allow(unused)]
 #[derive(Deserialize, Debug)]
 pub struct OAuthScope {
   pub id: Thing,
+  pub uuid: String,
   pub name: String,
   pub scope: String,
   pub policy: Vec<Thing>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OAuthScopeInfo {
+  pub uuid: String,
+  pub name: String,
+  pub scope: String,
+  pub policy: Vec<BasicOAuthPolicyInfo>,
 }
 
 pub struct OAuthScopeTable<'db> {
@@ -32,6 +49,7 @@ impl<'db> OAuthScopeTable<'db> {
       DEFINE TABLE IF NOT EXISTS oauth_scope SCHEMAFULL;
 
       DEFINE FIELD IF NOT EXISTS name ON TABLE oauth_scope TYPE string;
+      DEFINE FIELD IF NOT EXISTS uuid ON TABLE oauth_scope TYPE string;
       DEFINE FIELD IF NOT EXISTS scope ON TABLE oauth_scope TYPE string;
       DEFINE FIELD IF NOT EXISTS policy ON TABLE oauth_scope TYPE array<record<oauth_policy>>;
     ",
@@ -104,5 +122,78 @@ $scopes.map(|$s| $s.scope)",
       .await?;
 
     Ok(res.take::<Vec<String>>(1).unwrap_or_default())
+  }
+
+  pub async fn list(&self) -> Result<Vec<OAuthScopeInfo>, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $scope = SELECT * FROM oauth_scope;
+$scope.map(|$s| {
+    RETURN $s.policy.map(|$p| {
+        name: $p.name,
+        uuid: $p.uuid
+    });
+});
+    RETURN $scope;",
+      )
+      .await?;
+
+    let scopes = res.take::<Vec<OAuthScope>>(2).unwrap_or_default();
+    let policy = res
+      .take::<Vec<Vec<BasicOAuthPolicyInfo>>>(1)
+      .unwrap_or_default();
+
+    Ok(
+      scopes
+        .into_iter()
+        .zip(policy)
+        .map(|(scope, policy)| OAuthScopeInfo {
+          uuid: scope.uuid,
+          name: scope.name,
+          scope: scope.scope,
+          policy,
+        })
+        .collect(),
+    )
+  }
+
+  pub async fn create_scope(
+    &self,
+    scope: OAuthScopeCreate,
+    policy_mapped: Vec<Thing>,
+    uuid: String,
+  ) -> Result<(), Error> {
+    self
+      .db
+      .query("CREATE oauth_scope SET name = $name, uuid = $uuid, policy = $policy_mapped, scope = $scope")
+      .bind(scope)
+      .bind(("uuid", uuid))
+      .bind(("policy_mapped", policy_mapped))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn edit_scope(
+    &self,
+    scope: OAuthScopeInfo,
+    policy_mapped: Vec<Thing>,
+  ) -> Result<(), Error> {
+    self.db.query("UPDATE oauth_scope SET name = $name, policy = $policy_mapped, scope = $scop WHERE uuid = $uuid")
+      .bind(scope)
+      .bind(("policy_mapped", policy_mapped)).await?;
+
+    Ok(())
+  }
+
+  pub async fn delete_scope(&self, uuid: String) -> Result<(), Error> {
+    self
+      .db
+      .query("DELETE oauth_scope WHERE uuid = $uuid")
+      .bind(("uuid", uuid))
+      .await?;
+
+    Ok(())
   }
 }
