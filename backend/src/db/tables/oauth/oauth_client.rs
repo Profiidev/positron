@@ -3,9 +3,10 @@ use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::oauth::scope::Scope;
-
-use super::{group::BasicGroupInfo, user::BasicUserInfo};
+use crate::{
+  db::tables::user::{group::BasicGroupInfo, user::BasicUserInfo},
+  oauth::scope::Scope,
+};
 
 #[derive(Serialize)]
 pub struct OAuthClientCreate {

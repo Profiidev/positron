@@ -1,7 +1,9 @@
 use rocket::{get, serde::json::Json, Route, State};
 use serde::Serialize;
 
-use super::state::ConfigurationState;
+use crate::{db::DB, error::Result};
+
+use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![config]
@@ -26,8 +28,20 @@ struct Configuration {
 }
 
 #[get("/<client_id>/.well-known/openid-configuration")]
-fn config(client_id: &str, state: &State<ConfigurationState>) -> Json<Configuration> {
-  Json(Configuration {
+async fn config(
+  client_id: &str,
+  state: &State<ConfigurationState>,
+  db: &State<DB>,
+) -> Result<Json<Configuration>> {
+  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  scopes_supported.extend_from_slice(
+    &DEFAULT_SCOPES
+      .iter()
+      .map(|p| p.to_string())
+      .collect::<Vec<String>>(),
+  );
+
+  Ok(Json(Configuration {
     issuer: state.issuer.clone(),
     authorization_endpoint: format!("{}/authorize", &state.backend_url),
     token_endpoint: format!("{}/token", &state.backend_url),
@@ -40,7 +54,7 @@ fn config(client_id: &str, state: &State<ConfigurationState>) -> Json<Configurat
     id_token_signing_alg_values_supported: vec!["RS256".into()],
     subject_types_supported: vec!["public".into()],
     token_endpoint_auth_methods_supported: vec!["client_secret_basic".into()],
-    scopes_supported: vec!["openid".into(), "email".into(), "profile".into()],
+    scopes_supported,
     claims_supported: vec![
       "sub",
       "iss",
@@ -57,5 +71,5 @@ fn config(client_id: &str, state: &State<ConfigurationState>) -> Json<Configurat
     .into_iter()
     .map(|s| s.to_string())
     .collect(),
-  })
+  }))
 }

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use rocket::{form::Form, post, serde::json::Json, FromForm, Route, State};
@@ -87,9 +87,28 @@ async fn token<'r>(
   let Ok(user) = db.tables().user().get_user_by_uuid(code_info.user).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db.tables().groups().get_groups_for_user(user.id).await else {
+  let Ok(groups) = db
+    .tables()
+    .groups()
+    .get_groups_for_user(user.id.clone())
+    .await
+  else {
     return Err(Error::from_str("unauthorized_client"));
   };
+
+  let mut rest = HashMap::new();
+  for scope in code_info.scope.non_default() {
+    let Ok(rest_part) = db
+      .tables()
+      .oauth_scope()
+      .get_values_for_user(scope, &groups)
+      .await
+    else {
+      return Err(Error::from_str("unauthorized_client"));
+    };
+
+    rest = rest.into_iter().chain(rest_part).collect();
+  }
 
   let groups = groups.into_iter().map(|group| group.name).collect();
 
@@ -118,6 +137,7 @@ async fn token<'r>(
     preferred_username: name.clone(),
     name,
     groups,
+    rest,
   };
 
   let Ok(token) = jwt.create_generic_token(&claims) else {

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::ProfileUpdate, DB},
+  db::{tables::user::user::ProfileUpdate, DB},
   error::Result,
   permissions::Permission,
 };

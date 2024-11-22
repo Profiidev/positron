@@ -10,11 +10,7 @@ use webauthn_rs::prelude::Url;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::{
-      group::BasicGroupInfo,
-      oauth_client::{OAuthClientCreate, OAuthClientInfo},
-      user::BasicUserInfo,
-    },
+    tables::{oauth::oauth_client::{OAuthClientCreate, OAuthClientInfo}, user::{group::BasicGroupInfo, user::BasicUserInfo}},
     DB,
   },
   error::{Error, Result},

@@ -12,7 +12,7 @@ use crate::{
     state::PasswordState,
   },
   db::{
-    tables::user::{UserCreate, UserInfo},
+    tables::user::user::{UserCreate, UserInfo},
     DB,
   },
   error::{Error, Result},

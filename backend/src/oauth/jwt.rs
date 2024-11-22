@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rocket::{
   async_trait,
   request::{FromRequest, Outcome, Request},
@@ -27,6 +29,8 @@ pub struct OAuthClaims {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub preferred_username: Option<String>,
   pub groups: Vec<String>,
+  #[serde(flatten)]
+  pub rest: HashMap<String, String>,
 }
 
 #[async_trait]

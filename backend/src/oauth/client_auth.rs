@@ -98,7 +98,6 @@ impl<'r> FromRequest<'r> for ClientAuth {
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error<'r> {
   fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
     let body = json::to_string(&self).unwrap();
-    dbg!(&body);
     let response = Response::build()
       .status(Status::BadRequest)
       .sized_body(body.len(), Cursor::new(body))

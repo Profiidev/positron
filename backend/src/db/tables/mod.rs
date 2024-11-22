@@ -1,16 +1,14 @@
-use group::GroupTable;
 use invalid_jwt::InvalidJwtTable;
 use key::KeyTable;
-use oauth_client::OauthClientTable;
-use passkey::PasskeyTable;
+use oauth::{
+  oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
+};
 use surrealdb::{engine::remote::ws::Client, Error, Surreal};
-use user::UserTable;
+use user::{group::GroupTable, passkey::PasskeyTable, user::UserTable};
 
-pub mod group;
 pub mod invalid_jwt;
 pub mod key;
-pub mod oauth_client;
-pub mod passkey;
+pub mod oauth;
 pub mod user;
 
 pub struct Tables<'db> {
@@ -28,7 +26,9 @@ impl<'db> Tables<'db> {
     OauthClientTable::new(self.db).create().await?;
     GroupTable::new(self.db).create().await?;
     PasskeyTable::new(self.db).create().await?;
-    KeyTable::new(self.db).create().await
+    KeyTable::new(self.db).create().await?;
+    OAuthScopeTable::new(self.db).create().await?;
+    OAuthPolicyTable::new(self.db).create().await
   }
 
   pub fn user(self) -> UserTable<'db> {
@@ -53,5 +53,13 @@ impl<'db> Tables<'db> {
 
   pub fn key(self) -> KeyTable<'db> {
     KeyTable::new(self.db)
+  }
+
+  pub fn oauth_policy(self) -> OAuthPolicyTable<'db> {
+    OAuthPolicyTable::new(self.db)
+  }
+
+  pub fn oauth_scope(self) -> OAuthScopeTable<'db> {
+    OAuthScopeTable::new(self.db)
   }
 }

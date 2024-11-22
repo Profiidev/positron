@@ -2,6 +2,8 @@ use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
+pub const DEFAULT_SCOPES: [&str; 3] = ["openid", "email", "profile"];
+
 #[derive(Default, Clone)]
 pub struct Scope(Vec<String>);
 
@@ -20,6 +22,15 @@ impl Scope {
         .cloned()
         .collect(),
     )
+  }
+
+  pub fn non_default(&self) -> Vec<String> {
+    self
+      .0
+      .iter()
+      .filter(|s| !DEFAULT_SCOPES.contains(&s.as_str()))
+      .cloned()
+      .collect()
   }
 
   #[inline]

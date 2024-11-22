@@ -8,7 +8,7 @@ use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::oauth_client::OAuthClient, DB},
+  db::{tables::oauth::oauth_client::OAuthClient, DB},
   error::{Error, Result},
 };
 

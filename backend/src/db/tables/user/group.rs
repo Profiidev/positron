@@ -16,7 +16,7 @@ pub struct GroupCreate {
 }
 
 #[allow(dead_code)]
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Group {
   pub id: Thing,
   pub name: String,

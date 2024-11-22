@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::{
+    tables::user::{
       group::{GroupCreate, GroupInfo},
       user::BasicUserInfo,
     },
