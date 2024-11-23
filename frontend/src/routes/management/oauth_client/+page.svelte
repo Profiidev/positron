@@ -31,7 +31,7 @@
   import { Separator } from "$lib/components/ui/separator";
   import { PUBLIC_BACKEND_URL } from "$env/static/public";
   import { Button } from "$lib/components/ui/button";
-  import { LoaderCircle } from "lucide-svelte";
+  import { LoaderCircle, RotateCw } from "lucide-svelte";
 
   let isLoading = $state(false);
   let clients: OAuthClientInfo[] | undefined = $state();
@@ -83,6 +83,10 @@
     {
       name: "Revoke URL",
       value: `${PUBLIC_BACKEND_URL}/oauth/revoke`,
+    },
+    {
+      name: "JWKs URL",
+      value: `${PUBLIC_BACKEND_URL}/oauth/jwks`,
     },
     {
       name: "OIDC Configuration URL",
@@ -286,6 +290,7 @@
             {#if isLoading}
               <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
             {/if}
+            <RotateCw class="mr-2 h-4 w-4" />
             Reset</Button
           >
         {:else}
@@ -293,7 +298,7 @@
         {/if}
       </div>
       <Separator orientation="vertical" class="mx-[30px]" />
-      <div class="h-full space-y-1 grid gap-1">
+      <div class="h-fit space-y-1 grid gap-1">
         <Label for="id">Client ID</Label>
         <Input id="id" value={client.client_id} readonly />
         <Label for="name">Name</Label>
