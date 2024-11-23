@@ -12,7 +12,7 @@ use crate::{
     state::PasswordState,
   },
   db::{
-    tables::user::{UserCreate, UserInfo},
+    tables::user::user::{UserCreate, UserInfo},
     DB,
   },
   error::{Error, Result},
@@ -84,7 +84,7 @@ async fn create(
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserCreate).await?;
 
-  let exists = db.tables().user().user_exists(req.name.clone()).await?;
+  let exists = db.tables().user().user_exists(req.email.clone()).await?;
   if exists {
     return Err(Error::Conflict);
   }

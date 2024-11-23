@@ -6,6 +6,7 @@ use jsonwebtoken::{
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
+use rand::rngs::OsRng;
 use rocket::{
   async_trait,
   http::{Cookie, SameSite, Status},
@@ -15,10 +16,15 @@ use rocket::{
   tokio::sync::Mutex,
   Response,
 };
+use rsa::{
+  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
+  pkcs8::LineEnding,
+  RsaPrivateKey, RsaPublicKey,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::jwt_from_request;
+use crate::{db::DB, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -94,12 +100,18 @@ pub struct JwtState {
   encoding_key: EncodingKey,
   decoding_key: DecodingKey,
   validation: Validation,
-  iss: String,
+  pub iss: String,
   exp: i64,
   short_exp: i64,
+  pub kid: String,
+  pub public_key: RsaPublicKey,
 }
 
 impl JwtState {
+  pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
+    encode(&self.header, claims, &self.encoding_key)
+  }
+
   pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>, Error> {
     let duration = T::duration(self.exp, self.short_exp);
 
@@ -141,11 +153,8 @@ impl JwtState {
   pub fn validate_token<C: DeserializeOwned>(&self, token: &str) -> Result<C, Error> {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
-}
 
-impl Default for JwtState {
-  fn default() -> Self {
-    let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
+  pub async fn init(db: &DB) -> Self {
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
     let exp = std::env::var("AUTH_JWT_EXPIRATION")
       .expect("Failed to load JwtExpiration")
@@ -156,11 +165,43 @@ impl Default for JwtState {
       .parse()
       .expect("Failed to parse JwtExpiration short");
 
-    let header = Header::new(Algorithm::HS512);
-    let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
-    let decoding_key = DecodingKey::from_secret(key_string.as_bytes());
-    let mut validation = Validation::new(Algorithm::HS512);
+    let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
+      (key.private_key, key.uuid)
+    } else {
+      let mut rng = OsRng {};
+      let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
+      let key = private_key
+        .to_pkcs1_pem(LineEnding::CRLF)
+        .expect("Failed to export private key")
+        .to_string();
+
+      let uuid = Uuid::new_v4().to_string();
+
+      db.tables()
+        .key()
+        .create_key("jwt".into(), key.clone(), uuid.clone())
+        .await
+        .expect("Failed to save key");
+
+      (key, uuid)
+    };
+
+    let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
+    let public_key = RsaPublicKey::from(private_key);
+    let public_key_pem = public_key
+      .to_pkcs1_pem(LineEnding::CRLF)
+      .expect("Failed to export public key");
+
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some(kid.clone());
+
+    let encoding_key =
+      EncodingKey::from_rsa_pem(key.as_bytes()).expect("Failed to create encoding key");
+    let decoding_key =
+      DecodingKey::from_rsa_pem(public_key_pem.as_bytes()).expect("Failed to create decoding key");
+    let mut validation = Validation::new(Algorithm::RS256);
     validation.set_issuer(&[iss.as_str()]);
+    validation.validate_aud = false;
 
     Self {
       header,
@@ -170,6 +211,8 @@ impl Default for JwtState {
       iss,
       exp,
       short_exp,
+      kid,
+      public_key,
     }
   }
 }

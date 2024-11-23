@@ -19,11 +19,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile.Dev
     volumes:
-      - ./backend:/app/backend
-      - ./target:/app/target
-      - ./Cargo.lock:/app/Cargo.lock
-      - ./Cargo.toml:/app/Cargo.toml
-      - ./frontend/src-tauri:/app/frontend/src-tauri
+      - ./backend:/app
     networks:
       - nginx
     command: cargo watch -x run

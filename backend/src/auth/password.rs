@@ -7,7 +7,7 @@ use rocket::{
   serde::json::Json,
   Route, State,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -34,9 +34,21 @@ struct LoginReq {
   password: String,
 }
 
+#[derive(Serialize)]
+struct KeyRes<'a> {
+  key: &'a str,
+}
+
 #[get("/key")]
-fn key(state: &State<PasswordState>) -> &str {
-  &state.pub_key
+fn key(state: &State<PasswordState>) -> Json<KeyRes<'_>> {
+  Json(KeyRes {
+    key: &state.pub_key,
+  })
+}
+
+#[derive(Serialize)]
+struct AuthRes {
+  totp: bool,
 }
 
 #[post("/authenticate", data = "<req>")]
@@ -46,7 +58,7 @@ async fn authenticate(
   jwt: &State<JwtState>,
   db: &State<DB>,
   cookies: &CookieJar<'_>,
-) -> Result<TokenRes<bool>> {
+) -> Result<TokenRes<AuthRes>> {
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
@@ -71,7 +83,9 @@ async fn authenticate(
 
   cookies.add(cookie);
 
-  Ok(TokenRes { body: totp })
+  Ok(TokenRes {
+    body: AuthRes { totp },
+  })
 }
 
 #[derive(Deserialize)]

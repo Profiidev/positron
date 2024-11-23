@@ -3,7 +3,7 @@ use std::str::FromStr;
 use argon2::password_hash::SaltString;
 use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use rocket::{get, post, serde::json::Json, Route, State};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
@@ -11,14 +11,13 @@ use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
     tables::{
-      group::BasicGroupInfo,
-      oauth_client::{OAuthClientCreate, OAuthClientInfo},
-      user::BasicUserInfo,
+      oauth::oauth_client::{OAuthClientCreate, OAuthClientInfo},
+      user::{group::BasicGroupInfo, user::BasicUserInfo},
     },
     DB,
   },
   error::{Error, Result},
-  oauth::scope::Scope,
+  oauth::scope::{Scope, DEFAULT_SCOPES},
   permissions::Permission,
   utils::hash_secret,
 };
@@ -30,10 +29,12 @@ pub fn routes() -> Vec<Route> {
     list,
     group_list,
     user_list,
+    list_scopes,
     edit,
     start_create,
     create,
-    delete
+    delete,
+    reset
   ]
   .into_iter()
   .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth_client", base)))
@@ -66,6 +67,15 @@ async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<
 #[post("/edit", data = "<req>")]
 async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthClientInfo>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
+
+  if db
+    .tables()
+    .oauth_client()
+    .client_exists(req.name.clone(), req.client_id.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
 
   let client = db
     .tables()
@@ -134,6 +144,15 @@ async fn create(
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
 
+  if db
+    .tables()
+    .oauth_client()
+    .client_exists(req.name.clone(), "".into())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
+
   let mut lock = state.create.lock().await;
   let ClientCreateStart { secret, client_id } = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
 
@@ -173,4 +192,54 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<ClientDelete
   db.tables().oauth_client().remove_client(uuid).await?;
 
   Ok(())
+}
+
+#[derive(Deserialize)]
+struct ResetReq {
+  client_id: String,
+}
+
+#[derive(Serialize)]
+struct ResetRes {
+  secret: String,
+}
+
+#[post("/reset", data = "<req>")]
+async fn reset(
+  _auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<ResetReq>,
+  state: &State<ClientState>,
+) -> Result<Json<ResetRes>> {
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client_by_id(req.client_id.clone())
+    .await?;
+
+  let mut rng = OsRng {};
+  let secret: String = (0..32).map(|_| rng.sample(Alphanumeric) as char).collect();
+  let client_secret = hash_secret(&state.pepper, &client.salt, secret.as_bytes())?;
+
+  db.tables()
+    .oauth_client()
+    .set_secret_hash(client.id, client_secret)
+    .await?;
+
+  Ok(Json(ResetRes { secret }))
+}
+
+#[get("/list_scopes")]
+async fn list_scopes(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<String>>> {
+  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+
+  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  scopes_supported.extend_from_slice(
+    &DEFAULT_SCOPES
+      .iter()
+      .map(|p| p.to_string())
+      .collect::<Vec<String>>(),
+  );
+
+  Ok(Json(scopes_supported))
 }

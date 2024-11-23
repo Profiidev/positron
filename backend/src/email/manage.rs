@@ -34,6 +34,15 @@ async fn start_change(
 ) -> Result<Status> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
+  if db
+    .tables()
+    .user()
+    .user_exists(req.new_email.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
+
   let Some(code) = state.gen_info(req.new_email.clone()) else {
     return Err(Error::InternalServerError);
   };

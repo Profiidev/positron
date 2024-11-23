@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::ProfileUpdate, DB},
+  db::{tables::user::user::ProfileUpdate, DB},
   error::Result,
   permissions::Permission,
 };
@@ -88,7 +88,7 @@ async fn change_image(
 
   let image = image::load_from_memory(&bytes)?;
 
-  let scaled = image.resize_to_fill(512, 512, FilterType::Lanczos3);
+  let scaled = image.resize_to_fill(256, 256, FilterType::Lanczos3);
 
   let mut cursor = Cursor::new(Vec::new());
   scaled.write_to(&mut cursor, ImageFormat::WebP)?;

@@ -22,7 +22,11 @@ export const columns = (
     "Other Redirect URIs",
     (uris: string[]) => uris.join(", ") || "No Additional URIs",
   ),
-  createColumn("default_scope", "Default Scope"),
+  createColumn(
+    "default_scope",
+    "Default Scope",
+    (s: string) => s || "No Scopes",
+  ),
   createColumn(
     "group_access",
     "Groups",

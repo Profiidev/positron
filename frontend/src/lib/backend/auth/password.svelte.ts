@@ -14,16 +14,16 @@ export const fetch_key = async () => {
     return RequestError.Other;
   }
 
-  let key = await get<string>("/auth/password/key", ResponseType.Text);
+  let key = await get<{ key: string }>("/auth/password/key", ResponseType.Json);
 
-  if (typeof key !== "string") {
+  if (typeof key !== "object") {
     return key;
   }
 
   const JSEncrypt = (await import("jsencrypt")).JSEncrypt;
 
   encrypt = new JSEncrypt({ default_key_size: "4096" });
-  encrypt.setPublicKey(key);
+  encrypt.setPublicKey(key.key);
 };
 fetch_key();
 
@@ -33,9 +33,9 @@ export const password_login = async (email: string, password: string) => {
   }
 
   let encrypted_password = encrypt.encrypt(password);
-  let res = await post<string>(
+  let res = await post<{ totp: boolean }>(
     "/auth/password/authenticate",
-    ResponseType.Text,
+    ResponseType.Json,
     ContentType.Json,
     JSON.stringify({
       email,
@@ -43,14 +43,14 @@ export const password_login = async (email: string, password: string) => {
     }),
   );
 
-  if (typeof res !== "string") {
+  if (typeof res !== "object") {
     if (res === RequestError.Unauthorized) {
       fetch_key();
     }
     return res;
   }
 
-  return res === "true";
+  return res.totp;
 };
 
 export const password_special_access = async (password: string) => {

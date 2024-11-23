@@ -37,10 +37,9 @@ async fn rocket() -> _ {
     .configure(config)
     .attach(cors)
     .manage(rocket_cors::catch_all_options_routes())
-    .manage(db)
     .mount("/", routes());
 
-  state(server)
+  state(server, &db).await.manage(db)
 }
 
 fn routes() -> Vec<Route> {
@@ -53,8 +52,8 @@ fn routes() -> Vec<Route> {
     .collect()
 }
 
-fn state(server: Rocket<Build>) -> Rocket<Build> {
-  let server = auth::state(server);
+async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
+  let server = auth::state(server, db).await;
   let server = oauth::state(server);
   let server = management::state(server);
   email::state(server)

@@ -116,6 +116,8 @@
     if (ret) {
       if (ret === RequestError.Unauthorized) {
         return "You can only set access level below yours";
+      } else if (ret === RequestError.Conflict) {
+        return "Name already taken";
       } else {
         return "Error while updating group";
       }

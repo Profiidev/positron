@@ -1,4 +1,5 @@
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+use std::collections::HashMap;
+
 use rocket::{
   async_trait,
   request::{FromRequest, Outcome, Request},
@@ -15,7 +16,11 @@ pub struct OAuthClaims {
   pub sub: Uuid,
   pub exp: i64,
   pub iss: String,
-  pub client_id: Uuid,
+  pub aud: Uuid,
+  pub iat: i64,
+  pub auth_time: i64,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub nonce: Option<String>,
   pub scope: Scope,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub email: Option<String>,
@@ -24,34 +29,8 @@ pub struct OAuthClaims {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub preferred_username: Option<String>,
   pub groups: Vec<String>,
-}
-
-pub struct OAuthJwtState {
-  header: Header,
-  encoding_key: EncodingKey,
-  pub iss: String,
-}
-
-impl OAuthJwtState {
-  pub fn create_token(&self, claims: OAuthClaims) -> Result<String, jsonwebtoken::errors::Error> {
-    encode(&self.header, &claims, &self.encoding_key)
-  }
-}
-
-impl Default for OAuthJwtState {
-  fn default() -> Self {
-    let key_string = std::env::var("AUTH_JWT_SECRET").expect("Failed to load JwtSecret");
-    let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
-
-    let header = Header::new(Algorithm::HS512);
-    let encoding_key = EncodingKey::from_secret(key_string.as_bytes());
-
-    Self {
-      header,
-      encoding_key,
-      iss,
-    }
-  }
+  #[serde(flatten)]
+  pub rest: HashMap<String, String>,
 }
 
 #[async_trait]

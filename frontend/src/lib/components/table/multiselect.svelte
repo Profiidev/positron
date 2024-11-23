@@ -80,7 +80,7 @@
         variant="outline"
         {...props}
         role="combobox"
-        class="h-full text-wrap !opacity-100"
+        class="h-10 text-wrap !opacity-100"
       >
         {#if selected.length === 0}
           No {label}

@@ -79,7 +79,7 @@
       {/if}
     </Card.Content>
     <Card.Footer class="flex flex-col">
-      <span class="text-destructive truncate text-sm">{error}</span>
+      <span class="text-destructive truncate text-sm mb-4">{error}</span>
       <div class="flex justify-between w-full">
         <Button variant="secondary" onclick={cancel}>Cancel</Button>
         <Button onclick={confirm}>Confirm</Button>

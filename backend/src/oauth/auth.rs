@@ -1,13 +1,14 @@
 use std::str::FromStr;
 
 use chrono::Utc;
-use rocket::{form::Form, get, post, response::Redirect, Route, State};
+use rocket::{form::Form, get, post, response::Redirect, serde::json::Json, Route, State};
+use serde::Serialize;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::oauth_client::OAuthClient, DB},
+  db::{tables::oauth::oauth_client::OAuthClient, DB},
   error::{Error, Result},
 };
 
@@ -63,6 +64,11 @@ async fn authorize_start(
   ))
 }
 
+#[derive(Serialize)]
+struct AuthRes {
+  location: String,
+}
+
 #[post("/authorize_confirm?<code>&<allow>")]
 async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
@@ -70,14 +76,16 @@ async fn authorize_confirm(
   db: &State<DB>,
   code: &str,
   allow: Option<bool>,
-) -> Result<String> {
+) -> Result<Json<AuthRes>> {
   let mut lock = state.auth_pending.lock().await;
   let code = Uuid::from_str(code)?;
 
   let allow = allow.unwrap_or(false);
   if !allow {
     lock.remove(&code);
-    return Ok("".into());
+    return Ok(Json(AuthRes {
+      location: "".into(),
+    }));
   }
 
   let Some((exp, req)) = lock.get(&code) else {
@@ -108,7 +116,9 @@ async fn authorize_confirm(
 
   let initial_redirect_uri = req.redirect_uri.clone();
   if let Some(error) = validate_req(&mut req, &client) {
-    return Ok(format!("{}?error={}", client.redirect_uri, error));
+    return Ok(Json(AuthRes {
+      location: format!("{}?error={}", client.redirect_uri, error),
+    }));
   }
 
   let auth_code = Uuid::new_v4();
@@ -120,6 +130,7 @@ async fn authorize_confirm(
       scope: req.scope.unwrap().parse().unwrap(),
       user: auth.sub,
       exp: get_timestamp_10_min(),
+      nonce: req.nonce,
     },
   );
 
@@ -130,7 +141,9 @@ async fn authorize_confirm(
 
   let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
 
-  Ok(url.to_string())
+  Ok(Json(AuthRes {
+    location: url.to_string(),
+  }))
 }
 
 fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str> {
@@ -153,8 +166,11 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
     return Some("unsupported_response_type");
   }
 
-  if let Some(scope) = &req.scope {
-    let scope = client.default_scope.intersect(&scope.parse().unwrap());
+  if let Some(scope) = &mut req.scope {
+    *scope = client
+      .default_scope
+      .intersect(&scope.parse().unwrap())
+      .to_string();
     if scope.is_empty() {
       return Some("invalid_scope");
     }

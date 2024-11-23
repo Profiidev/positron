@@ -3,9 +3,10 @@ use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::oauth::scope::Scope;
-
-use super::{group::BasicGroupInfo, user::BasicUserInfo};
+use crate::{
+  db::tables::user::{group::BasicGroupInfo, user::BasicUserInfo},
+  oauth::scope::Scope,
+};
 
 #[derive(Serialize)]
 pub struct OAuthClientCreate {
@@ -201,5 +202,30 @@ RETURN $clients;",
     .await?;
 
     Ok(())
+  }
+
+  pub async fn set_secret_hash(&self, client: Thing, hash: String) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE $id SET client_secret = $hash")
+      .bind(("id", client))
+      .bind(("hash", hash))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn client_exists(&self, name: String, uuid: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $found = SELECT * FROM oauth_client WHERE name = $name AND client_id != $uuid;
+$found.len() > 0",
+      )
+      .bind(("name", name))
+      .bind(("uuid", uuid))
+      .await?;
+
+    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
   }
 }

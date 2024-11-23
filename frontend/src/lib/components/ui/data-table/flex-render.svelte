@@ -17,7 +17,7 @@
   import {
     RenderComponentConfig,
     RenderSnippetConfig,
-  } from "$lib/components/ui/data-table/render-helpers.js";
+  } from "./render-helpers.js";
   type Props = {
     /** The cell or header field of the current cell's column definition. */
     content?: TContext extends HeaderContext<TData, TValue>

@@ -21,7 +21,7 @@ use webauthn_rs::{
 use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
-  db::{tables::passkey::PasskeyCreate, DB},
+  db::{tables::user::passkey::PasskeyCreate, DB},
   error::{Error, Result},
 };
 
