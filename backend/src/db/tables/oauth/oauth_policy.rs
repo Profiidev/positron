@@ -188,4 +188,17 @@ $policy.map(|$p| {
       .take::<Option<OAuthPolicy>>(0)?
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
+
+  pub async fn policy_exists(&self, name: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $found = SELECT * FROM oauth_policy WHERE name = $name;
+$found.len() > 0",
+      )
+      .bind(("name", name))
+      .await?;
+
+    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
+  }
 }

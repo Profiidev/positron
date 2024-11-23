@@ -11,7 +11,7 @@ use crate::{
     },
     DB,
   },
-  error::Result,
+  error::{Error, Result},
   permissions::Permission,
 };
 
@@ -36,6 +36,15 @@ async fn create(
   req: Json<OAuthScopeCreate>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
+
+  if db
+    .tables()
+    .oauth_scope()
+    .scope_exists(req.name.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
 
   let policy = db
     .tables()
@@ -68,6 +77,15 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) 
 #[post("/edit", data = "<req>")]
 async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthScopeInfo>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
+
+  if db
+    .tables()
+    .oauth_scope()
+    .scope_exists(req.name.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
 
   let policy = db
     .tables()

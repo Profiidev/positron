@@ -59,6 +59,10 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupInfo>) ->
     return Err(Error::Unauthorized);
   }
 
+  if db.tables().groups().group_exists(req.name.clone()).await? {
+    return Err(Error::Conflict);
+  }
+
   let users = db
     .tables()
     .user()

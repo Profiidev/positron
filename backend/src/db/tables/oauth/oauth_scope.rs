@@ -206,4 +206,17 @@ $scope.map(|$s| {
 
     Ok(())
   }
+
+  pub async fn scope_exists(&self, name: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $found = SELECT * FROM oauth_scope WHERE name = $name;
+$found.len() > 0",
+      )
+      .bind(("name", name))
+      .await?;
+
+    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
+  }
 }

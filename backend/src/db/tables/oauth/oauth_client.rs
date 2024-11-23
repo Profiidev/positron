@@ -214,4 +214,17 @@ RETURN $clients;",
 
     Ok(())
   }
+
+  pub async fn client_exists(&self, name: String) -> Result<bool, Error> {
+    let mut res = self
+      .db
+      .query(
+        "LET $found = SELECT * FROM oauth_client WHERE name = $name;
+$found.len() > 0",
+      )
+      .bind(("name", name))
+      .await?;
+
+    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
+  }
 }

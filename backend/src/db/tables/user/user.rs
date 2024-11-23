@@ -355,11 +355,14 @@ RETURN $permissions.flatten().distinct()",
   pub async fn user_exists(&self, email: String) -> Result<bool, Error> {
     let mut res = self
       .db
-      .query("SELECT * FROM user WHERE email = $email")
+      .query(
+        "LET $found = SELECT * FROM user WHERE email = $email;
+$found.len() > 0",
+      )
       .bind(("email", email))
       .await?;
 
-    Ok(res.take::<Option<User>>(0)?.is_some())
+    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
   }
 
   pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, Error> {

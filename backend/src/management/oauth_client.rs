@@ -10,7 +10,10 @@ use webauthn_rs::prelude::Url;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::{oauth::oauth_client::{OAuthClientCreate, OAuthClientInfo}, user::{group::BasicGroupInfo, user::BasicUserInfo}},
+    tables::{
+      oauth::oauth_client::{OAuthClientCreate, OAuthClientInfo},
+      user::{group::BasicGroupInfo, user::BasicUserInfo},
+    },
     DB,
   },
   error::{Error, Result},
@@ -63,6 +66,15 @@ async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<
 #[post("/edit", data = "<req>")]
 async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthClientInfo>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
+
+  if db
+    .tables()
+    .oauth_client()
+    .client_exists(req.name.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
 
   let client = db
     .tables()
@@ -130,6 +142,15 @@ async fn create(
   state: &State<ClientState>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
+
+  if db
+    .tables()
+    .oauth_client()
+    .client_exists(req.name.clone())
+    .await?
+  {
+    return Err(Error::Conflict);
+  }
 
   let mut lock = state.create.lock().await;
   let ClientCreateStart { secret, client_id } = lock.get(&auth.sub).ok_or(Error::BadRequest)?;

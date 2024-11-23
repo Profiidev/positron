@@ -84,7 +84,7 @@ async fn create(
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserCreate).await?;
 
-  let exists = db.tables().user().user_exists(req.name.clone()).await?;
+  let exists = db.tables().user().user_exists(req.email.clone()).await?;
   if exists {
     return Err(Error::Conflict);
   }
