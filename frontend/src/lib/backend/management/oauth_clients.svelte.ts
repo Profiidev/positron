@@ -110,3 +110,14 @@ export const reset_client_secret = async (client_id: string) => {
     return ret;
   }
 };
+
+export const list_scope_names = async () => {
+  let ret = await get<string[]>(
+    "/management/oauth_client/list_scopes",
+    ResponseType.Json,
+  );
+
+  if (Array.isArray(ret)) {
+    return ret;
+  }
+};

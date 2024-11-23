@@ -17,6 +17,7 @@
     list_clients,
     list_clients_group,
     list_clients_user,
+    list_scope_names,
     reset_client_secret,
     start_create_client,
   } from "$lib/backend/management/oauth_clients.svelte";
@@ -37,9 +38,11 @@
   let clients: OAuthClientInfo[] | undefined = $state();
   let groups: GroupInfo[] | undefined = $state();
   let users: UserInfo[] | undefined = $state();
+  let scope_names: string[] | undefined = $state();
   list_clients().then((client) => (clients = client));
   list_clients_group().then((group) => (groups = group));
   list_clients_user().then((user) => (users = user));
+  list_scope_names().then((scope) => (scope_names = scope));
   let userInfo = $derived(getUserInfo());
 
   let client: OAuthClientInfo | undefined = $state();
@@ -49,9 +52,10 @@
   let redirect_uri = $state("");
   let additional_redirect_uri = $state("");
   let additional_redirect_uri_edit = $state("");
-  let scope = $state("");
+  let scope: string[] = $state([]);
   let startCreate: OAuthClientCreate | undefined = $state();
   let newSecret = $state("");
+  let scope_edit: string[] = $state([]);
 
   let clientInfo = $derived([
     {
@@ -155,7 +159,12 @@
       return "Set valid additional redirect URIs";
     }
 
-    let ret = await create_client(name, redirect_uri, other_uris, scope);
+    let ret = await create_client(
+      name,
+      redirect_uri,
+      other_uris,
+      scope.join(" "),
+    );
     if (ret) {
       if (ret === RequestError.Conflict) {
         return "Name already taken";
@@ -168,7 +177,7 @@
       name = "";
       redirect_uri = "";
       additional_redirect_uri = "";
-      scope = "";
+      scope = [];
     }
   };
 
@@ -180,6 +189,7 @@
     client = clients?.find((client) => client.client_id === client_id);
     additional_redirect_uri_edit =
       client?.additional_redirect_uris.join(" ") || "";
+    scope_edit = client?.default_scope.split(" ").filter((s) => s !== "") || [];
     newSecret = "";
     editOpen = true;
   };
@@ -204,6 +214,8 @@
     if (!client.additional_redirect_uris.every((u) => isUrl(u))) {
       return "Set valid additional redirect URIs";
     }
+
+    client.default_scope = scope_edit.join(" ");
 
     let ret = await edit_client(client);
 
@@ -303,11 +315,14 @@
         <Input id="id" value={client.client_id} readonly />
         <Label for="name">Name</Label>
         <Input id="name" placeholder="Name" bind:value={client.name} />
-        <Label for="scope">Scope</Label>
-        <Input
-          id="scope"
-          placeholder="Scope"
-          bind:value={client.default_scope}
+        <Label>Scope</Label>
+        <Multiselect
+          label="Scope"
+          data={scope_names?.map((s) => ({
+            label: s,
+            value: s,
+          })) || []}
+          selected={scope_edit}
         />
         <Label for="uri">Default Redirect URI</Label>
         <Input
@@ -379,7 +394,7 @@
             {/each}
           </div>
           <Separator orientation="vertical" class="mx-[30px]" />
-          <div class="h-full space-y-1">
+          <div class="h-fit grid space-y-1 gap-1">
             {#each clientInfo as info}
               <Label for={info.name}>{@html info.name}</Label>
               <Input id={info.name} value={info.value} readonly />
@@ -393,12 +408,13 @@
               bind:value={name}
             />
             <Label for="scope">Scope</Label>
-            <Input
-              id="scope"
-              placeholder="Scope"
-              required
-              disabled={isLoading}
-              bind:value={scope}
+            <Multiselect
+              label="Scope"
+              data={scope_names?.map((s) => ({
+                label: s,
+                value: s,
+              })) || []}
+              selected={scope}
             />
             <Label for="uri">Default Redirect URI</Label>
             <Input

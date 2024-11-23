@@ -17,7 +17,7 @@ use crate::{
     DB,
   },
   error::{Error, Result},
-  oauth::scope::Scope,
+  oauth::scope::{Scope, DEFAULT_SCOPES},
   permissions::Permission,
   utils::hash_secret,
 };
@@ -29,6 +29,7 @@ pub fn routes() -> Vec<Route> {
     list,
     group_list,
     user_list,
+    list_scopes,
     edit,
     start_create,
     create,
@@ -226,4 +227,19 @@ async fn reset(
     .await?;
 
   Ok(Json(ResetRes { secret }))
+}
+
+#[get("/list_scopes")]
+async fn list_scopes(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<String>>> {
+  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+
+  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  scopes_supported.extend_from_slice(
+    &DEFAULT_SCOPES
+      .iter()
+      .map(|p| p.to_string())
+      .collect::<Vec<String>>(),
+  );
+
+  Ok(Json(scopes_supported))
 }
