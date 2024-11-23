@@ -127,7 +127,11 @@
     let ret = await edit_policy(policy);
 
     if (ret) {
-      return "Error while updating policy";
+      if (ret === RequestError.Conflict) {
+        return "Name already taken";
+      } else {
+        return "Error while updating policy";
+      }
     } else {
       updatePolicies();
       toast.success("Policy updated");

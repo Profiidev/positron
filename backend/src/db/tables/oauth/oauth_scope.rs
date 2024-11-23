@@ -207,14 +207,15 @@ $scope.map(|$s| {
     Ok(())
   }
 
-  pub async fn scope_exists(&self, name: String) -> Result<bool, Error> {
+  pub async fn scope_exists(&self, name: String, uuid: String) -> Result<bool, Error> {
     let mut res = self
       .db
       .query(
-        "LET $found = SELECT * FROM oauth_scope WHERE name = $name;
+        "LET $found = SELECT * FROM oauth_scope WHERE name = $name AND uuid != $uuid;
 $found.len() > 0",
       )
       .bind(("name", name))
+      .bind(("uuid", uuid))
       .await?;
 
     Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))

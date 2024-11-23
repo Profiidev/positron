@@ -40,7 +40,7 @@ async fn create(
   if db
     .tables()
     .oauth_scope()
-    .scope_exists(req.name.clone())
+    .scope_exists(req.name.clone(), "".into())
     .await?
   {
     return Err(Error::Conflict);
@@ -81,7 +81,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthScopeInfo
   if db
     .tables()
     .oauth_scope()
-    .scope_exists(req.name.clone())
+    .scope_exists(req.name.clone(), req.uuid.clone())
     .await?
   {
     return Err(Error::Conflict);

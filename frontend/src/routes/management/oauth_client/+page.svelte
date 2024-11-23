@@ -204,7 +204,11 @@
     let ret = await edit_client(client);
 
     if (ret) {
-      return "Error while updating client";
+      if (ret === RequestError.Conflict) {
+        return "Name already taken";
+      } else {
+        return "Error while updating client";
+      }
     } else {
       updateClients();
       toast.success("Client updated");

@@ -144,11 +144,12 @@ RETURN $groups ",
       .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 
-  pub async fn group_exists(&self, name: String) -> Result<bool, Error> {
+  pub async fn group_exists(&self, name: String, uuid: String) -> Result<bool, Error> {
     let mut res = self
       .db
-      .query("SELECT * FROM group WHERE name = $name")
+      .query("SELECT * FROM group WHERE name = $name AND uuid != $uuid")
       .bind(("name", name))
+      .bind(("uuid", uuid))
       .await?;
 
     Ok(res.take::<Option<Group>>(0)?.is_some())

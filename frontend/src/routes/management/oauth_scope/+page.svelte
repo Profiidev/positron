@@ -111,7 +111,11 @@
     let ret = await edit_scope(scope);
 
     if (ret) {
-      return "Error while updating scope";
+      if (ret === RequestError.Conflict) {
+        return "Name already taken";
+      } else {
+        return "Error while updating scope";
+      }
     } else {
       updateScopes();
       toast.success("Scope updated");

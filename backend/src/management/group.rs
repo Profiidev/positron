@@ -59,7 +59,12 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupInfo>) ->
     return Err(Error::Unauthorized);
   }
 
-  if db.tables().groups().group_exists(req.name.clone()).await? {
+  if db
+    .tables()
+    .groups()
+    .group_exists(req.name.clone(), req.uuid.clone())
+    .await?
+  {
     return Err(Error::Conflict);
   }
 
@@ -84,7 +89,11 @@ async fn create(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupCreateR
   Permission::check(db, auth.sub, Permission::GroupCreate).await?;
   Permission::is_access_level_high_enough(db, auth.sub, req.access_level).await?;
 
-  let exists = db.tables().groups().group_exists(req.name.clone()).await?;
+  let exists = db
+    .tables()
+    .groups()
+    .group_exists(req.name.clone(), "".into())
+    .await?;
   if exists {
     return Err(Error::Conflict);
   }

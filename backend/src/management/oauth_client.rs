@@ -70,7 +70,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthClientInf
   if db
     .tables()
     .oauth_client()
-    .client_exists(req.name.clone())
+    .client_exists(req.name.clone(), req.client_id.clone())
     .await?
   {
     return Err(Error::Conflict);
@@ -146,7 +146,7 @@ async fn create(
   if db
     .tables()
     .oauth_client()
-    .client_exists(req.name.clone())
+    .client_exists(req.name.clone(), "".into())
     .await?
   {
     return Err(Error::Conflict);
