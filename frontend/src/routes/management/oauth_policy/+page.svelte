@@ -42,12 +42,16 @@
   let group: [GroupInfo, string][] = $state([]);
 
   let groups_left_edit = $derived(
-    groups?.filter(
-      (g) => policy && !policy.group.some((p) => p[0].uuid === g.uuid),
-    ) || [],
+    deepCopy(
+      groups?.filter(
+        (g) => policy && !policy.group.some((p) => p[0].uuid === g.uuid),
+      ) || [],
+    ),
   );
   let groups_left_create = $derived(
-    groups?.filter((g) => !group.some((p) => p[0].uuid === g.uuid)) || [],
+    deepCopy(
+      groups?.filter((g) => !group.some((p) => p[0].uuid === g.uuid)) || [],
+    ),
   );
 
   const filterFn = (row: Row<OAuthPolicy>, id: string, filterValues: any) => {
