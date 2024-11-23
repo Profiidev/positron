@@ -11,6 +11,7 @@ use totp_rs::{Rfc6238, Secret, TOTP};
 use crate::{
   db::DB,
   error::{Error, Result},
+  ws::state::{UpdateState, UpdateType},
 };
 
 use super::{
@@ -123,8 +124,13 @@ async fn confirm(
 }
 
 #[post("/remove")]
-async fn remove(auth: JwtClaims<JwtSpecial>, db: &State<DB>) -> Result<Status> {
+async fn remove(
+  auth: JwtClaims<JwtSpecial>,
+  db: &State<DB>,
+  updater: &State<UpdateState>,
+) -> Result<Status> {
   db.tables().user().totp_remove(auth.sub).await?;
+  updater.send_message(auth.sub, UpdateType::User).await;
 
   Ok(Status::Ok)
 }

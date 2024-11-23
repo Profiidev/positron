@@ -13,6 +13,7 @@ use crate::{
   },
   error::{Error, Result},
   permissions::Permission,
+  ws::state::{UpdateState, UpdateType},
 };
 
 pub fn routes() -> Vec<Route> {
@@ -34,6 +35,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
   req: Json<OAuthPolicyCreate>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -54,6 +56,7 @@ async fn create(
     .oauth_policy()
     .create_policy(req.0, groups, Uuid::new_v4().to_string(), content)
     .await?;
+  updater.broadcast_message(UpdateType::OAuthPolicy).await;
 
   Ok(())
 }
@@ -64,7 +67,12 @@ struct DeleteReq {
 }
 
 #[post("/delete", data = "<req>")]
-async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) -> Result<()> {
+async fn delete(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<DeleteReq>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientDelete).await?;
 
   let policy = db
@@ -78,12 +86,18 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) 
     .remove_policy_everywhere(policy.id)
     .await?;
   db.tables().oauth_policy().delete_policy(req.0.uuid).await?;
+  updater.broadcast_message(UpdateType::OAuthPolicy).await;
 
   Ok(())
 }
 
 #[post("/edit", data = "<req>")]
-async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthPolicyInfo>) -> Result<()> {
+async fn edit(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<OAuthPolicyInfo>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
@@ -103,6 +117,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthPolicyInf
     .oauth_policy()
     .update_policy(req.0, groups, content)
     .await?;
+  updater.broadcast_message(UpdateType::OAuthPolicy).await;
 
   Ok(())
 }

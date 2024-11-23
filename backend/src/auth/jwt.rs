@@ -139,7 +139,6 @@ impl JwtState {
     http: bool,
   ) -> Cookie<'c> {
     Cookie::build((name, value))
-      .domain(self.iss.clone())
       .http_only(http)
       .max_age(rocket::time::Duration::seconds(T::duration(
         self.exp,

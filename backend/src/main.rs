@@ -16,6 +16,7 @@ mod management;
 mod oauth;
 mod permissions;
 mod utils;
+mod ws;
 
 #[launch]
 async fn rocket() -> _ {
@@ -49,6 +50,7 @@ fn routes() -> Vec<Route> {
     .chain(email::routes())
     .chain(oauth::routes())
     .chain(management::routes())
+    .chain(ws::routes())
     .collect()
 }
 
@@ -56,5 +58,6 @@ async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
   let server = auth::state(server, db).await;
   let server = oauth::state(server);
   let server = management::state(server);
+  let server = ws::state(server);
   email::state(server)
 }

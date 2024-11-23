@@ -18,6 +18,7 @@ use crate::{
   error::{Error, Result},
   permissions::Permission,
   utils::hash_password,
+  ws::state::{UpdateState, UpdateType},
 };
 
 pub fn routes() -> Vec<Route> {
@@ -44,7 +45,12 @@ struct UserEdit {
 }
 
 #[post("/edit", data = "<req>")]
-async fn edit(req: Json<UserEdit>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<()> {
+async fn edit(
+  req: Json<UserEdit>,
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   let user = Uuid::from_str(&req.user)?;
   Permission::check(db, auth.sub, Permission::UserEdit).await?;
   Permission::is_privileged_enough(db, auth.sub, user).await?;
@@ -64,6 +70,7 @@ async fn edit(req: Json<UserEdit>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> 
     .user()
     .edit_user(user.id, req.0.permissions, req.0.name)
     .await?;
+  updater.broadcast_message(UpdateType::User).await;
 
   Ok(())
 }
@@ -81,6 +88,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
   pw: &State<PasswordState>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserCreate).await?;
 
@@ -105,6 +113,7 @@ async fn create(
       permissions: Default::default(),
     })
     .await?;
+  updater.broadcast_message(UpdateType::User).await;
 
   Ok(())
 }
@@ -115,7 +124,12 @@ struct UserDelete {
 }
 
 #[post("/delete", data = "<req>")]
-async fn delete(req: Json<UserDelete>, auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<()> {
+async fn delete(
+  req: Json<UserDelete>,
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::UserDelete).await?;
   Permission::is_privileged_enough(db, auth.sub, req.uuid).await?;
 
@@ -130,6 +144,7 @@ async fn delete(req: Json<UserDelete>, auth: JwtClaims<JwtBase>, db: &State<DB>)
     .await?;
   db.tables().groups().remove_user_everywhere(user.id).await?;
   db.tables().user().delete_user(req.uuid).await?;
+  updater.broadcast_message(UpdateType::User).await;
 
   Ok(())
 }

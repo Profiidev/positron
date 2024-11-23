@@ -5,6 +5,8 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
+  import { onMount } from "svelte";
+  import { connect_updater } from "$lib/backend/ws/updater.svelte";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -13,6 +15,8 @@
   let { children }: Props = $props();
 
   const noLayout = ["/login", "/oauth", "/oauth/logout"];
+
+  onMount(connect_updater);
 </script>
 
 <ModeWatcher />

@@ -23,6 +23,7 @@ use webauthn_rs_proto::ResidentKeyRequirement;
 use crate::{
   db::{tables::user::passkey::PasskeyCreate, DB},
   error::{Error, Result},
+  ws::state::{UpdateState, UpdateType},
 };
 
 use super::{
@@ -87,6 +88,7 @@ async fn finish_registration(
   db: &State<DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
   let uuid = Uuid::from_str(&user.uuid)?;
@@ -115,6 +117,7 @@ async fn finish_registration(
       name: reg.name.clone(),
     })
     .await?;
+  updater.send_message(auth.sub, UpdateType::Passkey).await;
 
   Ok(Status::Ok)
 }
@@ -292,6 +295,7 @@ async fn remove(
   req: Json<PasskeyRemove>,
   auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
@@ -299,6 +303,7 @@ async fn remove(
     .passkey()
     .remove_passkey_by_name(user.id, req.name.clone())
     .await?;
+  updater.send_message(auth.sub, UpdateType::Passkey).await;
 
   Ok(())
 }
@@ -314,6 +319,7 @@ async fn edit_name(
   req: Json<PasskeyEdit>,
   auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
@@ -330,6 +336,7 @@ async fn edit_name(
     .passkey()
     .edit_passkey_name(user.id, req.name.clone(), req.old_name.clone())
     .await?;
+  updater.send_message(auth.sub, UpdateType::Passkey).await;
 
   Ok(())
 }

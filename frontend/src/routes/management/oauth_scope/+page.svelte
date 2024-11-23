@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import {
     Permission,
-    type OAuthPolicyInfo,
     type OAuthScope,
   } from "$lib/backend/management/types.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
@@ -18,17 +17,17 @@
     create_scope,
     delete_scope,
     edit_scope,
-    list_policy_info,
-    list_scopes,
   } from "$lib/backend/management/oauth_scope.svelte";
   import Multiselect from "$lib/components/table/multiselect.svelte";
+  import {
+    oauth_policy_info_list,
+    oauth_scope_list,
+  } from "$lib/backend/management/stores.svelte";
 
   let isLoading = $state(false);
-  let scopes: OAuthScope[] | undefined = $state();
-  let policies: OAuthPolicyInfo[] | undefined = $state();
-  list_scopes().then((scope) => (scopes = scope));
-  list_policy_info().then((policy) => (policies = policy));
-  let userInfo = $derived(getUserInfo());
+  let scopes = $derived(oauth_scope_list.value);
+  let policies = $derived(oauth_policy_info_list.value);
+  let userInfo = $derived(userData.value?.[0]);
 
   let scope: OAuthScope | undefined = $state();
   let editOpen = $state(false);
@@ -81,16 +80,11 @@
         return "Error while creating scope";
       }
     } else {
-      updateScopes();
       toast.success("Created Scope");
       name = "";
       scope_name = "";
       policy = [];
     }
-  };
-
-  const updateScopes = async () => {
-    await list_scopes().then((scope) => (scopes = scope));
   };
 
   const editScope = (uuid: string) => {
@@ -117,7 +111,6 @@
         return "Error while updating scope";
       }
     } else {
-      updateScopes();
       toast.success("Scope updated");
     }
   };
@@ -132,7 +125,6 @@
     if (ret) {
       return "Error while deleting scope";
     } else {
-      updateScopes();
       toast.success("Scope deleted");
     }
   };

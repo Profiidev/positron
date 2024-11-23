@@ -6,9 +6,9 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Avatar from "$lib/components/util/avatar.svelte";
   import { logout } from "$lib/backend/auth/other.svelte";
-  import { getProfileInfo } from "$lib/backend/account/info.svelte";
+    import { userData } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(getProfileInfo());
+  let infoData = $derived(userData.value?.[1]);
   let sidebar = Sidebar.useSidebar();
 
   const settings = () => {

@@ -13,6 +13,7 @@ use crate::{
   },
   error::{Error, Result},
   permissions::Permission,
+  ws::state::{UpdateState, UpdateType},
 };
 
 pub fn routes() -> Vec<Route> {
@@ -34,6 +35,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
   req: Json<OAuthScopeCreate>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -56,6 +58,7 @@ async fn create(
     .oauth_scope()
     .create_scope(req.0, policy, Uuid::new_v4().to_string())
     .await?;
+  updater.broadcast_message(UpdateType::OAuthScope).await;
 
   Ok(())
 }
@@ -66,16 +69,27 @@ struct DeleteReq {
 }
 
 #[post("/delete", data = "<req>")]
-async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) -> Result<()> {
+async fn delete(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<DeleteReq>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientDelete).await?;
 
   db.tables().oauth_scope().delete_scope(req.0.uuid).await?;
+  updater.broadcast_message(UpdateType::OAuthScope).await;
 
   Ok(())
 }
 
 #[post("/edit", data = "<req>")]
-async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthScopeInfo>) -> Result<()> {
+async fn edit(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<OAuthScopeInfo>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
@@ -94,6 +108,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthScopeInfo
     .await?;
 
   db.tables().oauth_scope().edit_scope(req.0, policy).await?;
+  updater.broadcast_message(UpdateType::OAuthScope).await;
 
   Ok(())
 }

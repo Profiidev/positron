@@ -20,6 +20,7 @@ use crate::{
   oauth::scope::{Scope, DEFAULT_SCOPES},
   permissions::Permission,
   utils::hash_secret,
+  ws::state::{UpdateState, UpdateType},
 };
 
 use super::state::{ClientCreateStart, ClientState};
@@ -58,14 +59,25 @@ async fn group_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec
 
 #[get("/user_list")]
 async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<BasicUserInfo>>> {
-  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+  let res = Permission::check(db, auth.sub, Permission::OAuthClientList).await;
+  if let Err(Error::Unauthorized) = res {
+    Permission::check(db, auth.sub, Permission::GroupList).await?;
+  } else {
+    res?;
+  }
+
   let user = db.tables().user().basic_user_list().await?;
 
   Ok(Json(user))
 }
 
 #[post("/edit", data = "<req>")]
-async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthClientInfo>) -> Result<()> {
+async fn edit(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<OAuthClientInfo>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
@@ -98,6 +110,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthClientInf
     .oauth_client()
     .edit_client(req.0, client.id, users, groups)
     .await?;
+  updater.broadcast_message(UpdateType::OAuthClient).await;
 
   Ok(())
 }
@@ -141,6 +154,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
   state: &State<ClientState>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -173,6 +187,7 @@ async fn create(
       user_access: Vec::new(),
     })
     .await?;
+  updater.broadcast_message(UpdateType::OAuthClient).await;
 
   lock.remove(&auth.sub);
 
@@ -185,11 +200,17 @@ struct ClientDelete {
 }
 
 #[post("/delete", data = "<req>")]
-async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<ClientDelete>) -> Result<()> {
+async fn delete(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<ClientDelete>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientDelete).await?;
 
   let uuid = Uuid::from_str(&req.uuid)?;
   db.tables().oauth_client().remove_client(uuid).await?;
+  updater.broadcast_message(UpdateType::OAuthClient).await;
 
   Ok(())
 }

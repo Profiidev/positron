@@ -7,18 +7,16 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::user::{
-      group::{GroupCreate, GroupInfo},
-      user::BasicUserInfo,
-    },
+    tables::user::group::{GroupCreate, GroupInfo},
     DB,
   },
   error::{Error, Result},
   permissions::Permission,
+  ws::state::{UpdateState, UpdateType},
 };
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![list, user_list, edit, create, delete]
+  rocket::routes![list, edit, create, delete]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/group", base)))
     .collect()
@@ -32,16 +30,13 @@ async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<Group
   Ok(Json(groups))
 }
 
-#[get("/user_list")]
-async fn user_list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<BasicUserInfo>>> {
-  Permission::check(db, auth.sub, Permission::GroupList).await?;
-  let users = db.tables().user().basic_user_list().await?;
-
-  Ok(Json(users))
-}
-
 #[post("/edit", data = "<req>")]
-async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupInfo>) -> Result<()> {
+async fn edit(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<GroupInfo>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   let uuid = Uuid::parse_str(&req.uuid)?;
 
   Permission::check(db, auth.sub, Permission::GroupEdit).await?;
@@ -74,6 +69,7 @@ async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupInfo>) ->
     .get_users_by_info(req.users.clone())
     .await?;
   db.tables().groups().edit(group.id, req.0, users).await?;
+  updater.broadcast_message(UpdateType::Group).await;
 
   Ok(())
 }
@@ -85,7 +81,12 @@ struct GroupCreateReq {
 }
 
 #[post("/create", data = "<req>")]
-async fn create(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupCreateReq>) -> Result<()> {
+async fn create(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<GroupCreateReq>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   Permission::check(db, auth.sub, Permission::GroupCreate).await?;
   Permission::is_access_level_high_enough(db, auth.sub, req.access_level).await?;
 
@@ -108,6 +109,7 @@ async fn create(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupCreateR
       users: Vec::new(),
     })
     .await?;
+  updater.broadcast_message(UpdateType::Group).await;
 
   Ok(())
 }
@@ -118,7 +120,12 @@ struct GroupDelete {
 }
 
 #[post("/delete", data = "<req>")]
-async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupDelete>) -> Result<()> {
+async fn delete(
+  auth: JwtClaims<JwtBase>,
+  db: &State<DB>,
+  req: Json<GroupDelete>,
+  updater: &State<UpdateState>,
+) -> Result<()> {
   let uuid = Uuid::parse_str(&req.uuid)?;
 
   Permission::check(db, auth.sub, Permission::GroupDelete).await?;
@@ -135,6 +142,7 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupDelete>
     .remove_group_everywhere(group.id)
     .await?;
   db.tables().groups().delete_group(uuid).await?;
+  updater.broadcast_message(UpdateType::Group).await;
 
   Ok(())
 }
