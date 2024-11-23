@@ -41,6 +41,39 @@ export interface OAuthClientCreate {
   client_id: string;
 }
 
+export interface OAuthPolicy {
+  name: string;
+  uuid: string;
+  claim: string;
+  default: string;
+  group: [GroupInfo, string][];
+}
+
+export interface OAuthPolicyInfo {
+  name: string;
+  uuid: string;
+}
+
+export interface OAuthPolicyCreate {
+  name: string;
+  claim: string;
+  default: string;
+  group: [GroupInfo, string][];
+}
+
+export interface OAuthScope {
+  name: string;
+  uuid: string;
+  scope: string;
+  policy: OAuthPolicyInfo[];
+}
+
+export interface OAuthScopeCreate {
+  name: string;
+  scope: string;
+  policy: OAuthPolicyInfo[];
+}
+
 export enum Permission {
   //user page
   UserList = "UserList",

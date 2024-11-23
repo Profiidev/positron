@@ -343,7 +343,7 @@
   <div class="ml-7 md:m-0">
     <h3 class="text-xl font-medium">Clients</h3>
     <p class="text-muted-foreground text-sm">
-      Modify, create, delete clients and manage settings here
+      Modify, create, delete clients and manage their settings here
     </p>
   </div>
   <Table filterColumn="name" {table}>

@@ -8,8 +8,7 @@ pub struct OAuthPolicyCreate {
   pub name: String,
   pub claim: String,
   pub default: String,
-  pub group: Vec<BasicGroupInfo>,
-  pub content: Vec<String>,
+  pub group: Vec<(BasicGroupInfo, String)>,
 }
 
 #[allow(unused)]
@@ -30,8 +29,7 @@ pub struct OAuthPolicyInfo {
   pub name: String,
   pub claim: String,
   pub default: String,
-  pub group: Vec<BasicGroupInfo>,
-  pub content: Vec<String>,
+  pub group: Vec<(BasicGroupInfo, String)>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -96,8 +94,7 @@ $policy.map(|$p| {
           name: policy.name,
           claim: policy.claim,
           default: policy.default,
-          group,
-          content: policy.content,
+          group: group.into_iter().zip(policy.content).collect(),
         })
         .collect(),
     )
@@ -108,13 +105,15 @@ $policy.map(|$p| {
     policy: OAuthPolicyCreate,
     group_mapped: Vec<Thing>,
     uuid: String,
+    content: Vec<String>,
   ) -> Result<(), Error> {
     self
       .db
-      .query("CREATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content, uuid = $uuid")
+      .query("CREATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content_r, uuid = $uuid")
       .bind(policy)
       .bind(("uuid", uuid))
       .bind(("group_mapped", group_mapped))
+      .bind(("content_r", content))
       .await?;
 
     Ok(())
@@ -124,8 +123,12 @@ $policy.map(|$p| {
     &self,
     policy: OAuthPolicyInfo,
     group_mapped: Vec<Thing>,
+    content: Vec<String>,
   ) -> Result<(), Error> {
-    self.db.query("UPDATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content WHERE uuid = $uuid").bind(policy).bind(("group_mapped", group_mapped)).await?;
+    self.db.query("UPDATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content_r WHERE uuid = $uuid")
+    .bind(policy)
+    .bind(("group_mapped", group_mapped))
+    .bind(("content_r", content)).await?;
 
     Ok(())
   }
@@ -148,7 +151,7 @@ $policy.map(|$p| {
       .db
       .query(
         "$policy.map(|$p| {
-    LET $found = SELECT id FROM group WHERE uuid = $p.uuid;
+    LET $found = SELECT id FROM oauth_policy WHERE uuid = $p.uuid;
     RETURN $found[0].id;
 })",
       )
@@ -162,5 +165,27 @@ $policy.map(|$p| {
     let mut res = self.db.query("SELECT name, uuid FROM oauth_policy").await?;
 
     Ok(res.take(0).unwrap_or_default())
+  }
+
+  pub async fn remove_group_everywhere(&self, group: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE oauth_policy SET group -= $group")
+      .bind(("group", group))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn get_policy(&self, uuid: String) -> Result<OAuthPolicy, Error> {
+    let mut res = self
+      .db
+      .query("SELECT * FROM oauth_policy WHERE uuid = $uuid")
+      .bind(("uuid", uuid))
+      .await?;
+
+    res
+      .take::<Option<OAuthPolicy>>(0)?
+      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
   }
 }

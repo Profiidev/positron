@@ -5,7 +5,10 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::oauth::oauth_policy::{OAuthPolicyCreate, OAuthPolicyInfo},
+    tables::{
+      oauth::oauth_policy::{OAuthPolicyCreate, OAuthPolicyInfo},
+      user::group::BasicGroupInfo,
+    },
     DB,
   },
   error::Result,
@@ -34,15 +37,13 @@ async fn create(
 ) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
 
-  let groups = db
-    .tables()
-    .groups()
-    .get_groups_by_info(req.group.clone())
-    .await?;
+  let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();
+
+  let groups = db.tables().groups().get_groups_by_info(group).await?;
 
   db.tables()
     .oauth_policy()
-    .create_policy(req.0, groups, Uuid::new_v4().to_string())
+    .create_policy(req.0, groups, Uuid::new_v4().to_string(), content)
     .await?;
 
   Ok(())
@@ -50,14 +51,24 @@ async fn create(
 
 #[derive(Deserialize)]
 struct DeleteReq {
-  name: String,
+  uuid: String,
 }
 
 #[post("/delete", data = "<req>")]
 async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientDelete).await?;
 
-  db.tables().oauth_policy().delete_policy(req.0.name).await?;
+  let policy = db
+    .tables()
+    .oauth_policy()
+    .get_policy(req.uuid.clone())
+    .await?;
+
+  db.tables()
+    .oauth_scope()
+    .remove_policy_everywhere(policy.id)
+    .await?;
+  db.tables().oauth_policy().delete_policy(req.0.uuid).await?;
 
   Ok(())
 }
@@ -66,15 +77,13 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<DeleteReq>) 
 async fn edit(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<OAuthPolicyInfo>) -> Result<()> {
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
 
-  let groups = db
-    .tables()
-    .groups()
-    .get_groups_by_info(req.group.clone())
-    .await?;
+  let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();
+
+  let groups = db.tables().groups().get_groups_by_info(group).await?;
 
   db.tables()
     .oauth_policy()
-    .update_policy(req.0, groups)
+    .update_policy(req.0, groups, content)
     .await?;
 
   Ok(())

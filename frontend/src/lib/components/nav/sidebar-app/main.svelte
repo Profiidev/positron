@@ -37,6 +37,16 @@
               url: "/management/oauth_client",
               permission: Permission.OAuthClientList,
             },
+            {
+              title: "OAuth Scopes",
+              url: "/management/oauth_scope",
+              permission: Permission.OAuthClientList,
+            },
+            {
+              title: "OAuth Policies",
+              url: "/management/oauth_policy",
+              permission: Permission.OAuthClientList,
+            },
           ],
         },
       ],

@@ -180,7 +180,7 @@ $scope.map(|$s| {
     scope: OAuthScopeInfo,
     policy_mapped: Vec<Thing>,
   ) -> Result<(), Error> {
-    self.db.query("UPDATE oauth_scope SET name = $name, policy = $policy_mapped, scope = $scop WHERE uuid = $uuid")
+    self.db.query("UPDATE oauth_scope SET name = $name, policy = $policy_mapped, scope = $scope WHERE uuid = $uuid")
       .bind(scope)
       .bind(("policy_mapped", policy_mapped)).await?;
 
@@ -192,6 +192,16 @@ $scope.map(|$s| {
       .db
       .query("DELETE oauth_scope WHERE uuid = $uuid")
       .bind(("uuid", uuid))
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn remove_policy_everywhere(&self, policy: Thing) -> Result<(), Error> {
+    self
+      .db
+      .query("UPDATE oauth_scope SET policy -= $policy")
+      .bind(("policy", policy))
       .await?;
 
     Ok(())

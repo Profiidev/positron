@@ -115,6 +115,10 @@ async fn delete(auth: JwtClaims<JwtBase>, db: &State<DB>, req: Json<GroupDelete>
 
   db.tables()
     .oauth_client()
+    .remove_group_everywhere(group.id.clone())
+    .await?;
+  db.tables()
+    .oauth_policy()
     .remove_group_everywhere(group.id)
     .await?;
   db.tables().groups().delete_group(uuid).await?;
