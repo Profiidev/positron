@@ -8,7 +8,7 @@
   import { toast } from "svelte-sonner";
   import { DateTime } from "$lib/util/time.svelte";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
-  import { getUserInfo, updateInfo } from "$lib/backend/account/info.svelte";
+  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import {
     is_code,
     totp_confirm_setup,
@@ -24,7 +24,7 @@
 
   let { valid, requestAccess }: Props = $props();
 
-  let userInfo: UserInfo | undefined = $derived(getUserInfo());
+  let userInfo: UserInfo | undefined = $derived(user_info.value);
 
   let totpQr = $state("");
   let totpCode = $state("");
@@ -45,7 +45,6 @@
     if (ret) {
       return "Error while removing TOTP";
     } else {
-      updateInfo();
       toast.success("Remove successful", {
         description: "TOTP was removed successfully from your account",
       });
@@ -85,7 +84,6 @@
         return "Error while adding TOTP";
       }
     } else {
-      updateInfo();
       toast.success("Addition successful", {
         description: "TOTP was added successfully to your account",
       });

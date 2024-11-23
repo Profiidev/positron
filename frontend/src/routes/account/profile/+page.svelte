@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { getProfileInfo, updateInfo } from "$lib/backend/account/info.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -13,8 +12,9 @@
     profile_change_image,
     profile_update,
   } from "$lib/backend/account/general.svelte";
+  import { profileInfo } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(getProfileInfo());
+  let infoData = $derived(profileInfo.value);
   $effect(() => {
     name = infoData?.name;
   });
@@ -35,7 +35,6 @@
           description: "Error while uploading image",
         });
       } else {
-        await updateInfo();
         toast.success("Upload successful", {
           description: "Your profile profile image was updated successfully",
         });
@@ -64,7 +63,6 @@
         description: "There was an error while updating your profile",
       });
     } else {
-      await updateInfo();
       toast.success("Successfully Update", {
         description: "Your profile was updated successfully",
       });

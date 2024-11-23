@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import {
     Permission,
     type GroupInfo,
@@ -8,7 +8,6 @@
   import { createTable } from "$lib/components/table/helpers.svelte";
   import type { Row } from "@tanstack/table-core";
   import { columns } from "./table.svelte";
-  import { list_clients_group } from "$lib/backend/management/oauth_clients.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import { toast } from "svelte-sonner";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
@@ -19,19 +18,20 @@
     create_policy,
     delete_policy,
     edit_policy,
-    list_policies,
   } from "$lib/backend/management/oauth_policy.svelte";
   import * as Select from "$lib/components/ui/select";
   import { Button } from "$lib/components/ui/button";
   import { Plus, Trash } from "lucide-svelte";
   import { deepCopy } from "$lib/util/other.svelte";
+  import {
+    group_info_list,
+    oauth_policy_list,
+  } from "$lib/backend/management/stores.svelte";
 
   let isLoading = $state(false);
-  let policies: OAuthPolicy[] | undefined = $state();
-  let groups: GroupInfo[] | undefined = $state();
-  list_policies().then((policy) => (policies = policy));
-  list_clients_group().then((group) => (groups = group));
-  let userInfo = $derived(getUserInfo());
+  let policies = $derived(oauth_policy_list.value);
+  let groups = $derived(group_info_list.value);
+  let userInfo = $derived(user_info.value);
 
   let policy: OAuthPolicy | undefined = $state();
   let editOpen = $state(false);
@@ -99,17 +99,12 @@
         return "Error while creating policy";
       }
     } else {
-      updatePolicies();
       toast.success("Created Policy");
       name = "";
       claim = "";
       default_content = "";
       group = [];
     }
-  };
-
-  const updatePolicies = async () => {
-    await list_policies().then((policy) => (policies = policy));
   };
 
   const editPolicy = (uuid: string) => {
@@ -137,7 +132,6 @@
         return "Error while updating policy";
       }
     } else {
-      updatePolicies();
       toast.success("Policy updated");
     }
   };
@@ -152,7 +146,6 @@
     if (ret) {
       return "Error while deleting policy";
     } else {
-      updatePolicies();
       toast.success("Policy deleted");
     }
   };

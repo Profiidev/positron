@@ -15,12 +15,12 @@
   import type { Row } from "@tanstack/table-core";
   import {
     create_user,
-    list_users,
     remove_user,
     user_edit,
   } from "$lib/backend/management/user.svelte";
-  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import Multiselect from "$lib/components/table/multiselect.svelte";
+  import { user_list } from "$lib/backend/management/stores.svelte";
 
   const filterFn = (row: Row<User>, id: string, filterValues: any) => {
     const info = [row.original.email, row.original.name, row.original.uuid]
@@ -33,8 +33,6 @@
     return searchTerms.some((term) => info.includes(term.toLowerCase()));
   };
 
-  let users: User[] | undefined = $state();
-  list_users().then((user) => (users = user));
   let table = $state(
     createTable(
       [],
@@ -47,7 +45,7 @@
       filterFn,
     ),
   );
-  let userInfo = $derived(getUserInfo());
+  let userInfo = $derived(user_info.value);
   let name = $state("");
   let email = $state("");
   let password = $state("");
@@ -55,6 +53,8 @@
   let user: User | undefined = $state();
   let editOpen = $state(false);
   let deleteOpen = $state(false);
+
+  let users = $derived(user_list.value);
 
   $effect(() => {
     table = createTable(
@@ -75,16 +75,11 @@
       await fetch_key();
       return "Error while creating user";
     } else {
-      updateUsers();
       toast.success("Created User");
       email = "";
       name = "";
       password = "";
     }
-  };
-
-  const updateUsers = async () => {
-    await list_users().then((user) => (users = user));
   };
 
   const editUser = (uuid: string) => {
@@ -107,7 +102,6 @@
     if (ret) {
       return "Error while updating user";
     } else {
-      updateUsers();
       toast.success("User updated");
     }
   };
@@ -122,7 +116,6 @@
     if (ret) {
       return "Error while deleting user";
     } else {
-      updateUsers();
       toast.success("User deleted");
     }
   };

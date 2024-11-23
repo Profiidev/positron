@@ -5,6 +5,7 @@ use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
   db::DB,
   error::{Error, Result},
+  ws::state::{UpdateState, UpdateType},
 };
 
 use super::{
@@ -78,6 +79,7 @@ async fn finish_change(
   auth: JwtClaims<JwtSpecial>,
   db: &State<DB>,
   state: &State<EmailState>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {
@@ -92,6 +94,7 @@ async fn finish_change(
     .user()
     .change_email(auth.sub, info.new_email.clone())
     .await?;
+  updater.send_message(auth.sub, UpdateType::User).await;
 
   state_lock.remove(&auth.sub);
 

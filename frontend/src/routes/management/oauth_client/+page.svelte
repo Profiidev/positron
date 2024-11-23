@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import {
     Permission,
-    type GroupInfo,
     type OAuthClientCreate,
     type OAuthClientInfo,
-    type UserInfo,
   } from "$lib/backend/management/types.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
   import type { Row } from "@tanstack/table-core";
@@ -14,10 +12,6 @@
     create_client,
     delete_client,
     edit_client,
-    list_clients,
-    list_clients_group,
-    list_clients_user,
-    list_scope_names,
     reset_client_secret,
     start_create_client,
   } from "$lib/backend/management/oauth_clients.svelte";
@@ -33,17 +27,19 @@
   import { PUBLIC_BACKEND_URL } from "$env/static/public";
   import { Button } from "$lib/components/ui/button";
   import { LoaderCircle, RotateCw } from "lucide-svelte";
+  import {
+    group_info_list,
+    oauth_client_list,
+    oauth_scope_names,
+    user_info_list,
+  } from "$lib/backend/management/stores.svelte";
 
   let isLoading = $state(false);
-  let clients: OAuthClientInfo[] | undefined = $state();
-  let groups: GroupInfo[] | undefined = $state();
-  let users: UserInfo[] | undefined = $state();
-  let scope_names: string[] | undefined = $state();
-  list_clients().then((client) => (clients = client));
-  list_clients_group().then((group) => (groups = group));
-  list_clients_user().then((user) => (users = user));
-  list_scope_names().then((scope) => (scope_names = scope));
-  let userInfo = $derived(getUserInfo());
+  let clients = $derived(oauth_client_list.value);
+  let groups = $derived(group_info_list.value);
+  let users = $derived(user_info_list.value);
+  let scope_names = $derived(oauth_scope_names.value);
+  let userInfo = $derived(user_info.value);
 
   let client: OAuthClientInfo | undefined = $state();
   let editOpen = $state(false);
@@ -172,17 +168,12 @@
         return "Error while creating client";
       }
     } else {
-      updateClients();
       toast.success("Created Client");
       name = "";
       redirect_uri = "";
       additional_redirect_uri = "";
       scope = [];
     }
-  };
-
-  const updateClients = async () => {
-    await list_clients().then((client) => (clients = client));
   };
 
   const editClient = (client_id: string) => {
@@ -226,7 +217,6 @@
         return "Error while updating client";
       }
     } else {
-      updateClients();
       toast.success("Client updated");
     }
   };
@@ -241,7 +231,6 @@
     if (ret) {
       return "Error while deleting client";
     } else {
-      updateClients();
       toast.success("Client deleted");
     }
   };

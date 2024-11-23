@@ -1,3 +1,5 @@
+import { UpdateType } from "../ws/types.svelte";
+import { create_updater } from "../ws/updater.svelte";
 import { profile_info, user_info } from "./general.svelte";
 import {
   isProfileInfo,
@@ -6,36 +8,28 @@ import {
   type UserInfo,
 } from "./types.svelte";
 
-let profileInfo: ProfileInfo | undefined = $state();
-let userInfo: UserInfo | undefined = $state();
-
-export const updateInfo = async () => {
-  await updateUserInfo();
-  await updateProfileInfo();
-};
-
 const updateUserInfo = async () => {
   let ret = await user_info();
   if (isUserInfo(ret)) {
-    userInfo = ret;
+    return ret;
   }
 };
 
-export const getUserInfo = () => {
-  return userInfo;
-};
-
 const updateProfileInfo = async () => {
-  if (userInfo) {
-    let ret = await profile_info(userInfo.uuid);
+  if (userInfo.value) {
+    let ret = await profile_info(userInfo.value.uuid);
     if (isProfileInfo(ret)) {
-      profileInfo = ret;
+      return ret;
     }
   }
 };
 
-export const getProfileInfo = () => {
-  return profileInfo;
-};
+export const userInfo = create_updater<UserInfo>(
+  UpdateType.User,
+  updateUserInfo,
+);
 
-updateInfo();
+export const profileInfo = create_updater<ProfileInfo>(
+  UpdateType.User,
+  updateProfileInfo,
+);

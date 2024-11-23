@@ -8,14 +8,14 @@
   import { toast } from "svelte-sonner";
   import { Input } from "$lib/components/ui/input";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import { getProfileInfo, updateInfo } from "$lib/backend/account/info.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import {
     email_finish_change,
     email_start_change,
   } from "$lib/backend/email.svelte";
+  import { profileInfo } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(getProfileInfo());
+  let infoData = $derived(profileInfo.value);
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
@@ -78,7 +78,6 @@
         return "There was an error while updating your email";
       }
     } else {
-      await updateInfo();
       enteringCodes = false;
       toast.success("Update successful", {
         description: "Your email address was updated successfully",

@@ -4,7 +4,6 @@
   import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import type { Passkey } from "$lib/backend/auth/types.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
@@ -12,11 +11,11 @@
   import { DateTime } from "$lib/util/time.svelte";
   import {
     passkey_edit_name,
-    passkey_list,
     passkey_register,
     passkey_remove,
   } from "$lib/backend/auth/passkey.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
+  import { passkey_list } from "$lib/backend/auth/stores.svelte";
 
   interface Props {
     valid: boolean;
@@ -26,8 +25,7 @@
   let { valid, requestAccess }: Props = $props();
 
   let createName = $state("");
-  let passkeys: Passkey[] | undefined = $state();
-  let passkeysPromise = $state(passkey_list().then((pks) => (passkeys = pks)));
+  let passkeys = $derived(passkey_list.value);
   let editName = $state("");
   let editing = $state("");
   let editDialog: SvelteComponent | undefined = $state();
@@ -61,7 +59,6 @@
       }
     } else {
       createName = "";
-      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Creation successful", {
         description: "Passkey was successfully added to your account",
       });
@@ -85,7 +82,6 @@
     if (ret) {
       return "There was an error while deleting your passkey";
     } else {
-      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Deletion successful", {
         description: `Passkey "${editing}" was successfully removed from your account`,
       });
@@ -118,7 +114,6 @@
         return "There was an error while editing passkey name";
       }
     } else {
-      passkey_list().then((pks) => (passkeys = pks));
       toast.success("Edit successful", {
         description: `Passkey name was changed successfully from ${editing} to ${editName}`,
       });
@@ -177,7 +172,7 @@
     ></FormDialog>
   </div>
   <Separator />
-  {#await passkeysPromise}
+  {#if !passkeys}
     <div class="flex p-2 items-center">
       <div class="space-y-2 p-2">
         <div class="flex space-x-2 items-center">
@@ -193,52 +188,50 @@
       <Skeleton class="m-2 ml-auto size-10" />
       <Skeleton class="m-2 size-10" />
     </div>
-  {:then}
-    {#if passkeys && passkeys.length > 0}
-      {#each passkeys as passkey, i}
-        {#if i > 0}
-          <Separator />
-        {/if}
-        <div class="flex p-2 items-center">
-          <div class="space-y-2 p-2">
-            <div class="flex space-x-2">
-              <KeyRound class="size-5" />
-              <h4>{passkey.name}</h4>
-            </div>
-            <div class="flex space-x-2">
-              <p class="text-muted-foreground text-sm">
-                Created on {DateTime.fromISO(passkey.created).toLocaleString(
-                  DateTime.DATE_MED,
-                )}
-              </p>
-              <Separator orientation={"vertical"} />
-              <p class="text-muted-foreground text-sm">
-                Last used on {DateTime.fromISO(passkey.used).toLocaleString(
-                  DateTime.DATE_MED,
-                )}
-              </p>
-            </div>
+  {:else if passkeys && passkeys.length > 0}
+    {#each passkeys as passkey, i}
+      {#if i > 0}
+        <Separator />
+      {/if}
+      <div class="flex p-2 items-center">
+        <div class="space-y-2 p-2">
+          <div class="flex space-x-2">
+            <KeyRound class="size-5" />
+            <h4>{passkey.name}</h4>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            class="m-2 ml-auto"
-            onclick={() => startEditPasskey(passkey.name)}
-          >
-            <Pencil />
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            class="m-2"
-            onclick={() => startDeletePasskey(passkey.name)}
-          >
-            <Trash />
-          </Button>
+          <div class="flex space-x-2">
+            <p class="text-muted-foreground text-sm">
+              Created on {DateTime.fromISO(passkey.created).toLocaleString(
+                DateTime.DATE_MED,
+              )}
+            </p>
+            <Separator orientation={"vertical"} />
+            <p class="text-muted-foreground text-sm">
+              Last used on {DateTime.fromISO(passkey.used).toLocaleString(
+                DateTime.DATE_MED,
+              )}
+            </p>
+          </div>
         </div>
-      {/each}
-    {:else}
-      <div class="flex justify-center rounded-lg m-5">No passkeys found</div>
-    {/if}
-  {/await}
+        <Button
+          variant="outline"
+          size="icon"
+          class="m-2 ml-auto"
+          onclick={() => startEditPasskey(passkey.name)}
+        >
+          <Pencil />
+        </Button>
+        <Button
+          variant="destructive"
+          size="icon"
+          class="m-2"
+          onclick={() => startDeletePasskey(passkey.name)}
+        >
+          <Trash />
+        </Button>
+      </div>
+    {/each}
+  {:else}
+    <div class="flex justify-center rounded-lg m-5">No passkeys found</div>
+  {/if}
 </div>

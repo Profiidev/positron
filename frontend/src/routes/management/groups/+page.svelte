@@ -1,17 +1,14 @@
 <script lang="ts">
-  import { getUserInfo } from "$lib/backend/account/info.svelte";
+  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import {
     create_group,
     delete_group,
     edit_group,
-    list_groups,
-    list_groups_user,
   } from "$lib/backend/management/group.svelte";
   import {
     getPermissionGroups,
     Permission,
     type Group,
-    type UserInfo,
   } from "$lib/backend/management/types.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
@@ -23,13 +20,15 @@
   import type { Row } from "@tanstack/table-core";
   import { RequestError } from "$lib/backend/types.svelte";
   import Multiselect from "$lib/components/table/multiselect.svelte";
+  import {
+    group_list,
+    user_info_list,
+  } from "$lib/backend/management/stores.svelte";
 
   let isLoading = $state(false);
-  let groups: Group[] | undefined = $state();
-  let users: UserInfo[] | undefined = $state();
-  list_groups().then((group) => (groups = group));
-  list_groups_user().then((user) => (users = user));
-  let userInfo = $derived(getUserInfo());
+  let groups = $derived(group_list.value);
+  let users = $derived(user_info_list.value);
+  let userInfo = $derived(user_info.value);
 
   let name = $state("");
   let access_level = $state("");
@@ -85,15 +84,10 @@
         return "Error while creating group";
       }
     } else {
-      updateGroups();
       toast.success("Created Group");
       name = "";
       access_level = "";
     }
-  };
-
-  const updateGroups = async () => {
-    await list_groups().then((group) => (groups = group));
   };
 
   const editGroup = (uuid: string) => {
@@ -122,7 +116,6 @@
         return "Error while updating group";
       }
     } else {
-      updateGroups();
       toast.success("Group updated");
     }
   };
@@ -137,7 +130,6 @@
     if (ret) {
       return "Error while deleting Group";
     } else {
-      updateGroups();
       toast.success("Group deleted");
     }
   };

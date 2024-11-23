@@ -9,16 +9,6 @@ export const list_groups = async () => {
   }
 };
 
-export const list_groups_user = async () => {
-  let ret = await get<UserInfo[]>(
-    "/management/group/user_list",
-    ResponseType.Json,
-  );
-  if (Array.isArray(ret)) {
-    return ret;
-  }
-};
-
 export const edit_group = async (group: Group) => {
   return await post<undefined>(
     "/management/group/edit",

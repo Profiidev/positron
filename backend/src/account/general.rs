@@ -14,6 +14,7 @@ use crate::{
   db::{tables::user::user::ProfileUpdate, DB},
   error::Result,
   permissions::Permission,
+  ws::state::{UpdateState, UpdateType},
 };
 
 pub fn routes() -> Vec<Route> {
@@ -81,6 +82,7 @@ async fn change_image(
   req: TempFile<'_>,
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
   let mut bytes = Vec::new();
   let mut temp = req.open().await?;
@@ -96,6 +98,7 @@ async fn change_image(
   let cropped = BASE64_STANDARD.encode(cursor.into_inner());
 
   db.tables().user().change_image(auth.sub, cropped).await?;
+  updater.broadcast_message(UpdateType::User).await;
 
   Ok(Status::Ok)
 }
@@ -105,8 +108,10 @@ async fn update_profile(
   req: Json<ProfileUpdate>,
   auth: JwtClaims<JwtBase>,
   db: &State<DB>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
   db.tables().user().update_profile(auth.sub, req.0).await?;
+  updater.broadcast_message(UpdateType::User).await;
 
   Ok(Status::Ok)
 }
