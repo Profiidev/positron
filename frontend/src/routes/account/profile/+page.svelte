@@ -12,9 +12,9 @@
     profile_change_image,
     profile_update,
   } from "$lib/backend/account/general.svelte";
-  import { profileInfo } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(profileInfo.value);
+  let infoData = $derived(userData.value?.[1]);
   $effect(() => {
     name = infoData?.name;
   });

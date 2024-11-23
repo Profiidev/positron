@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
   import { password_change } from "$lib/backend/auth/password.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
@@ -21,7 +21,7 @@
   let newPassword = $state("");
   let newPasswordConfirm = $state("");
   let isLoading = $state(false);
-  let userInfo: UserInfo | undefined = $derived(user_info.value);
+  let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
   const startChange = async () => {
     if (!valid) {

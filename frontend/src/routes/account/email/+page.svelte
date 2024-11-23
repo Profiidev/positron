@@ -13,9 +13,9 @@
     email_finish_change,
     email_start_change,
   } from "$lib/backend/email.svelte";
-  import { profileInfo } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
-  let infoData = $derived(profileInfo.value);
+  let infoData = $derived(userData.value?.[1]);
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();

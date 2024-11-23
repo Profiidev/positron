@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import {
     Permission,
     type OAuthScope,
@@ -27,7 +27,7 @@
   let isLoading = $state(false);
   let scopes = $derived(oauth_scope_list.value);
   let policies = $derived(oauth_policy_info_list.value);
-  let userInfo = $derived(user_info.value);
+  let userInfo = $derived(userData.value?.[0]);
 
   let scope: OAuthScope | undefined = $state();
   let editOpen = $state(false);

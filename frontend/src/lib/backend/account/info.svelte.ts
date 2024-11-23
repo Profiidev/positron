@@ -16,20 +16,22 @@ const updateUserInfo = async () => {
 };
 
 const updateProfileInfo = async () => {
-  if (userInfo.value) {
-    let ret = await profile_info(userInfo.value.uuid);
+  let user = await updateUserInfo();
+  let profile: ProfileInfo | undefined;
+
+  if (user) {
+    let ret = await profile_info(user.uuid);
     if (isProfileInfo(ret)) {
-      return ret;
+      profile = ret;
     }
+  }
+
+  if (user && profile) {
+    return [user, profile] as [UserInfo, ProfileInfo];
   }
 };
 
-export const userInfo = create_updater<UserInfo>(
-  UpdateType.User,
-  updateUserInfo,
-);
-
-export const profileInfo = create_updater<ProfileInfo>(
+export const userData = create_updater<[UserInfo, ProfileInfo]>(
   UpdateType.User,
   updateProfileInfo,
 );

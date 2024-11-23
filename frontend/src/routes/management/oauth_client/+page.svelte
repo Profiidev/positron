@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import {
     Permission,
     type OAuthClientCreate,
@@ -39,7 +39,7 @@
   let groups = $derived(group_info_list.value);
   let users = $derived(user_info_list.value);
   let scope_names = $derived(oauth_scope_names.value);
-  let userInfo = $derived(user_info.value);
+  let userInfo = $derived(userData.value?.[0]);
 
   let client: OAuthClientInfo | undefined = $state();
   let editOpen = $state(false);

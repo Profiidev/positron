@@ -4,7 +4,7 @@
   import { ChevronRight, KeyRound, Users } from "lucide-svelte";
   import { page } from "$app/stores";
   import { Permission } from "$lib/backend/management/types.svelte";
-  import { userInfo } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   const allItems = [
     {
@@ -53,7 +53,7 @@
     },
   ];
 
-  let permissions = $derived(userInfo.value?.permissions);
+  let permissions = $derived(userData.value?.[0].permissions);
   let items = $derived.by(() => {
     return permissions
       ? allItems

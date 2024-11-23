@@ -5,7 +5,7 @@
   import { goto } from "$app/navigation";
   import Avatar from "$lib/components/util/avatar.svelte";
   import type { PageServerData } from "./$types";
-  import { profileInfo } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
     data: PageServerData;
@@ -15,7 +15,7 @@
   let oauth_logout = $derived(data.oauth_logout);
 
   let error = $state("");
-  let infoData = $derived(profileInfo.value);
+  let infoData = $derived(userData.value?.[1]);
 
   const back = async () => {
     if (!oauth_logout) {

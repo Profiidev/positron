@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import {
     Permission,
     type GroupInfo,
@@ -31,7 +31,7 @@
   let isLoading = $state(false);
   let policies = $derived(oauth_policy_list.value);
   let groups = $derived(group_info_list.value);
-  let userInfo = $derived(user_info.value);
+  let userInfo = $derived(userData.value?.[0]);
 
   let policy: OAuthPolicy | undefined = $state();
   let editOpen = $state(false);

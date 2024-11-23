@@ -18,7 +18,7 @@
     remove_user,
     user_edit,
   } from "$lib/backend/management/user.svelte";
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
   import Multiselect from "$lib/components/table/multiselect.svelte";
   import { user_list } from "$lib/backend/management/stores.svelte";
 
@@ -45,7 +45,7 @@
       filterFn,
     ),
   );
-  let userInfo = $derived(user_info.value);
+  let userInfo = $derived(userData.value?.[0]);
   let name = $state("");
   let email = $state("");
   let password = $state("");

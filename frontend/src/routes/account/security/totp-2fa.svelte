@@ -8,7 +8,6 @@
   import { toast } from "svelte-sonner";
   import { DateTime } from "$lib/util/time.svelte";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
-  import { userInfo as user_info } from "$lib/backend/account/info.svelte";
   import {
     is_code,
     totp_confirm_setup,
@@ -16,6 +15,7 @@
     totp_remove,
   } from "$lib/backend/auth/totp.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
     valid: boolean;
@@ -24,7 +24,7 @@
 
   let { valid, requestAccess }: Props = $props();
 
-  let userInfo: UserInfo | undefined = $derived(user_info.value);
+  let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
   let totpQr = $state("");
   let totpCode = $state("");
