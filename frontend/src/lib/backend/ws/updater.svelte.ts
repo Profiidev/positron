@@ -27,6 +27,12 @@ export const connect_updater = () => {
       .forEach((cb) => cb());
   });
 
+  updater.addEventListener("close", () => {
+    setTimeout(() => {
+      connect_updater();
+    }, 1000);
+  });
+
   interval = setInterval(() => {
     if (!updater) {
       clearInterval(interval);
