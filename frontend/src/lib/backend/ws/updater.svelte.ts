@@ -2,6 +2,7 @@ import { browser } from "$app/environment";
 import { PUBLIC_BACKEND_URL } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
+import { sleep } from "$lib/util/interval.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -12,9 +13,10 @@ export const connect_updater = () => {
     return;
   }
 
-  if (updater) {
-    updater.close();
+  if (updater && updater.readyState !== updater.CLOSED) {
     clearInterval(interval);
+    updater.close();
+    return;
   }
 
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
@@ -27,10 +29,9 @@ export const connect_updater = () => {
       .forEach((cb) => cb());
   });
 
-  updater.addEventListener("close", () => {
-    setTimeout(() => {
-      connect_updater();
-    }, 1000);
+  updater.addEventListener("close", async () => {
+    await sleep(1000);
+    connect_updater();
   });
 
   interval = setInterval(() => {

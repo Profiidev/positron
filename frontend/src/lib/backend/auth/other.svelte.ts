@@ -1,5 +1,5 @@
-import { ContentType, ResponseType } from "../types.svelte";
-import { post } from "../util.svelte";
+import { ContentType, RequestError, ResponseType } from "../types.svelte";
+import { get, post } from "../util.svelte";
 import type { OAuthParams } from "./types.svelte";
 
 export const logout = async () => {
@@ -27,4 +27,9 @@ export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
   } else {
     return res;
   }
+};
+
+export const test_token = async () => {
+  let res = await get<boolean>("/auth/test_token", ResponseType.Json);
+  return typeof res === "boolean" && res;
 };

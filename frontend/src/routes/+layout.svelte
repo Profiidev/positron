@@ -6,6 +6,8 @@
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
+  import { test_token } from "$lib/backend/auth/other.svelte";
+  import { goto } from "$app/navigation";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -16,6 +18,11 @@
   const noLayout = ["/login", "/oauth", "/oauth/logout"];
 
   connect_updater();
+  test_token().then((valid) => {
+    if (!valid) {
+      goto("/login");
+    }
+  });
 </script>
 
 <ModeWatcher />
