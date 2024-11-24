@@ -13,12 +13,14 @@ export const connect_updater = () => {
     return;
   }
 
-  if (updater && updater.readyState !== updater.CLOSED) {
-    clearInterval(interval);
-    updater.close();
+  if (updater) {
     return;
   }
 
+  create_websocket();
+};
+
+const create_websocket = () => {
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
 
   updater.addEventListener("message", (event) => {
@@ -30,12 +32,18 @@ export const connect_updater = () => {
   });
 
   updater.addEventListener("close", async () => {
+    clearInterval(interval);
     await sleep(1000);
-    connect_updater();
+    console.log("reconnect")
+    create_websocket();
   });
 
   interval = setInterval(() => {
-    if (!updater) {
+    if (
+      !updater ||
+      updater.readyState === updater.CLOSING ||
+      updater.readyState === updater.CLOSED
+    ) {
       clearInterval(interval);
       return;
     }
@@ -43,7 +51,9 @@ export const connect_updater = () => {
     updater.send("heartbeat");
   }, 10000);
 
-  updater_cbs.values().forEach((types) => types.values().forEach((cb) => cb()));
+  updater_cbs
+    .values()
+    .forEach?.((types) => types.values().forEach((cb) => cb()));
 };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
