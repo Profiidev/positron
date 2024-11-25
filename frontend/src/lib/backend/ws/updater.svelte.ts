@@ -3,7 +3,7 @@ import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
 import { sleep } from "$lib/util/interval.svelte";
-import { getCookie } from "../cookie.svelte";
+import { getTokenCookie } from "../cookie.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -24,17 +24,14 @@ export const connect_updater = () => {
 const create_websocket = () => {
   let token = "";
   if (PUBLIC_IS_APP === "true") {
-    token = `?token=${getCookie("token")}`;
+    token = `?token=${getTokenCookie()}`;
   }
 
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
 
   updater.addEventListener("message", (event) => {
     let msg: UpdateType = JSON.parse(event.data);
-    updater_cbs
-      .get(msg)
-      ?.values()
-      .forEach((cb) => cb());
+    Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
   });
 
   updater.addEventListener("close", async () => {
@@ -56,9 +53,9 @@ const create_websocket = () => {
     updater.send("heartbeat");
   }, 10000);
 
-  updater_cbs
-    .values()
-    .forEach?.((types) => types.values().forEach((cb) => cb()));
+  Array.from(updater_cbs.values()).forEach((types) =>
+    Array.from(types.values()).forEach((cb) => cb()),
+  );
 };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
