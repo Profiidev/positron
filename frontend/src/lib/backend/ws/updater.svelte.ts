@@ -1,8 +1,9 @@
 import { browser } from "$app/environment";
-import { PUBLIC_BACKEND_URL } from "$env/static/public";
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
 import { sleep } from "$lib/util/interval.svelte";
+import { getCookie } from "../cookie.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -21,7 +22,12 @@ export const connect_updater = () => {
 };
 
 const create_websocket = () => {
-  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
+  let token = "";
+  if (PUBLIC_IS_APP === "true") {
+    token = `?token=${getCookie("token")}`;
+  }
+
+  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
 
   updater.addEventListener("message", (event) => {
     let msg: UpdateType = JSON.parse(event.data);
