@@ -60,3 +60,7 @@ export const wait_for = (condition: () => boolean, intervalTime = 100) => {
     }, intervalTime);
   });
 };
+
+export const sleep = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};

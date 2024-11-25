@@ -3,14 +3,12 @@ import type { OAuthParams } from "$lib/backend/auth/types.svelte.js";
 import { redirect } from "@sveltejs/kit";
 
 export const load = ({ cookies, url }) => {
+  if (PUBLIC_IS_APP === "true") return;
+
   let cookie = cookies.get("token");
 
-  let code;
-  let name;
-  if (PUBLIC_IS_APP !== "true") {
-    code = url.searchParams.get("code");
-    name = url.searchParams.get("name");
-  }
+  let code = url.searchParams.get("code");
+  let name = url.searchParams.get("name");
 
   if (cookie) {
     if (code && name) {

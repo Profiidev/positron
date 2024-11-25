@@ -5,8 +5,13 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
-  import { onMount } from "svelte";
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
+  import { test_token } from "$lib/backend/auth/other.svelte";
+  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { getCookie } from "$lib/backend/cookie.svelte";
+  import { get } from "svelte/store";
+  import { PUBLIC_IS_APP } from "$env/static/public";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -16,7 +21,21 @@
 
   const noLayout = ["/login", "/oauth", "/oauth/logout"];
 
-  onMount(connect_updater);
+  connect_updater();
+  test_token().then((valid) => {
+    if (!valid) {
+      goto("/login");
+    }
+  });
+
+  onMount(() => {
+    if (PUBLIC_IS_APP !== "true") return;
+
+    let url = get(page).url.pathname;
+    if (!getCookie("token") && url !== "/login") {
+      goto("/login");
+    }
+  });
 </script>
 
 <ModeWatcher />

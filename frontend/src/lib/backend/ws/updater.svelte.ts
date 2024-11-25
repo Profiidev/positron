@@ -1,7 +1,9 @@
 import { browser } from "$app/environment";
-import { PUBLIC_BACKEND_URL } from "$env/static/public";
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
+import { sleep } from "$lib/util/interval.svelte";
+import { getCookie } from "../cookie.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -13,11 +15,19 @@ export const connect_updater = () => {
   }
 
   if (updater) {
-    updater.close();
-    clearInterval(interval);
+    return;
   }
 
-  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
+  create_websocket();
+};
+
+const create_websocket = () => {
+  let token = "";
+  if (PUBLIC_IS_APP === "true") {
+    token = `?token=${getCookie("token")}`;
+  }
+
+  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
 
   updater.addEventListener("message", (event) => {
     let msg: UpdateType = JSON.parse(event.data);
@@ -27,8 +37,18 @@ export const connect_updater = () => {
       .forEach((cb) => cb());
   });
 
+  updater.addEventListener("close", async () => {
+    clearInterval(interval);
+    await sleep(1000);
+    create_websocket();
+  });
+
   interval = setInterval(() => {
-    if (!updater) {
+    if (
+      !updater ||
+      updater.readyState === updater.CLOSING ||
+      updater.readyState === updater.CLOSED
+    ) {
       clearInterval(interval);
       return;
     }
@@ -36,7 +56,9 @@ export const connect_updater = () => {
     updater.send("heartbeat");
   }, 10000);
 
-  updater_cbs.values().forEach((types) => types.values().forEach((cb) => cb()));
+  updater_cbs
+    .values()
+    .forEach?.((types) => types.values().forEach((cb) => cb()));
 };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
