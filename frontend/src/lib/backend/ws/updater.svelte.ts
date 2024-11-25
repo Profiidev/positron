@@ -34,7 +34,6 @@ const create_websocket = () => {
   updater.addEventListener("close", async () => {
     clearInterval(interval);
     await sleep(1000);
-    console.log("reconnect")
     create_websocket();
   });
 

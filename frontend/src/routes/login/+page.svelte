@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { OAuthParams } from "$lib/backend/auth/types.svelte";
+  import { onMount } from "svelte";
   import type { PageServerData } from "./$types";
   import Login from "./login-form.svelte";
+  import { PUBLIC_IS_APP } from "$env/static/public";
+  import { getCookie } from "$lib/backend/cookie.svelte";
+  import { goto } from "$app/navigation";
 
   interface Props {
     data: PageServerData;
@@ -9,6 +13,14 @@
 
   let { data }: Props = $props();
   let oauth_params: OAuthParams | undefined = $derived(data.oauth_params);
+
+  onMount(() => {
+    if (PUBLIC_IS_APP !== "true") return;
+
+    if (getCookie("token")) {
+      goto("/");
+    }
+  });
 </script>
 
 <div

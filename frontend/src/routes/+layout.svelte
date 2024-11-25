@@ -8,6 +8,10 @@
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
   import { test_token } from "$lib/backend/auth/other.svelte";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { getCookie } from "$lib/backend/cookie.svelte";
+  import { get } from "svelte/store";
+  import { PUBLIC_IS_APP } from "$env/static/public";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -20,6 +24,15 @@
   connect_updater();
   test_token().then((valid) => {
     if (!valid) {
+      goto("/login");
+    }
+  });
+
+  onMount(() => {
+    if (PUBLIC_IS_APP !== "true") return;
+
+    let url = get(page).url.pathname;
+    if (!getCookie("token") && url !== "/login") {
       goto("/login");
     }
   });

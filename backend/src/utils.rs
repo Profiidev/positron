@@ -20,13 +20,16 @@ pub async fn jwt_from_request<'r, C: DeserializeOwned, T: JwtType>(
 ) -> Outcome<C, ()> {
   let mut token = match req.headers().get_one("Authorization") {
     Some(token) => token,
-    None => {
-      let Some(token) = req.cookies().get(T::cookie_name()) else {
-        return Outcome::Error((Status::BadRequest, ()));
-      };
+    None => match req.cookies().get(T::cookie_name()) {
+      Some(token) => token.value(),
+      None => {
+        let Some(Ok(token)) = req.query_value::<&str>("token") else {
+          return Outcome::Error((Status::BadRequest, ()));
+        };
 
-      token.value()
-    }
+        token
+      }
+    },
   };
 
   if let Some(stripped) = token.strip_prefix("Bearer ") {
