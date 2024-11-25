@@ -24,17 +24,14 @@ export const connect_updater = () => {
 const create_websocket = () => {
   let token = "";
   if (PUBLIC_IS_APP === "true") {
-    token = `?token=${getCookie("token")}`;
+    token = `?${getCookie("token")}`;
   }
 
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
 
   updater.addEventListener("message", (event) => {
     let msg: UpdateType = JSON.parse(event.data);
-    updater_cbs
-      .get(msg)
-      ?.values()
-      .forEach((cb) => cb());
+    Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
   });
 
   updater.addEventListener("close", async () => {
@@ -56,12 +53,13 @@ const create_websocket = () => {
     updater.send("heartbeat");
   }, 10000);
 
-  updater_cbs
-    .values()
-    .forEach?.((types) => types.values().forEach((cb) => cb()));
+  Array.from(updater_cbs.values()).forEach((types) =>
+    Array.from(types.values()).forEach((cb) => cb()),
+  );
 };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
+  console.log("reg", type);
   let uuid = crypto.randomUUID().toString();
 
   let existing = updater_cbs.get(type) || new Map();
@@ -72,6 +70,7 @@ export const register_cb = (type: UpdateType, cb: () => void) => {
 };
 
 export const unregister_cb = (uuid: string, type: UpdateType) => {
+  console.log(type);
   let type_cbs = updater_cbs.get(type);
   type_cbs?.delete(uuid);
 };
