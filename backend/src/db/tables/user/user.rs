@@ -270,7 +270,7 @@ RETURN $permissions.flatten() CONTAINS $permission",
         "LET $users = SELECT * FROM user;
 RETURN $users.map(|$user| {
     LET $groups = SELECT access_level FROM group WHERE users CONTAINS $user.id;
-    $groups.map(|$group| $group.access_level).min();
+    $groups.map(|$group| $group.access_level).max();
 });
 RETURN $users",
       )

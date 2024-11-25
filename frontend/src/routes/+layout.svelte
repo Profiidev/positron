@@ -12,6 +12,7 @@
   import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { get } from "svelte/store";
   import { PUBLIC_IS_APP } from "$env/static/public";
+    import { browser } from "$app/environment";
 
   interface Props {
     children?: import("svelte").Snippet;
@@ -23,13 +24,13 @@
 
   connect_updater();
   test_token().then((valid) => {
-    if (!valid) {
+    if (!valid && browser) {
       goto("/login");
     }
   });
 
   onMount(() => {
-    if (PUBLIC_IS_APP !== "true") return;
+    if (PUBLIC_IS_APP !== "true" || !browser) return;
 
     let url = get(page).url.pathname;
     if (!getTokenCookie() && url !== "/login") {

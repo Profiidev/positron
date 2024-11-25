@@ -102,9 +102,6 @@ async fn authorize_confirm(
     .await?;
   let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
 
-  let (_, mut req) = lock.remove(&code).unwrap();
-  drop(lock);
-
   if !db
     .tables()
     .oauth_client()
@@ -113,6 +110,9 @@ async fn authorize_confirm(
   {
     return Err(Error::Unauthorized);
   }
+
+  let (_, mut req) = lock.remove(&code).unwrap();
+  drop(lock);
 
   let initial_redirect_uri = req.redirect_uri.clone();
   if let Some(error) = validate_req(&mut req, &client) {

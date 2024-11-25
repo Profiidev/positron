@@ -6,6 +6,7 @@
   import { PUBLIC_IS_APP } from "$env/static/public";
   import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { goto } from "$app/navigation";
+    import { browser } from "$app/environment";
 
   interface Props {
     data: PageServerData;
@@ -15,7 +16,7 @@
   let oauth_params: OAuthParams | undefined = $derived(data.oauth_params);
 
   onMount(() => {
-    if (PUBLIC_IS_APP !== "true") return;
+    if (PUBLIC_IS_APP !== "true" || !browser) return;
 
     if (getTokenCookie()) {
       goto("/");
