@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use rocket::http::Method;
 use rocket_cors::{AllOrSome, AllowedHeaders, AllowedOrigins, Cors};
 
@@ -8,8 +10,15 @@ pub fn cors() -> Cors {
       .split(",")
       .collect::<Vec<&str>>(),
   );
+  let allowed_origins_regex = std::env::var("CORS_ORIGIN_REGEX")
+    .unwrap_or_default()
+    .split(",")
+    .map(Into::into)
+    .collect::<HashSet<String>>();
+
   if let AllOrSome::Some(origin) = &mut allowed_origins {
     origin.allow_null = true;
+    origin.regex = Some(allowed_origins_regex);
   }
 
   rocket_cors::CorsOptions {

@@ -4,7 +4,7 @@
   import type { PageServerData } from "./$types";
   import Login from "./login-form.svelte";
   import { PUBLIC_IS_APP } from "$env/static/public";
-  import { getCookie } from "$lib/backend/cookie.svelte";
+  import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { goto } from "$app/navigation";
 
   interface Props {
@@ -17,7 +17,7 @@
   onMount(() => {
     if (PUBLIC_IS_APP !== "true") return;
 
-    if (getCookie("token")) {
+    if (getTokenCookie()) {
       goto("/");
     }
   });

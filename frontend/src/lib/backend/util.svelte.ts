@@ -1,6 +1,6 @@
 import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { wait_for } from "$lib/util/interval.svelte";
-import { getAllCookies, setCookie } from "./cookie.svelte";
+import { getTokenCookie, setTokenCookie } from "./cookie.svelte";
 import { ContentType, RequestError, ResponseType } from "./types.svelte";
 
 let fetchFn: typeof fetch | undefined = undefined;
@@ -44,10 +44,13 @@ const request = async <T>(
   }
 
   if (PUBLIC_IS_APP === "true") {
-    headers = {
-      ...headers,
-      Cookie: getAllCookies(),
-    };
+    let token = getTokenCookie();
+    if (token) {
+      headers = {
+        ...headers,
+        Authorization: token,
+      };
+    }
   }
 
   try {
@@ -73,7 +76,7 @@ const request = async <T>(
     if (PUBLIC_IS_APP === "true") {
       let cookie = res.headers.get("Set-Cookie");
       if (cookie) {
-        setCookie(cookie);
+        setTokenCookie(cookie);
       }
     }
 

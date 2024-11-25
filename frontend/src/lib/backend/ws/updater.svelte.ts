@@ -3,7 +3,7 @@ import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
 import { sleep } from "$lib/util/interval.svelte";
-import { getCookie } from "../cookie.svelte";
+import { getTokenCookie } from "../cookie.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -24,7 +24,7 @@ export const connect_updater = () => {
 const create_websocket = () => {
   let token = "";
   if (PUBLIC_IS_APP === "true") {
-    token = `?${getCookie("token")}`;
+    token = `?token=${getTokenCookie()}`;
   }
 
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
@@ -59,7 +59,6 @@ const create_websocket = () => {
 };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
-  console.log("reg", type);
   let uuid = crypto.randomUUID().toString();
 
   let existing = updater_cbs.get(type) || new Map();
@@ -70,7 +69,6 @@ export const register_cb = (type: UpdateType, cb: () => void) => {
 };
 
 export const unregister_cb = (uuid: string, type: UpdateType) => {
-  console.log(type);
   let type_cbs = updater_cbs.get(type);
   type_cbs?.delete(uuid);
 };

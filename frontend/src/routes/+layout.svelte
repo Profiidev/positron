@@ -9,7 +9,7 @@
   import { test_token } from "$lib/backend/auth/other.svelte";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { getCookie } from "$lib/backend/cookie.svelte";
+  import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { get } from "svelte/store";
   import { PUBLIC_IS_APP } from "$env/static/public";
 
@@ -32,7 +32,7 @@
     if (PUBLIC_IS_APP !== "true") return;
 
     let url = get(page).url.pathname;
-    if (!getCookie("token") && url !== "/login") {
+    if (!getTokenCookie() && url !== "/login") {
       goto("/login");
     }
   });

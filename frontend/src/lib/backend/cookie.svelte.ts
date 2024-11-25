@@ -6,9 +6,9 @@ interface Cookie {
   maxAge: number;
 }
 
-export const setCookie = (cookie_str: string) => {
+export const setTokenCookie = (cookie_str: string) => {
   let cookie = parseCookie(cookie_str);
-  if (!cookie) {
+  if (!cookie || cookie.key !== "token") {
     return;
   }
 
@@ -19,25 +19,16 @@ export const setCookie = (cookie_str: string) => {
   }
 };
 
-export const getAllCookies = () => {
-  let cookies: string[] = JSON.parse(localStorage.getItem(COOKIE_KEYS) || "[]");
-
-  return cookies
-    .map(getCookie)
-    .filter((c) => c !== undefined)
-    .join(";\n");
-};
-
-export const getCookie = (cookie: string) => {
-  let storeValue = localStorage.getItem(cookie);
+export const getTokenCookie = () => {
+  let storeValue = localStorage.getItem("token");
   if (!storeValue) return;
 
   let [value, expires_timestamp] = JSON.parse(storeValue);
   if (expires_timestamp < Date.now()) {
-    removeCookie(cookie);
+    removeCookie("token");
   }
 
-  return `${cookie}=${value}`;
+  return value;
 };
 
 const saveCookie = (cookie: Cookie) => {
