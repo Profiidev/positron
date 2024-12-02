@@ -1,7 +1,7 @@
 <script lang="ts" module>
-  export interface FormSchema {
-    schema: ZodObject<any>;
-    form: SuperValidated<Infer<Schema>>;
+  export interface FormSchema<T extends ZodRawShape> {
+    schema: ZodObject<T>;
+    form: SuperValidated<T, any, T>;
   }
 
   export interface Error {
@@ -10,7 +10,7 @@
   }
 </script>
 
-<script lang="ts">
+<script lang="ts" generics="T extends ZodRawShape">
   import * as Dialog from "$lib/components/ui/dialog";
   import type { Snippet } from "svelte";
   import { Button, type ButtonSize, type ButtonVariant } from "../ui/button";
@@ -19,13 +19,11 @@
   import {
     setError,
     superForm,
-    type Infer,
-    type Schema,
     type SuperForm,
     type SuperValidated,
   } from "sveltekit-superforms";
   import { zodClient } from "sveltekit-superforms/adapters";
-  import type { ZodObject } from "zod";
+  import type { ZodObject, ZodRawShape } from "zod";
   import { get } from "svelte/store";
 
   interface Props {
@@ -46,11 +44,11 @@
     };
     onopen?: () => boolean | Promise<boolean>;
     onsubmit: (
-      form: SuperValidated<any>,
+      form: SuperValidated<T>,
     ) => Error | undefined | Promise<Error | undefined>;
-    children?: Snippet<[{ form: SuperForm<any> }]>;
+    children?: Snippet<[{ form: SuperForm<T> }]>;
     triggerInner?: Snippet;
-    form: FormSchema;
+    form: FormSchema<T>;
   }
 
   let {
@@ -107,10 +105,10 @@
     isLoading = false;
   };
 
-  export const setValue = (value: { [key: string]: string }) => {
-    let old: any = get(form.form);
+  export const setValue = (value: T) => {
+    let old = get(form.form);
 
-    let newValue: any = {};
+    let newValue: T = {} as any;
     for (const key in old) {
       newValue[key] = value[key] ?? old[key];
     }

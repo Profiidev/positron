@@ -1,4 +1,7 @@
-<script lang="ts">
+<script
+  lang="ts"
+  generics="C extends ZodRawShape, E extends ZodRawShape, D extends ZodRawShape, T"
+>
   import { userData } from "$lib/backend/account/info.svelte";
   import { Permission } from "$lib/backend/management/types.svelte";
   import FormDialog, {
@@ -12,8 +15,7 @@
   import { RequestError } from "$lib/backend/types.svelte";
   import type { Snippet, SvelteComponent } from "svelte";
   import type { SuperForm, SuperValidated } from "sveltekit-superforms";
-
-  type T = $$Generic;
+  import type { ZodRawShape } from "zod";
 
   interface Props {
     data: T[] | undefined;
@@ -26,7 +28,7 @@
     ) => ColumnDef<T>[];
     label: string;
     createItemFn: (
-      form: SuperValidated<any>,
+      form: SuperValidated<C>,
     ) => Promise<RequestError | undefined>;
     editItemFn: (item: T) => Promise<RequestError | undefined>;
     deleteItemFn: (id: string) => Promise<RequestError | undefined>;
@@ -39,7 +41,7 @@
         {
           props: {
             disabled: boolean;
-            form: SuperForm<any>;
+            form: SuperForm<E>;
           };
           item: T;
         },
@@ -50,15 +52,15 @@
         {
           props: {
             disabled: boolean;
-            form: SuperForm<any>;
+            form: SuperForm<C>;
           };
         },
       ]
     >;
     createPermission: Permission;
-    createForm: FormSchema;
-    editForm: FormSchema;
-    deleteForm: FormSchema;
+    createForm: FormSchema<C>;
+    editForm: FormSchema<any>;
+    deleteForm: FormSchema<D>;
     startCreate?: () => boolean | Promise<boolean>;
     startEdit?: (item: T) => void | Promise<void>;
     createClass?: string;
@@ -145,7 +147,7 @@
     );
   });
 
-  const createItem = async (form: SuperValidated<any>) => {
+  const createItem = async (form: SuperValidated<C>) => {
     let ret = await createItemFn(form);
 
     if (ret) {
@@ -173,11 +175,11 @@
     deleteOpen = true;
   };
 
-  const editItemConfirm = async (form: SuperValidated<any>) => {
+  const editItemConfirm = async (form: SuperValidated<E>) => {
     selected = {
       ...selected,
       ...form.data,
-    };
+    } as any;
 
     if (!selected) {
       return;
