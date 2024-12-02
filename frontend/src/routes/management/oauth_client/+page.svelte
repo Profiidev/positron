@@ -1,13 +1,5 @@
 <script lang="ts">
-  import { userData } from "$lib/backend/account/info.svelte";
-  import {
-    Permission,
-    type OAuthClientCreate,
-    type OAuthClientInfo,
-  } from "$lib/backend/management/types.svelte";
-  import { createTable } from "$lib/components/table/helpers.svelte";
-  import type { Row } from "@tanstack/table-core";
-  import { columns } from "./table.svelte";
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
   import {
     create_client,
     delete_client,
@@ -15,43 +7,48 @@
     reset_client_secret,
     start_create_client,
   } from "$lib/backend/management/oauth_clients.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import { toast } from "svelte-sonner";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
-  import { Label } from "$lib/components/ui/label";
-  import { Input } from "$lib/components/ui/input";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
-  import Table from "$lib/components/table/table.svelte";
-  import { isUrl } from "$lib/util/other.svelte";
-  import { Separator } from "$lib/components/ui/separator";
-  import { PUBLIC_BACKEND_URL } from "$env/static/public";
-  import { Button } from "$lib/components/ui/button";
-  import { LoaderCircle, RotateCw } from "lucide-svelte";
   import {
     group_info_list,
     oauth_client_list,
     oauth_scope_names,
     user_info_list,
   } from "$lib/backend/management/stores.svelte";
+  import {
+    Permission,
+    type OAuthClientCreate,
+    type OAuthClientInfo,
+  } from "$lib/backend/management/types.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import Multiselect from "$lib/components/table/multiselect.svelte";
+  import SimpleTable from "$lib/components/table/simple-table.svelte";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Separator } from "$lib/components/ui/separator";
+  import { columns } from "./table.svelte";
+  import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import { LoaderCircle, RotateCw } from "lucide-svelte";
+  import type { PageServerData } from "./$types";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import { toast } from "svelte-sonner";
+  import { deepCopy } from "$lib/util/other.svelte";
 
-  let isLoading = $state(false);
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
+
   let clients = $derived(oauth_client_list.value);
   let groups = $derived(group_info_list.value);
   let users = $derived(user_info_list.value);
   let scope_names = $derived(oauth_scope_names.value);
-  let userInfo = $derived(userData.value?.[0]);
 
-  let client: OAuthClientInfo | undefined = $state();
-  let editOpen = $state(false);
-  let deleteOpen = $state(false);
-  let name = $state("");
-  let redirect_uri = $state("");
-  let additional_redirect_uri = $state("");
-  let additional_redirect_uri_edit = $state("");
+  let isLoading = $state(false);
   let scope: string[] = $state([]);
   let startCreate: OAuthClientCreate | undefined = $state();
   let newSecret = $state("");
-  let scope_edit: string[] = $state([]);
 
   let clientInfo = $derived([
     {
@@ -63,7 +60,7 @@
       value: startCreate?.secret,
     },
   ]);
-  let backendURLs = $derived([
+  let backendURLs = (client_id: string | undefined) => [
     {
       name: "Authorization URL",
       value: `${PUBLIC_BACKEND_URL}/oauth/authorize`,
@@ -78,7 +75,7 @@
     },
     {
       name: "Logout URL",
-      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id || client?.client_id || ""}`,
+      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id || client_id || ""}`,
     },
     {
       name: "Revoke URL",
@@ -90,50 +87,33 @@
     },
     {
       name: "OIDC Configuration URL",
-      value: `${PUBLIC_BACKEND_URL}/oauth/${startCreate?.client_id || client?.client_id || ""}/.well-known/openid-configuration`,
+      value: `${PUBLIC_BACKEND_URL}/oauth/${startCreate?.client_id || client_id || ""}/.well-known/openid-configuration`,
     },
-  ]);
+  ];
 
-  const filterFn = (
-    row: Row<OAuthClientInfo>,
-    id: string,
-    filterValues: any,
-  ) => {
-    const info = [
-      row.original.name,
-      row.original.client_id,
-      row.original.default_scope,
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    let searchTerms = Array.isArray(filterValues)
-      ? filterValues
-      : [filterValues];
-    return searchTerms.some((term) => info.includes(term.toLowerCase()));
+  const createItemFn = async (form: SuperValidated<any>) => {
+    return await create_client(
+      form.data.name,
+      form.data.redirect_uri,
+      form.data.additional_redirect_uris,
+      scope.join(" "),
+    );
   };
 
-  let table = $state(
-    createTable(
-      [],
-      columns(
-        [],
-        () => {},
-        () => {},
-      ),
-      filterFn,
-    ),
-  );
+  const resetSecret = async (item: OAuthClientInfo) => {
+    isLoading = true;
+    let ret = await reset_client_secret(item.client_id);
+    isLoading = false;
 
-  $effect(() => {
-    table = createTable(
-      clients || [],
-      columns(userInfo?.permissions || [], editClient, deleteClient),
-      filterFn,
-    );
-  });
+    if (ret) {
+      newSecret = ret.secret;
+    } else {
+      return "Error while creating new secret";
+    }
+  };
 
   const startCreateClient = async () => {
+    scope = [];
     let ret = await start_create_client();
 
     if (ret) {
@@ -145,133 +125,61 @@
     }
   };
 
-  const createClient = async () => {
-    if (!isUrl(redirect_uri)) {
-      return "Set a valid redirect URI";
-    }
-
-    let other_uris = additional_redirect_uri.split(" ").filter((u) => u !== "");
-    if (!other_uris.every((u) => isUrl(u))) {
-      return "Set valid additional redirect URIs";
-    }
-
-    let ret = await create_client(
-      name,
-      redirect_uri,
-      other_uris,
-      scope.join(" "),
-    );
-    if (ret) {
-      if (ret === RequestError.Conflict) {
-        return "Name already taken";
-      } else {
-        return "Error while creating client";
-      }
-    } else {
-      toast.success("Created Client");
-      name = "";
-      redirect_uri = "";
-      additional_redirect_uri = "";
-      scope = [];
-    }
+  const editClient = async (client: OAuthClientInfo) => {
+    let clientLocal = deepCopy(client);
+    clientLocal.default_scope = scope.join(" ");
+    return await edit_client(clientLocal);
   };
 
-  const editClient = (client_id: string) => {
-    client = clients?.find((client) => client.client_id === client_id);
-    additional_redirect_uri_edit =
-      client?.additional_redirect_uris.join(" ") || "";
-    scope_edit = client?.default_scope.split(" ").filter((s) => s !== "") || [];
-    newSecret = "";
-    editOpen = true;
+  const createForm = {
+    schema: createSchema,
+    form: data.createForm,
   };
 
-  const deleteClient = (client_id: string) => {
-    client = clients?.find((client) => client.client_id === client_id);
-    deleteOpen = true;
+  const editForm = {
+    schema: editSchema,
+    form: data.editForm,
   };
 
-  const editClientConfirm = async () => {
-    if (!client) {
-      return;
-    }
-
-    if (!isUrl(client.redirect_uri)) {
-      return "Set a valid redirect URI";
-    }
-
-    client.additional_redirect_uris = additional_redirect_uri_edit
-      .split(" ")
-      .filter((u) => u !== "");
-    if (!client.additional_redirect_uris.every((u) => isUrl(u))) {
-      return "Set valid additional redirect URIs";
-    }
-
-    client.default_scope = scope_edit.join(" ");
-
-    let ret = await edit_client(client);
-
-    if (ret) {
-      if (ret === RequestError.Conflict) {
-        return "Name already taken";
-      } else {
-        return "Error while updating client";
-      }
-    } else {
-      toast.success("Client updated");
-    }
-  };
-
-  const deleteClientConfirm = async () => {
-    if (!client) {
-      return;
-    }
-
-    let ret = await delete_client(client.client_id);
-
-    if (ret) {
-      return "Error while deleting client";
-    } else {
-      toast.success("Client deleted");
-    }
-  };
-
-  const resetSecret = async () => {
-    if (!client) {
-      return;
-    }
-
-    isLoading = true;
-    let ret = await reset_client_secret(client.client_id);
-    isLoading = false;
-
-    if (ret) {
-      newSecret = ret.secret;
-    } else {
-      return "Error while creating new secret";
-    }
+  const deleteForm = {
+    schema: deleteSchema,
+    form: data.deleteForm,
   };
 </script>
 
-<FormDialog
-  title="Delete Client"
-  description={`Do you really want to delete the client ${client?.name}?`}
-  confirm="Delete"
-  confirmVariant="destructive"
-  onsubmit={deleteClientConfirm}
-  bind:open={deleteOpen}
-></FormDialog>
-<FormDialog
-  title="Edit Client"
-  description={`Edit the client info for ${client?.name} below`}
-  confirm="Confirm"
-  onsubmit={editClientConfirm}
-  bind:open={editOpen}
-  class="md:max-w-[750px]"
+<SimpleTable
+  data={clients}
+  filter_keys={["name", "client_id", "default_scope"]}
+  {columns}
+  label="Client"
+  {createItemFn}
+  editItemFn={editClient}
+  deleteItemFn={delete_client}
+  toId={(item) => item.client_id}
+  display={(item) => item?.name}
+  title="Clients"
+  description="Modify, create, delete clients and manage their settings here"
+  createPermission={Permission.OAuthClientCreate}
+  {createForm}
+  {editForm}
+  {deleteForm}
+  errorMappings={{
+    [RequestError.Conflict]: {
+      field: "name",
+      error: "Name already taken",
+    },
+  }}
+  startCreate={startCreateClient}
+  startEdit={(item) => {
+    scope = item.default_scope.split(" ");
+  }}
+  createClass="md:max-w-[750px]"
+  editClass="md:max-w-[750px]"
 >
-  {#if client && userInfo}
+  {#snippet editDialog({ props, item })}
     <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
       <div class="space-y-1 grid gap-1">
-        {#each backendURLs as info}
+        {#each backendURLs(item.client_id) as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
@@ -286,7 +194,7 @@
           <Button
             disabled={isLoading}
             variant="destructive"
-            onclick={resetSecret}
+            onclick={() => resetSecret(item)}
           >
             {#if isLoading}
               <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
@@ -301,9 +209,8 @@
       <Separator orientation="vertical" class="mx-[30px]" />
       <div class="h-fit space-y-1 grid gap-1">
         <Label for="id">Client ID</Label>
-        <Input id="id" value={client.client_id} readonly />
-        <Label for="name">Name</Label>
-        <Input id="name" placeholder="Name" bind:value={client.name} />
+        <Input id="id" value={item.client_id} readonly />
+        <FormInput label="Name" placeholder="Name" key="name" {...props} />
         <Label>Scope</Label>
         <Multiselect
           label="Scope"
@@ -311,20 +218,19 @@
             label: s,
             value: s,
           })) || []}
-          selected={scope_edit}
+          bind:selected={scope}
         />
-        <Label for="uri">Default Redirect URI</Label>
-        <Input
-          id="uri"
-          placeholder="Redirect URI"
-          required
-          bind:value={client.redirect_uri}
+        <FormInput
+          label="Default Redirect URI"
+          placeholder="URI"
+          key="redirect_uri"
+          {...props}
         />
-        <Label for="add_uri">Additional Redirect URIs (space separated)</Label>
-        <Input
-          id="add_uri"
-          placeholder="Additional Redirect URIs"
-          bind:value={additional_redirect_uri_edit}
+        <FormInput
+          label="Additional Redirect URIs (space separated)"
+          placeholder="URIs"
+          key="additional_redirect_uris"
+          {...props}
         />
         <Label>Groups</Label>
         <Multiselect
@@ -333,7 +239,7 @@
             label: g.name,
             value: g,
           })) || []}
-          selected={client.group_access}
+          bind:selected={item.group_access}
           display={(u) => u.name}
           compare={(a, b) => a.uuid === b.uuid}
         />
@@ -344,85 +250,50 @@
             label: u.name,
             value: u,
           })) || []}
-          selected={client.user_access}
+          bind:selected={item.user_access}
           display={(u) => u.name}
           compare={(a, b) => a.uuid === b.uuid}
         />
       </div>
     </div>
-  {/if}
-</FormDialog>
-<div class="space-y-3 m-4">
-  <div class="ml-7 md:m-0">
-    <h3 class="text-xl font-medium">Clients</h3>
-    <p class="text-muted-foreground text-sm">
-      Modify, create, delete clients and manage their settings here
-    </p>
-  </div>
-  <Table filterColumn="name" {table}>
-    {#if userInfo?.permissions.includes(Permission.OAuthClientCreate)}
-      <FormDialog
-        title="Create Client"
-        description="Enter the details for the new client below"
-        confirm="Create"
-        trigger={{
-          text: "Create Client",
-          variant: "secondary",
-          class: "ml-2",
-          loadIcon: true,
-        }}
-        onsubmit={createClient}
-        onopen={startCreateClient}
-        class="md:max-w-[750px]"
-      >
-        <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
-          <div class="space-y-1">
-            {#each backendURLs as info}
-              <Label for={info.name}>{info.name}</Label>
-              <Input id={info.name} value={info.value} readonly />
-            {/each}
-          </div>
-          <Separator orientation="vertical" class="mx-[30px]" />
-          <div class="h-fit grid space-y-1 gap-1">
-            {#each clientInfo as info}
-              <Label for={info.name}>{@html info.name}</Label>
-              <Input id={info.name} value={info.value} readonly />
-            {/each}
-            <Label for="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="Name"
-              required
-              disabled={isLoading}
-              bind:value={name}
-            />
-            <Label for="scope">Scope</Label>
-            <Multiselect
-              label="Scope"
-              data={scope_names?.map((s) => ({
-                label: s,
-                value: s,
-              })) || []}
-              selected={scope}
-            />
-            <Label for="uri">Default Redirect URI</Label>
-            <Input
-              id="uri"
-              placeholder="Redirect URI"
-              required
-              bind:value={redirect_uri}
-            />
-            <Label for="add_uri"
-              >Additional Redirect URIs (space separated)</Label
-            >
-            <Input
-              id="add_uri"
-              placeholder="Additional Redirect URIs"
-              bind:value={additional_redirect_uri}
-            />
-          </div>
-        </div>
-      </FormDialog>
-    {/if}
-  </Table>
-</div>
+  {/snippet}
+  {#snippet createDialog({ props })}
+    <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
+      <div class="space-y-1">
+        {#each backendURLs(startCreate?.client_id) as info}
+          <Label for={info.name}>{info.name}</Label>
+          <Input id={info.name} value={info.value} readonly />
+        {/each}
+      </div>
+      <Separator orientation="vertical" class="mx-[30px]" />
+      <div class="h-fit grid space-y-1 gap-1">
+        {#each clientInfo as info}
+          <Label for={info.name}>{@html info.name}</Label>
+          <Input id={info.name} value={info.value} readonly />
+        {/each}
+        <FormInput label="Name" placeholder="Name" key="name" {...props} />
+        <Label for="scope">Scope</Label>
+        <Multiselect
+          label="Scope"
+          data={scope_names?.map((s) => ({
+            label: s,
+            value: s,
+          })) || []}
+          bind:selected={scope}
+        />
+        <FormInput
+          label="Default Redirect URI"
+          placeholder="URI"
+          key="redirect_uri"
+          {...props}
+        />
+        <FormInput
+          label="Additional Redirect URIs (space separated)"
+          placeholder="URIs"
+          key="additional_redirect_uris"
+          {...props}
+        />
+      </div>
+    </div>
+  {/snippet}
+</SimpleTable>

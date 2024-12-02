@@ -94,7 +94,7 @@
       label="Permissions"
       data={getPermissionGroups()}
       filter={(i) => userInfo!.permissions.includes(i.label as Permission)}
-      selected={item.permissions}
+      bind:selected={item.permissions}
     />
     <Label>Users</Label>
     <Multiselect
@@ -103,7 +103,7 @@
         label: u.name,
         value: u,
       })) || []}
-      selected={item.users}
+      bind:selected={item.users}
       display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />

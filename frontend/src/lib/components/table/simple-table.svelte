@@ -59,6 +59,10 @@
     createForm: FormSchema;
     editForm: FormSchema;
     deleteForm: FormSchema;
+    startCreate?: () => boolean | Promise<boolean>;
+    startEdit?: (item: T) => void | Promise<void>;
+    createClass?: string;
+    editClass?: string;
     errorMappings?: {
       [key in RequestError]?: Error;
     };
@@ -82,6 +86,10 @@
     createForm,
     editForm,
     deleteForm,
+    startCreate,
+    startEdit,
+    createClass,
+    editClass,
     errorMappings,
   }: Props = $props();
 
@@ -155,6 +163,7 @@
     selected = data?.find((item) => toId(item) === id);
     if (selected) {
       setEditValue(selected);
+      startEdit?.(selected);
     }
     editOpen = true;
   };
@@ -221,6 +230,7 @@
   bind:open={editOpen}
   bind:isLoading
   form={editForm}
+  class={editClass}
 >
   {#snippet children({ form })}
     {#if selected && userInfo}
@@ -239,24 +249,25 @@
     </p>
   </div>
   <Table filterColumn="name" {table}>
-    {#if userInfo?.permissions.includes(createPermission)}
-      <FormDialog
-        title={`Create ${label}`}
-        description={`Enter the details for the new ${labelLower} below`}
-        confirm="Create"
-        trigger={{
-          text: `Create ${label}`,
-          variant: "secondary",
-          class: "ml-2",
-        }}
-        onsubmit={createItem}
-        bind:isLoading
-        form={createForm}
-      >
-        {#snippet children({ form })}
-          {@render createDialog?.({ props: { form, ...fieldProps } })}
-        {/snippet}
-      </FormDialog>
-    {/if}
+    <FormDialog
+      title={`Create ${label}`}
+      description={`Enter the details for the new ${labelLower} below`}
+      confirm="Create"
+      trigger={{
+        text: `Create ${label}`,
+        variant: "secondary",
+        class: "ml-2",
+        disabled: !userInfo?.permissions.includes(createPermission),
+      }}
+      onsubmit={createItem}
+      onopen={startCreate}
+      bind:isLoading
+      form={createForm}
+      class={createClass}
+    >
+      {#snippet children({ form })}
+        {@render createDialog?.({ props: { form, ...fieldProps } })}
+      {/snippet}
+    </FormDialog>
   </Table>
 </div>
