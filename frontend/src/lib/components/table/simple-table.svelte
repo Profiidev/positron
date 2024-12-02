@@ -1,0 +1,262 @@
+<script lang="ts">
+  import { userData } from "$lib/backend/account/info.svelte";
+  import { Permission } from "$lib/backend/management/types.svelte";
+  import FormDialog, {
+    type Error,
+    type FormSchema,
+  } from "$lib/components/form/form-dialog.svelte";
+  import { createTable } from "$lib/components/table/helpers.svelte";
+  import Table from "$lib/components/table/table.svelte";
+  import { toast } from "svelte-sonner";
+  import type { ColumnDef, Row } from "@tanstack/table-core";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import type { Snippet, SvelteComponent } from "svelte";
+  import type { SuperForm, SuperValidated } from "sveltekit-superforms";
+
+  type T = $$Generic;
+
+  interface Props {
+    data: T[] | undefined;
+    filter_keys: string[];
+    columns: (
+      permissions: Permission[],
+      access_level: number,
+      editFn: (id: string) => void,
+      deleteFn: (id: string) => void,
+    ) => ColumnDef<T>[];
+    label: string;
+    createItemFn: (
+      form: SuperValidated<any>,
+    ) => Promise<RequestError | undefined>;
+    editItemFn: (item: T) => Promise<RequestError | undefined>;
+    deleteItemFn: (id: string) => Promise<RequestError | undefined>;
+    toId: (item: T) => string;
+    display: (item: T | undefined) => string | undefined;
+    title: string;
+    description: string;
+    editDialog?: Snippet<
+      [
+        {
+          props: {
+            disabled: boolean;
+            form: SuperForm<any>;
+          };
+          item: T;
+        },
+      ]
+    >;
+    createDialog?: Snippet<
+      [
+        {
+          props: {
+            disabled: boolean;
+            form: SuperForm<any>;
+          };
+        },
+      ]
+    >;
+    createPermission: Permission;
+    createForm: FormSchema;
+    editForm: FormSchema;
+    deleteForm: FormSchema;
+    errorMappings?: {
+      [key in RequestError]?: Error;
+    };
+  }
+
+  let {
+    data,
+    filter_keys,
+    columns,
+    label,
+    createItemFn,
+    editItemFn,
+    deleteItemFn,
+    toId,
+    display,
+    title,
+    description,
+    editDialog,
+    createDialog,
+    createPermission,
+    createForm,
+    editForm,
+    deleteForm,
+    errorMappings,
+  }: Props = $props();
+
+  let isLoading = $state(false);
+  let userInfo = $derived(userData.value?.[0]);
+  let labelLower = $derived(label.toLocaleLowerCase());
+  let fieldProps = $derived({ disabled: isLoading });
+
+  let selected: T | undefined = $state();
+  let editOpen = $state(false);
+  let deleteOpen = $state(false);
+
+  let editComp: SvelteComponent | undefined = $state();
+  let setEditValue: (value: { [key: string]: string }) => void = $derived(
+    editComp?.setValue || (() => {}),
+  );
+
+  const filterFn = (row: Row<T>, id: string, filterValues: any) => {
+    const info = filter_keys
+      .map((k) => (row.original as any)[k] as string)
+      .filter(Boolean)
+      .join(" ");
+
+    let searchTerms = Array.isArray(filterValues)
+      ? filterValues
+      : [filterValues];
+    return searchTerms.some((term) => info.includes(term.toLowerCase()));
+  };
+
+  let table = $state(
+    createTable(
+      [],
+      columns(
+        [],
+        0,
+        () => {},
+        () => {},
+      ),
+      filterFn,
+    ),
+  );
+
+  $effect(() => {
+    table = createTable(
+      data || [],
+      columns(
+        userInfo?.permissions || [],
+        userInfo?.access_level ?? 0,
+        editItem,
+        deleteItem,
+      ),
+      filterFn,
+    );
+  });
+
+  const createItem = async (form: SuperValidated<any>) => {
+    let ret = await createItemFn(form);
+
+    if (ret) {
+      if (errorMappings && errorMappings[ret]) {
+        return errorMappings[ret];
+      } else {
+        return { error: `Error while creating ${labelLower}` };
+      }
+    } else {
+      toast.success(`Created ${label}`);
+    }
+  };
+
+  const editItem = (id: string) => {
+    selected = data?.find((item) => toId(item) === id);
+    if (selected) {
+      setEditValue(selected);
+    }
+    editOpen = true;
+  };
+
+  const deleteItem = (id: string) => {
+    selected = data?.find((item) => toId(item) === id);
+    deleteOpen = true;
+  };
+
+  const editItemConfirm = async (form: SuperValidated<any>) => {
+    selected = {
+      ...selected,
+      ...form.data,
+    };
+
+    if (!selected) {
+      return;
+    }
+
+    let ret = await editItemFn(selected);
+
+    if (ret) {
+      if (errorMappings && errorMappings[ret]) {
+        return errorMappings[ret];
+      } else {
+        return { error: `Error while updating ${labelLower}` };
+      }
+    } else {
+      toast.success(`${label} updated`);
+    }
+  };
+
+  const deleteItemConfirm = async () => {
+    if (!selected) {
+      return;
+    }
+
+    let ret = await deleteItemFn(toId(selected));
+
+    if (ret) {
+      return { error: `Error while deleting ${label}` };
+    } else {
+      toast.success(`${label} deleted`);
+    }
+  };
+</script>
+
+<FormDialog
+  title={`Delete ${label}`}
+  description={`Do you really want to delete the ${labelLower} ${display(selected)}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteItemConfirm}
+  bind:open={deleteOpen}
+  bind:isLoading
+  form={deleteForm}
+/>
+<FormDialog
+  bind:this={editComp}
+  title={`Edit ${label}`}
+  description={`Edit the ${labelLower} info for ${display(selected)} below`}
+  confirm="Confirm"
+  onsubmit={editItemConfirm}
+  bind:open={editOpen}
+  bind:isLoading
+  form={editForm}
+>
+  {#snippet children({ form })}
+    {#if selected && userInfo}
+      {@render editDialog?.({
+        props: { form, ...fieldProps },
+        item: selected,
+      })}
+    {/if}
+  {/snippet}
+</FormDialog>
+<div class="space-y-3 m-4">
+  <div class="ml-7 md:m-0">
+    <h3 class="text-xl font-medium">{title}</h3>
+    <p class="text-muted-foreground text-sm">
+      {description}
+    </p>
+  </div>
+  <Table filterColumn="name" {table}>
+    {#if userInfo?.permissions.includes(createPermission)}
+      <FormDialog
+        title={`Create ${label}`}
+        description={`Enter the details for the new ${labelLower} below`}
+        confirm="Create"
+        trigger={{
+          text: `Create ${label}`,
+          variant: "secondary",
+          class: "ml-2",
+        }}
+        onsubmit={createItem}
+        bind:isLoading
+        form={createForm}
+      >
+        {#snippet children({ form })}
+          {@render createDialog?.({ props: { form, ...fieldProps } })}
+        {/snippet}
+      </FormDialog>
+    {/if}
+  </Table>
+</div>
