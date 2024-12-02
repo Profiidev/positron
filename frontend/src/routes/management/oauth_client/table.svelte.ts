@@ -11,6 +11,7 @@ import type { ColumnDef } from "@tanstack/table-core";
 
 export const columns = (
   permissions: Permission[],
+  access_level: number,
   edit: (user: string) => void,
   remove: (user: string) => void,
 ): ColumnDef<OAuthClientInfo>[] => [

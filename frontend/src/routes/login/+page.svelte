@@ -6,7 +6,7 @@
   import { PUBLIC_IS_APP } from "$env/static/public";
   import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { goto } from "$app/navigation";
-    import { browser } from "$app/environment";
+  import { browser } from "$app/environment";
 
   interface Props {
     data: PageServerData;

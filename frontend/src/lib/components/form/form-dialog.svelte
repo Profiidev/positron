@@ -1,8 +1,30 @@
-<script lang="ts">
+<script lang="ts" module>
+  export interface FormSchema<T extends ZodRawShape> {
+    schema: ZodObject<T>;
+    form: SuperValidated<T, any, T>;
+  }
+
+  export interface Error {
+    field?: string;
+    error: string;
+  }
+</script>
+
+<script lang="ts" generics="T extends ZodRawShape">
   import * as Dialog from "$lib/components/ui/dialog";
   import type { Snippet } from "svelte";
   import { Button, type ButtonSize, type ButtonVariant } from "../ui/button";
   import { LoaderCircle } from "lucide-svelte";
+  import { FormButton } from "../ui/form";
+  import {
+    setError,
+    superForm,
+    type SuperForm,
+    type SuperValidated,
+  } from "sveltekit-superforms";
+  import { zodClient } from "sveltekit-superforms/adapters";
+  import type { ZodObject, ZodRawShape } from "zod";
+  import { get } from "svelte/store";
 
   interface Props {
     title: string;
@@ -11,6 +33,7 @@
     confirmVariant?: ButtonVariant;
     open?: boolean;
     class?: string;
+    isLoading?: boolean;
     trigger?: {
       text?: string;
       variant?: ButtonVariant;
@@ -20,9 +43,12 @@
       disabled?: boolean;
     };
     onopen?: () => boolean | Promise<boolean>;
-    onsubmit: () => string | undefined | Promise<string | undefined>;
-    children?: Snippet;
+    onsubmit: (
+      form: SuperValidated<T>,
+    ) => Error | undefined | Promise<Error | undefined>;
+    children?: Snippet<[{ form: SuperForm<T> }]>;
     triggerInner?: Snippet;
+    form: FormSchema<T>;
   }
 
   let {
@@ -33,16 +59,44 @@
     open = $bindable(false),
     class: className,
     trigger,
+    isLoading = $bindable(false),
     onopen = () => true,
     onsubmit,
     children,
     triggerInner,
+    form: formInfo,
   }: Props = $props();
 
   let error = $state("");
-  let isLoading = $state(false);
 
-  export const openFn = async () => {
+  let form = superForm(formInfo.form, {
+    validators: zodClient(formInfo.schema),
+    SPA: true,
+    onUpdate: async ({ form, cancel }) => {
+      if (!form.valid) return;
+
+      error = "";
+      isLoading = true;
+
+      let ret = await onsubmit(form);
+
+      isLoading = false;
+      if (!ret) {
+        open = false;
+      } else {
+        if (ret.field) {
+          form.errors;
+          setError(form, ret.field as "", ret.error, undefined);
+        } else if (ret.error !== "") {
+          error = "";
+          cancel();
+        }
+      }
+    },
+  });
+  let { enhance } = form;
+
+  const openFn = async () => {
     isLoading = true;
     if (await onopen()) {
       error = "";
@@ -51,18 +105,15 @@
     isLoading = false;
   };
 
-  const submit = async () => {
-    error = "";
-    isLoading = true;
+  export const setValue = (value: T) => {
+    let old = get(form.form);
 
-    let ret = await onsubmit();
-
-    isLoading = false;
-    if (!ret && ret !== "") {
-      open = false;
-    } else {
-      error = ret;
+    let newValue: T = {} as any;
+    for (const key in old) {
+      newValue[key] = value[key] ?? old[key];
     }
+
+    form.form.set(newValue);
   };
 </script>
 
@@ -87,18 +138,18 @@
       <Dialog.Title>{title}</Dialog.Title>
       <Dialog.Description>{description}</Dialog.Description>
     </Dialog.Header>
-    <form onsubmit={submit} class="grid gap-3">
-      {@render children?.()}
+    <form method="POST" class="grid gap-3" use:enhance>
+      {@render children?.({ form })}
       {#if error}
         <span class="text-destructive truncate text-sm">{error}</span>
       {/if}
       <Dialog.Footer class="mt-4">
-        <Button type="submit" disabled={isLoading} variant={confirmVariant}>
+        <FormButton type="submit" disabled={isLoading} variant={confirmVariant}>
           {#if isLoading}
             <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
           {/if}
           {confirm}
-        </Button>
+        </FormButton>
       </Dialog.Footer>
     </form>
   </Dialog.Content>

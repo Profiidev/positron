@@ -12,7 +12,7 @@
   import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { get } from "svelte/store";
   import { PUBLIC_IS_APP } from "$env/static/public";
-    import { browser } from "$app/environment";
+  import { browser } from "$app/environment";
 
   interface Props {
     children?: import("svelte").Snippet;

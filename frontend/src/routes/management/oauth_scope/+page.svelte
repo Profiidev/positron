@@ -1,155 +1,85 @@
 <script lang="ts">
-  import { userData } from "$lib/backend/account/info.svelte";
-  import {
-    Permission,
-    type OAuthScope,
-  } from "$lib/backend/management/types.svelte";
-  import { createTable } from "$lib/components/table/helpers.svelte";
-  import type { Row } from "@tanstack/table-core";
-  import { columns } from "./table.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import { toast } from "svelte-sonner";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
-  import { Label } from "$lib/components/ui/label";
-  import { Input } from "$lib/components/ui/input";
-  import Table from "$lib/components/table/table.svelte";
   import {
     create_scope,
     delete_scope,
     edit_scope,
   } from "$lib/backend/management/oauth_scope.svelte";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
   import {
     oauth_policy_info_list,
     oauth_scope_list,
   } from "$lib/backend/management/stores.svelte";
+  import {
+    Permission,
+    type OAuthPolicyInfo,
+  } from "$lib/backend/management/types.svelte";
+  import { RequestError } from "$lib/backend/types.svelte";
+  import SimpleTable from "$lib/components/table/simple-table.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import type { PageServerData } from "./$types";
+  import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
+  import { columns } from "./table.svelte";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import { Label } from "$lib/components/ui/label";
+  import Multiselect from "$lib/components/table/multiselect.svelte";
 
-  let isLoading = $state(false);
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
+
   let scopes = $derived(oauth_scope_list.value);
   let policies = $derived(oauth_policy_info_list.value);
-  let userInfo = $derived(userData.value?.[0]);
+  let policy: OAuthPolicyInfo[] = $state([]);
 
-  let scope: OAuthScope | undefined = $state();
-  let editOpen = $state(false);
-  let deleteOpen = $state(false);
-  let name = $state("");
-  let scope_name = $state("");
-  let policy = $state([]);
-
-  const filterFn = (row: Row<OAuthScope>, id: string, filterValues: any) => {
-    const info = [row.original.name, row.original.scope, row.original.uuid]
-      .filter(Boolean)
-      .join(" ");
-
-    let searchTerms = Array.isArray(filterValues)
-      ? filterValues
-      : [filterValues];
-    return searchTerms.some((term) => info.includes(term.toLowerCase()));
+  const createItemFn = async (form: SuperValidated<any>) => {
+    let scope = form.data;
+    scope.policy = policy;
+    return await create_scope(scope);
   };
 
-  let table = $state(
-    createTable(
-      [],
-      columns(
-        [],
-        () => {},
-        () => {},
-      ),
-      filterFn,
-    ),
-  );
-
-  $effect(() => {
-    table = createTable(
-      scopes || [],
-      columns(userInfo?.permissions || [], editScope, deleteScope),
-      filterFn,
-    );
-  });
-
-  const createScope = async () => {
-    let ret = await create_scope({
-      name,
-      scope: scope_name,
-      policy,
-    });
-    if (ret) {
-      if (ret === RequestError.Conflict) {
-        return "Name already taken";
-      } else {
-        return "Error while creating scope";
-      }
-    } else {
-      toast.success("Created Scope");
-      name = "";
-      scope_name = "";
-      policy = [];
-    }
+  const createForm = {
+    schema: createSchema,
+    form: data.createForm,
   };
 
-  const editScope = (uuid: string) => {
-    scope = scopes?.find((scope) => scope.uuid === uuid);
-    editOpen = true;
+  const editForm = {
+    schema: editSchema,
+    form: data.editForm,
   };
 
-  const deleteScope = (uuid: string) => {
-    scope = scopes?.find((scope) => scope.uuid === uuid);
-    deleteOpen = true;
-  };
-
-  const editScopeConfirm = async () => {
-    if (!scope) {
-      return;
-    }
-
-    let ret = await edit_scope(scope);
-
-    if (ret) {
-      if (ret === RequestError.Conflict) {
-        return "Name already taken";
-      } else {
-        return "Error while updating scope";
-      }
-    } else {
-      toast.success("Scope updated");
-    }
-  };
-
-  const deleteScopeConfirm = async () => {
-    if (!scope) {
-      return;
-    }
-
-    let ret = await delete_scope(scope.uuid);
-
-    if (ret) {
-      return "Error while deleting scope";
-    } else {
-      toast.success("Scope deleted");
-    }
+  const deleteForm = {
+    schema: deleteSchema,
+    form: data.deleteForm,
   };
 </script>
 
-<FormDialog
-  title="Delete Scope"
-  description={`Do you really want to delete the scope ${scope?.name}?`}
-  confirm="Delete"
-  confirmVariant="destructive"
-  onsubmit={deleteScopeConfirm}
-  bind:open={deleteOpen}
-></FormDialog>
-<FormDialog
-  title="Edit Scope"
-  description={`Edit the scope info for ${scope?.name} below`}
-  confirm="Confirm"
-  onsubmit={editScopeConfirm}
-  bind:open={editOpen}
+<SimpleTable
+  data={scopes}
+  filter_keys={["name", "scope", "uuid"]}
+  {columns}
+  label="Scope"
+  {createItemFn}
+  editItemFn={edit_scope}
+  deleteItemFn={delete_scope}
+  toId={(item) => item.uuid}
+  display={(item) => item?.name}
+  title="Scopes"
+  description="Modify, create, delete scopes and manage their settings here"
+  createPermission={Permission.OAuthClientCreate}
+  {createForm}
+  {editForm}
+  {deleteForm}
+  errorMappings={{
+    [RequestError.Conflict]: {
+      field: "name",
+      error: "Name already taken",
+    },
+  }}
 >
-  {#if scope && userInfo}
-    <Label for="name">Name</Label>
-    <Input id="name" placeholder="Name" bind:value={scope.name} />
-    <Label for="scope">Scope</Label>
-    <Input id="scope" placeholder="Scope" bind:value={scope.scope} />
+  {#snippet editDialog({ props, item })}
+    <FormInput label="Name" placeholder="Name" key="name" {...props} />
+    <FormInput label="Scope" placeholder="Scope" key="scope" {...props} />
     <Label>Policies</Label>
     <Multiselect
       label="Policies"
@@ -157,61 +87,24 @@
         label: g.name,
         value: g,
       })) || []}
-      selected={scope.policy}
+      selected={item.policy}
       display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
-  {/if}
-</FormDialog>
-<div class="space-y-3 m-4">
-  <div class="ml-7 md:m-0">
-    <h3 class="text-xl font-medium">Scopes</h3>
-    <p class="text-muted-foreground text-sm">
-      Modify, create, delete scopes and manage their settings here
-    </p>
-  </div>
-  <Table filterColumn="name" {table}>
-    {#if userInfo?.permissions.includes(Permission.OAuthClientCreate)}
-      <FormDialog
-        title="Create Scope"
-        description="Enter the details for the new scope below"
-        confirm="Create"
-        trigger={{
-          text: "Create Scope",
-          variant: "secondary",
-          class: "ml-2",
-          loadIcon: true,
-        }}
-        onsubmit={createScope}
-      >
-        <Label for="name">Name</Label>
-        <Input
-          id="name"
-          placeholder="Name"
-          required
-          disabled={isLoading}
-          bind:value={name}
-        />
-        <Label for="scope">Scope</Label>
-        <Input
-          id="scope"
-          placeholder="Scope"
-          required
-          disabled={isLoading}
-          bind:value={scope_name}
-        />
-        <Label>Policies</Label>
-        <Multiselect
-          label="Policies"
-          data={policies?.map((g) => ({
-            label: g.name,
-            value: g,
-          })) || []}
-          selected={policy}
-          display={(u) => u.name}
-          compare={(a, b) => a.uuid === b.uuid}
-        />
-      </FormDialog>
-    {/if}
-  </Table>
-</div>
+  {/snippet}
+  {#snippet createDialog({ props })}
+    <FormInput label="Name" placeholder="Name" key="name" {...props} />
+    <FormInput label="Scope" placeholder="Scope" key="scope" {...props} />
+    <Label>Policies</Label>
+    <Multiselect
+      label="Policies"
+      data={policies?.map((g) => ({
+        label: g.name,
+        value: g,
+      })) || []}
+      selected={policy}
+      display={(u) => u.name}
+      compare={(a, b) => a.uuid === b.uuid}
+    />
+  {/snippet}
+</SimpleTable>
