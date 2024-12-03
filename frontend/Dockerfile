@@ -24,8 +24,8 @@ RUN adduser -D static
 USER static
 WORKDIR /app
 
-COPY --from=build /app/build .
-COPY --from=build /app/package.json .
-COPY --from=build /app/package-lock.json .
+COPY --from=build /app/frontend/build .
+COPY --from=build /app/frontend/package.json .
+COPY --from=build /app/frontend/package-lock.json .
 
 CMD ["node", "."]
