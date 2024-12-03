@@ -4,10 +4,7 @@
 >
   import { userData } from "$lib/backend/account/info.svelte";
   import { Permission } from "$lib/backend/management/types.svelte";
-  import FormDialog, {
-    type Error,
-    type FormSchema,
-  } from "$lib/components/form/form-dialog.svelte";
+  import type { Error, FormSchema } from "$lib/components/form/form.svelte";
   import { createTable } from "$lib/components/table/helpers.svelte";
   import Table from "$lib/components/table/table.svelte";
   import { toast } from "svelte-sonner";
@@ -16,6 +13,7 @@
   import type { Snippet, SvelteComponent } from "svelte";
   import type { SuperForm, SuperValidated } from "sveltekit-superforms";
   import type { ZodRawShape } from "zod";
+  import FormDialog from "../form/form-dialog.svelte";
 
   interface Props {
     data: T[] | undefined;
