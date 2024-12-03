@@ -5,12 +5,39 @@
   import AccessConfirm from "../access-confirm.svelte";
   import Password from "./password.svelte";
   import type { SvelteComponent } from "svelte";
+  import type { PageServerData } from "./$types";
+  import {
+    passkeyCreateSchema,
+    passkeyDeleteSchema,
+    passkeyEditSchema,
+  } from "./schema.svelte";
+
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
   let requestAccess: () => Promise<boolean> = $derived(
     accessConfirm?.requestAccess || (() => false),
   );
+
+  const passkeyCreate = {
+    form: data.passkeyCreateForm,
+    schema: passkeyCreateSchema,
+  };
+
+  const passkeyEdit = {
+    form: data.passkeyEditForm,
+    schema: passkeyEditSchema,
+  };
+
+  const passkeyDelete = {
+    form: data.passkeyDeleteForm,
+    schema: passkeyDeleteSchema,
+  };
 </script>
 
 <div class="space-y-6">
@@ -27,7 +54,13 @@
   </div>
   <div class="space-y-3">
     <h3 class="text-lg">Passkey</h3>
-    <PasskeyList valid={specialAccessValid} {requestAccess} />
+    <PasskeyList
+      valid={specialAccessValid}
+      {requestAccess}
+      createSchema={passkeyCreate}
+      editSchema={passkeyEdit}
+      deleteSchema={passkeyDelete}
+    />
   </div>
   <div class="space-y-3">
     <h3 class="text-lg">Other 2FA Methods</h3>

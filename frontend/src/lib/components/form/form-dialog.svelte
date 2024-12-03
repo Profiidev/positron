@@ -64,7 +64,7 @@
     return ret;
   };
 
-  const openFn = async () => {
+  export const openFn = async () => {
     isLoading = true;
     if (await onopen()) {
       open = true;

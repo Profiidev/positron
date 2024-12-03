@@ -1,7 +1,5 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { Separator } from "$lib/components/ui/separator";
@@ -16,17 +14,22 @@
   } from "$lib/backend/auth/passkey.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import { passkey_list } from "$lib/backend/auth/stores.svelte";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import type { FormSchema } from "$lib/components/form/form.svelte";
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
+    createSchema: FormSchema<any>;
+    editSchema: FormSchema<any>;
+    deleteSchema: FormSchema<any>;
   }
 
-  let { valid, requestAccess }: Props = $props();
+  let { valid, requestAccess, createSchema, editSchema, deleteSchema }: Props =
+    $props();
 
-  let createName = $state("");
   let passkeys = $derived(passkey_list.value);
-  let editName = $state("");
   let editing = $state("");
   let editDialog: SvelteComponent | undefined = $state();
   let deleteDialog: SvelteComponent | undefined = $state();
@@ -38,27 +41,21 @@
       }
     }
 
-    createName = "";
     return true;
   };
 
-  const createPasskey = async () => {
-    if (createName === "") {
-      return "No Name provided";
-    }
-
-    let ret = await passkey_register(createName);
+  const createPasskey = async (form: SuperValidated<any>) => {
+    let ret = await passkey_register(form.data.name);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return "There was an error with your passkey";
+        return { error: "There was an error with your passkey" };
       } else if (ret === RequestError.Conflict) {
-        return "Name already taken";
+        return { field: "name", error: "Name already taken" };
       } else {
-        return "There was an error while creating passkey";
+        return { error: "There was an error while creating passkey" };
       }
     } else {
-      createName = "";
       toast.success("Creation successful", {
         description: "Passkey was successfully added to your account",
       });
@@ -80,7 +77,7 @@
     let ret = await passkey_remove(editing);
 
     if (ret) {
-      return "There was an error while deleting your passkey";
+      return { error: "There was an error while deleting your passkey" };
     } else {
       toast.success("Deletion successful", {
         description: `Passkey "${editing}" was successfully removed from your account`,
@@ -96,26 +93,22 @@
     }
 
     editing = name;
-    editName = name;
     editDialog?.openFn();
+    editDialog?.setValue({ name });
   };
 
-  const editPasskey = async () => {
-    if (editName === "") {
-      return "No Name provided";
-    }
-
-    let ret = await passkey_edit_name(editName, editing);
+  const editPasskey = async (form: SuperValidated<any>) => {
+    let ret = await passkey_edit_name(form.data.name, editing);
 
     if (ret) {
       if (ret === RequestError.Conflict) {
-        return "Name already taken";
+        return { field: "name", error: "Name already taken" };
       } else {
-        return "There was an error while editing passkey name";
+        return { error: "There was an error while editing passkey name" };
       }
     } else {
       toast.success("Edit successful", {
-        description: `Passkey name was changed successfully from ${editing} to ${editName}`,
+        description: `Passkey name was changed successfully from ${editing} to ${form.data.name}`,
       });
     }
   };
@@ -136,14 +129,11 @@
       }}
       onopen={startCreatePasskey}
       onsubmit={createPasskey}
+      form={createSchema}
     >
-      <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-      <Input
-        id="passkey_name"
-        placeholder="Name"
-        required
-        bind:value={createName}
-      />
+      {#snippet children({ form })}
+        <FormInput label="Passkey Name" placeholder="Name" key="name" {form} />
+      {/snippet}
     </FormDialog>
     <FormDialog
       title="Change Passkey Name"
@@ -152,14 +142,11 @@
       trigger={undefined}
       onsubmit={editPasskey}
       bind:this={editDialog}
+      form={editSchema}
     >
-      <Label for="passkey_name" class="sr-only">Passkey Name</Label>
-      <Input
-        id="passkey_name"
-        placeholder="Name"
-        required
-        bind:value={editName}
-      />
+      {#snippet children({ form })}
+        <FormInput label="Passkey Name" placeholder="Name" key="name" {form} />
+      {/snippet}
     </FormDialog>
     <FormDialog
       title="Delete Passkey"
@@ -169,6 +156,7 @@
       trigger={undefined}
       onsubmit={deletePasskey}
       bind:this={deleteDialog}
+      form={deleteSchema}
     ></FormDialog>
   </div>
   <Separator />

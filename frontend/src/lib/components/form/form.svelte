@@ -63,10 +63,9 @@
       isLoading = false;
       if (ret) {
         if (ret.field) {
-          form.errors;
           setError(form, ret.field as "", ret.error, undefined);
         } else if (ret.error !== "") {
-          error = "";
+          error = ret.error;
           cancel();
         }
       }
