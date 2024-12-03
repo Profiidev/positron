@@ -20,6 +20,14 @@ export const passwordChange = z.object({
   password_confirm: z.string().min(1, "Password Confirm is required"),
 });
 
+export const totpAdd = z.object({
+  code: z.string().min(6, "Code must be 6 characters long"),
+});
+
+export const totpRemove = z.object({
+  phantom: z.string().default("").optional(),
+});
+
 export type PasskeyCreateSchemaType = typeof passkeyCreateSchema;
 export type PasskeyEditSchemaType = typeof passkeyEditSchema;
 export type PasskeyDeleteSchemaType = typeof passkeyDeleteSchema;

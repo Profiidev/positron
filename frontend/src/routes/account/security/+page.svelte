@@ -12,6 +12,8 @@
     passkeyDeleteSchema,
     passkeyEditSchema,
     passwordChange,
+    totpAdd,
+    totpRemove,
   } from "./schema.svelte";
 
   interface Props {
@@ -50,6 +52,16 @@
     form: data.passwordChange,
     schema: passwordChange,
   };
+
+  const totpAddForm = {
+    form: data.totpAdd,
+    schema: totpAdd,
+  };
+
+  const totpRemoveForm = {
+    form: data.totpRemove,
+    schema: totpRemove,
+  };
 </script>
 
 <div class="space-y-6">
@@ -81,7 +93,12 @@
   <div class="space-y-3">
     <h3 class="text-lg">Other 2FA Methods</h3>
     <div class="border p-2 rounded-xl">
-      <Totp_2fa valid={specialAccessValid} {requestAccess} />
+      <Totp_2fa
+        valid={specialAccessValid}
+        {requestAccess}
+        addForm={totpAddForm}
+        removeForm={totpRemoveForm}
+      />
     </div>
   </div>
 </div>

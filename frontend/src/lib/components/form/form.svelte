@@ -55,6 +55,7 @@
     validators: zodClient(formInfo.schema),
     SPA: true,
     onUpdate: async ({ form, cancel }) => {
+      console.log(form)
       if (!form.valid) return;
 
       error = "";
