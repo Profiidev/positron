@@ -11,6 +11,15 @@ export const passkeyEditSchema = z.object({
 
 export const passkeyDeleteSchema = z.object({});
 
+export const confirmSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
+export const passwordChange = z.object({
+  password: z.string().min(1, "Password is required"),
+  password_confirm: z.string().min(1, "Password Confirm is required"),
+});
+
 export type PasskeyCreateSchemaType = typeof passkeyCreateSchema;
 export type PasskeyEditSchemaType = typeof passkeyEditSchema;
 export type PasskeyDeleteSchemaType = typeof passkeyDeleteSchema;

@@ -30,7 +30,9 @@
     onsubmit: (
       form: SuperValidated<T>,
     ) => Error | undefined | Promise<Error | undefined>;
-    children?: Snippet<[{ form: SuperForm<T> }]>;
+    children?: Snippet<
+      [{ props: { formData: SuperForm<T>; isLoading: boolean } }]
+    >;
     footer: Snippet<[{ children: Snippet }]>;
     isLoading: boolean;
     confirmVariant?: ButtonVariant;
@@ -87,7 +89,7 @@
 </script>
 
 <form method="POST" class="grid gap-3" use:enhance>
-  {@render children?.({ form })}
+  {@render children?.({ props: { formData: form, isLoading } })}
   {#if error}
     <span class="text-destructive truncate text-sm">{error}</span>
   {/if}

@@ -39,7 +39,7 @@
         {
           props: {
             disabled: boolean;
-            form: SuperForm<E>;
+            formData: SuperForm<E>;
           };
           item: T;
         },
@@ -50,7 +50,7 @@
         {
           props: {
             disabled: boolean;
-            form: SuperForm<C>;
+            formData: SuperForm<C>;
           };
         },
       ]
@@ -232,10 +232,10 @@
   form={editForm}
   class={editClass}
 >
-  {#snippet children({ form })}
+  {#snippet children({ props })}
     {#if selected && userInfo}
       {@render editDialog?.({
-        props: { form, ...fieldProps },
+        props: { ...props, ...fieldProps },
         item: selected,
       })}
     {/if}
@@ -265,8 +265,8 @@
       form={createForm}
       class={createClass}
     >
-      {#snippet children({ form })}
-        {@render createDialog?.({ props: { form, ...fieldProps } })}
+      {#snippet children({ props })}
+        {@render createDialog?.({ props: { ...props, ...fieldProps } })}
       {/snippet}
     </FormDialog>
   </Table>

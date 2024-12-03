@@ -1,21 +1,21 @@
 <script lang="ts">
   import LoginOther from "$lib/components/form/login-other-options.svelte";
   import * as Dialog from "$lib/components/ui/dialog";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
-  import { Button } from "$lib/components/ui/button";
-  import { LoaderCircle } from "lucide-svelte";
   import { interval } from "$lib/util/interval.svelte";
   import { password_special_access } from "$lib/backend/auth/password.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import { passkey_special_access } from "$lib/backend/auth/passkey.svelte";
   import { browser } from "$app/environment";
+  import Form, { type FormSchema } from "$lib/components/form/form.svelte";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
     specialAccessValid: boolean;
+    formData: FormSchema<any>;
   }
 
-  let { specialAccessValid = $bindable(false) }: Props = $props();
+  let { specialAccessValid = $bindable(false), formData }: Props = $props();
 
   let specialAccessWatcher = interval(() => {
     if (!browser) {
@@ -34,10 +34,8 @@
 
   let cb: (value: boolean) => void;
   let open = $state(false);
-  let isLoading = $state(false);
-  let password = $state("");
-  let formError = $state("");
   let passkeyError = $state("");
+  let isLoading = $state(false);
 
   export const requestAccess = async () => {
     return new Promise<boolean>((resolve) => {
@@ -46,23 +44,18 @@
     });
   };
 
-  const confirm = async () => {
-    isLoading = true;
-    formError = "";
+  const confirm = async (form: SuperValidated<any>) => {
     passkeyError = "";
 
-    let ret = await password_special_access(password);
-
-    isLoading = false;
+    let ret = await password_special_access(form.data.password);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        formError = "Wrong Password";
+        return { error: "Wrong Password" };
       } else {
-        formError = "There was an error while confirming access";
+        return { error: "There was an error while confirming access" };
       }
     } else {
-      password = "";
       cb(true);
       open = false;
     }
@@ -70,7 +63,6 @@
 
   const passkeyClick = async () => {
     isLoading = true;
-    formError = "";
     passkeyError = "";
 
     let ret = await passkey_special_access();
@@ -102,29 +94,28 @@
       <Dialog.Title>Confirm Access</Dialog.Title>
       <Dialog.Description>Confirm access to your account</Dialog.Description>
     </Dialog.Header>
-    <form class="grid gap-2" onsubmit={confirm}>
-      <div class="grid gap-1">
-        <Label class="sr-only" for="password">Password</Label>
-        <Input
-          id="password"
+    <Form
+      onsubmit={confirm}
+      confirm="Confirm Access"
+      bind:isLoading
+      form={formData}
+    >
+      {#snippet children({ props })}
+        <FormInput
+          {...props}
+          label="Password"
+          key="password"
           placeholder="Password"
-          type="password"
           autocapitalize="none"
           autocomplete="current-password"
           autocorrect="off"
-          disabled={isLoading}
-          required
-          bind:value={password}
+          type="password"
         />
-      </div>
-      <span class="text-destructive truncate text-sm">{formError}</span>
-      <Button type="submit" disabled={isLoading}>
-        {#if isLoading}
-          <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-        {/if}
-        Confirm Access
-      </Button>
-    </form>
+      {/snippet}
+      {#snippet footer({ children })}
+        {@render children()}
+      {/snippet}
+    </Form>
     <LoginOther {isLoading} {passkeyError} {passkeyClick} />
   </Dialog.Content>
 </Dialog.Root>

@@ -2,18 +2,20 @@
   import * as Form from "$lib/components/ui/form";
   import { type SuperForm } from "sveltekit-superforms";
   import { Input } from "../ui/input";
-  import type { HTMLInputTypeAttribute } from "svelte/elements";
+  import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
 
   interface Props {
-    form: SuperForm<any>;
+    formData: SuperForm<any>;
     key: string;
     label: string;
-    type?: HTMLInputTypeAttribute;
-    placeholder?: string;
   }
 
-  let { form, key, label, type, placeholder, ...restProps }: Input & Props =
-    $props();
+  let {
+    formData: form,
+    key,
+    label,
+    ...restProps
+  }: HTMLInputAttributes & Props = $props();
 
   const { form: formData } = $derived(form);
 </script>
@@ -26,8 +28,6 @@
         {...props}
         {...restProps}
         bind:value={$formData[key]}
-        {type}
-        {placeholder}
       />
     {/snippet}
   </Form.Control>

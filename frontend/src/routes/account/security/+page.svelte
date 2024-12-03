@@ -7,9 +7,11 @@
   import type { SvelteComponent } from "svelte";
   import type { PageServerData } from "./$types";
   import {
+    confirmSchema,
     passkeyCreateSchema,
     passkeyDeleteSchema,
     passkeyEditSchema,
+    passwordChange,
   } from "./schema.svelte";
 
   interface Props {
@@ -38,6 +40,16 @@
     form: data.passkeyDeleteForm,
     schema: passkeyDeleteSchema,
   };
+
+  const confirm = {
+    form: data.confirmForm,
+    schema: confirmSchema,
+  };
+
+  const passwordChangeForm = {
+    form: data.passwordChange,
+    schema: passwordChange,
+  };
 </script>
 
 <div class="space-y-6">
@@ -50,7 +62,11 @@
   <Separator />
   <div class="space-y-3">
     <h3 class="text-lg">Password</h3>
-    <Password valid={specialAccessValid} {requestAccess} />
+    <Password
+      valid={specialAccessValid}
+      {requestAccess}
+      formData={passwordChangeForm}
+    />
   </div>
   <div class="space-y-3">
     <h3 class="text-lg">Passkey</h3>
@@ -69,4 +85,8 @@
     </div>
   </div>
 </div>
-<AccessConfirm bind:specialAccessValid bind:this={accessConfirm} />
+<AccessConfirm
+  bind:specialAccessValid
+  bind:this={accessConfirm}
+  formData={confirm}
+/>

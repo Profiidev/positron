@@ -4,23 +4,22 @@
   import { password_change } from "$lib/backend/auth/password.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import type { FormSchema } from "$lib/components/form/form.svelte";
   import { Separator } from "$lib/components/ui/separator";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { DateTime } from "$lib/util/time.svelte";
   import { toast } from "svelte-sonner";
+  import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
+    formData: FormSchema<any>;
   }
 
-  let { valid, requestAccess }: Props = $props();
+  let { valid, requestAccess, formData }: Props = $props();
 
-  let newPassword = $state("");
-  let newPasswordConfirm = $state("");
-  let isLoading = $state(false);
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
   const startChange = async () => {
@@ -30,23 +29,24 @@
       }
     }
 
-    newPassword = "";
-    newPasswordConfirm = "";
     return true;
   };
 
-  const changeConfirm = async () => {
-    if (newPassword !== newPasswordConfirm) {
-      return "Passwords are not equal";
+  const changeConfirm = async (form: SuperValidated<any>) => {
+    if (form.data.password !== form.data.password_confirm) {
+      return { error: "Passwords are not equal", field: "password_confirm" };
     }
 
-    let ret = await password_change(newPassword, newPasswordConfirm);
+    let ret = await password_change(
+      form.data.password,
+      form.data.password_confirm,
+    );
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return "Passwords are not equal";
+        return { error: "Passwords are not equal", field: "password_confirm" };
       } else {
-        return "Error while updating password";
+        return { error: "Error while updating password" };
       }
     } else {
       toast.success("Update successful", {
@@ -88,36 +88,29 @@
     }}
     onopen={startChange}
     onsubmit={changeConfirm}
+    form={formData}
   >
-    <div class="grid gap-1">
-      <Label class="sr-only" for="new-password">New Password</Label>
-      <Input
-        id="new-password"
+    {#snippet children({ props })}
+      <FormInput
+        {...props}
+        label="New Password"
+        key="password"
         placeholder="New Password"
-        type="password"
         autocapitalize="none"
         autocomplete="new-password"
         autocorrect="off"
-        disabled={isLoading}
-        required
-        bind:value={newPassword}
+        type="password"
       />
-    </div>
-    <div class="grid gap-1">
-      <Label class="sr-only" for="new-password-confirm"
-        >Confirm New Password</Label
-      >
-      <Input
-        id="new-password-confirm"
+      <FormInput
+        {...props}
+        label="Confirm New Password"
+        key="password_confirm"
         placeholder="Confirm New Password"
-        type="password"
         autocapitalize="none"
         autocomplete="new-password"
         autocorrect="off"
-        disabled={isLoading}
-        required
-        bind:value={newPasswordConfirm}
+        type="password"
       />
-    </div>
+    {/snippet}
   </FormDialog>
 </div>

@@ -29,7 +29,7 @@
     onsubmit: (
       form: SuperValidated<T>,
     ) => Error | undefined | Promise<Error | undefined>;
-    children?: Snippet<[{ form: SuperForm<T> }]>;
+    children?: Snippet<[{ props: { formData: SuperForm<T> } }]>;
     triggerInner?: Snippet;
     form: FormSchema<T>;
   }

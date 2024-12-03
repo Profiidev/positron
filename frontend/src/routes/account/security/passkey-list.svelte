@@ -131,8 +131,13 @@
       onsubmit={createPasskey}
       form={createSchema}
     >
-      {#snippet children({ form })}
-        <FormInput label="Passkey Name" placeholder="Name" key="name" {form} />
+      {#snippet children({ props })}
+        <FormInput
+          label="Passkey Name"
+          placeholder="Name"
+          key="name"
+          {...props}
+        />
       {/snippet}
     </FormDialog>
     <FormDialog
@@ -144,8 +149,13 @@
       bind:this={editDialog}
       form={editSchema}
     >
-      {#snippet children({ form })}
-        <FormInput label="Passkey Name" placeholder="Name" key="name" {form} />
+      {#snippet children({ props })}
+        <FormInput
+          label="Passkey Name"
+          placeholder="Name"
+          key="name"
+          {...props}
+        />
       {/snippet}
     </FormDialog>
     <FormDialog
