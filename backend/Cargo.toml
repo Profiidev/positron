@@ -20,7 +20,7 @@ rsa = "0.9.7"
 serde = { version = "1.0.214", features = ["derive"] }
 serde_urlencoded = "0.7.1"
 surrealdb = "2.1.2"
-thiserror = "2.0.3"
+thiserror = "2.0.4"
 totp-rs = { version = "5.6.0", features = ["qr", "gen_secret", "otpauth"]}
 uuid = "1.11.0"
 webauthn-rs = { version = "0.5.0", features = ["conditional-ui"] }
