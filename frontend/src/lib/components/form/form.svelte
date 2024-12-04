@@ -8,13 +8,13 @@
     type SuperValidated,
   } from "sveltekit-superforms";
   import { zodClient } from "sveltekit-superforms/adapters";
-  import type { ZodObject, ZodRawShape } from "zod";
+  import type { ZodEffects, ZodObject, ZodRawShape } from "zod";
   import { FormButton } from "../ui/form";
   import { LoaderCircle } from "lucide-svelte";
   import type { ButtonVariant } from "../ui/button";
 
   export interface FormSchema<T extends ZodRawShape> {
-    schema: ZodObject<T>;
+    schema: ZodObject<T> | ZodEffects<ZodObject<T>>;
     form: SuperValidated<T, any, T>;
   }
 
@@ -55,7 +55,7 @@
     validators: zodClient(formInfo.schema),
     SPA: true,
     onUpdate: async ({ form, cancel }) => {
-      console.log(form)
+      console.log(form);
       if (!form.valid) return;
 
       error = "";
@@ -67,8 +67,8 @@
       if (ret) {
         if (ret.field) {
           setError(form, ret.field as "", ret.error, undefined);
-        } else if (ret.error !== "") {
-          error = ret.error;
+        } else {
+          if (ret.error !== "") error = ret.error;
           cancel();
         }
       }
@@ -85,8 +85,10 @@
       newValue[key] = value[key] ?? old[key];
     }
 
+    console.log(newValue);
     form.form.set(newValue);
   };
+  $inspect(get(form.form)).with(console.log);
 </script>
 
 <form method="POST" class="grid gap-3" use:enhance>

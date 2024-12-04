@@ -18,7 +18,7 @@
 <Form.Field {form} name={key}>
   <Form.Control>
     {#snippet children({ props })}
-      <Form.Label>{label}</Form.Label>
+      <Form.Label class={className}>{label}</Form.Label>
       <InputOtp.Root
         maxlength={6}
         bind:value={$formData[key]}
@@ -42,5 +42,5 @@
       </InputOtp.Root>
     {/snippet}
   </Form.Control>
-  <Form.FieldErrors />
+  <Form.FieldErrors class={className} />
 </Form.Field>
