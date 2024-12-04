@@ -25,7 +25,10 @@
   connect_updater();
   test_token().then((valid) => {
     if (!valid && browser) {
-      goto("/login");
+      let url = get(page).url.pathname;
+      if (url !== "/login") {
+        goto("/login");
+      }
     }
   });
 

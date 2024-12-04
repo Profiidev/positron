@@ -6,7 +6,6 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
-  import { Input } from "$lib/components/ui/input";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import {
@@ -14,6 +13,27 @@
     email_start_change,
   } from "$lib/backend/email.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
+  import type { PageServerData } from "./$types";
+  import { confirmSchema, emailChange } from "./schema.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import { get } from "svelte/store";
+  import FormInput from "$lib/components/form/form-input.svelte";
+
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
+
+  let confirmForm = {
+    form: data.confirm,
+    schema: confirmSchema,
+  };
+
+  let changeEmailForm = {
+    form: data.emailChange,
+    schema: emailChange,
+  };
 
   let infoData = $derived(userData.value?.[1]);
 
@@ -23,10 +43,8 @@
     accessConfirm?.requestAccess || (() => false),
   );
 
-  let newEmail = $state("");
-  let oldCode = $state("");
-  let newCode = $state("");
   let enteringCodes = $state(false);
+  let emailFormComp: SvelteComponent | undefined = $state();
 
   const startChangeEmail = async () => {
     if (!specialAccessValid) {
@@ -35,47 +53,43 @@
       }
     }
 
-    oldCode = "";
-    newCode = "";
-    newEmail = "";
     return true;
   };
 
-  const changeEmail = async () => {
+  const changeEmail = async (form: SuperValidated<any>) => {
     if (enteringCodes) {
-      return enterCodes();
+      return enterCodes(form);
     } else {
-      return enterEmail();
+      return enterEmail(form);
     }
   };
 
-  const enterEmail = async () => {
-    if (newEmail === "") {
-      return "No email provided";
-    }
-
-    let ret = await email_start_change(newEmail);
+  const enterEmail = async (form: SuperValidated<any>) => {
+    let ret = await email_start_change(form.data.email);
 
     if (ret) {
-      return "There was an error while sending your emails";
+      if (ret === RequestError.Conflict) {
+        return { field: "email", error: "This email is already taken" };
+      } else {
+        return { error: "There was an error while sending your emails" };
+      }
     } else {
       enteringCodes = true;
-      return "";
+      emailFormComp?.setValue({
+        email_input: false,
+      });
+      return { error: "" };
     }
   };
 
-  const enterCodes = async () => {
-    if (oldCode === "" || newCode === "") {
-      return "No code provided";
-    }
-
-    let ret = await email_finish_change(oldCode, newCode);
+  const enterCodes = async (form: SuperValidated<any>) => {
+    let ret = await email_finish_change(form.data.old_code, form.data.new_code);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return "Invalid confirm code";
+        return { error: "Invalid confirm code", field: "new_code" };
       } else {
-        return "There was an error while updating your email";
+        return { error: "There was an error while updating your email" };
       }
     } else {
       enteringCodes = false;
@@ -102,6 +116,7 @@
       {/if}
     </div>
     <FormDialog
+      bind:this={emailFormComp}
       title="Change Email"
       description={enteringCodes
         ? "Enter the code send to your old and new email below"
@@ -115,36 +130,45 @@
       }}
       onopen={startChangeEmail}
       onsubmit={changeEmail}
+      form={changeEmailForm}
     >
-      {#if !enteringCodes}
-        <Label for="new_email" class="sr-only">New Email</Label>
-        <Input
-          id="new_email"
-          placeholder="New Email"
-          type="email"
-          autocapitalize="none"
-          autocomplete="email"
-          autocorrect="off"
-          required
-          bind:value={newEmail}
-        />
-      {:else}
-        <div class="space-y-4">
-          <div class="space-y-2">
-            <Label class="flex justify-center"
-              >Code from old Email ({infoData?.email})</Label
-            >
-            <Totp_6 bind:totp={oldCode} class="flex justify-center" />
+      {#snippet children({ props })}
+        {#if !enteringCodes}
+          <FormInput
+            label="New Email"
+            placeholder="New Email"
+            key="email"
+            autocapitalize="none"
+            autocomplete="email"
+            autocorrect="off"
+            {...props}
+          />
+        {:else}
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <Totp_6
+                label={`Code from old Email (${infoData?.email})`}
+                key="old_code"
+                {...props}
+                class="flex justify-center"
+              />
+            </div>
+            <div class="space-y-2">
+              <Totp_6
+                label={`Code from new Email (${get(props.formData.form).email})`}
+                key="new_code"
+                {...props}
+                class="flex justify-center"
+              />
+            </div>
           </div>
-          <div class="space-y-2">
-            <Label class="flex justify-center"
-              >Code from new Email ({newEmail})</Label
-            >
-            <Totp_6 bind:totp={newCode} class="flex justify-center" />
-          </div>
-        </div>
-      {/if}
+        {/if}
+      {/snippet}
     </FormDialog>
   </div>
 </div>
-<AccessConfirm bind:this={accessConfirm} bind:specialAccessValid />
+<AccessConfirm
+  bind:this={accessConfirm}
+  bind:specialAccessValid
+  formData={confirmForm}
+/>

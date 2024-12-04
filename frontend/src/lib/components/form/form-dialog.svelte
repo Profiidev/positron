@@ -1,30 +1,13 @@
-<script lang="ts" module>
-  export interface FormSchema<T extends ZodRawShape> {
-    schema: ZodObject<T>;
-    form: SuperValidated<T, any, T>;
-  }
-
-  export interface Error {
-    field?: string;
-    error: string;
-  }
-</script>
-
 <script lang="ts" generics="T extends ZodRawShape">
   import * as Dialog from "$lib/components/ui/dialog";
-  import type { Snippet } from "svelte";
+  import type { Snippet, SvelteComponent } from "svelte";
   import { Button, type ButtonSize, type ButtonVariant } from "../ui/button";
   import { LoaderCircle } from "lucide-svelte";
-  import { FormButton } from "../ui/form";
-  import {
-    setError,
-    superForm,
-    type SuperForm,
-    type SuperValidated,
-  } from "sveltekit-superforms";
-  import { zodClient } from "sveltekit-superforms/adapters";
-  import type { ZodObject, ZodRawShape } from "zod";
-  import { get } from "svelte/store";
+  import { type SuperForm, type SuperValidated } from "sveltekit-superforms";
+  import type { ZodRawShape } from "zod";
+  import type { Error, FormSchema } from "./form.svelte";
+  import Form from "./form.svelte";
+  import { wait_for } from "$lib/util/interval.svelte";
 
   interface Props {
     title: string;
@@ -46,7 +29,7 @@
     onsubmit: (
       form: SuperValidated<T>,
     ) => Error | undefined | Promise<Error | undefined>;
-    children?: Snippet<[{ form: SuperForm<T> }]>;
+    children?: Snippet<[{ props: { formData: SuperForm<T> } }]>;
     triggerInner?: Snippet;
     form: FormSchema<T>;
   }
@@ -67,53 +50,33 @@
     form: formInfo,
   }: Props = $props();
 
+  let formComp: SvelteComponent | undefined = $state();
   let error = $state("");
+  let formSetValue: undefined | ((value: T) => void) = $derived(
+    formComp?.setValue,
+  );
 
-  let form = superForm(formInfo.form, {
-    validators: zodClient(formInfo.schema),
-    SPA: true,
-    onUpdate: async ({ form, cancel }) => {
-      if (!form.valid) return;
+  const submit = async (form: SuperValidated<T>) => {
+    let ret = await onsubmit(form);
+    if (!ret) {
+      open = false;
+    }
+    return ret;
+  };
 
-      error = "";
-      isLoading = true;
-
-      let ret = await onsubmit(form);
-
-      isLoading = false;
-      if (!ret) {
-        open = false;
-      } else {
-        if (ret.field) {
-          form.errors;
-          setError(form, ret.field as "", ret.error, undefined);
-        } else if (ret.error !== "") {
-          error = "";
-          cancel();
-        }
-      }
-    },
-  });
-  let { enhance } = form;
-
-  const openFn = async () => {
+  export const openFn = async () => {
     isLoading = true;
     if (await onopen()) {
-      error = "";
       open = true;
+      error = "";
     }
     isLoading = false;
   };
 
-  export const setValue = (value: T) => {
-    let old = get(form.form);
-
-    let newValue: T = {} as any;
-    for (const key in old) {
-      newValue[key] = value[key] ?? old[key];
+  export const setValue = async (value: T) => {
+    if (await wait_for(() => formSetValue !== undefined, 10, 5000)) {
+      formSetValue!(value);
     }
-
-    form.form.set(newValue);
   };
 </script>
 
@@ -138,19 +101,21 @@
       <Dialog.Title>{title}</Dialog.Title>
       <Dialog.Description>{description}</Dialog.Description>
     </Dialog.Header>
-    <form method="POST" class="grid gap-3" use:enhance>
-      {@render children?.({ form })}
-      {#if error}
-        <span class="text-destructive truncate text-sm">{error}</span>
-      {/if}
-      <Dialog.Footer class="mt-4">
-        <FormButton type="submit" disabled={isLoading} variant={confirmVariant}>
-          {#if isLoading}
-            <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-          {/if}
-          {confirm}
-        </FormButton>
-      </Dialog.Footer>
-    </form>
+    <Form
+      bind:this={formComp}
+      bind:isLoading
+      bind:error
+      form={formInfo}
+      {confirmVariant}
+      onsubmit={submit}
+      {confirm}
+      {children}
+    >
+      {#snippet footer({ children })}
+        <Dialog.Footer class="mt-4">
+          {@render children()}
+        </Dialog.Footer>
+      {/snippet}
+    </Form>
   </Dialog.Content>
 </Dialog.Root>

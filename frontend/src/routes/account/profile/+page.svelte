@@ -13,15 +13,28 @@
     profile_update,
   } from "$lib/backend/account/general.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
+  import type { PageServerData } from "./$types";
+  import { profileSchema } from "./schema.svelte";
+  import Form from "$lib/components/form/form.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import type { SvelteComponent } from "svelte";
+
+  interface Props {
+    data: PageServerData;
+  }
+
+  let { data }: Props = $props();
 
   let infoData = $derived(userData.value?.[1]);
   $effect(() => {
-    name = infoData?.name;
+    console.log(infoData)
+    if (infoData) formComp?.setValue(infoData);
   });
 
-  let name: string | undefined = $state();
   let isLoading = $state(false);
   let imageInput: undefined | HTMLElement | null = $state(null);
+  let formComp: SvelteComponent | undefined = $state();
 
   const updatePreview = async (e: Event) => {
     let input = e.target as HTMLInputElement;
@@ -46,15 +59,10 @@
     imageInput?.click();
   };
 
-  const updateProfile = async () => {
-    if (!name) {
-      toast.error("Missing Inputs");
-      return;
-    }
-
+  const updateProfile = async (form: SuperValidated<any>) => {
     isLoading = true;
 
-    let ret = await profile_update(name);
+    let ret = await profile_update(form.data.name);
 
     isLoading = false;
 
@@ -67,6 +75,13 @@
         description: "Your profile was updated successfully",
       });
     }
+
+    return undefined;
+  };
+
+  const profileForm = {
+    form: data.profile,
+    schema: profileSchema,
   };
 </script>
 
@@ -102,32 +117,33 @@
         <Skeleton class="size-52 rounded-full" />
       {/if}
     </div>
-    <form
+    <Form
       class="mt-5 sm:mt-0 sm:pl-10 flex flex-col space-y-2"
       onsubmit={updateProfile}
+      form={profileForm}
+      bind:isLoading
+      confirm="Update Profile"
+      bind:this={formComp}
     >
-      <Label for="username">Username</Label>
-      <div class="relative">
-        <Input
-          id="username"
-          autocomplete="off"
-          placeholder={infoData ? "Username" : ""}
-          class="sm:max-w-72"
-          required
-          bind:value={name}
-        />
-        {#if !infoData}
-          <div class="absolute inset-0 size-full flex items-center ml-2">
-            <Skeleton class="h-5 w-32" />
-          </div>
-        {/if}
-      </div>
-      <Button type="submit" class="!mt-8 ml-auto" disabled={isLoading}>
-        {#if isLoading}
-          <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-        {/if}
-        Update Profile
-      </Button>
-    </form>
+      {#snippet children({ props })}
+        <div class="relative">
+          <FormInput
+            label="Username"
+            placeholder={infoData ? "Username" : ""}
+            key="name"
+            class="sm:max-w-72"
+            {...props}
+          />
+          {#if !infoData}
+            <div class="absolute inset-0 size-full flex mt-11 ml-2">
+              <Skeleton class="h-5 w-32" />
+            </div>
+          {/if}
+        </div>
+      {/snippet}
+      {#snippet footer({ children })}
+        {@render children({ className: "!mt-8 ml-auto" })}
+      {/snippet}
+    </Form>
   </div>
 </div>

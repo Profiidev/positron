@@ -16,19 +16,22 @@
   } from "$lib/backend/auth/totp.svelte";
   import { RequestError } from "$lib/backend/types.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
+  import type { FormSchema } from "$lib/components/form/form.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
+    removeForm: FormSchema<any>;
+    addForm: FormSchema<any>;
   }
 
-  let { valid, requestAccess }: Props = $props();
+  let { valid, requestAccess, addForm, removeForm }: Props = $props();
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
   let totpQr = $state("");
   let totpCode = $state("");
-  let totpConfirm = $state("");
 
   const startRemoveTotp = async () => {
     if (!valid) {
@@ -43,7 +46,7 @@
     let ret = await totp_remove();
 
     if (ret) {
-      return "Error while removing TOTP";
+      return { error: "Error while removing TOTP" };
     } else {
       toast.success("Remove successful", {
         description: "TOTP was removed successfully from your account",
@@ -59,7 +62,6 @@
     }
 
     totpQr = "";
-    totpConfirm = "";
 
     const fetch = async () => {
       let code = await totp_get_setup_code();
@@ -74,14 +76,14 @@
     return true;
   };
 
-  const addTotp = async () => {
-    let res = await totp_confirm_setup(totpConfirm);
+  const addTotp = async (form: SuperValidated<any>) => {
+    let res = await totp_confirm_setup(form.data.code);
 
     if (res) {
       if (res === RequestError.Unauthorized) {
-        return "TOTP code invalid";
+        return { error: "TOTP code invalid", field: "code" };
       } else {
-        return "Error while adding TOTP";
+        return { error: "Error while adding TOTP" };
       }
     } else {
       toast.success("Addition successful", {
@@ -147,6 +149,7 @@
         }}
         onopen={startRemoveTotp}
         onsubmit={removeTotp}
+        form={removeForm}
       ></FormDialog>
     {:else}
       <FormDialog
@@ -156,24 +159,32 @@
         trigger={{ text: "Add", class: "m-2 ml-auto", loadIcon: true }}
         onopen={startAddTotp}
         onsubmit={addTotp}
+        form={addForm}
       >
-        <div class="flex items-center flex-col space-y-2">
-          {#if totpQr !== ""}
-            <img
-              class="size-60"
-              src={`data:image/png;base64, ${totpQr}`}
-              alt="QR"
+        {#snippet children({ props })}
+          <div class="flex items-center flex-col space-y-2">
+            {#if totpQr !== ""}
+              <img
+                class="size-60"
+                src={`data:image/png;base64, ${totpQr}`}
+                alt="QR"
+              />
+              <p class="text-muted-foreground">Or use the code</p>
+              <p class="bg-muted px-1 rounded">{totpCode}</p>
+            {:else}
+              <Skeleton class="size-60" />
+              <p class="text-muted-foreground">Or use the code</p>
+              <Skeleton class="h-6 w-80" />
+            {/if}
+            <p class="mb-2">Confirm Code</p>
+            <Totp_6
+              label="Confirm Code"
+              key="code"
+              {...props}
+              class="flex justify-center"
             />
-            <p class="text-muted-foreground">Or use the code</p>
-            <p class="bg-muted px-1 rounded">{totpCode}</p>
-          {:else}
-            <Skeleton class="size-60" />
-            <p class="text-muted-foreground">Or use the code</p>
-            <Skeleton class="h-6 w-80" />
-          {/if}
-          <p class="mb-2">Confirm Code</p>
-          <Totp_6 bind:totp={totpConfirm} class="flex justify-center" />
-        </div>
+          </div>
+        {/snippet}
       </FormDialog>
     {/if}
   {:else}

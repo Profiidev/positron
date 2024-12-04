@@ -50,14 +50,23 @@ export const interval = <T>(update: () => T, timeout: number) => {
   };
 };
 
-export const wait_for = (condition: () => boolean, intervalTime = 100) => {
-  return new Promise((resolve) => {
+export const wait_for = (
+  condition: () => boolean,
+  intervalTime = 100,
+  max?: number,
+) => {
+  return new Promise<boolean>((resolve) => {
     const interval = setInterval(() => {
       if (condition()) {
         clearInterval(interval);
-        resolve(undefined);
+        resolve(true);
       }
     }, intervalTime);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      resolve(false);
+    }, max);
   });
 };
 

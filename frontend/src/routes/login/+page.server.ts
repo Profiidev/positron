@@ -1,9 +1,15 @@
 import { PUBLIC_IS_APP } from "$env/static/public";
 import type { OAuthParams } from "$lib/backend/auth/types.svelte.js";
 import { redirect } from "@sveltejs/kit";
+import { superValidate } from "sveltekit-superforms";
+import { zod } from "sveltekit-superforms/adapters";
+import { loginSchema } from "./schema.svelte.js";
 
-export const load = ({ cookies, url }) => {
-  if (PUBLIC_IS_APP === "true") return;
+export const load = async ({ cookies, url }) => {
+  if (PUBLIC_IS_APP === "true")
+    return {
+      loginForm: await superValidate(zod(loginSchema)),
+    };
 
   let cookie = cookies.get("token");
 
@@ -22,7 +28,10 @@ export const load = ({ cookies, url }) => {
         code,
         name,
       } as OAuthParams,
+      loginForm: await superValidate(zod(loginSchema)),
     };
   }
-  return {};
+  return {
+    loginForm: await superValidate(zod(loginSchema)),
+  };
 };

@@ -1,11 +1,5 @@
 <script lang="ts">
-  import { preventDefault } from "svelte/legacy";
-
   import { cn } from "$lib/utils";
-  import { LoaderCircle } from "lucide-svelte";
-  import { Button } from "../../lib/components/ui/button/index";
-  import { Input } from "../../lib/components/ui/input/index";
-  import { Label } from "../../lib/components/ui/label/index";
   import { goto } from "$app/navigation";
   import LoginOther from "../../lib/components/form/login-other-options.svelte";
   import Totp_6 from "$lib/components/form/totp-6.svelte";
@@ -15,70 +9,70 @@
   import { password_login } from "$lib/backend/auth/password.svelte";
   import { passkey_authenticate } from "$lib/backend/auth/passkey.svelte";
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
+  import Form, { type FormSchema } from "$lib/components/form/form.svelte";
+  import FormInput from "$lib/components/form/form-input.svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import type { SvelteComponent } from "svelte";
 
   interface Props {
     class?: string | undefined | null;
     oauth_params: OAuthParams | undefined;
+    loginForm: FormSchema<any>;
   }
 
-  let { class: className = undefined, oauth_params }: Props = $props();
+  let {
+    class: className = undefined,
+    oauth_params,
+    loginForm,
+  }: Props = $props();
 
   let enterEmail = $state(true);
   let isLoading = $state(false);
-  let email = $state("");
-  let password = $state("");
-  let totp = $state("");
-  let form_error = $state("");
   let passkeyError = $state("");
+  let formComp: SvelteComponent | undefined = $state();
 
-  const onSubmit = async () => {
+  const onSubmit = async (form: SuperValidated<any>) => {
     if (!enterEmail) {
-      isLoading = true;
-      form_error = "";
       passkeyError = "";
 
-      let ret = await totp_confirm(totp);
-
-      isLoading = false;
+      let ret = await totp_confirm(form.data.totp);
 
       if (ret) {
         if (ret === RequestError.Unauthorized) {
-          form_error = "Wrong TOTP Code";
+          return { field: "totp", error: "Wrong TOTP Code" };
         } else {
-          form_error = "There was and Error while checking TOTP Code";
+          return { error: "There was and Error while checking TOTP Code" };
         }
-        return;
       } else {
-        await login_success();
+        login_success();
         return;
       }
     }
 
-    isLoading = true;
-    form_error = "";
     passkeyError = "";
 
-    let ret = await password_login(email, password);
-
-    isLoading = false;
+    let ret = await password_login(form.data.email, form.data.password);
 
     if (typeof ret === "boolean") {
       if (ret) {
         enterEmail = false;
+        formComp?.setValue({
+          code_input: true,
+        });
+        return { error: "" };
       } else {
-        await login_success();
+        login_success();
       }
     } else {
       if (ret === RequestError.Unauthorized) {
-        form_error = "Wrong Email or Password";
+        return { field: "password", error: "Wrong Email or Password" };
       } else {
-        form_error = "There was an Error while signing in";
+        return { error: "There was an Error while signing in" };
       }
     }
   };
 
   const passkeyClick = async () => {
-    form_error = "";
     passkeyError = "";
     isLoading = true;
 
@@ -93,11 +87,11 @@
         passkeyError = "There was an Error while signing in";
       }
     } else {
-      await login_success();
+      login_success();
     }
   };
 
-  const login_success = async () => {
+  const login_success = () => {
     connect_updater();
     if (oauth_params) {
       goto(`/oauth?code=${oauth_params.code}&name=${oauth_params.name}`);
@@ -108,56 +102,46 @@
 </script>
 
 <div class={cn("grid gap-6", className)}>
-  <form onsubmit={preventDefault(onSubmit)}>
-    <div class="grid gap-2">
+  <Form
+    bind:this={formComp}
+    onsubmit={onSubmit}
+    confirm={enterEmail ? "Sign In" : "Confirm"}
+    bind:isLoading
+    form={loginForm}
+    class="gap-0"
+  >
+    {#snippet children({ props })}
       {#if enterEmail}
-        <div class="grid gap-1">
-          <Label class="sr-only" for="email">Email</Label>
-          <Input
-            id="email"
-            placeholder="name@example.com"
-            type="email"
-            autocapitalize="none"
-            autocomplete="email"
-            autocorrect="off"
-            disabled={isLoading}
-            required
-            autofocus
-            bind:value={email}
-          />
-        </div>
-        <div class="grid gap-1">
-          <Label class="sr-only" for="password">Password</Label>
-          <Input
-            id="password"
-            placeholder="Password"
-            type="password"
-            autocapitalize="none"
-            autocomplete="current-password"
-            autocorrect="off"
-            disabled={isLoading}
-            required
-            bind:value={password}
-          />
-        </div>
+        <FormInput
+          key="email"
+          label="Email"
+          placeholder="name@example.com"
+          autocapitalize="none"
+          autocomplete="email"
+          autocorrect="off"
+          {...props}
+        />
+        <FormInput
+          key="password"
+          label="Password"
+          placeholder="Password"
+          autocapitalize="none"
+          autocomplete="current-password"
+          autocorrect="off"
+          {...props}
+        />
       {:else}
-        <div class="grid gap-1">
-          <Label class="sr-only">TOTP</Label>
-          <Totp_6 bind:totp class="flex w-full sm:w-[350px] justify-between" />
-        </div>
+        <Totp_6
+          label="TOTP"
+          key="totp"
+          class="flex w-full sm:w-[350px] justify-between"
+          {...props}
+        />
       {/if}
-      <span class="text-destructive truncate text-sm">{form_error}</span>
-      <Button type="submit" disabled={isLoading}>
-        {#if isLoading}
-          <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-        {/if}
-        {#if enterEmail}
-          Sign In
-        {:else}
-          Confirm
-        {/if}
-      </Button>
-    </div>
-  </form>
+    {/snippet}
+    {#snippet footer({ children })}
+      {@render children({ className: "mt-2" })}
+    {/snippet}
+  </Form>
   <LoginOther {isLoading} {passkeyError} {passkeyClick} />
 </div>
