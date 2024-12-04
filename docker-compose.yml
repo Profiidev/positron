@@ -10,8 +10,6 @@ services:
       - ./package.json:/app/package.json
     networks:
       - nginx
-    ports:
-      - "1234:1420"
     command: npm run dev -- --host
 
   backend:
@@ -23,6 +21,9 @@ services:
     networks:
       - nginx
     command: cargo watch -x run
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   nginx:
     image: nginx:latest
@@ -34,6 +35,28 @@ services:
       - nginx
     environment:
       - NGINX_ENTRYPOINT_QUIET_LOGS=1
+    depends_on:
+      - frontend
+      - backend
+
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_USER=test
+      - POSTGRES_DB=test
+    networks:
+      - nginx
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
 
 networks:
   nginx:
