@@ -7,6 +7,7 @@
   import { getTokenCookie } from "$lib/backend/cookie.svelte";
   import { goto } from "$app/navigation";
   import { browser } from "$app/environment";
+  import { loginSchema } from "./schema.svelte";
 
   interface Props {
     data: PageServerData;
@@ -22,6 +23,11 @@
       goto("/");
     }
   });
+
+  const loginForm = {
+    form: data.loginForm,
+    schema: loginSchema,
+  };
 </script>
 
 <div
@@ -43,7 +49,7 @@
           Enter your login details below
         </p>
       </div>
-      <Login {oauth_params} />
+      <Login {oauth_params} {loginForm} />
     </div>
   </div>
 </div>
