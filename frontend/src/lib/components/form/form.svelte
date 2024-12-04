@@ -12,6 +12,7 @@
   import { FormButton } from "../ui/form";
   import { LoaderCircle } from "lucide-svelte";
   import type { ButtonVariant } from "../ui/button";
+  import { cn } from "$lib/utils";
 
   export interface FormSchema<T extends ZodRawShape> {
     schema: ZodObject<T> | ZodEffects<ZodObject<T>>;
@@ -33,11 +34,12 @@
     children?: Snippet<
       [{ props: { formData: SuperForm<T>; isLoading: boolean } }]
     >;
-    footer: Snippet<[{ children: Snippet }]>;
+    footer: Snippet<[{ children: Snippet<[{ className?: string }?]> }]>;
     isLoading: boolean;
     confirmVariant?: ButtonVariant;
     confirm: string;
     error?: string;
+    class?: string;
   }
 
   let {
@@ -49,13 +51,13 @@
     confirmVariant = "default",
     confirm,
     error = $bindable(""),
+    class: className,
   }: Props = $props();
 
   let form = superForm(formInfo.form, {
     validators: zodClient(formInfo.schema),
     SPA: true,
     onUpdate: async ({ form, cancel }) => {
-      console.log(form);
       if (!form.valid) return;
 
       error = "";
@@ -85,13 +87,11 @@
       newValue[key] = value[key] ?? old[key];
     }
 
-    console.log(newValue);
     form.form.set(newValue);
   };
-  $inspect(get(form.form)).with(console.log);
 </script>
 
-<form method="POST" class="grid gap-3" use:enhance>
+<form method="POST" class={cn("grid gap-3", className)} use:enhance>
   {@render children?.({ props: { formData: form, isLoading } })}
   {#if error}
     <span class="text-destructive truncate text-sm">{error}</span>
@@ -99,8 +99,14 @@
   {@render footer({ children: formButton })}
 </form>
 
-{#snippet formButton()}
-  <FormButton type="submit" disabled={isLoading} variant={confirmVariant}>
+{#snippet formButton(props: { className?: string } | undefined)}
+  {@const prop = { ...props }}
+  <FormButton
+    class={prop.className}
+    type="submit"
+    disabled={isLoading}
+    variant={confirmVariant}
+  >
     {#if isLoading}
       <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
     {/if}
