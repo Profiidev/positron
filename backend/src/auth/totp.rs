@@ -78,6 +78,7 @@ async fn finish_setup(
   req: Json<TotpReq>,
   state: &State<TotpState>,
   conn: Connection<'_, DB>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
   let db = conn.into_inner();
   let mut lock = state.reg_state.lock().await;
@@ -93,6 +94,7 @@ async fn finish_setup(
     .await?;
 
   lock.remove(&auth.sub);
+  updater.send_message(auth.sub, UpdateType::User).await;
 
   Ok(Status::Ok)
 }

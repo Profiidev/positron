@@ -24,21 +24,24 @@ pub async fn update_relations<RT: EntityTrait>(
 
   let to_remove: Vec<Uuid> = relations
     .into_iter()
-    .filter_map(|r| {
-      mapped_values
+    .filter(|r| {
+      !mapped_values
         .iter()
-        .find(|mapped_value| **mapped_value == relation_to_id(&r))?;
-
-      Some(relation_to_id(&r))
+        .any(|mapped_value| *mapped_value == relation_to_id(r))
     })
+    .map(|r| relation_to_id(&r))
     .collect();
 
-  RT::insert_many(to_add).exec(db).await?;
-  RT::delete_many()
-    .filter(column.eq(id))
-    .filter(map_column.is_in(to_remove))
-    .exec(db)
-    .await?;
+  if !to_add.is_empty() {
+    RT::insert_many(to_add).exec(db).await?;
+  }
+  if !to_remove.is_empty() {
+    RT::delete_many()
+      .filter(column.eq(id))
+      .filter(map_column.is_in(to_remove))
+      .exec(db)
+      .await?;
+  }
 
   Ok(())
 }

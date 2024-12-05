@@ -111,7 +111,7 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        <Input placeholder="Content" bind:value={group[1]} />
+        <Input placeholder="Content" bind:value={group[1]} required />
         <Button
           size="icon"
           variant="destructive"
@@ -167,7 +167,7 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        <Input placeholder="Content" bind:value={group_item[1]} />
+        <Input placeholder="Content" bind:value={group_item[1]} required />
         <Button
           size="icon"
           variant="destructive"

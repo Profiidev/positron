@@ -126,9 +126,11 @@ impl<'db> OAuthScopeTable<'db> {
         scope: Set(scope.id),
       });
     }
-    OAuthScopeOAuthPolicy::insert_many(policies)
-      .exec(self.db)
-      .await?;
+    if !policies.is_empty() {
+      OAuthScopeOAuthPolicy::insert_many(policies)
+        .exec(self.db)
+        .await?;
+    }
 
     Ok(())
   }

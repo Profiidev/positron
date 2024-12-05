@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use entity::{group, prelude::*, sea_orm_active_enums::Permission, user};
+use entity::{prelude::*, sea_orm_active_enums::Permission, user};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -150,11 +150,7 @@ impl<'db> UserTable<'db> {
   }
 
   pub async fn list(&self) -> Result<Vec<UserInfo>, DbErr> {
-    let res = User::find()
-      .find_with_related(Group)
-      .filter(group::Column::AccessLevel.max())
-      .all(self.db)
-      .await?;
+    let res = User::find().find_with_related(Group).all(self.db).await?;
 
     Ok(
       res
@@ -181,7 +177,6 @@ impl<'db> UserTable<'db> {
     let mut res = User::find()
       .filter(user::Column::Id.eq(uuid))
       .find_with_related(Group)
-      .filter(group::Column::AccessLevel.max())
       .all(self.db)
       .await?;
 

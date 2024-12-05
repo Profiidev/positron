@@ -78,15 +78,17 @@ impl<'db> OAuthPolicyTable<'db> {
     let mut contents = Vec::new();
     for (group, content) in group_mapped.into_iter().zip(content) {
       contents.push(o_auth_policy_content::ActiveModel {
+        id: Set(Uuid::new_v4()),
         policy: Set(policy.id),
         content: Set(content),
         group: Set(group),
-        ..Default::default()
       });
     }
-    OAuthPolicyContent::insert_many(contents)
-      .exec(self.db)
-      .await?;
+    if !contents.is_empty() {
+      OAuthPolicyContent::insert_many(contents)
+        .exec(self.db)
+        .await?;
+    }
 
     Ok(())
   }
@@ -113,16 +115,20 @@ impl<'db> OAuthPolicyTable<'db> {
     policy.default = Set(info.default);
 
     for (group, content) in group_mapped.iter().copied().zip(content) {
-      if let Some(mut model) = contents.iter().find(|c| c.group == Set(group)).cloned() {
+      if let Some(mut model) = contents
+        .iter()
+        .find(|c| *c.group.as_ref() == group)
+        .cloned()
+      {
         model.content = Set(content);
 
         model.update(self.db).await?;
       } else {
         o_auth_policy_content::ActiveModel {
+          id: Set(Uuid::new_v4()),
           group: Set(group),
           content: Set(content),
           policy: policy.id.clone(),
-          ..Default::default()
         }
         .insert(self.db)
         .await?;
@@ -131,14 +137,16 @@ impl<'db> OAuthPolicyTable<'db> {
 
     let delete_ids: Vec<Uuid> = contents
       .into_iter()
-      .filter(|c| group_mapped.contains(c.group.as_ref()))
+      .filter(|c| !group_mapped.contains(c.group.as_ref()))
       .map(|mut c| c.id.take().unwrap())
       .collect();
 
-    OAuthPolicyContent::delete_many()
-      .filter(o_auth_policy_content::Column::Id.is_in(delete_ids))
-      .exec(self.db)
-      .await?;
+    if !delete_ids.is_empty() {
+      OAuthPolicyContent::delete_many()
+        .filter(o_auth_policy_content::Column::Id.is_in(delete_ids))
+        .exec(self.db)
+        .await?;
+    }
 
     policy.update(self.db).await?;
 

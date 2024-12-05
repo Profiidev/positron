@@ -8,6 +8,7 @@ services:
       - ./node_modules:/app/node_modules
       - ./package-lock.json:/app/package-lock.json
       - ./package.json:/app/package.json
+    tty: true
     networks:
       - nginx
     command: npm run dev -- --host
@@ -20,6 +21,7 @@ services:
       - ./backend:/app
     networks:
       - nginx
+    tty: true
     entrypoint: ["tini", "--"]
     command: ["cargo", "watch", "-x", "run"]
     depends_on:
@@ -54,7 +56,7 @@ services:
     ports:
       - "9301:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD", "pg_isready", "-U", "test"]
       interval: 60s
       timeout: 5s
       retries: 5
