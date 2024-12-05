@@ -115,7 +115,7 @@ impl<'db> GroupTable<'db> {
     group.access_level = Set(info.access_level);
 
     update_relations::<GroupUser>(
-      &self.db,
+      self.db,
       users_mapped,
       id,
       |relation: &group_user::Model| relation.user,

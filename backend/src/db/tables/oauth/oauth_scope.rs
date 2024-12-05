@@ -144,7 +144,7 @@ impl<'db> OAuthScopeTable<'db> {
     scope.scope = Set(info.scope);
 
     update_relations::<OAuthScopeOAuthPolicy>(
-      &self.db,
+      self.db,
       policy_mapped,
       info.uuid,
       |relation| relation.policy,

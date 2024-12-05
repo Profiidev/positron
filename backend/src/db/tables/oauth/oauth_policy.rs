@@ -131,7 +131,7 @@ impl<'db> OAuthPolicyTable<'db> {
 
     let delete_ids: Vec<Uuid> = contents
       .into_iter()
-      .filter(|c| group_mapped.contains(&c.group.as_ref()))
+      .filter(|c| group_mapped.contains(c.group.as_ref()))
       .map(|mut c| c.id.take().unwrap())
       .collect();
 

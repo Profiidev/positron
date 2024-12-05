@@ -62,13 +62,13 @@ impl<'db> OauthClientTable<'db> {
       .all(self.db)
       .await?;
 
-    if users.iter().find(|u| u.user == user).is_some() {
+    if users.iter().any(|u| u.user == user) {
       Ok(true)
     } else {
       Ok(
         groups
           .iter()
-          .any(|g| user_groups.iter().find(|ug| ug.group == g.group).is_some()),
+          .any(|g| user_groups.iter().any(|ug| ug.group == g.group)),
       )
     }
   }
@@ -158,7 +158,7 @@ impl<'db> OauthClientTable<'db> {
     );
 
     update_relations::<OAuthClientUser>(
-      &self.db,
+      self.db,
       users_mapped,
       id,
       |relation| relation.user,
@@ -172,7 +172,7 @@ impl<'db> OauthClientTable<'db> {
     .await?;
 
     update_relations::<OAuthClientGroup>(
-      &self.db,
+      self.db,
       groups_mapped,
       id,
       |relation| relation.group,

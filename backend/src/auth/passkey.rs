@@ -99,7 +99,7 @@ async fn finish_registration(
   if db
     .tables()
     .passkey()
-    .passkey_name_exists(user.id.clone(), reg.name.clone())
+    .passkey_name_exists(user.id, reg.name.clone())
     .await?
   {
     return Err(Error::Conflict);
@@ -340,7 +340,7 @@ async fn edit_name(
   if db
     .tables()
     .passkey()
-    .passkey_name_exists(user.id.clone(), req.name.clone())
+    .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
     return Err(Error::Conflict);

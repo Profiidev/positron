@@ -90,12 +90,7 @@ async fn token<'r>(
   let Ok(user) = db.tables().user().get_user(code_info.user).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db
-    .tables()
-    .groups()
-    .get_groups_for_user(user.id.clone())
-    .await
-  else {
+  let Ok(groups) = db.tables().groups().get_groups_for_user(user.id).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
 

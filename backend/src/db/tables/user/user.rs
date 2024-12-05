@@ -233,8 +233,7 @@ impl<'db> UserTable<'db> {
     Ok(
       groups
         .into_iter()
-        .map(|g| g.permissions)
-        .flatten()
+        .flat_map(|g| g.permissions)
         .chain(user.permissions)
         .collect(),
     )

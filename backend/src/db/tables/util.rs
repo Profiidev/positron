@@ -15,10 +15,9 @@ pub async fn update_relations<RT: EntityTrait>(
   let to_add: Vec<RT::ActiveModel> = mapped_values
     .iter()
     .filter(|mapped_value| {
-      relations
+      !relations
         .iter()
-        .find(|&r| **mapped_value == relation_to_id(r))
-        .is_none()
+        .any(|r| **mapped_value == relation_to_id(r))
     })
     .map(|mapped_value| uuids_to_active_model(*mapped_value, id))
     .collect();
