@@ -19,11 +19,11 @@ impl<'db> KeyTable<'db> {
     res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn create_key(&self, name: String, key: String) -> Result<(), DbErr> {
+  pub async fn create_key(&self, name: String, key: String, id: Uuid) -> Result<(), DbErr> {
     let model = key::ActiveModel {
       name: Set(name),
       private_key: Set(key),
-      id: Set(Uuid::new_v4()),
+      id: Set(id),
     };
 
     model.insert(self.db).await?;

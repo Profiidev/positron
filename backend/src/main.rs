@@ -1,8 +1,13 @@
+use auth::AsyncAuthStates;
 use cors::cors;
 use db::DB;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use rocket::{launch, Build, Config, Rocket, Route};
+use rocket::{
+  fairing::{self, AdHoc},
+  launch, Build, Config, Rocket, Route,
+};
+use sea_orm_rocket::Database;
 
 mod account;
 mod auth;
@@ -48,8 +53,8 @@ async fn rocket() -> _ {
     .manage(rocket_cors::catch_all_options_routes())
     .mount("/", routes());
 
-  let server = state(server, &db).await;
-  DB::attach(server)
+  let server = state(server);
+  DB::attach(server).attach(AdHoc::try_on_ignite("DB States init", init_state_with_db))
 }
 
 fn routes() -> Vec<Route> {
@@ -63,10 +68,19 @@ fn routes() -> Vec<Route> {
     .collect()
 }
 
-async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
-  let server = auth::state(server, db).await;
+fn state(server: Rocket<Build>) -> Rocket<Build> {
+  let server = auth::state(server);
   let server = oauth::state(server);
   let server = management::state(server);
   let server = ws::state(server);
   email::state(server)
+}
+
+async fn init_state_with_db(server: Rocket<Build>) -> fairing::Result {
+  let db = &DB::fetch(&server).unwrap().conn;
+
+  let states = AsyncAuthStates::new(db).await;
+  let server = states.add(server);
+
+  Ok(server)
 }

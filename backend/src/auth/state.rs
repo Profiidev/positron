@@ -7,6 +7,7 @@ use rsa::{
   pkcs8::LineEnding,
   Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
+use sea_orm::DatabaseConnection;
 use totp_rs::TOTP;
 use uuid::Uuid;
 use webauthn_rs::{
@@ -14,7 +15,7 @@ use webauthn_rs::{
   Webauthn, WebauthnBuilder,
 };
 
-use crate::db::DB;
+use crate::db::DBTrait;
 
 #[derive(Default)]
 pub struct PasskeyState {
@@ -66,7 +67,7 @@ impl PasswordState {
     self.key.decrypt(Pkcs1v15Encrypt, message)
   }
 
-  pub async fn init(db: &DB) -> Self {
+  pub async fn init(db: &DatabaseConnection) -> Self {
     let key = if let Ok(key) = db.tables().key().get_key_by_name("password".into()).await {
       RsaPrivateKey::from_pkcs1_pem(&key.private_key).expect("Failed to parse private password key")
     } else {
@@ -77,11 +78,9 @@ impl PasswordState {
         .expect("Failed to export private key")
         .to_string();
 
-      let uuid = Uuid::new_v4().to_string();
-
       db.tables()
         .key()
-        .create_key("password".into(), key.clone(), uuid.clone())
+        .create_key("password".into(), key.clone(), Uuid::new_v4())
         .await
         .expect("Failed to save key");
 
