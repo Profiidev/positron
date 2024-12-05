@@ -9,7 +9,6 @@ pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
   pub name: String,
-  pub uuid: Uuid,
   pub access_level: i32,
   pub permissions: Vec<Permission>,
 }

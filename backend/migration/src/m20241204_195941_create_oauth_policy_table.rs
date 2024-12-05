@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(OAuthScope::Id))
           .col(string(OAuthScope::Name))
-          .col(uuid(OAuthScope::Uuid))
           .col(string(OAuthScope::Scope))
           .to_owned(),
       )
@@ -70,7 +69,6 @@ enum OAuthScope {
   Table,
   Id,
   Name,
-  Uuid,
   Scope,
 }
 

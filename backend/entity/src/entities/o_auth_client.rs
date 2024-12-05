@@ -8,7 +8,6 @@ pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
   pub name: String,
-  pub client_id: Uuid,
   pub redirect_uri: String,
   pub additional_redirect_uris: Vec<String>,
   pub default_scope: String,

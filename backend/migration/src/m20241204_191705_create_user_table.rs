@@ -14,7 +14,6 @@ impl MigrationTrait for Migration {
           .table(User::Table)
           .if_not_exists()
           .col(pk_uuid(User::Id))
-          .col(uuid(User::Uuid))
           .col(string(User::Name))
           .col(string(User::Image))
           .col(string(User::Email))
@@ -23,8 +22,8 @@ impl MigrationTrait for Migration {
           .col(date_time(User::LastLogin))
           .col(date_time(User::LastSpecialAccess))
           .col(string_null(User::Totp))
-          .col(date_time(User::TotpCreated))
-          .col(date_time(User::TotpLastUsed))
+          .col(date_time_null(User::TotpCreated))
+          .col(date_time_null(User::TotpLastUsed))
           .col(array(
             User::Permissions,
             ColumnType::Custom(Permission::Enum.into_iden()),
@@ -45,7 +44,6 @@ impl MigrationTrait for Migration {
 pub enum User {
   Table,
   Id,
-  Uuid,
   Name,
   Image,
   Email,

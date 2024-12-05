@@ -8,7 +8,6 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
-  pub uuid: Uuid,
   pub name: String,
   pub image: String,
   pub email: String,
@@ -17,8 +16,8 @@ pub struct Model {
   pub last_login: DateTime,
   pub last_special_access: DateTime,
   pub totp: Option<String>,
-  pub totp_created: DateTime,
-  pub totp_last_used: DateTime,
+  pub totp_created: Option<DateTime>,
+  pub totp_last_used: Option<DateTime>,
   pub permissions: Vec<Permission>,
 }
 

@@ -1,61 +1,32 @@
-use serde::Deserialize;
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
-
-#[allow(unused)]
-#[derive(Deserialize)]
-pub struct Key {
-  pub id: Thing,
-  pub name: String,
-  pub uuid: String,
-  pub private_key: String,
-}
+use entity::{key, prelude::*};
+use sea_orm::{prelude::*, ActiveValue::Set};
 
 pub struct KeyTable<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> KeyTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
   }
 
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-      DEFINE TABLE IF NOT EXISTS key SCHEMAFULL;
-
-      DEFINE FIELD IF NOT EXISTS uuid ON TABLE key TYPE string;
-      DEFINE FIELD IF NOT EXISTS name ON TABLE key TYPE string;
-      DEFINE FIELD IF NOT EXISTS private_key ON TABLE key TYPE string;
-    ",
-      )
+  pub async fn get_key_by_name(&self, name: String) -> Result<key::Model, DbErr> {
+    let res = Key::find()
+      .filter(key::Column::Name.eq(name))
+      .one(self.db)
       .await?;
 
-    Ok(())
+    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn get_key_by_name(&self, name: String) -> Result<Key, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM key WHERE name = $name")
-      .bind(("name", name))
-      .await?;
+  pub async fn create_key(&self, name: String, key: String) -> Result<(), DbErr> {
+    let model = key::ActiveModel {
+      name: Set(name),
+      private_key: Set(key),
+      id: Set(Uuid::new_v4()),
+    };
 
-    res
-      .take::<Option<Key>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
-  }
-
-  pub async fn create_key(&self, name: String, key: String, uuid: String) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE key SET name = $name, private_key = $key, uuid = $uuid")
-      .bind(("name", name))
-      .bind(("key", key))
-      .bind(("uuid", uuid))
-      .await?;
+    model.insert(self.db).await?;
 
     Ok(())
   }

@@ -1,35 +1,16 @@
+use entity::{group, group_user, prelude::*, sea_orm_active_enums::Permission};
+use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
 
-use crate::permissions::Permission;
+use crate::db::tables::util::update_relations;
 
 use super::user::BasicUserInfo;
-
-#[derive(Serialize)]
-pub struct GroupCreate {
-  pub name: String,
-  pub uuid: String,
-  pub access_level: i32,
-  pub permissions: Vec<Permission>,
-  pub users: Vec<Thing>,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-pub struct Group {
-  pub id: Thing,
-  pub name: String,
-  pub uuid: String,
-  pub access_level: i32,
-  pub permissions: Vec<Permission>,
-  pub users: Vec<Thing>,
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct GroupInfo {
   pub name: String,
-  pub uuid: String,
+  pub uuid: Uuid,
   pub access_level: i32,
   pub permissions: Vec<Permission>,
   pub users: Vec<BasicUserInfo>,
@@ -38,168 +19,142 @@ pub struct GroupInfo {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BasicGroupInfo {
   pub name: String,
-  pub uuid: String,
+  pub uuid: Uuid,
 }
 
 pub struct GroupTable<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> GroupTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
   }
 
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-      DEFINE TABLE IF NOT EXISTS group SCHEMAFULL;
-
-      DEFINE FIELD IF NOT EXISTS name ON TABLE group TYPE string;
-      DEFINE FIELD IF NOT EXISTS uuid ON TABLE group TYPE string;
-      DEFINE FIELD IF NOT EXISTS access_level ON TABLE group TYPE int;
-      DEFINE FIELD IF NOT EXISTS permissions ON TABLE group TYPE array<string>;
-      DEFINE FIELD IF NOT EXISTS users ON TABLE group TYPE array<record<user>>;
-    ",
-      )
-      .await?;
-
-    Ok(())
-  }
-
-  pub async fn list_groups(&self) -> Result<Vec<GroupInfo>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $groups = SELECT * FROM group;
-$groups.map(|$group| {
-    RETURN $group.users.map(|$u| {
-        name: $u.name,
-        uuid: $u.uuid
-    });
-});
-RETURN $groups ",
-      )
-      .await?;
-
-    let groups = res.take::<Vec<Group>>(2).unwrap_or_default();
-    let users = res.take::<Vec<Vec<BasicUserInfo>>>(1).unwrap_or_default();
+  pub async fn list_groups(&self) -> Result<Vec<GroupInfo>, DbErr> {
+    let res = Group::find().find_with_related(User).all(self.db).await?;
 
     Ok(
-      groups
+      res
         .into_iter()
-        .zip(users)
-        .map(|(group, users)| GroupInfo {
-          name: group.name,
-          uuid: group.uuid,
-          access_level: group.access_level,
-          permissions: group.permissions,
-          users,
+        .map(|(g, users)| GroupInfo {
+          name: g.name,
+          uuid: g.id,
+          access_level: g.access_level,
+          permissions: g.permissions,
+          users: users
+            .into_iter()
+            .map(|u| BasicUserInfo {
+              name: u.name,
+              uuid: u.id,
+            })
+            .collect(),
         })
         .collect(),
     )
   }
 
-  pub async fn get_groups_for_user(&self, user: Thing) -> Result<Vec<Group>, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM group WHERE users CONTAINS $user")
-      .bind(("user", user))
+  pub async fn get_groups_for_user(&self, user: Uuid) -> Result<Vec<group::Model>, DbErr> {
+    let mut res = User::find_by_id(user)
+      .find_with_related(Group)
+      .all(self.db)
       .await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    assert!(res.len() == 1);
+    Ok(res.remove(0).1)
   }
 
-  pub async fn remove_user_everywhere(&self, user: Thing) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE group SET users -= $user")
-      .bind(("user", user))
-      .await?;
-
+  pub async fn create_group(&self, group: group::Model) -> Result<(), DbErr> {
+    let group: group::ActiveModel = group.into();
+    group.insert(self.db).await?;
     Ok(())
   }
 
-  pub async fn create_group(&self, group: GroupCreate) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE group CONTENT $group")
-      .bind(("group", group))
+  pub async fn get_group_by_uuid(&self, uuid: Uuid) -> Result<group::Model, DbErr> {
+    let group = Group::find()
+      .filter(group::Column::Id.eq(uuid))
+      .one(self.db)
       .await?;
 
-    Ok(())
+    group.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn get_group_by_uuid(&self, uuid: Uuid) -> Result<Group, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM group WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
+  pub async fn group_exists(&self, name: String, uuid: String) -> Result<bool, DbErr> {
+    let group = Group::find()
+      .filter(group::Column::Name.eq(name))
+      .filter(group::Column::Id.ne(uuid))
+      .one(self.db)
       .await?;
 
-    res
-      .take::<Option<Group>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+    Ok(group.is_some())
   }
 
-  pub async fn group_exists(&self, name: String, uuid: String) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM group WHERE name = $name AND uuid != $uuid")
-      .bind(("name", name))
-      .bind(("uuid", uuid))
-      .await?;
+  pub async fn get_group(&self, group: Uuid) -> Result<group::Model, DbErr> {
+    let group = Group::find_by_id(group).one(self.db).await?;
 
-    Ok(res.take::<Option<Group>>(0)?.is_some())
+    group.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn delete_group(&self, group: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE group WHERE uuid = $uuid")
-      .bind(("uuid", group.to_string()))
-      .await?;
+  pub async fn delete_group(&self, group: Uuid) -> Result<(), DbErr> {
+    let group: group::ActiveModel = self.get_group(group).await?.into();
+    group.delete(self.db).await?;
 
     Ok(())
   }
 
   pub async fn edit(
     &self,
-    id: Thing,
-    group: GroupInfo,
-    users_mapped: Vec<Thing>,
-  ) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE $id SET name = $name, permissions = $permissions, access_level = $access_level, users = $users_mapped")
-      .bind(group)
-      .bind(("id", id))
-      .bind(("users_mapped", users_mapped))
-      .await?;
+    id: Uuid,
+    info: GroupInfo,
+    users_mapped: Vec<Uuid>,
+  ) -> Result<(), DbErr> {
+    let mut group: group::ActiveModel = self.get_group(id).await?.into();
+
+    group.name = Set(info.name);
+    group.permissions = Set(info.permissions);
+    group.access_level = Set(info.access_level);
+
+    update_relations::<GroupUser>(
+      &self.db,
+      users_mapped,
+      id,
+      |relation: &group_user::Model| relation.user,
+      |user, group| group_user::ActiveModel {
+        user: Set(user),
+        group: Set(group),
+      },
+      group_user::Column::Group,
+      group_user::Column::User,
+    )
+    .await?;
+
+    group.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn get_groups_by_info(&self, groups: Vec<BasicGroupInfo>) -> Result<Vec<Thing>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "$groups.map(|$group| {
-    LET $found = SELECT id FROM group WHERE uuid = $group.uuid;
-    RETURN $found[0].id;
-})",
-      )
-      .bind(("groups", groups))
+  pub async fn get_groups_by_info(&self, groups: Vec<BasicGroupInfo>) -> Result<Vec<Uuid>, DbErr> {
+    let uuids: Vec<Uuid> = groups.iter().map(|g| g.uuid).collect();
+
+    let res = Group::find()
+      .filter(group::Column::Id.is_in(uuids))
+      .all(self.db)
       .await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(res.iter().map(|g| g.id).collect())
   }
 
-  pub async fn basic_group_list(&self) -> Result<Vec<BasicGroupInfo>, Error> {
-    let mut res = self.db.query("SELECT name, uuid FROM group").await?;
+  pub async fn basic_group_list(&self) -> Result<Vec<BasicGroupInfo>, DbErr> {
+    let res = Group::find().all(self.db).await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(
+      res
+        .into_iter()
+        .map(|u| BasicGroupInfo {
+          name: u.name,
+          uuid: u.id,
+        })
+        .collect(),
+    )
   }
 }

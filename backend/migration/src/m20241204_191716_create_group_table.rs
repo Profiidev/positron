@@ -17,7 +17,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(Group::Id))
           .col(string(Group::Name))
-          .col(uuid(Group::Uuid))
           .col(integer(Group::AccessLevel))
           .col(array(
             Group::Permissions,
@@ -76,7 +75,6 @@ pub enum Group {
   Table,
   Id,
   Name,
-  Uuid,
   AccessLevel,
   Permissions,
 }

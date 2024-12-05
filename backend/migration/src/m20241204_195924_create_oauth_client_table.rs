@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(OAuthClient::Id))
           .col(string(OAuthClient::Name))
-          .col(uuid(OAuthClient::ClientId))
           .col(string(OAuthClient::RedirectUri))
           .col(array(
             OAuthClient::AdditionalRedirectUris,
@@ -109,7 +108,6 @@ enum OAuthClient {
   Table,
   Id,
   Name,
-  ClientId,
   RedirectUri,
   AdditionalRedirectUris,
   DefaultScope,

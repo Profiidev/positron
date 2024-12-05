@@ -1,69 +1,40 @@
-use surrealdb::{
-  engine::remote::ws::{Client, Ws, Wss},
-  opt::auth::Namespace,
-  Error, Surreal,
+use migration::MigratorTrait;
+use pool::SeaOrmPool;
+use rocket::{
+  fairing::{self, AdHoc},
+  Build, Rocket,
 };
+use sea_orm::DatabaseConnection;
+use sea_orm_rocket::Database;
 use tables::Tables;
 
+mod pool;
 pub mod tables;
 
-pub struct DB {
-  surrealdb: Surreal<Client>,
-}
+#[derive(Database, Debug)]
+#[database("sea_orm")]
+pub struct DB(SeaOrmPool);
 
 impl DB {
-  pub async fn init_db_from_env() -> Result<Self, Error> {
-    let secure = std::env::var("DB_SECURE")
-      .expect("No DB_SECURE found")
-      .parse()
-      .expect("Failed to parse Port");
-    let address = std::env::var("DB_ADDRESS").expect("No DB address found");
-    let port = std::env::var("DB_PORT")
-      .expect("No DB address found")
-      .parse()
-      .expect("Failed to parse Port");
-    let username = std::env::var("DB_USERNAME").expect("No DB address found");
-    let password = std::env::var("DB_PASSWORD").expect("No DB address found");
-    let database = std::env::var("DB_DATABASE").expect("No DB address found");
-
-    Self::init_db(secure, &address, port, &username, &password, &database).await
+  pub fn attach(rocket: Rocket<Build>) -> Rocket<Build> {
+    rocket
+      .attach(DB::init())
+      .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
   }
+}
 
-  pub async fn init_db(
-    secure: bool,
-    address: &str,
-    port: u16,
-    username: &str,
-    password: &str,
-    database: &str,
-  ) -> Result<Self, Error> {
-    let address = format!("{}:{}", address, port);
-    let db = if secure {
-      Surreal::new::<Wss>(address).await?
-    } else {
-      Surreal::new::<Ws>(address).await?
-    };
+pub trait DBTrait {
+  fn tables(&self) -> Tables<'_>;
+}
 
-    db.signin(Namespace {
-      namespace: "positron",
-      username,
-      password,
-    })
-    .await?;
-
-    db.use_ns("positron").await?;
-
-    db.query(format!("DEFINE DATABASE IF NOT EXISTS {}", database))
-      .await?;
-
-    db.use_db(database).await?;
-
-    Tables::new(&db).create_tables().await?;
-
-    Ok(DB { surrealdb: db })
+impl DBTrait for DatabaseConnection {
+  fn tables(&self) -> Tables<'_> {
+    Tables::new(self)
   }
+}
 
-  pub fn tables(&self) -> Tables<'_> {
-    Tables::new(&self.surrealdb)
-  }
+async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
+  let conn = &DB::fetch(&rocket).unwrap().conn;
+  let _ = migration::Migrator::up(conn, None).await;
+  Ok(rocket)
 }

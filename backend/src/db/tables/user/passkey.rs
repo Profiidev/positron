@@ -1,157 +1,105 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
-
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PasskeyCreate {
-  pub name: String,
-  pub data: String,
-  pub cred_id: String,
-  pub user: Thing,
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd)]
-pub struct Passkey {
-  pub name: String,
-  pub id: Thing,
-  pub data: String,
-  pub cred_id: String,
-  pub user: Thing,
-  pub created: DateTime<Utc>,
-  pub used: DateTime<Utc>,
-}
-
-#[derive(Serialize)]
-struct PasskeyUpdate {
-  id: Thing,
-  data: String,
-}
-
-#[derive(Serialize)]
-struct PasskeyRemove {
-  name: String,
-  user: Thing,
-}
-
-#[derive(Serialize)]
-struct PasskeyEdit {
-  name: String,
-  old_name: String,
-  user: Thing,
-}
+use chrono::Utc;
+use entity::{passkey, prelude::*};
+use sea_orm::{prelude::*, ActiveValue::Set};
 
 pub struct PasskeyTable<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> PasskeyTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
   }
 
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-        DEFINE TABLE IF NOT EXISTS passkey SCHEMAFULL;
-
-        DEFINE FIELD IF NOT EXISTS name ON TABLE passkey TYPE string;
-        DEFINE FIELD IF NOT EXISTS data ON TABLE passkey TYPE string;
-        DEFINE FIELD IF NOT EXISTS cred_id ON TABLE passkey TYPE string;
-        DEFINE FIELD IF NOT EXISTS user ON TABLE passkey TYPE record<user>;
-        DEFINE FIELD IF NOT EXISTS created ON TABLE passkey TYPE datetime DEFAULT time::now();
-        DEFINE FIELD IF NOT EXISTS used ON TABLE passkey TYPE datetime DEFAULT time::now();
-      ",
-      )
+  pub async fn get_passkeys_for_user(&self, user: Uuid) -> Result<Vec<passkey::Model>, DbErr> {
+    let mut res = User::find_by_id(user)
+      .find_with_related(Passkey)
+      .all(self.db)
       .await?;
 
+    assert!(res.len() == 1);
+    Ok(res.remove(0).1)
+  }
+
+  pub async fn get_passkey_by_cred_id(&self, cred_id: String) -> Result<passkey::Model, DbErr> {
+    let res = Passkey::find()
+      .filter(passkey::Column::CredId.eq(cred_id))
+      .one(self.db)
+      .await?;
+
+    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
+  }
+
+  pub async fn create_passkey_record(&self, passkey: passkey::Model) -> Result<(), DbErr> {
+    let passkey: passkey::ActiveModel = passkey.into();
+    passkey.insert(self.db).await?;
     Ok(())
   }
 
-  pub async fn get_passkeys_for_user(&self, user: Thing) -> Result<Vec<Passkey>, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM passkey WHERE user = $user")
-      .bind(("user", user))
-      .await?;
-    Ok(res.take(0).unwrap_or_default())
+  pub async fn get_passkey(&self, id: Uuid) -> Result<passkey::Model, DbErr> {
+    let res = Passkey::find_by_id(id).one(self.db).await?;
+
+    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn get_passkey_by_cred_id(&self, cred_id: String) -> Result<Passkey, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM passkey WHERE cred_id = $cred_id LIMIT 1")
-      .bind(("cred_id", cred_id))
+  pub async fn get_passkey_by_user_and_name(
+    &self,
+    user: Uuid,
+    name: String,
+  ) -> Result<passkey::Model, DbErr> {
+    let res = Passkey::find()
+      .filter(passkey::Column::Name.eq(name))
+      .filter(passkey::Column::User.eq(user))
+      .one(self.db)
       .await?;
-    res
-      .take::<Option<Passkey>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
+
+    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn create_passkey_record(&self, passkey: PasskeyCreate) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE passkey CONTENT $passkey")
-      .bind(("passkey", passkey))
-      .await?;
+  pub async fn update_passkey_record(&self, id: Uuid, data: String) -> Result<(), DbErr> {
+    let mut key: passkey::ActiveModel = self.get_passkey(id).await?.into();
 
-    Ok(())
-  }
+    key.data = Set(data);
+    key.used = Set(Utc::now().naive_utc());
 
-  pub async fn update_passkey_record(&self, id: Thing, data: String) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE $id SET data = $data, used = time::now()")
-      .bind(PasskeyUpdate { id, data })
-      .await?;
+    key.update(self.db).await?;
+
     Ok(())
   }
 
   pub async fn edit_passkey_name(
     &self,
-    user: Thing,
+    user: Uuid,
     name: String,
     old_name: String,
-  ) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE passkey SET name = $name WHERE name = $old_name && user = $user")
-      .bind(PasskeyEdit {
-        name,
-        user,
-        old_name,
-      })
-      .await?;
+  ) -> Result<(), DbErr> {
+    let mut key: passkey::ActiveModel = self
+      .get_passkey_by_user_and_name(user, old_name)
+      .await?
+      .into();
+
+    key.name = Set(name);
+
+    key.update(self.db).await?;
+
     Ok(())
   }
 
-  pub async fn remove_passkey_by_name(&self, user: Thing, name: String) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE passkey WHERE name = $name && user = $user")
-      .bind(PasskeyRemove { name, user })
-      .await?;
+  pub async fn remove_passkey_by_name(&self, user: Uuid, name: String) -> Result<(), DbErr> {
+    let key: passkey::ActiveModel = self.get_passkey_by_user_and_name(user, name).await?.into();
+
+    key.delete(self.db).await?;
+
     Ok(())
   }
 
-  pub async fn passkey_name_exists(&self, user: Thing, name: String) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM passkey WHERE name = $name && user = $user")
-      .bind(PasskeyRemove { name, user })
-      .await?;
-    let keys: Vec<Passkey> = res.take(0).unwrap_or_default();
-    Ok(!keys.is_empty())
-  }
-
-  pub async fn remove_passkeys_for_user(&self, user: Thing) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE passkey WHERE user = $user")
-      .bind(("user", user))
+  pub async fn passkey_name_exists(&self, user: Uuid, name: String) -> Result<bool, DbErr> {
+    let res = Passkey::find()
+      .filter(passkey::Column::Name.eq(name))
+      .filter(passkey::Column::User.eq(user))
+      .one(self.db)
       .await?;
 
-    Ok(())
+    Ok(res.is_some())
   }
 }

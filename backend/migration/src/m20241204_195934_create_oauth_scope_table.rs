@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(OAuthPolicy::Id))
           .col(string(OAuthPolicy::Name))
-          .col(uuid(OAuthPolicy::Uuid))
           .col(string(OAuthPolicy::Claim))
           .col(string(OAuthPolicy::Default))
           .to_owned(),
@@ -67,7 +66,6 @@ pub enum OAuthPolicy {
   Table,
   Id,
   Name,
-  Uuid,
   Claim,
   Default,
 }

@@ -1,42 +1,12 @@
 use chrono::{DateTime, Utc};
+use entity::{group, prelude::*, sea_orm_active_enums::Permission, user};
+use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 use uuid::Uuid;
-
-use crate::permissions::Permission;
-
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct UserCreate {
-  pub uuid: String,
-  pub name: String,
-  pub image: String,
-  pub email: String,
-  pub password: String,
-  pub salt: String,
-  pub totp: Option<String>,
-  pub permissions: Vec<Permission>,
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct User {
-  pub id: Thing,
-  pub uuid: String,
-  pub name: String,
-  pub image: String,
-  pub email: String,
-  pub password: String,
-  pub salt: String,
-  pub last_login: DateTime<Utc>,
-  pub last_special_access: DateTime<Utc>,
-  pub totp: Option<String>,
-  pub totp_created: Option<DateTime<Utc>>,
-  pub totp_last_used: Option<DateTime<Utc>>,
-  pub permissions: Vec<Permission>,
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct UserInfo {
-  pub uuid: String,
+  pub uuid: Uuid,
   pub name: String,
   pub image: String,
   pub email: String,
@@ -47,342 +17,260 @@ pub struct UserInfo {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BasicUserInfo {
-  name: String,
-  uuid: String,
+  pub name: String,
+  pub uuid: Uuid,
 }
 
 pub struct UserTable<'db> {
-  db: &'db Surreal<Client>,
-}
-
-#[derive(Serialize)]
-struct TotpUpdate {
-  uuid: String,
-  totp: String,
-}
-
-#[derive(Serialize)]
-struct ChangePassword {
-  id: Thing,
-  password: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct ProfileUpdate {
-  name: String,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> UserTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
   }
 
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-    DEFINE TABLE IF NOT EXISTS user SCHEMAFULL;
+  pub async fn get_user(&self, id: Uuid) -> Result<user::Model, DbErr> {
+    let user = User::find_by_id(id).one(self.db).await?;
 
-    DEFINE FIELD IF NOT EXISTS uuid ON TABLE user TYPE string;
-    DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string;
-    DEFINE FIELD IF NOT EXISTS image ON TABLE user TYPE string;
-    DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string ASSERT string::is::email($value);
-    DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
-    DEFINE FIELD IF NOT EXISTS salt ON TABLE user TYPE string;
-    DEFINE FIELD IF NOT EXISTS last_login ON TABLE user TYPE datetime DEFAULT time::now();
-    DEFINE FIELD IF NOT EXISTS last_special_access ON TABLE user TYPE datetime DEFAULT time::now();
-    DEFINE FIELD IF NOT EXISTS totp ON TABLE user TYPE option<string>;
-    DEFINE FIELD IF NOT EXISTS totp_created ON TABLE user TYPE option<datetime> DEFAULT NONE;
-    DEFINE FIELD IF NOT EXISTS totp_last_used ON TABLE user TYPE option<datetime> DEFAULT NONE;
-    DEFINE FIELD IF NOT EXISTS permissions ON TABLE user TYPE array<string>;
+    user.ok_or(DbErr::RecordNotFound("Not Found".into()))
+  }
 
-    DEFINE INDEX IF NOT EXISTS id ON TABLE user COLUMNS uuid UNIQUE;
-  ",
-      )
+  pub async fn get_user_by_email(&self, email: &str) -> Result<user::Model, DbErr> {
+    let user = User::find()
+      .filter(user::Column::Email.eq(email))
+      .one(self.db)
       .await?;
+
+    user.ok_or(DbErr::RecordNotFound("Not Found".into()))
+  }
+
+  pub async fn create_user(&self, user: user::Model) -> Result<(), DbErr> {
+    let user: user::ActiveModel = user.into();
+    user.insert(self.db).await?;
+    Ok(())
+  }
+
+  pub async fn add_totp(&self, uuid: Uuid, secret: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.totp = Set(Some(secret));
+    user.totp_created = Set(Some(Utc::now().naive_utc()));
+    user.totp_last_used = Set(Some(Utc::now().naive_utc()));
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn get_user(&self, id: Thing) -> Result<User, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM $id LIMIT 1")
-      .bind(("id", id))
-      .await?;
+  pub async fn totp_remove(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
 
-    res
-      .take::<Option<User>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
-  }
+    user.totp = Set(None);
+    user.totp_created = Set(None);
+    user.totp_last_used = Set(None);
 
-  pub async fn get_user_by_uuid(&self, uuid: Uuid) -> Result<User, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM user WHERE uuid = $uuid LIMIT 1")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
-
-    res
-      .take::<Option<User>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
-  }
-
-  pub async fn get_user_by_email(&self, email: &str) -> Result<User, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM user WHERE email = $email LIMIT 1")
-      .bind(("email", email.to_string()))
-      .await?;
-
-    res
-      .take::<Option<User>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
-  }
-
-  pub async fn create_user(&self, user: UserCreate) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE user CONTENT $user")
-      .bind(("user", user))
-      .await?;
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn add_totp(&self, uuid: Uuid, secret: String) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET totp = $totp, totp_created = time::now(), totp_last_used = time::now() WHERE uuid = $uuid")
-      .bind(TotpUpdate {
-        uuid: uuid.to_string(),
-        totp: secret,
-      })
-      .await?;
+  pub async fn logged_in(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.last_login = Set(Utc::now().naive_utc());
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn totp_remove(&self, uuid: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET totp = NONE, totp_created = NONE, totp_last_used = NONE WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
+  pub async fn used_special_access(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.last_special_access = Set(Utc::now().naive_utc());
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn logged_in(&self, uuid: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET last_login = time::now() WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
+  pub async fn used_totp(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.totp_last_used = Set(Some(Utc::now().naive_utc()));
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn used_special_access(&self, uuid: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET last_special_access = time::now() WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
+  pub async fn change_password(&self, id: Uuid, password: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(id).await?.into();
+
+    user.password = Set(password);
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn used_totp(&self, uuid: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET totp_last_used = time::now() WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
+  pub async fn change_image(&self, uuid: Uuid, image: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.image = Set(image);
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn change_password(&self, id: Thing, password: String) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE $id SET password = $password")
-      .bind(ChangePassword { id, password })
-      .await?;
+  pub async fn update_profile(&self, uuid: Uuid, name: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.name = Set(name);
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn change_image(&self, uuid: Uuid, image: String) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET image = $image WHERE uuid = $uuid")
-      .bind(("image", image))
-      .bind(("uuid", uuid.to_string()))
-      .await?;
+  pub async fn change_email(&self, uuid: Uuid, new_email: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
+
+    user.email = Set(new_email);
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn update_profile(&self, uuid: Uuid, profile: ProfileUpdate) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET name = $name WHERE uuid = $uuid")
-      .bind(profile)
-      .bind(("uuid", uuid.to_string()))
-      .await?;
-
-    Ok(())
+  pub async fn has_permission(&self, uuid: Uuid, permission: Permission) -> Result<bool, DbErr> {
+    Ok(self.list_permissions(uuid).await?.contains(&permission))
   }
 
-  pub async fn change_email(&self, uuid: Uuid, new_email: String) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE user SET email = $email WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .bind(("email", new_email))
+  pub async fn list(&self) -> Result<Vec<UserInfo>, DbErr> {
+    let res = User::find()
+      .find_with_related(Group)
+      .filter(group::Column::AccessLevel.max())
+      .all(self.db)
       .await?;
-
-    Ok(())
-  }
-
-  pub async fn has_permission(&self, uuid: Uuid, permission: Permission) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
-LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-LET $permissions = $groups.map(|$g| $g.permissions).push($user[0].permissions);
-RETURN $permissions.flatten() CONTAINS $permission",
-      )
-      .bind(("uuid", uuid.to_string()))
-      .bind(("permission", permission))
-      .await?;
-
-    Ok(res.take::<Option<bool>>(3)?.unwrap_or(false))
-  }
-
-  pub async fn list(&self) -> Result<Vec<UserInfo>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $users = SELECT * FROM user;
-RETURN $users.map(|$user| {
-    LET $groups = SELECT access_level FROM group WHERE users CONTAINS $user.id;
-    $groups.map(|$group| $group.access_level).max();
-});
-RETURN $users",
-      )
-      .await?;
-
-    let users: Vec<User> = res.take(2)?;
-    let access_levels: Vec<Option<i32>> = res.take(1)?;
 
     Ok(
-      users
+      res
         .into_iter()
-        .zip(access_levels)
-        .map(|(user, access_level)| UserInfo {
+        .map(|(user, groups)| UserInfo {
+          uuid: user.id,
           name: user.name,
-          email: user.email,
-          uuid: user.uuid,
           image: user.image,
-          last_login: user.last_login,
+          email: user.email,
+          last_login: user.last_login.and_utc(),
           permissions: user.permissions,
-          access_level: access_level.unwrap_or(0).max(0),
+          access_level: groups
+            .into_iter()
+            .map(|g| g.access_level)
+            .max()
+            .unwrap_or(0)
+            .max(0),
         })
         .collect(),
     )
   }
 
-  pub async fn access_level(&self, uuid: Uuid) -> Result<i32, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
-LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-RETURN $groups.map(|$g| $g.access_level).max()",
-      )
-      .bind(("uuid", uuid.to_string()))
+  pub async fn access_level(&self, uuid: Uuid) -> Result<i32, DbErr> {
+    let mut res = User::find()
+      .filter(user::Column::Id.eq(uuid))
+      .find_with_related(Group)
+      .filter(group::Column::AccessLevel.max())
+      .all(self.db)
       .await?;
 
-    Ok(res.take::<Option<i32>>(2)?.unwrap_or(0).max(0))
+    assert!(res.len() == 1);
+    let (_, groups) = res.remove(0);
+
+    let max_access_level = groups
+      .into_iter()
+      .map(|g| g.access_level)
+      .max()
+      .unwrap_or(0)
+      .max(0);
+
+    Ok(max_access_level)
   }
 
   pub async fn edit_user(
     &self,
-    user: Thing,
+    user: Uuid,
     permissions: Vec<Permission>,
     name: String,
-  ) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE $user SET permissions = $permissions, name = $name")
-      .bind(("permissions", permissions))
-      .bind(("user", user))
-      .bind(("name", name))
-      .await?;
+  ) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user(user).await?.into();
+
+    user.permissions = Set(permissions);
+    user.name = Set(name);
+
+    user.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn delete_user(&self, uuid: Uuid) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE user WHERE uuid = $uuid")
-      .bind(("uuid", uuid.to_string()))
-      .await?;
-
+  pub async fn delete_user(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let user: user::ActiveModel = self.get_user(uuid).await?.into();
+    user.delete(self.db).await?;
     Ok(())
   }
 
-  pub async fn list_permissions(&self, uuid: Uuid) -> Result<Vec<Permission>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $user = SELECT * FROM user WHERE uuid = $uuid;
-LET $groups = SELECT * FROM group WHERE users CONTAINS $user[0].id;
-LET $permissions = $groups.map(|$g| $g.permissions).push($user[0].permissions);
-RETURN $permissions.flatten().distinct()",
-      )
-      .bind(("uuid", uuid.to_string()))
+  pub async fn list_permissions(&self, uuid: Uuid) -> Result<Vec<Permission>, DbErr> {
+    let mut res = User::find()
+      .filter(user::Column::Id.eq(uuid))
+      .find_with_related(Group)
+      .all(self.db)
       .await?;
 
-    Ok(res.take(3).unwrap_or_default())
+    assert!(res.len() == 1);
+    let (user, groups) = res.remove(0);
+
+    Ok(
+      groups
+        .into_iter()
+        .map(|g| g.permissions)
+        .flatten()
+        .chain(user.permissions)
+        .collect(),
+    )
   }
 
-  pub async fn user_exists(&self, email: String) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $found = SELECT * FROM user WHERE email = $email;
-$found.len() > 0",
-      )
-      .bind(("email", email))
+  pub async fn user_exists(&self, email: String) -> Result<bool, DbErr> {
+    let user = User::find()
+      .filter(user::Column::Email.eq(email))
+      .one(self.db)
       .await?;
 
-    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
+    Ok(user.is_some())
   }
 
-  pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, Error> {
-    let mut res = self.db.query("SELECT name, uuid FROM user").await?;
+  pub async fn basic_user_list(&self) -> Result<Vec<BasicUserInfo>, DbErr> {
+    let res = User::find().all(self.db).await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(
+      res
+        .into_iter()
+        .map(|u| BasicUserInfo {
+          name: u.name,
+          uuid: u.id,
+        })
+        .collect(),
+    )
   }
 
-  pub async fn get_users_by_info(&self, users: Vec<BasicUserInfo>) -> Result<Vec<Thing>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "$users.map(|$user| {
-    LET $found = SELECT id FROM user WHERE uuid = $user.uuid;
-    RETURN $found[0].id;
-})",
-      )
-      .bind(("users", users))
+  pub async fn get_users_by_info(&self, users: Vec<BasicUserInfo>) -> Result<Vec<Uuid>, DbErr> {
+    let uuids: Vec<Uuid> = users.iter().map(|u| u.uuid).collect();
+
+    let res = User::find()
+      .filter(user::Column::Id.is_in(uuids))
+      .all(self.db)
       .await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(res.iter().map(|u| u.id).collect())
   }
 }

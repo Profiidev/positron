@@ -6,43 +6,55 @@ use db::DB;
 use dotenv::dotenv;
 use rocket::{config::LogLevel, launch, Build, Config, Rocket, Route};
 
-mod account;
-mod auth;
+//mod account;
+//mod auth;
 mod cors;
 mod db;
-mod email;
-mod error;
-mod management;
-mod oauth;
-mod permissions;
-mod utils;
-mod ws;
+//mod email;
+//mod error;
+//mod management;
+//mod oauth;
+//mod permissions;
+//mod utils;
+//mod ws;
 
 #[launch]
 async fn rocket() -> _ {
   #[cfg(debug_assertions)]
   dotenv().ok();
 
-  let db = DB::init_db_from_env()
-    .await
-    .expect("Failed connecting to DB");
   let cors = cors();
 
-  let config = Config {
-    address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-    log_level: LogLevel::Normal,
-    ..Default::default()
-  };
+  let url = std::env::var("DB_URL").expect("Failed to load DB_URL");
+  let sqlx_logging = std::env::var("DB_LOGGING")
+    .map(|s| s.parse::<bool>().unwrap_or(false))
+    .unwrap_or(false);
 
-  let server = rocket::build()
-    .configure(config)
+  let figment = Config::figment()
+    .merge(("address", "0.0.0.0"))
+    .merge(("log_level", "normal"))
+    .merge((
+      "databases.sea_orm",
+      sea_orm_rocket::Config {
+        url,
+        min_connections: None,
+        max_connections: 1024,
+        connect_timeout: 5,
+        idle_timeout: None,
+        sqlx_logging,
+      },
+    ));
+
+  let server = rocket::custom(figment)
     .attach(cors)
-    .manage(rocket_cors::catch_all_options_routes())
-    .mount("/", routes());
+    .manage(rocket_cors::catch_all_options_routes());
+  //.mount("/", routes());
 
-  state(server, &db).await.manage(db)
+  //state(server, &db).await.manage(db)
+  DB::attach(server)
 }
 
+/*
 fn routes() -> Vec<Route> {
   auth::routes()
     .into_iter()
@@ -60,4 +72,4 @@ async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
   let server = management::state(server);
   let server = ws::state(server);
   email::state(server)
-}
+}*/

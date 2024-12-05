@@ -13,7 +13,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(Key::Id))
           .col(string(Key::Name))
-          .col(uuid(Key::Uuid))
           .col(string(Key::PrivateKey))
           .to_owned(),
       )
@@ -32,7 +31,6 @@ enum Key {
   Table,
   Id,
   Name,
-  Uuid,
   #[allow(clippy::enum_variant_names)]
   PrivateKey,
 }

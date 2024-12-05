@@ -1,7 +1,11 @@
 use chrono::DateTime;
 use rocket::{get, http::CookieJar, post, serde::json::Json, time::Duration, Route, State};
+use sea_orm_rocket::Connection;
 
-use crate::{db::DB, error::Result};
+use crate::{
+  db::{DBTrait, DB},
+  error::Result,
+};
 
 use super::jwt::{JwtBase, JwtClaims, JwtInvalidState, JwtState, TokenRes};
 
@@ -12,7 +16,7 @@ pub fn routes() -> Vec<Route> {
 #[post("/logout")]
 async fn logout(
   auth: JwtClaims<JwtBase>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   cookies: &CookieJar<'_>,
   state: &State<JwtInvalidState>,
   jwt: &State<JwtState>,
@@ -23,6 +27,7 @@ async fn logout(
   reset_cookie.set_max_age(Duration::seconds(0));
   cookies.remove(reset_cookie);
 
+  let db = conn.into_inner();
   let mut count = state.count.lock().await;
   db.tables()
     .invalid_jwt()
@@ -32,8 +37,7 @@ async fn logout(
       &mut count,
     )
     .await?;
-
-  Ok(TokenRes::default())
+  db.into_inner().Ok(TokenRes::default())
 }
 
 #[get("/test_token")]
