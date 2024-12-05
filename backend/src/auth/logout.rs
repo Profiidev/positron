@@ -37,7 +37,7 @@ async fn logout(
       &mut count,
     )
     .await?;
-  db.into_inner().Ok(TokenRes::default())
+  Ok(TokenRes::default())
 }
 
 #[get("/test_token")]

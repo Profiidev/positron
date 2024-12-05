@@ -100,34 +100,35 @@ impl<'db> OauthClientTable<'db> {
       })
       .collect();
 
-    Ok(
-      res
-        .into_iter()
-        .map(|(c, users)| OAuthClientInfo {
-          name: c.name,
-          client_id: c.id,
-          redirect_uri: c.redirect_uri.parse().unwrap(),
-          additional_redirect_uris: c
-            .additional_redirect_uris
-            .into_iter()
-            .flat_map(|u| u.parse())
-            .collect(),
-          default_scope: c.default_scope,
-          group_access: client_group
-            .into_iter()
-            .find(|(id, _)| *id == c.id)
-            .unwrap()
-            .1,
-          user_access: users
-            .into_iter()
-            .map(|u| BasicUserInfo {
-              name: u.name,
-              uuid: u.id,
-            })
-            .collect(),
-        })
-        .collect(),
-    )
+    let mut infos = Vec::new();
+    for (c, users) in res {
+      infos.push(OAuthClientInfo {
+        name: c.name,
+        client_id: c.id,
+        redirect_uri: c.redirect_uri.parse().unwrap(),
+        additional_redirect_uris: c
+          .additional_redirect_uris
+          .into_iter()
+          .flat_map(|u| u.parse())
+          .collect(),
+        default_scope: c.default_scope.parse().unwrap(),
+        group_access: client_group
+          .iter()
+          .find(|(id, _)| *id == c.id)
+          .unwrap()
+          .1
+          .clone(),
+        user_access: users
+          .into_iter()
+          .map(|u| BasicUserInfo {
+            name: u.name,
+            uuid: u.id,
+          })
+          .collect(),
+      })
+    }
+
+    Ok(infos)
   }
 
   pub async fn get_client(&self, id: Uuid) -> Result<o_auth_client::Model, DbErr> {
@@ -146,7 +147,7 @@ impl<'db> OauthClientTable<'db> {
     let mut client: o_auth_client::ActiveModel = self.get_client(id).await?.into();
 
     client.name = Set(info.name);
-    client.default_scope = Set(info.default_scope);
+    client.default_scope = Set(info.default_scope.to_string());
     client.redirect_uri = Set(info.redirect_uri.to_string());
     client.additional_redirect_uris = Set(
       info
@@ -199,7 +200,7 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
-  pub async fn client_exists(&self, name: String, client_id: String) -> Result<bool, DbErr> {
+  pub async fn client_exists(&self, name: String, client_id: Uuid) -> Result<bool, DbErr> {
     let group = OAuthClient::find()
       .filter(o_auth_client::Column::Name.eq(name))
       .filter(o_auth_client::Column::Id.ne(client_id))

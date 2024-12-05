@@ -9,10 +9,14 @@ use rocket::{
   serde::json::{self, Json},
   Response, State,
 };
+use sea_orm_rocket::Connection;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{db::DB, utils::hash_secret};
+use crate::{
+  db::{DBTrait, DB},
+  utils::hash_secret,
+};
 
 use super::state::ClientState;
 
@@ -58,27 +62,22 @@ impl<'r> FromRequest<'r> for ClientAuth {
     let Some(client_id) = parts.next() else {
       return Error::outcome_from_str("invalid_request");
     };
+    let Ok(client_id) = client_id.parse() else {
+      return Error::outcome_from_str("invalid_client");
+    };
     let Some(passphrase) = parts.next() else {
       return Error::outcome_from_str("invalid_request");
     };
 
-    let Some(db) = req.guard::<&State<DB>>().await.succeeded() else {
+    let Some(conn) = req.guard::<Connection<'_, DB>>().await.succeeded() else {
       return Error::outcome_from_str("invalid_request");
     };
     let Some(client_state) = req.guard::<&State<ClientState>>().await.succeeded() else {
       return Error::outcome_from_str("invalid_request");
     };
 
-    let Ok(client) = db
-      .tables()
-      .oauth_client()
-      .get_client_by_id(client_id.to_string())
-      .await
-    else {
-      return Error::outcome_from_str("invalid_client");
-    };
-
-    let Ok(client_id) = client_id.parse() else {
+    let db = conn.into_inner();
+    let Ok(client) = db.tables().oauth_client().get_client(client_id).await else {
       return Error::outcome_from_str("invalid_client");
     };
 

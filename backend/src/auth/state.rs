@@ -7,8 +7,8 @@ use rsa::{
   pkcs8::LineEnding,
   Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
-use surrealdb::Uuid;
 use totp_rs::TOTP;
+use uuid::Uuid;
 use webauthn_rs::{
   prelude::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url},
   Webauthn, WebauthnBuilder,

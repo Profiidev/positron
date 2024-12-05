@@ -1,22 +1,20 @@
-use std::net::{IpAddr, Ipv4Addr};
-
 use cors::cors;
 use db::DB;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use rocket::{config::LogLevel, launch, Build, Config, Rocket, Route};
+use rocket::{launch, Build, Config, Rocket, Route};
 
-//mod account;
-//mod auth;
+mod account;
+mod auth;
 mod cors;
 mod db;
-//mod email;
-//mod error;
-//mod management;
-//mod oauth;
-//mod permissions;
-//mod utils;
-//mod ws;
+mod email;
+mod error;
+mod management;
+mod oauth;
+mod permission;
+mod utils;
+mod ws;
 
 #[launch]
 async fn rocket() -> _ {
@@ -47,14 +45,13 @@ async fn rocket() -> _ {
 
   let server = rocket::custom(figment)
     .attach(cors)
-    .manage(rocket_cors::catch_all_options_routes());
-  //.mount("/", routes());
+    .manage(rocket_cors::catch_all_options_routes())
+    .mount("/", routes());
 
-  //state(server, &db).await.manage(db)
+  let server = state(server, &db).await;
   DB::attach(server)
 }
 
-/*
 fn routes() -> Vec<Route> {
   auth::routes()
     .into_iter()
@@ -72,4 +69,4 @@ async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
   let server = management::state(server);
   let server = ws::state(server);
   email::state(server)
-}*/
+}

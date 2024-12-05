@@ -174,7 +174,7 @@ impl<'db> OAuthScopeTable<'db> {
     Ok(())
   }
 
-  pub async fn scope_exists(&self, name: String, uuid: String) -> Result<bool, DbErr> {
+  pub async fn scope_exists(&self, name: String, uuid: Uuid) -> Result<bool, DbErr> {
     let group = OAuthScope::find()
       .filter(o_auth_scope::Column::Name.eq(name))
       .filter(o_auth_scope::Column::Id.ne(uuid))

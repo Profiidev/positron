@@ -79,7 +79,7 @@ impl<'db> GroupTable<'db> {
     group.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn group_exists(&self, name: String, uuid: String) -> Result<bool, DbErr> {
+  pub async fn group_exists(&self, name: String, uuid: Uuid) -> Result<bool, DbErr> {
     let group = Group::find()
       .filter(group::Column::Name.eq(name))
       .filter(group::Column::Id.ne(uuid))

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use rocket::{
   get,
   http::{CookieJar, Status},
@@ -7,11 +5,11 @@ use rocket::{
   serde::json::Json,
   Route, State,
 };
+use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
-  db::DB,
+  db::{DBTrait, DB},
   error::{Error, Result},
   utils::hash_password,
 };
@@ -52,13 +50,14 @@ struct AuthRes {
 }
 
 #[post("/authenticate", data = "<req>")]
-async fn authenticate(
+async fn authenticate<'a>(
   req: Json<LoginReq>,
   state: &State<PasswordState>,
   jwt: &State<JwtState>,
-  db: &State<DB>,
-  cookies: &CookieJar<'_>,
+  conn: Connection<'a, DB>,
+  cookies: &CookieJar<'a>,
 ) -> Result<TokenRes<AuthRes>> {
+  let db = conn.into_inner();
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
@@ -67,18 +66,11 @@ async fn authenticate(
   }
 
   let (cookie, totp) = if user.totp.is_some() {
-    (
-      jwt.create_token::<JwtTotpRequired>(Uuid::from_str(&user.uuid)?)?,
-      true,
-    )
+    (jwt.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    let uuid = Uuid::from_str(&user.uuid)?;
-    db.tables().user().logged_in(uuid).await?;
+    db.tables().user().logged_in(user.id).await?;
 
-    (
-      jwt.create_token::<JwtBase>(Uuid::from_str(&user.uuid)?)?,
-      false,
-    )
+    (jwt.create_token::<JwtBase>(user.id)?, false)
   };
 
   cookies.add(cookie);
@@ -99,10 +91,11 @@ async fn special_access(
   auth: JwtClaims<JwtBase>,
   state: &State<PasswordState>,
   jwt: &State<JwtState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   cookies: &CookieJar<'_>,
 ) -> Result<TokenRes> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
 
   if hash != user.password {
@@ -111,7 +104,7 @@ async fn special_access(
 
   db.tables().user().used_special_access(auth.sub).await?;
 
-  let cookie = jwt.create_token::<JwtSpecial>(Uuid::from_str(&user.uuid)?)?;
+  let cookie = jwt.create_token::<JwtSpecial>(user.id)?;
   cookies.add(cookie);
   cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
 
@@ -129,9 +122,10 @@ async fn change(
   req: Json<PasswordChange>,
   auth: JwtClaims<JwtSpecial>,
   state: &State<PasswordState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(state, &user.salt, &req.password)?;
   let hash_confirm = hash_password(state, &user.salt, &req.password_confirm)?;
 

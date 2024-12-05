@@ -184,7 +184,7 @@ impl<'db> OAuthPolicyTable<'db> {
     res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
-  pub async fn policy_exists(&self, name: String, uuid: String) -> Result<bool, DbErr> {
+  pub async fn policy_exists(&self, name: String, uuid: Uuid) -> Result<bool, DbErr> {
     let group = OAuthPolicy::find()
       .filter(o_auth_policy::Column::Name.eq(name))
       .filter(o_auth_policy::Column::Id.ne(uuid))
