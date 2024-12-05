@@ -128,6 +128,7 @@
           autocapitalize="none"
           autocomplete="current-password"
           autocorrect="off"
+          type="password"
           {...props}
         />
       {:else}

@@ -176,7 +176,6 @@
               <p class="text-muted-foreground">Or use the code</p>
               <Skeleton class="h-6 w-80" />
             {/if}
-            <p class="mb-2">Confirm Code</p>
             <Totp_6
               label="Confirm Code"
               key="code"
