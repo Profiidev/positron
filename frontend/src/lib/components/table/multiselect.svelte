@@ -82,7 +82,6 @@
       )
       .filter((i) => i !== undefined)[0];
   };
-  $inspect(disabled).with(console.log)
 </script>
 
 <Popover.Root>

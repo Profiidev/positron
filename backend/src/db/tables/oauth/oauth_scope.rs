@@ -27,7 +27,7 @@ impl<'db> OAuthScopeTable<'db> {
 
   pub async fn get_scope_by_name(&self, scope: String) -> Result<o_auth_scope::Model, DbErr> {
     let res = OAuthScope::find()
-      .filter(o_auth_scope::Column::Name.eq(scope))
+      .filter(o_auth_scope::Column::Scope.eq(scope))
       .one(self.db)
       .await?;
 
@@ -72,9 +72,8 @@ impl<'db> OAuthScopeTable<'db> {
         })
         .max_by_key(|(a, _)| *a);
 
-      if let Some((_, c)) = content {
-        data.insert(policy.claim, c);
-      }
+      let content = content.map(|(_, c)| c).unwrap_or(policy.default);
+      data.insert(policy.claim, content);
     }
 
     Ok(data)
