@@ -5,11 +5,12 @@ use rocket::{
   serde::json::Json,
   Route, State,
 };
+use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
 
 use crate::{
-  db::DB,
+  db::{DBTrait, DB},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -38,12 +39,13 @@ struct TotpSetupRes {
 }
 
 #[get("/start_setup")]
-async fn start_setup(
+async fn start_setup<'a>(
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'a, DB>,
   state: &State<TotpState>,
 ) -> Result<Json<TotpSetupRes>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   if user.totp.is_some() {
     return Err(Error::BadRequest);
   }
@@ -75,8 +77,10 @@ async fn finish_setup(
   auth: JwtClaims<JwtSpecial>,
   req: Json<TotpReq>,
   state: &State<TotpState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
+  updater: &State<UpdateState>,
 ) -> Result<Status> {
+  let db = conn.into_inner();
   let mut lock = state.reg_state.lock().await;
   let totp = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
   let valid = totp.check_current(&req.code).unwrap();
@@ -90,6 +94,7 @@ async fn finish_setup(
     .await?;
 
   lock.remove(&auth.sub);
+  updater.send_message(auth.sub, UpdateType::User).await;
 
   Ok(Status::Ok)
 }
@@ -98,11 +103,12 @@ async fn finish_setup(
 async fn confirm(
   req: Json<TotpReq>,
   auth: JwtClaims<JwtTotpRequired>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   jwt: &State<JwtState>,
   cookies: &CookieJar<'_>,
 ) -> Result<TokenRes> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
     Rfc6238::with_defaults(Secret::Encoded(user.totp.unwrap()).to_bytes().unwrap()).unwrap(),
@@ -126,9 +132,10 @@ async fn confirm(
 #[post("/remove")]
 async fn remove(
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   updater: &State<UpdateState>,
 ) -> Result<Status> {
+  let db = conn.into_inner();
   db.tables().user().totp_remove(auth.sub).await?;
   updater.send_message(auth.sub, UpdateType::User).await;
 

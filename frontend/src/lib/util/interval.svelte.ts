@@ -56,6 +56,11 @@ export const wait_for = (
   max?: number,
 ) => {
   return new Promise<boolean>((resolve) => {
+    if (condition()) {
+      resolve(true);
+      return;
+    }
+
     const interval = setInterval(() => {
       if (condition()) {
         clearInterval(interval);

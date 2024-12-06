@@ -1,8 +1,7 @@
 use jwt::{JwtInvalidState, JwtState};
 use rocket::{Build, Rocket, Route};
+use sea_orm::DatabaseConnection;
 use state::{webauthn, PasskeyState, PasswordState, TotpState};
-
-use crate::db::DB;
 
 pub mod jwt;
 mod logout;
@@ -21,12 +20,28 @@ pub fn routes() -> Vec<Route> {
     .collect()
 }
 
-pub async fn state(server: Rocket<Build>, db: &DB) -> Rocket<Build> {
+pub struct AsyncAuthStates {
+  password: PasswordState,
+  jwt: JwtState,
+}
+
+impl AsyncAuthStates {
+  pub async fn new(db: &DatabaseConnection) -> Self {
+    Self {
+      password: PasswordState::init(db).await,
+      jwt: JwtState::init(db).await,
+    }
+  }
+
+  pub fn add(self, server: Rocket<Build>) -> Rocket<Build> {
+    server.manage(self.password).manage(self.jwt)
+  }
+}
+
+pub fn state(server: Rocket<Build>) -> Rocket<Build> {
   server
-    .manage(PasswordState::init(db).await)
     .manage(PasskeyState::default())
     .manage(TotpState::default())
-    .manage(JwtState::init(db).await)
     .manage(JwtInvalidState::default())
     .manage(webauthn())
 }

@@ -2,12 +2,13 @@ use std::{collections::HashMap, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use rocket::{form::Form, post, serde::json::Json, FromForm, Route, State};
+use sea_orm_rocket::Connection;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
-  db::DB,
+  db::{DBTrait, DB},
 };
 
 use super::{
@@ -45,8 +46,10 @@ async fn token<'r>(
   auth: ClientAuth,
   state: &State<AuthorizeState>,
   jwt: &State<JwtState>,
-  db: &State<DB>,
+  conn: Connection<'r, DB>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
+  let db = conn.into_inner();
+
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
@@ -84,15 +87,10 @@ async fn token<'r>(
   let code_info = lock.remove(&uuid).unwrap();
   drop(lock);
 
-  let Ok(user) = db.tables().user().get_user_by_uuid(code_info.user).await else {
+  let Ok(user) = db.tables().user().get_user(code_info.user).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db
-    .tables()
-    .groups()
-    .get_groups_for_user(user.id.clone())
-    .await
-  else {
+  let Ok(groups) = db.tables().groups().get_groups_for_user(user.id).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
 
@@ -168,10 +166,12 @@ struct RevokeReq {
 async fn revoke(
   req_p: Option<RevokeReq>,
   req_b: Option<Form<RevokeReq>>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   state: &State<JwtState>,
   invalidate: &State<JwtInvalidState>,
 ) -> crate::error::Result<()> {
+  let db = conn.into_inner();
+
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {

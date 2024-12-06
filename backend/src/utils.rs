@@ -4,6 +4,7 @@ use argon2::{
 };
 use base64::prelude::*;
 use rocket::{http::Status, request::Outcome, Request, State};
+use sea_orm_rocket::Connection;
 use serde::de::DeserializeOwned;
 
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
     jwt::{JwtState, JwtType},
     state::PasswordState,
   },
-  db::DB,
+  db::{DBTrait, DB},
   error::Result,
 };
 
@@ -39,9 +40,10 @@ pub async fn jwt_from_request<'r, C: DeserializeOwned, T: JwtType>(
   let Some(jwt) = req.guard::<&State<JwtState>>().await.succeeded() else {
     return Outcome::Error((Status::InternalServerError, ()));
   };
-  let Some(db) = req.guard::<&State<DB>>().await.succeeded() else {
+  let Some(conn) = req.guard::<Connection<'_, DB>>().await.succeeded() else {
     return Outcome::Error((Status::InternalServerError, ()));
   };
+  let db = conn.into_inner();
 
   let Ok(valid) = db
     .tables()

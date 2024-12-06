@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
+use entity::passkey;
 use rocket::{
   get,
   http::{CookieJar, Status},
@@ -9,8 +10,9 @@ use rocket::{
   serde::json::{self, Json},
   Route, State,
 };
+use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
-use surrealdb::Uuid;
+use uuid::Uuid;
 use webauthn_rs::{
   prelude::{
     CreationChallengeResponse, Passkey, PublicKeyCredential, RegisterPublicKeyCredential,
@@ -21,7 +23,7 @@ use webauthn_rs::{
 use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
-  db::{tables::user::passkey::PasskeyCreate, DB},
+  db::{DBTrait, DB},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -49,13 +51,14 @@ pub fn routes() -> Vec<Route> {
 }
 
 #[get("/start_registration")]
-async fn start_registration(
+async fn start_registration<'a>(
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'a, DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Json<CreationChallengeResponse>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
@@ -85,36 +88,39 @@ struct RegFinishReq {
 async fn finish_registration(
   auth: JwtClaims<JwtSpecial>,
   reg: Json<RegFinishReq>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
   updater: &State<UpdateState>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
-  let uuid = Uuid::from_str(&user.uuid)?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   if db
     .tables()
     .passkey()
-    .passkey_name_exists(user.id.clone(), reg.name.clone())
+    .passkey_name_exists(user.id, reg.name.clone())
     .await?
   {
     return Err(Error::Conflict);
   }
 
   let mut states = state.reg_state.lock().await;
-  let reg_state = states.remove(&uuid).ok_or(Error::BadRequest)?;
+  let reg_state = states.remove(&user.id).ok_or(Error::BadRequest)?;
 
   let key = webauthn.finish_passkey_registration(&reg.reg, &reg_state)?;
 
   let json_key = json::to_string(&key)?;
   db.tables()
     .passkey()
-    .create_passkey_record(PasskeyCreate {
+    .create_passkey_record(passkey::Model {
+      id: Uuid::new_v4(),
       data: json_key,
       cred_id: BASE64_STANDARD.encode(key.cred_id()),
       user: user.id,
       name: reg.name.clone(),
+      created: Utc::now().naive_utc(),
+      used: Utc::now().naive_utc(),
     })
     .await?;
   updater.send_message(auth.sub, UpdateType::Passkey).await;
@@ -148,12 +154,13 @@ async fn start_authentication(
 async fn finish_authentication(
   id: &str,
   auth: Json<PublicKeyCredential>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
   jwt: &State<JwtState>,
   cookies: &CookieJar<'_>,
 ) -> Result<TokenRes> {
+  let db = conn.into_inner();
   let auth_id = Uuid::from_str(id)?;
 
   let mut states = state.auth_state.lock().await;
@@ -169,7 +176,6 @@ async fn finish_authentication(
   let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
 
   let user = db.tables().user().get_user(passkey_db.user).await?;
-  let uuid = Uuid::from_str(&user.uuid)?;
 
   let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
 
@@ -185,9 +191,9 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.tables().user().logged_in(uuid).await?;
+  db.tables().user().logged_in(user.id).await?;
 
-  let cookie = jwt.create_token::<JwtBase>(uuid)?;
+  let cookie = jwt.create_token::<JwtBase>(user.id)?;
   cookies.add(cookie);
 
   Ok(TokenRes::default())
@@ -198,9 +204,10 @@ async fn start_special_access(
   auth: JwtClaims<JwtBase>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Json<RequestChallengeResponse>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   let passkey_records = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkey_records
     .into_iter()
@@ -224,10 +231,11 @@ async fn finish_special_access(
   auth: JwtClaims<JwtBase>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   jwt: &State<JwtState>,
   cookies: &CookieJar<'_>,
 ) -> Result<TokenRes> {
+  let db = conn.into_inner();
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
     return Err(Error::BadRequest);
   };
@@ -269,16 +277,20 @@ struct PasskeyInfo {
 }
 
 #[get("/list")]
-async fn list(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<Vec<PasskeyInfo>>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+async fn list(
+  auth: JwtClaims<JwtBase>,
+  conn: Connection<'_, DB>,
+) -> Result<Json<Vec<PasskeyInfo>>> {
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
 
   let ret = passkeys
     .into_iter()
     .map(|p| PasskeyInfo {
       name: p.name,
-      created: p.created,
-      used: p.used,
+      created: p.created.and_utc(),
+      used: p.used.and_utc(),
     })
     .collect();
 
@@ -294,10 +306,11 @@ struct PasskeyRemove {
 async fn remove(
   req: Json<PasskeyRemove>,
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   updater: &State<UpdateState>,
 ) -> Result<()> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   db.tables()
     .passkey()
@@ -318,15 +331,16 @@ struct PasskeyEdit {
 async fn edit_name(
   req: Json<PasskeyEdit>,
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   updater: &State<UpdateState>,
 ) -> Result<()> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   if db
     .tables()
     .passkey()
-    .passkey_name_exists(user.id.clone(), req.name.clone())
+    .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
     return Err(Error::Conflict);

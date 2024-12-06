@@ -82,13 +82,13 @@
     <FormInput label="Scope" placeholder="Scope" key="scope" {...props} />
     <Label>Policies</Label>
     <Multiselect
+      {...props}
       label="Policies"
       data={policies?.map((g) => ({
         label: g.name,
         value: g,
       })) || []}
       selected={item.policy}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}
@@ -97,13 +97,13 @@
     <FormInput label="Scope" placeholder="Scope" key="scope" {...props} />
     <Label>Policies</Label>
     <Multiselect
+      {...props}
       label="Policies"
       data={policies?.map((g) => ({
         label: g.name,
         value: g,
       })) || []}
       selected={policy}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}

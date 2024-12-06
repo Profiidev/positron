@@ -91,6 +91,7 @@
     />
     <Label>Permissions</Label>
     <Multiselect
+      {...props}
       label="Permissions"
       data={getPermissionGroups()}
       filter={(i) => userInfo!.permissions.includes(i.label as Permission)}
@@ -98,13 +99,13 @@
     />
     <Label>Users</Label>
     <Multiselect
+      {...props}
       label="Users"
       data={users?.map((u) => ({
         label: u.name,
         value: u,
       })) || []}
       bind:selected={item.users}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}

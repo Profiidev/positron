@@ -32,8 +32,8 @@
     filter?: (data: Item) => boolean;
     selected: T[];
     label: string;
-    display?: (item: T) => string;
     compare?: (a: T, b: T) => boolean;
+    disabled?: boolean;
   }
 
   let {
@@ -41,8 +41,8 @@
     selected = $bindable([]),
     filter = () => true,
     label,
-    display = (i) => i as string,
     compare = (a, b) => a === b,
+    disabled,
   }: Props = $props();
 
   const select = (value: T) => {
@@ -71,6 +71,17 @@
       ];
     }
   });
+
+  const find_element = (value: T): Item | undefined => {
+    return filtered
+      .map(
+        (g) =>
+          g.items
+            .map((i) => (compare(i.value, value) ? i : undefined))
+            .filter((i) => i !== undefined)[0],
+      )
+      .filter((i) => i !== undefined)[0];
+  };
 </script>
 
 <Popover.Root>
@@ -81,18 +92,19 @@
         {...props}
         role="combobox"
         class="h-10 text-wrap !opacity-100"
+        {disabled}
       >
         {#if selected.length === 0}
           No {label}
         {:else}
-          {selected.map(display).join(", ")}
+          {selected.map((s) => find_element(s)?.label).join(", ")}
         {/if}
       </Button>
     {/snippet}
   </Popover.Trigger>
   <Popover.Content>
     <Command.Root>
-      <Command.Input placeholder="Search permissions..." />
+      <Command.Input placeholder={`Search ${label.toLowerCase()}...`} />
       <ScrollArea orientation="vertical" class="h-full w-full">
         <Command.List class="overflow-visible">
           <Command.Empty>No {label} found</Command.Empty>

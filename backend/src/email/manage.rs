@@ -1,9 +1,10 @@
 use rocket::{http::Status, post, serde::json::Json, Route, State};
+use sea_orm_rocket::Connection;
 use serde::Deserialize;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
-  db::DB,
+  db::{DBTrait, DB},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -29,11 +30,12 @@ struct EmailChange {
 async fn start_change(
   req: Json<EmailChange>,
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   mailer: &State<Mailer>,
   state: &State<EmailState>,
 ) -> Result<Status> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   if db
     .tables()
@@ -77,10 +79,11 @@ struct EmailCode {
 async fn finish_change(
   req: Json<EmailCode>,
   auth: JwtClaims<JwtSpecial>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   state: &State<EmailState>,
   updater: &State<UpdateState>,
 ) -> Result<Status> {
+  let db = conn.into_inner();
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {
     return Err(Error::BadRequest);

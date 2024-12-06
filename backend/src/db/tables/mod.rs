@@ -3,32 +3,22 @@ use key::KeyTable;
 use oauth::{
   oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
 };
-use surrealdb::{engine::remote::ws::Client, Error, Surreal};
+use sea_orm::DatabaseConnection;
 use user::{group::GroupTable, passkey::PasskeyTable, user::UserTable};
 
 pub mod invalid_jwt;
 pub mod key;
 pub mod oauth;
 pub mod user;
+mod util;
 
 pub struct Tables<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> Tables<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
-  }
-
-  pub async fn create_tables(&self) -> Result<(), Error> {
-    UserTable::new(self.db).create().await?;
-    InvalidJwtTable::new(self.db).create().await?;
-    OauthClientTable::new(self.db).create().await?;
-    GroupTable::new(self.db).create().await?;
-    PasskeyTable::new(self.db).create().await?;
-    KeyTable::new(self.db).create().await?;
-    OAuthScopeTable::new(self.db).create().await?;
-    OAuthPolicyTable::new(self.db).create().await
   }
 
   pub fn user(self) -> UserTable<'db> {

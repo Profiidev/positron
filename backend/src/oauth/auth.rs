@@ -1,18 +1,23 @@
 use std::str::FromStr;
 
 use chrono::Utc;
+use entity::o_auth_client;
 use rocket::{form::Form, get, post, response::Redirect, serde::json::Json, Route, State};
+use sea_orm_rocket::Connection;
 use serde::Serialize;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::oauth::oauth_client::OAuthClient, DB},
+  db::{DBTrait, DB},
   error::{Error, Result},
 };
 
-use super::state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq};
+use super::{
+  scope::Scope,
+  state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq},
+};
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![authorize_get, authorize_confirm, authorize_post, logout]
@@ -22,31 +27,30 @@ pub fn routes() -> Vec<Route> {
 async fn authorize_get(
   req: AuthReq,
   state: &State<AuthorizeState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Redirect> {
-  authorize_start(req, state, db).await
+  authorize_start(req, state, conn).await
 }
 
 #[post("/authorize", data = "<req>")]
 async fn authorize_post(
   req: Form<AuthReq>,
   state: &State<AuthorizeState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Redirect> {
-  authorize_start(req.into_inner(), state, db).await
+  authorize_start(req.into_inner(), state, conn).await
 }
 
 async fn authorize_start(
   req: AuthReq,
   state: &State<AuthorizeState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
-  let client = db
-    .tables()
-    .oauth_client()
-    .get_client_by_id(req.client_id.clone())
-    .await?;
+  let client_id = req.client_id.parse()?;
+
+  let db = conn.into_inner();
+  let client = db.tables().oauth_client().get_client(client_id).await?;
 
   state
     .auth_pending
@@ -73,10 +77,12 @@ struct AuthRes {
 async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
   state: &State<AuthorizeState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   code: &str,
   allow: Option<bool>,
 ) -> Result<Json<AuthRes>> {
+  let db = conn.into_inner();
+
   let mut lock = state.auth_pending.lock().await;
   let code = Uuid::from_str(code)?;
 
@@ -95,17 +101,14 @@ async fn authorize_confirm(
     return Err(Error::BadRequest);
   }
 
-  let client = db
-    .tables()
-    .oauth_client()
-    .get_client_by_id(req.client_id.clone())
-    .await?;
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+  let client_id = req.client_id.parse()?;
+  let client = db.tables().oauth_client().get_client(client_id).await?;
+  let user = db.tables().user().get_user(auth.sub).await?;
 
   if !db
     .tables()
     .oauth_client()
-    .has_user_access(user.id, req.client_id.clone())
+    .has_user_access(user.id, client_id)
     .await?
   {
     return Err(Error::Unauthorized);
@@ -125,7 +128,7 @@ async fn authorize_confirm(
   state.auth_codes.lock().await.insert(
     auth_code,
     CodeReq {
-      client_id: client.client_id.parse().unwrap(),
+      client_id: client.id,
       redirect_uri: initial_redirect_uri,
       scope: req.scope.unwrap().parse().unwrap(),
       user: auth.sub,
@@ -146,7 +149,7 @@ async fn authorize_confirm(
   }))
 }
 
-fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str> {
+fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'static str> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
       return Some("invalid_request");
@@ -155,7 +158,7 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
     let mut possibilities =
       std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
 
-    if !possibilities.any(|reg_url| *reg_url == url) {
+    if !possibilities.any(|reg_url| reg_url.parse::<Url>().unwrap() == url) {
       return Some("invalid_request");
     }
   } else {
@@ -169,6 +172,8 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
   if let Some(scope) = &mut req.scope {
     *scope = client
       .default_scope
+      .parse::<Scope>()
+      .unwrap()
       .intersect(&scope.parse().unwrap())
       .to_string();
     if scope.is_empty() {
@@ -183,15 +188,14 @@ fn validate_req(req: &mut AuthReq, client: &OAuthClient) -> Option<&'static str>
 
 #[get("/logout/<client_id>")]
 async fn logout(
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   client_id: String,
   state: &State<AuthorizeState>,
 ) -> Result<Redirect> {
-  let client = db
-    .tables()
-    .oauth_client()
-    .get_client_by_id(client_id)
-    .await?;
+  let db = conn.into_inner();
+  let client_id = client_id.parse()?;
+
+  let client = db.tables().oauth_client().get_client(client_id).await?;
 
   Ok(Redirect::found(
     Url::parse_with_params(

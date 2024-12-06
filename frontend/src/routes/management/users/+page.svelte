@@ -86,6 +86,7 @@
       <FormInput label="Name" placeholder="Name" key="name" {...props} />
       <Label for="permissions">Permissions</Label>
       <Multiselect
+        {...props}
         label="Permissions"
         data={getPermissionGroups()}
         filter={(i) => userInfo.permissions.includes(i.label as Permission)}

@@ -1,31 +1,12 @@
+use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
+use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, sql::Thing, Error, Surreal};
 
 use crate::db::tables::user::group::BasicGroupInfo;
 
 #[derive(Serialize, Deserialize)]
-pub struct OAuthPolicyCreate {
-  pub name: String,
-  pub claim: String,
-  pub default: String,
-  pub group: Vec<(BasicGroupInfo, String)>,
-}
-
-#[allow(unused)]
-#[derive(Deserialize, Debug)]
-pub struct OAuthPolicy {
-  pub id: Thing,
-  pub uuid: String,
-  pub name: String,
-  pub claim: String,
-  pub default: String,
-  pub group: Vec<Thing>,
-  pub content: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct OAuthPolicyInfo {
-  pub uuid: String,
+  pub uuid: Uuid,
   pub name: String,
   pub claim: String,
   pub default: String,
@@ -34,172 +15,190 @@ pub struct OAuthPolicyInfo {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BasicOAuthPolicyInfo {
-  pub uuid: String,
+  pub uuid: Uuid,
   pub name: String,
 }
 
 pub struct OAuthPolicyTable<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> OAuthPolicyTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
   }
 
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-      DEFINE TABLE IF NOT EXISTS oauth_policy SCHEMAFULL;
-
-      DEFINE FIELD IF NOT EXISTS name ON TABLE oauth_policy TYPE string;
-      DEFINE FIELD IF NOT EXISTS uuid ON TABLE oauth_policy TYPE string;
-      DEFINE FIELD IF NOT EXISTS claim ON TABLE oauth_policy TYPE string;
-      DEFINE FIELD IF NOT EXISTS default ON TABLE oauth_policy TYPE string;
-      DEFINE FIELD IF NOT EXISTS group ON TABLE oauth_policy TYPE array<record<group>>;
-      DEFINE FIELD IF NOT EXISTS content ON TABLE oauth_policy TYPE array<string>;
-    ",
-      )
+  pub async fn list(&self) -> Result<Vec<OAuthPolicyInfo>, DbErr> {
+    let res = OAuthPolicy::find()
+      .find_with_related(OAuthPolicyContent)
+      .all(self.db)
       .await?;
 
-    Ok(())
-  }
+    let mut policies = Vec::new();
+    for (p, content) in res {
+      let group_ids: Vec<Uuid> = content.iter().map(|c| c.group).collect();
+      let groups = Group::find()
+        .filter(group::Column::Id.is_in(group_ids))
+        .all(self.db)
+        .await?;
 
-  pub async fn list(&self) -> Result<Vec<OAuthPolicyInfo>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $policy = SELECT * FROM oauth_policy;
-$policy.map(|$p| {
-    RETURN $p.group.map(|$g| {
-        name: $g.name,
-        uuid: $g.uuid
-    });
-});
-    RETURN $policy;",
-      )
-      .await?;
+      policies.push(OAuthPolicyInfo {
+        name: p.name,
+        uuid: p.id,
+        claim: p.claim,
+        default: p.default,
+        group: content
+          .into_iter()
+          .map(|c| {
+            let group = groups.iter().find(|g| g.id == c.group).unwrap();
+            (
+              BasicGroupInfo {
+                name: group.name.clone(),
+                uuid: group.id,
+              },
+              c.content,
+            )
+          })
+          .collect(),
+      })
+    }
 
-    let policy = res.take::<Vec<OAuthPolicy>>(2).unwrap_or_default();
-    let groups = res.take::<Vec<Vec<BasicGroupInfo>>>(1).unwrap_or_default();
-
-    Ok(
-      policy
-        .into_iter()
-        .zip(groups)
-        .map(|(policy, group)| OAuthPolicyInfo {
-          uuid: policy.uuid,
-          name: policy.name,
-          claim: policy.claim,
-          default: policy.default,
-          group: group.into_iter().zip(policy.content).collect(),
-        })
-        .collect(),
-    )
+    Ok(policies)
   }
 
   pub async fn create_policy(
     &self,
-    policy: OAuthPolicyCreate,
-    group_mapped: Vec<Thing>,
-    uuid: String,
+    policy: o_auth_policy::Model,
+    group_mapped: Vec<Uuid>,
     content: Vec<String>,
-  ) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content_r, uuid = $uuid")
-      .bind(policy)
-      .bind(("uuid", uuid))
-      .bind(("group_mapped", group_mapped))
-      .bind(("content_r", content))
-      .await?;
+  ) -> Result<(), DbErr> {
+    let policy: o_auth_policy::ActiveModel = policy.into();
+    let policy = policy.insert(self.db).await?;
+
+    let mut contents = Vec::new();
+    for (group, content) in group_mapped.into_iter().zip(content) {
+      contents.push(o_auth_policy_content::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        policy: Set(policy.id),
+        content: Set(content),
+        group: Set(group),
+      });
+    }
+    if !contents.is_empty() {
+      OAuthPolicyContent::insert_many(contents)
+        .exec(self.db)
+        .await?;
+    }
 
     Ok(())
   }
 
   pub async fn update_policy(
     &self,
-    policy: OAuthPolicyInfo,
-    group_mapped: Vec<Thing>,
+    info: OAuthPolicyInfo,
+    group_mapped: Vec<Uuid>,
     content: Vec<String>,
-  ) -> Result<(), Error> {
-    self.db.query("UPDATE oauth_policy SET name = $name, claim = $claim, default = $default, group = $group_mapped, content = $content_r WHERE uuid = $uuid")
-    .bind(policy)
-    .bind(("group_mapped", group_mapped))
-    .bind(("content_r", content)).await?;
+  ) -> Result<(), DbErr> {
+    let mut res = OAuthPolicy::find_by_id(info.uuid)
+      .find_with_related(OAuthPolicyContent)
+      .all(self.db)
+      .await?;
+
+    assert!(res.len() == 1);
+    let (policy, contents) = res.remove(0);
+    let mut policy: o_auth_policy::ActiveModel = policy.into();
+    let contents: Vec<o_auth_policy_content::ActiveModel> =
+      contents.into_iter().map(|c| c.into()).collect();
+
+    policy.name = Set(info.name);
+    policy.claim = Set(info.claim);
+    policy.default = Set(info.default);
+
+    for (group, content) in group_mapped.iter().copied().zip(content) {
+      if let Some(mut model) = contents
+        .iter()
+        .find(|c| *c.group.as_ref() == group)
+        .cloned()
+      {
+        model.content = Set(content);
+
+        model.update(self.db).await?;
+      } else {
+        o_auth_policy_content::ActiveModel {
+          id: Set(Uuid::new_v4()),
+          group: Set(group),
+          content: Set(content),
+          policy: policy.id.clone(),
+        }
+        .insert(self.db)
+        .await?;
+      }
+    }
+
+    let delete_ids: Vec<Uuid> = contents
+      .into_iter()
+      .filter(|c| !group_mapped.contains(c.group.as_ref()))
+      .map(|mut c| c.id.take().unwrap())
+      .collect();
+
+    if !delete_ids.is_empty() {
+      OAuthPolicyContent::delete_many()
+        .filter(o_auth_policy_content::Column::Id.is_in(delete_ids))
+        .exec(self.db)
+        .await?;
+    }
+
+    policy.update(self.db).await?;
 
     Ok(())
   }
 
-  pub async fn delete_policy(&self, uuid: String) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE oauth_policy WHERE uuid = $uuid")
-      .bind(("uuid", uuid))
-      .await?;
-
+  pub async fn delete_policy(&self, uuid: Uuid) -> Result<(), DbErr> {
+    let policy: o_auth_policy::ActiveModel = self.get_policy(uuid).await?.into();
+    policy.delete(self.db).await?;
     Ok(())
   }
 
   pub async fn get_policy_by_info(
     &self,
     policy: Vec<BasicOAuthPolicyInfo>,
-  ) -> Result<Vec<Thing>, Error> {
-    let mut res = self
-      .db
-      .query(
-        "$policy.map(|$p| {
-    LET $found = SELECT id FROM oauth_policy WHERE uuid = $p.uuid;
-    RETURN $found[0].id;
-})",
-      )
-      .bind(("policy", policy))
+  ) -> Result<Vec<Uuid>, DbErr> {
+    let uuids: Vec<Uuid> = policy.iter().map(|g| g.uuid).collect();
+
+    let res = OAuthPolicy::find()
+      .filter(o_auth_policy::Column::Id.is_in(uuids))
+      .all(self.db)
       .await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(res.iter().map(|g| g.id).collect())
   }
 
-  pub async fn basic_policy_list(&self) -> Result<Vec<BasicOAuthPolicyInfo>, Error> {
-    let mut res = self.db.query("SELECT name, uuid FROM oauth_policy").await?;
+  pub async fn basic_policy_list(&self) -> Result<Vec<BasicOAuthPolicyInfo>, DbErr> {
+    let res = OAuthPolicy::find().all(self.db).await?;
 
-    Ok(res.take(0).unwrap_or_default())
+    Ok(
+      res
+        .into_iter()
+        .map(|u| BasicOAuthPolicyInfo {
+          name: u.name,
+          uuid: u.id,
+        })
+        .collect(),
+    )
   }
 
-  pub async fn remove_group_everywhere(&self, group: Thing) -> Result<(), Error> {
-    self
-      .db
-      .query("UPDATE oauth_policy SET group -= $group")
-      .bind(("group", group))
+  pub async fn get_policy(&self, id: Uuid) -> Result<o_auth_policy::Model, DbErr> {
+    let res = OAuthPolicy::find_by_id(id).one(self.db).await?;
+    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
+  }
+
+  pub async fn policy_exists(&self, name: String, uuid: Uuid) -> Result<bool, DbErr> {
+    let group = OAuthPolicy::find()
+      .filter(o_auth_policy::Column::Name.eq(name))
+      .filter(o_auth_policy::Column::Id.ne(uuid))
+      .one(self.db)
       .await?;
 
-    Ok(())
-  }
-
-  pub async fn get_policy(&self, uuid: String) -> Result<OAuthPolicy, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM oauth_policy WHERE uuid = $uuid")
-      .bind(("uuid", uuid))
-      .await?;
-
-    res
-      .take::<Option<OAuthPolicy>>(0)?
-      .ok_or(Error::Db(surrealdb::error::Db::NoRecordFound))
-  }
-
-  pub async fn policy_exists(&self, name: String, uuid: String) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query(
-        "LET $found = SELECT * FROM oauth_policy WHERE name = $name AND uuid != $uuid;
-$found.len() > 0",
-      )
-      .bind(("name", name))
-      .bind(("uuid", uuid))
-      .await?;
-
-    Ok(res.take::<Option<bool>>(1)?.unwrap_or(true))
+    Ok(group.is_some())
   }
 }

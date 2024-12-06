@@ -7,9 +7,16 @@ RUN cargo install cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
-COPY backend/Cargo.toml ./Cargo.lock ./
+
 COPY backend/src ./src
-RUN cargo chef prepare
+COPY backend/entity ./entity
+COPY backend/migration ./migration
+COPY backend/Cargo.toml ./Cargo.lock ./
+
+RUN echo "[workspace]" >> Cargo.toml && \
+    echo "members = [\"entity\", \"migration\"]" >> Cargo.toml
+
+RUN cargo chef prepare --recipe-path recipe.json --bin positron-backend
 
 FROM chef AS builder
 
@@ -17,13 +24,18 @@ ARG TARGET
 ENV TARGET=$TARGET
 
 COPY --from=planner /app/recipe.json .
+
 RUN cargo chef cook --release --target $TARGET
-COPY backend/Cargo.toml ./Cargo.lock ./
+
 COPY backend/src ./src
-RUN cargo build --release --target $TARGET
+COPY backend/entity ./entity
+COPY backend/migration ./migration
+COPY backend/Cargo.toml ./Cargo.lock ./
+
+RUN cargo build --release --target $TARGET --bin positron-backend
 RUN mv ./target/$TARGET/release/positron-backend ./app
 
-FROM scratch
+FROM alpine
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 

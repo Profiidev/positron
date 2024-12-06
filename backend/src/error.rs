@@ -30,7 +30,7 @@ pub enum Error {
   #[error("DB error {source:?}")]
   DB {
     #[from]
-    source: surrealdb::Error,
+    source: sea_orm::DbErr,
   },
   #[error("Rsa error {source:?}")]
   Rsa {

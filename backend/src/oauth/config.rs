@@ -1,7 +1,11 @@
 use rocket::{get, serde::json::Json, Route, State};
+use sea_orm_rocket::Connection;
 use serde::Serialize;
 
-use crate::{db::DB, error::Result};
+use crate::{
+  db::{DBTrait, DB},
+  error::Result,
+};
 
 use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 
@@ -31,8 +35,10 @@ struct Configuration {
 async fn config(
   client_id: &str,
   state: &State<ConfigurationState>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Json<Configuration>> {
+  let db = conn.into_inner();
+
   let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES

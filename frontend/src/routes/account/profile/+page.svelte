@@ -28,7 +28,6 @@
 
   let infoData = $derived(userData.value?.[1]);
   $effect(() => {
-    console.log(infoData)
     if (infoData) formComp?.setValue(infoData);
   });
 

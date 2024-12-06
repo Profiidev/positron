@@ -19,7 +19,6 @@ export const loginSchema = z
     totp: z.string().default(""),
   })
   .superRefine((val, ctx) => {
-    console.log(val)
     if (val.code_input) {
       if (!val.totp || val.totp.length !== 6) {
         ctx.addIssue({

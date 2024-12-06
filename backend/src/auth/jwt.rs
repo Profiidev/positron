@@ -21,10 +21,11 @@ use rsa::{
   pkcs8::LineEnding,
   RsaPrivateKey, RsaPublicKey,
 };
+use sea_orm::DatabaseConnection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{db::DB, utils::jwt_from_request};
+use crate::{db::DBTrait, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -153,7 +154,7 @@ impl JwtState {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(db: &DB) -> Self {
+  pub async fn init(db: &DatabaseConnection) -> Self {
     let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
     let exp = std::env::var("AUTH_JWT_EXPIRATION")
       .expect("Failed to load JwtExpiration")
@@ -165,7 +166,7 @@ impl JwtState {
       .expect("Failed to parse JwtExpiration short");
 
     let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
-      (key.private_key, key.uuid)
+      (key.private_key, key.id.to_string())
     } else {
       let mut rng = OsRng {};
       let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
@@ -174,15 +175,15 @@ impl JwtState {
         .expect("Failed to export private key")
         .to_string();
 
-      let uuid = Uuid::new_v4().to_string();
+      let uuid = Uuid::new_v4();
 
       db.tables()
         .key()
-        .create_key("jwt".into(), key.clone(), uuid.clone())
+        .create_key("jwt".into(), key.clone(), uuid)
         .await
         .expect("Failed to save key");
 
-      (key, uuid)
+      (key, uuid.to_string())
     };
 
     let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");

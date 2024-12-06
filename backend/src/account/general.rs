@@ -2,18 +2,19 @@ use std::{io::Cursor, str::FromStr};
 
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
+use entity::sea_orm_active_enums::Permission;
 use image::{imageops::FilterType, ImageFormat};
 use rocket::{
   fs::TempFile, get, http::Status, post, serde::json::Json, tokio::io::AsyncReadExt, Route, State,
 };
-use serde::Serialize;
+use sea_orm_rocket::Connection;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::user::ProfileUpdate, DB},
+  db::{DBTrait, DB},
   error::Result,
-  permissions::Permission,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -35,10 +36,12 @@ struct ProfileInfo {
 async fn profile_info(
   _auth: JwtClaims<JwtBase>,
   uuid: &str,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
 ) -> Result<Json<ProfileInfo>> {
+  let db = conn.into_inner();
+
   let uuid = Uuid::from_str(uuid)?;
-  let user = db.tables().user().get_user_by_uuid(uuid).await?;
+  let user = db.tables().user().get_user(uuid).await?;
 
   Ok(Json(ProfileInfo {
     name: user.name,
@@ -60,17 +63,18 @@ struct UserInfo {
 }
 
 #[get("/info")]
-async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<UserInfo>> {
-  let user = db.tables().user().get_user_by_uuid(auth.sub).await?;
+async fn info(auth: JwtClaims<JwtBase>, conn: Connection<'_, DB>) -> Result<Json<UserInfo>> {
+  let db = conn.into_inner();
+  let user = db.tables().user().get_user(auth.sub).await?;
   let permissions = db.tables().user().list_permissions(auth.sub).await?;
   let access_level = db.tables().user().access_level(auth.sub).await?;
 
   Ok(Json(UserInfo {
-    last_login: user.last_login,
-    last_special_access: user.last_special_access,
+    last_login: user.last_login.and_utc(),
+    last_special_access: user.last_special_access.and_utc(),
     totp_enabled: user.totp.is_some(),
-    totp_created: user.totp_created,
-    totp_last_used: user.totp_last_used,
+    totp_created: user.totp_created.map(|t| t.and_utc()),
+    totp_last_used: user.totp_last_used.map(|t| t.and_utc()),
     uuid: auth.sub,
     permissions,
     access_level,
@@ -81,9 +85,11 @@ async fn info(auth: JwtClaims<JwtBase>, db: &State<DB>) -> Result<Json<UserInfo>
 async fn change_image(
   req: TempFile<'_>,
   auth: JwtClaims<JwtBase>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   updater: &State<UpdateState>,
 ) -> Result<Status> {
+  let db = conn.into_inner();
+
   let mut bytes = Vec::new();
   let mut temp = req.open().await?;
   temp.read_to_end(&mut bytes).await?;
@@ -103,14 +109,24 @@ async fn change_image(
   Ok(Status::Ok)
 }
 
+#[derive(Deserialize)]
+struct UpdateReq {
+  name: String,
+}
+
 #[post("/update_profile", data = "<req>")]
 async fn update_profile(
-  req: Json<ProfileUpdate>,
+  req: Json<UpdateReq>,
   auth: JwtClaims<JwtBase>,
-  db: &State<DB>,
+  conn: Connection<'_, DB>,
   updater: &State<UpdateState>,
 ) -> Result<Status> {
-  db.tables().user().update_profile(auth.sub, req.0).await?;
+  let db = conn.into_inner();
+
+  db.tables()
+    .user()
+    .update_profile(auth.sub, req.0.name)
+    .await?;
   updater.broadcast_message(UpdateType::User).await;
 
   Ok(Status::Ok)

@@ -1,5 +1,5 @@
 [workspace]
-members = ["frontend/src-tauri", "backend"]
+members = ["frontend/src-tauri", "backend", "backend/entity", "backend/migration"]
 resolver = "2"
 
 [profile.dev.package.num-bigint-dig]

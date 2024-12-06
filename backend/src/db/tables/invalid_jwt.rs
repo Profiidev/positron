@@ -1,48 +1,14 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use surrealdb::{
-  engine::remote::ws::Client,
-  sql::{Thing, Value},
-  Error, Surreal,
-};
-
-#[derive(Serialize)]
-struct InvalidJwtCreate {
-  token: String,
-  exp: Value,
-}
-
-#[allow(unused)]
-#[derive(Deserialize)]
-struct InvalidJwt {
-  id: Thing,
-  token: String,
-  exp: DateTime<Utc>,
-}
+use entity::{invalid_jwt, prelude::*};
+use sea_orm::{prelude::*, ActiveValue::Set};
 
 pub struct InvalidJwtTable<'db> {
-  db: &'db Surreal<Client>,
+  db: &'db DatabaseConnection,
 }
 
 impl<'db> InvalidJwtTable<'db> {
-  pub fn new(db: &'db Surreal<Client>) -> Self {
+  pub fn new(db: &'db DatabaseConnection) -> Self {
     Self { db }
-  }
-
-  pub async fn create(&self) -> Result<(), Error> {
-    self
-      .db
-      .query(
-        "
-      DEFINE TABLE IF NOT EXISTS invalid_jwt SCHEMAFULL;
-
-      DEFINE FIELD IF NOT EXISTS token ON TABLE invalid_jwt TYPE string;
-      DEFINE FIELD IF NOT EXISTS exp ON TABLE invalid_jwt TYPE datetime;
-    ",
-      )
-      .await?;
-
-    Ok(())
   }
 
   pub async fn invalidate_jwt(
@@ -50,18 +16,13 @@ impl<'db> InvalidJwtTable<'db> {
     token: String,
     exp: DateTime<Utc>,
     invalid_count: &mut i32,
-  ) -> Result<(), Error> {
-    self
-      .db
-      .query("CREATE invalid_jwt CONTENT $content")
-      .bind((
-        "content",
-        InvalidJwtCreate {
-          token,
-          exp: Value::Datetime(exp.into()),
-        },
-      ))
-      .await?;
+  ) -> Result<(), DbErr> {
+    let model = invalid_jwt::ActiveModel {
+      token: Set(token),
+      exp: Set(exp.naive_utc()),
+      id: Set(Uuid::new_v4()),
+    };
+    model.insert(self.db).await?;
 
     if *invalid_count > 1000 {
       self.remove_expired().await?;
@@ -73,22 +34,19 @@ impl<'db> InvalidJwtTable<'db> {
     Ok(())
   }
 
-  pub async fn is_token_valid(&self, token: String) -> Result<bool, Error> {
-    let mut res = self
-      .db
-      .query("SELECT * FROM invalid_jwt WHERE token = $to_test LIMIT 1")
-      .bind(("to_test", token))
+  pub async fn is_token_valid(&self, token: String) -> Result<bool, DbErr> {
+    let res = InvalidJwt::find()
+      .filter(invalid_jwt::Column::Token.eq(token))
+      .one(self.db)
       .await?;
 
-    let token: Option<InvalidJwt> = res.take(0)?;
-
-    Ok(token.is_none())
+    Ok(res.is_none())
   }
 
-  pub async fn remove_expired(&self) -> Result<(), Error> {
-    self
-      .db
-      .query("DELETE invalid_jwt WHERE exp < time::now()")
+  pub async fn remove_expired(&self) -> Result<(), DbErr> {
+    InvalidJwt::delete_many()
+      .filter(invalid_jwt::Column::Exp.lt(Utc::now().naive_utc()))
+      .exec(self.db)
       .await?;
 
     Ok(())
