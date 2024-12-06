@@ -91,6 +91,7 @@
     />
     <Label>Permissions</Label>
     <Multiselect
+      {...props}
       label="Permissions"
       data={getPermissionGroups()}
       filter={(i) => userInfo!.permissions.includes(i.label as Permission)}
@@ -98,6 +99,7 @@
     />
     <Label>Users</Label>
     <Multiselect
+      {...props}
       label="Users"
       data={users?.map((u) => ({
         label: u.name,

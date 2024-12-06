@@ -8,9 +8,16 @@
     key: string;
     label: string;
     formData: SuperForm<any>;
+    disabled?: boolean;
   }
 
-  let { class: className, key, formData: form, label }: Props = $props();
+  let {
+    class: className,
+    key,
+    formData: form,
+    label,
+    disabled,
+  }: Props = $props();
 
   let { form: formData } = $derived(form);
 </script>
@@ -24,6 +31,7 @@
         bind:value={$formData[key]}
         class={className}
         autofocus
+        {disabled}
         {...props}
       >
         {#snippet children({ cells })}

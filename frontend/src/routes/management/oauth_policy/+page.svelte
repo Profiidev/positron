@@ -101,6 +101,7 @@
           type="single"
           bind:value={group[0].uuid}
           allowDeselect={false}
+          disabled={props.disabled}
           onValueChange={(v) =>
             (group[0].name = groups?.find((g) => g.uuid === v)?.name || "")}
         >
@@ -111,11 +112,17 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        <Input placeholder="Content" bind:value={group[1]} required />
+        <Input
+          placeholder="Content"
+          bind:value={group[1]}
+          required
+          disabled={props.disabled}
+        />
         <Button
           size="icon"
           variant="destructive"
           class="min-w-10"
+          disabled={props.disabled}
           onclick={() => {
             if (!item) return;
             item.group = item.group.filter((g) => g[0].uuid !== group[0].uuid);
@@ -128,6 +135,7 @@
     {#if groups_left_edit.length > 0}
       <Button
         size="icon"
+        disabled={props.disabled}
         onclick={() => {
           if (!item) return;
           item.group.push([groups_left_edit[0], ""]);
@@ -156,6 +164,7 @@
           type="single"
           bind:value={group_item[0].uuid}
           allowDeselect={false}
+          disabled={props.disabled}
           onValueChange={(v) =>
             (group_item[0].name =
               groups?.find((g) => g.uuid === v)?.name || "")}
@@ -167,11 +176,17 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        <Input placeholder="Content" bind:value={group_item[1]} required />
+        <Input
+          placeholder="Content"
+          bind:value={group_item[1]}
+          required
+          disabled={props.disabled}
+        />
         <Button
           size="icon"
           variant="destructive"
           class="min-w-10"
+          disabled={props.disabled}
           onclick={() => {
             group = group.filter((g) => g[0].uuid !== group_item[0].uuid);
           }}
@@ -183,6 +198,7 @@
     {#if groups_left_create.length > 0}
       <Button
         size="icon"
+        disabled={props.disabled}
         onclick={() => {
           group.push([groups_left_create[0], ""]);
         }}

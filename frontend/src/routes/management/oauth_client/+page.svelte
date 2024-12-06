@@ -213,6 +213,7 @@
         <FormInput label="Name" placeholder="Name" key="name" {...props} />
         <Label>Scope</Label>
         <Multiselect
+          {...props}
           label="Scope"
           data={scope_names?.map((s) => ({
             label: s,
@@ -234,6 +235,7 @@
         />
         <Label>Groups</Label>
         <Multiselect
+          {...props}
           label="Groups"
           data={groups?.map((g) => ({
             label: g.name,
@@ -244,6 +246,7 @@
         />
         <Label>Users</Label>
         <Multiselect
+          {...props}
           label="Users"
           data={users?.map((u) => ({
             label: u.name,
@@ -272,6 +275,7 @@
         <FormInput label="Name" placeholder="Name" key="name" {...props} />
         <Label for="scope">Scope</Label>
         <Multiselect
+          {...props}
           label="Scope"
           data={scope_names?.map((s) => ({
             label: s,

@@ -33,6 +33,7 @@
     selected: T[];
     label: string;
     compare?: (a: T, b: T) => boolean;
+    disabled?: boolean;
   }
 
   let {
@@ -41,6 +42,7 @@
     filter = () => true,
     label,
     compare = (a, b) => a === b,
+    disabled,
   }: Props = $props();
 
   const select = (value: T) => {
@@ -80,6 +82,7 @@
       )
       .filter((i) => i !== undefined)[0];
   };
+  $inspect(disabled).with(console.log)
 </script>
 
 <Popover.Root>
@@ -90,6 +93,7 @@
         {...props}
         role="combobox"
         class="h-10 text-wrap !opacity-100"
+        {disabled}
       >
         {#if selected.length === 0}
           No {label}
