@@ -240,7 +240,6 @@
             value: g,
           })) || []}
           bind:selected={item.group_access}
-          display={(u) => u.name}
           compare={(a, b) => a.uuid === b.uuid}
         />
         <Label>Users</Label>
@@ -251,7 +250,6 @@
             value: u,
           })) || []}
           bind:selected={item.user_access}
-          display={(u) => u.name}
           compare={(a, b) => a.uuid === b.uuid}
         />
       </div>

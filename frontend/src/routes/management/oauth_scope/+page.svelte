@@ -88,7 +88,6 @@
         value: g,
       })) || []}
       selected={item.policy}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}
@@ -103,7 +102,6 @@
         value: g,
       })) || []}
       selected={policy}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}

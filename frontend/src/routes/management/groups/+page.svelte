@@ -104,7 +104,6 @@
         value: u,
       })) || []}
       bind:selected={item.users}
-      display={(u) => u.name}
       compare={(a, b) => a.uuid === b.uuid}
     />
   {/snippet}
