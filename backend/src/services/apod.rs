@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use base64::prelude::*;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use entity::{apod, sea_orm_active_enums::Permission};
 use image::{imageops::FilterType, ImageFormat};
 use rocket::{get, post, serde::json::Json, Route, State};
@@ -14,7 +14,7 @@ use crate::{
   db::{tables::user::user::BasicUserInfo, DBTrait, DB},
   error::{Error, Result},
   permission::PermissionTrait,
-  s3::S3,
+  s3::S3, ws::state::{UpdateState, UpdateType},
 };
 
 use super::state::ApodState;
@@ -27,7 +27,7 @@ pub fn routes() -> Vec<Route> {
 struct ListRes {
   image: String,
   title: String,
-  date: NaiveDate,
+  date: DateTime<Utc>,
   user: BasicUserInfo,
 }
 
@@ -54,7 +54,7 @@ async fn list(
     apod_infos.push(ListRes {
       image: BASE64_STANDARD.encode(image),
       title: apod.title,
-      date: apod.date,
+      date: apod.date.and_hms_micro_opt(0, 0, 0, 0).unwrap().and_utc(),
       user: apod.user,
     });
   }
@@ -73,6 +73,7 @@ async fn set_good(
   auth: JwtClaims<JwtBase>,
   req: Json<SetGoodReq>,
   conn: Connection<'_, DB>,
+  updater: &State<UpdateState>,
 ) -> Result<()> {
   let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodSelect).await?;
@@ -81,6 +82,8 @@ async fn set_good(
     .apod()
     .set_good(req.date.date_naive(), auth.sub, req.good)
     .await?;
+
+  updater.broadcast_message(UpdateType::Apod).await;
 
   Ok(())
 }
