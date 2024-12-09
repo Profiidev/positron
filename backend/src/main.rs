@@ -18,10 +18,10 @@ mod error;
 mod management;
 mod oauth;
 mod permission;
-mod utils;
-mod ws;
 mod s3;
 mod services;
+mod utils;
+mod ws;
 
 #[launch]
 async fn rocket() -> _ {
@@ -85,7 +85,7 @@ async fn init_state_with_db(server: Rocket<Build>) -> fairing::Result {
 
   let states = AsyncAuthStates::new(db).await;
   let server = states.add(server);
-  
+
   let server = s3::async_state(server).await;
 
   Ok(server)

@@ -2,8 +2,8 @@ use folders::Folders;
 use rocket::{Build, Rocket};
 use s3::{creds::Credentials, Bucket, Region};
 
-pub mod folders;
 pub mod error;
+pub mod folders;
 
 pub struct S3 {
   bucket: Box<Bucket>,
