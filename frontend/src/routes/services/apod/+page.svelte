@@ -1,23 +1,31 @@
 <script lang="ts">
   import * as Tabs from "$lib/components/ui/tabs";
   import * as Card from "$lib/components/ui/card";
-  import { get_image } from "$lib/backend/services/apod.svelte";
   import type { Apod } from "$lib/backend/services/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { AspectRatio } from "$lib/components/ui/aspect-ratio";
   import Datepicker from "$lib/components/util/datepicker.svelte";
-  import { getLocalTimeZone, now, today } from "@internationalized/date";
+  import { getLocalTimeZone, now } from "@internationalized/date";
+  import {
+    apod,
+    getApodDate,
+    setApodDate,
+  } from "$lib/backend/services/stores.svelte";
 
-  let current_image: Apod | undefined = $state();
-  get_image(new Date().toISOString()).then((image) => (current_image = image));
+  let current_image: Apod | undefined = $derived(apod.value);
+  let isLoading = $state(false);
+  let date = $state(getApodDate());
 
-  let date = $state(now(getLocalTimeZone()));
   $effect(() => {
-    current_image = undefined;
-    get_image(date.toDate().toISOString()).then(
-      (image) => (current_image = image),
-    );
+    isLoading = true;
+    setApodDate(date);
   });
+
+  $effect(() => {
+    if(current_image) {
+      isLoading = false;
+    }
+  })
 </script>
 
 <Tabs.Root value="today" class="m-4">
@@ -28,14 +36,14 @@
   <Tabs.Content value="today">
     <Card.Root>
       <Card.Header>
-        {#if current_image}
+        {#if current_image && !isLoading}
           {current_image.title}
         {:else}
           <Skeleton class="h-5 w-52" />
         {/if}
       </Card.Header>
       <Card.Content>
-        {#if current_image}
+        {#if current_image && !isLoading}
           <img
             class="rounded"
             src={`data:image/webp;base64, ${current_image.image}`}
@@ -49,7 +57,7 @@
         <Datepicker
           class="mt-6"
           bind:value={date}
-          end={today(getLocalTimeZone())}
+          end={now(getLocalTimeZone())}
         />
       </Card.Content>
     </Card.Root>

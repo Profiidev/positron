@@ -48,6 +48,7 @@
       initialFocus
       minValue={start}
       maxValue={end}
+      preventDeselect
     />
   </Popover.Content>
 </Popover.Root>
