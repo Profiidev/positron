@@ -26,11 +26,27 @@ impl<'db> ApodTable<'db> {
     Ok(())
   }
 
-  pub async fn get_for_date(&self, date: Date) -> Result<Option<apod::Model>, DbErr> {
-    Apod::find()
+  pub async fn get_for_date(
+    &self,
+    date: Date,
+  ) -> Result<Option<(apod::Model, Option<BasicUserInfo>)>, DbErr> {
+    let res = Apod::find()
       .filter(apod::Column::Date.eq(date))
-      .one(self.db)
-      .await
+      .find_with_related(User)
+      .all(self.db)
+      .await?;
+
+    if res.is_empty() {
+      return Ok(None);
+    }
+
+    Ok(Some((
+      res[0].0.clone(),
+      res[0].1.first().map(|user| BasicUserInfo {
+        name: user.name.clone(),
+        uuid: user.id,
+      }),
+    )))
   }
 
   pub async fn set_good(&self, date: Date, user: Uuid, good: bool) -> Result<(), DbErr> {
@@ -38,6 +54,7 @@ impl<'db> ApodTable<'db> {
       .get_for_date(date)
       .await?
       .ok_or(DbErr::RecordNotFound("Not Found".into()))?
+      .0
       .into();
 
     apod.selector = if good { Set(Some(user)) } else { Set(None) };

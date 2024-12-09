@@ -23,3 +23,15 @@ export const get_image = async (date: string) => {
     return ret;
   }
 };
+
+export const set_good = async (good: boolean, date: string) => {
+  return await post<undefined>(
+    "/services/apod/set_good",
+    ResponseType.None,
+    ContentType.Json,
+    JSON.stringify({
+      good,
+      date,
+    }),
+  );
+};

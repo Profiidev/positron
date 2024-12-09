@@ -101,6 +101,7 @@ struct GetReq {
 struct GetRes {
   title: String,
   image: String,
+  user: Option<BasicUserInfo>,
 }
 
 #[post("/get_image", data = "<req>")]
@@ -115,7 +116,7 @@ async fn get_image(
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-  let res = if let Some(apod) = db
+  let res = if let Some((apod, user)) = db
     .tables()
     .apod()
     .get_for_date(req.date.date_naive())
@@ -130,6 +131,7 @@ async fn get_image(
     GetRes {
       title: apod.title,
       image: BASE64_STANDARD.encode(image),
+      user,
     }
   } else {
     let image_data = state.get_image(req.date).await?.ok_or(Error::Gone)?;
@@ -167,6 +169,7 @@ async fn get_image(
     GetRes {
       title: image_data.title,
       image: BASE64_STANDARD.encode(image),
+      user: None,
     }
   };
 

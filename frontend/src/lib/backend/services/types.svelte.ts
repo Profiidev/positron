@@ -10,4 +10,5 @@ export interface ApodInfo {
 export interface Apod {
   title: string;
   image: string;
+  user?: UserInfo;
 }
