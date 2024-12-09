@@ -9,7 +9,7 @@ pub struct ApodState {
 
 #[derive(Deserialize)]
 struct ImageRes {
-  hdurl: String,
+  hdurl: Option<String>,
   media_type: String,
   title: String,
 }
@@ -49,7 +49,13 @@ impl ApodState {
       return Ok(None);
     }
 
-    let image_res = self.client.get(res.hdurl).send().await?.bytes().await?;
+    let image_res = self
+      .client
+      .get(res.hdurl.unwrap())
+      .send()
+      .await?
+      .bytes()
+      .await?;
 
     Ok(Some(Image {
       image: image_res.to_vec(),

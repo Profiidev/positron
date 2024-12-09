@@ -14,13 +14,17 @@ use crate::{
   db::{tables::user::user::BasicUserInfo, DBTrait, DB},
   error::{Error, Result},
   permission::PermissionTrait,
-  s3::S3, ws::state::{UpdateState, UpdateType},
+  s3::S3,
+  ws::state::{UpdateState, UpdateType},
 };
 
 use super::state::ApodState;
 
 pub fn routes() -> Vec<Route> {
   rocket::routes![set_good, get_image, list]
+    .into_iter()
+    .flat_map(|route| route.map_base(|base| format!("{}{}", "/apod", base)))
+    .collect()
 }
 
 #[derive(Serialize)]

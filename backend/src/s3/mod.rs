@@ -19,7 +19,9 @@ impl S3 {
       Credentials::from_env_specific(Some("S3_KEY_ID"), Some("S3_ACCESS_KEY"), None, None)
         .expect("Failed to load S3_KEY_ID or S3_ACCESS_KEY");
 
-    let bucket = Bucket::new(&bucket, region, credentials).expect("Failed to init S3 Bucket");
+    let bucket = Bucket::new(&bucket, region, credentials)
+      .expect("Failed to init S3 Bucket")
+      .with_path_style();
 
     if !bucket
       .exists()
