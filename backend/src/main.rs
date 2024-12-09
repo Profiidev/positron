@@ -20,6 +20,8 @@ mod oauth;
 mod permission;
 mod utils;
 mod ws;
+mod s3;
+mod services;
 
 #[launch]
 async fn rocket() -> _ {
@@ -65,6 +67,7 @@ fn routes() -> Vec<Route> {
     .chain(oauth::routes())
     .chain(management::routes())
     .chain(ws::routes())
+    .chain(services::routes())
     .collect()
 }
 
@@ -73,6 +76,7 @@ fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = oauth::state(server);
   let server = management::state(server);
   let server = ws::state(server);
+  let server = services::state(server);
   email::state(server)
 }
 
@@ -81,6 +85,8 @@ async fn init_state_with_db(server: Rocket<Build>) -> fairing::Result {
 
   let states = AsyncAuthStates::new(db).await;
   let server = states.add(server);
+  
+  let server = s3::async_state(server).await;
 
   Ok(server)
 }

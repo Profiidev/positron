@@ -4,11 +4,13 @@ use oauth::{
   oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
 };
 use sea_orm::DatabaseConnection;
+use services::apod::ApodTable;
 use user::{group::GroupTable, passkey::PasskeyTable, user::UserTable};
 
 pub mod invalid_jwt;
 pub mod key;
 pub mod oauth;
+pub mod services;
 pub mod user;
 mod util;
 
@@ -51,5 +53,9 @@ impl<'db> Tables<'db> {
 
   pub fn oauth_scope(self) -> OAuthScopeTable<'db> {
     OAuthScopeTable::new(self.db)
+  }
+
+  pub fn apod(self) -> ApodTable<'db> {
+    ApodTable::new(self.db)
   }
 }
