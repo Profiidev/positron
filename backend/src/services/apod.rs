@@ -63,6 +63,9 @@ async fn list(
     });
   }
 
+  apod_infos.sort_unstable_by_key(|apod| apod.date);
+  apod_infos.reverse();
+
   Ok(Json(apod_infos))
 }
 
@@ -137,7 +140,7 @@ async fn get_image(
     let image_data = state.get_image(req.date).await?.ok_or(Error::Gone)?;
 
     let image = image::load_from_memory(&image_data.image)?;
-    let scaled = image.resize_to_fill(256, 256, FilterType::Lanczos3);
+    let scaled = image.resize(256, 256, FilterType::Lanczos3);
 
     let mut cursor = Cursor::new(Vec::new());
     image.write_to(&mut cursor, ImageFormat::WebP)?;

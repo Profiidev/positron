@@ -1,21 +1,24 @@
 <script lang="ts">
   import * as Tabs from "$lib/components/ui/tabs";
   import * as Card from "$lib/components/ui/card";
-  import type { Apod } from "$lib/backend/services/types.svelte";
+  import type { Apod, ApodInfo } from "$lib/backend/services/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { AspectRatio } from "$lib/components/ui/aspect-ratio";
   import Datepicker from "$lib/components/util/datepicker.svelte";
   import { getLocalTimeZone, now } from "@internationalized/date";
   import {
     apod,
+    apod_info_list,
     getApodDate,
     setApodDate,
   } from "$lib/backend/services/stores.svelte";
   import { Button } from "$lib/components/ui/button";
   import { set_good } from "$lib/backend/services/apod.svelte";
-    import { LoaderCircle } from "lucide-svelte";
+  import { LoaderCircle } from "lucide-svelte";
+  import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
 
   let current_image: Apod | undefined = $derived(apod.value);
+  let apods: ApodInfo[] | undefined = $derived(apod_info_list.value);
   let imageLoading = $state(false);
   let isLoading = $state(false);
   let date = $state(getApodDate());
@@ -38,8 +41,8 @@
   };
 </script>
 
-<Tabs.Root value="today" class="m-4">
-  <Tabs.List class="ml-10 md:ml-0">
+<Tabs.Root value="today" class="p-4 h-full flex flex-col overflow-hidden">
+  <Tabs.List class="ml-10 md:ml-0 w-fit">
     <Tabs.Trigger value="today">Today</Tabs.Trigger>
     <Tabs.Trigger value="library">Library</Tabs.Trigger>
   </Tabs.List>
@@ -83,5 +86,25 @@
       </Card.Content>
     </Card.Root>
   </Tabs.Content>
-  <Tabs.Content value="library"></Tabs.Content>
+  <Tabs.Content value="library" class="flex-1 min-h-0">
+    <ScrollArea orientation={"vertical"} class="h-full rounded">
+      <div
+        class="grid w-full gap-3 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
+      >
+        {#if apods}
+          {#each apods as apod}
+            <div class="w-72 aspect-square">
+              <img
+                class="rounded object-contain h-auto w-auto"
+                src={`data:image/webp;base64, ${apod.image}`}
+                alt="Apod"
+              />
+              <p class="mt-1">{apod.title}</p>
+              <p class="text-muted-foreground">by {apod.user.name}</p>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </ScrollArea>
+  </Tabs.Content>
 </Tabs.Root>
