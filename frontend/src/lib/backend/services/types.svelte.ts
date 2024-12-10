@@ -7,8 +7,11 @@ export interface ApodInfo {
   user: UserInfo;
 }
 
-export interface Apod {
+export interface ApodData {
   title: string;
-  image: string;
   user?: UserInfo;
+}
+
+export interface Apod {
+  image: string;
 }

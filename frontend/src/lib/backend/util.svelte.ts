@@ -18,15 +18,17 @@ export const post = async <T>(
   res_type: ResponseType,
   content_type: ContentType,
   body: any,
+  signal?: AbortSignal,
 ): Promise<T | RequestError> => {
-  return await request(path, "POST", res_type, content_type, body);
+  return await request(path, "POST", res_type, content_type, body, signal);
 };
 
 export const get = async <T>(
   path: string,
   res_type: ResponseType,
+  signal?: AbortSignal,
 ): Promise<T | RequestError> => {
-  return await request(path, "GET", res_type);
+  return await request(path, "GET", res_type, undefined, undefined, signal);
 };
 
 const request = async <T>(
@@ -35,6 +37,7 @@ const request = async <T>(
   res_type: ResponseType,
   content_type?: ContentType,
   body?: any,
+  signal?: AbortSignal,
 ): Promise<T | RequestError> => {
   let headers;
   if (content_type && body) {
@@ -60,6 +63,7 @@ const request = async <T>(
       method,
       headers,
       body,
+      signal,
     });
 
     switch (res.status) {

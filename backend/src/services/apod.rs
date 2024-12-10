@@ -170,17 +170,28 @@ async fn get_image_info(
   Ok(Json(res))
 }
 
+#[derive(Serialize)]
+struct GetRes {
+  image: String,
+}
+
 #[post("/get_image", data = "<req>")]
 async fn get_image(
   auth: JwtClaims<JwtBase>,
   s3: &State<S3>,
   req: Json<GetReq>,
   conn: Connection<'_, DB>,
-) -> Result<String> {
+) -> Result<Json<GetRes>> {
   let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-  let image = s3.folders().apod().download(&file_name).await?;
-  Ok(BASE64_STANDARD.encode(image))
+  let image = s3
+    .folders()
+    .apod()
+    .download(&format!("{}.webp", file_name))
+    .await?;
+  Ok(Json(GetRes {
+    image: BASE64_STANDARD.encode(image),
+  }))
 }

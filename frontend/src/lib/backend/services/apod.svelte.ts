@@ -1,6 +1,6 @@
 import { ContentType, ResponseType } from "../types.svelte";
 import { get, post } from "../util.svelte";
-import type { Apod, ApodInfo } from "./types.svelte";
+import type { Apod, ApodData, ApodInfo } from "./types.svelte";
 
 export const list_apods = async () => {
   let ret = await get<ApodInfo[]>("/services/apod/list", ResponseType.Json);
@@ -9,7 +9,22 @@ export const list_apods = async () => {
   }
 };
 
-export const get_image = async (date: string) => {
+export const get_image_info = async (date: string) => {
+  let ret = await post<ApodData>(
+    "/services/apod/get_image_info",
+    ResponseType.Json,
+    ContentType.Json,
+    JSON.stringify({
+      date,
+    }),
+  );
+
+  if (typeof ret === "object") {
+    return ret;
+  }
+};
+
+export const get_image = async (date: string, signal?: AbortSignal) => {
   let ret = await post<Apod>(
     "/services/apod/get_image",
     ResponseType.Json,
@@ -17,6 +32,7 @@ export const get_image = async (date: string) => {
     JSON.stringify({
       date,
     }),
+    signal,
   );
 
   if (typeof ret === "object") {
