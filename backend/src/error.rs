@@ -17,6 +17,8 @@ pub enum Error {
   InternalServerError,
   #[error("Conflict")]
   Conflict,
+  #[error("Gone")]
+  Gone,
   #[error("SerdeJson Error {source:?}")]
   SerdeJson {
     #[from]
@@ -72,13 +74,24 @@ pub enum Error {
     #[from]
     source: MailError,
   },
+  #[error("Reqwest Error {source:?}")]
+  Reqwest {
+    #[from]
+    source: reqwest::Error,
+  },
+  #[error("S3 Error {source:?}")]
+  S3 {
+    #[from]
+    source: crate::s3::error::S3Error,
+  },
 }
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
     match self {
       Self::Unauthorized => Status::Unauthorized.respond_to(request),
-      Self::InternalServerError | Self::Mail { .. } => {
+      Self::Gone => Status::Gone.respond_to(request),
+      Self::InternalServerError | Self::Mail { .. } | Self::Reqwest { .. } => {
         Status::InternalServerError.respond_to(request)
       }
       Self::Conflict => Status::Conflict.respond_to(request),

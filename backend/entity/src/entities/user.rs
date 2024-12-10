@@ -23,12 +23,20 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+  #[sea_orm(has_many = "super::apod::Entity")]
+  Apod,
   #[sea_orm(has_many = "super::group_user::Entity")]
   GroupUser,
   #[sea_orm(has_many = "super::o_auth_client_user::Entity")]
   OAuthClientUser,
   #[sea_orm(has_many = "super::passkey::Entity")]
   Passkey,
+}
+
+impl Related<super::apod::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Apod.def()
+  }
 }
 
 impl Related<super::group_user::Entity> for Entity {

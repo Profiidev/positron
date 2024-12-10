@@ -22,6 +22,7 @@ pub enum UpdateType {
   OAuthScope,
   OAuthPolicy,
   OAuthClient,
+  Apod,
 }
 
 impl UpdateState {

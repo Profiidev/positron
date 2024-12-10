@@ -5,4 +5,5 @@ export enum UpdateType {
   OAuthScope = "OAuthScope",
   OAuthPolicy = "OAuthPolicy",
   OAuthClient = "OAuthClient",
+  Apod = "Apod",
 }
