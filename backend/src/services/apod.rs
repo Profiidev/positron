@@ -21,7 +21,7 @@ use crate::{
 use super::state::ApodState;
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![set_good, get_image, list]
+  rocket::routes![set_good, get_image_info, list, get_image]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/apod", base)))
     .collect()
@@ -101,39 +101,30 @@ struct GetReq {
 }
 
 #[derive(Serialize)]
-struct GetRes {
+struct GetInfoRes {
   title: String,
-  image: String,
   user: Option<BasicUserInfo>,
 }
 
-#[post("/get_image", data = "<req>")]
-async fn get_image(
+#[post("/get_image_info", data = "<req>")]
+async fn get_image_info(
   auth: JwtClaims<JwtBase>,
   conn: Connection<'_, DB>,
   state: &State<ApodState>,
   s3: &State<S3>,
   req: Json<GetReq>,
-) -> Result<Json<GetRes>> {
+) -> Result<Json<GetInfoRes>> {
   let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
-  let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
   let res = if let Some((apod, user)) = db
     .tables()
     .apod()
     .get_for_date(req.date.date_naive())
     .await?
   {
-    let image = s3
-      .folders()
-      .apod()
-      .download(&format!("{}.webp", file_name))
-      .await?;
-
-    GetRes {
+    GetInfoRes {
       title: apod.title,
-      image: BASE64_STANDARD.encode(image),
       user,
     }
   } else {
@@ -150,6 +141,7 @@ async fn get_image(
     let image = cursor.into_inner();
     let image_scaled = scaled_cursor.into_inner();
 
+    let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
     s3.folders()
       .apod()
       .upload(&format!("{}.webp", file_name), &image)
@@ -169,12 +161,26 @@ async fn get_image(
       })
       .await?;
 
-    GetRes {
+    GetInfoRes {
       title: image_data.title,
-      image: BASE64_STANDARD.encode(image),
       user: None,
     }
   };
 
   Ok(Json(res))
+}
+
+#[post("/get_image", data = "<req>")]
+async fn get_image(
+  auth: JwtClaims<JwtBase>,
+  s3: &State<S3>,
+  req: Json<GetReq>,
+  conn: Connection<'_, DB>,
+) -> Result<String> {
+  let db = conn.into_inner();
+  Permission::check(db, auth.sub, Permission::ApodList).await?;
+
+  let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
+  let image = s3.folders().apod().download(&file_name).await?;
+  Ok(BASE64_STANDARD.encode(image))
 }
