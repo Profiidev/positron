@@ -108,5 +108,8 @@ export const create_updater = <T>(
 
       return value;
     },
+    update: async () => {
+      update().then((v) => (value = v));
+    },
   };
 };

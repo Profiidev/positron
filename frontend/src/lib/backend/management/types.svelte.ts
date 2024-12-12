@@ -92,12 +92,17 @@ export enum Permission {
   OAuthClientDelete = "OAuthClientDelete",
   OAuthClientList = "OAuthClientList",
   OAuthClientEdit = "OAuthClientEdit",
+
+  //apod list
+  ApodList = "ApodList",
+  ApodSelect = "ApodSelect",
 }
 
 enum PermissionGroups {
   User = "User",
   Group = "Group",
   OAuthClient = "OAuthClient",
+  Apod = "Apod",
 }
 
 export const getPermissionGroups = () => {

@@ -1,12 +1,29 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as Collapsible from "$lib/components/ui/collapsible";
-  import { ChevronRight, KeyRound, Users } from "lucide-svelte";
+  import { ChevronRight, Image, KeyRound, Users } from "lucide-svelte";
   import { page } from "$app/stores";
   import { Permission } from "$lib/backend/management/types.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
 
   const allItems = [
+    {
+      title: "Services",
+      items: [
+        {
+          title: "Image",
+          icon: Image,
+          isActive: true,
+          items: [
+            {
+              title: "Apod",
+              url: "/services/apod",
+              permission: Permission.ApodList,
+            },
+          ],
+        },
+      ],
+    },
     {
       title: "Management",
       items: [

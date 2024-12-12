@@ -25,6 +25,7 @@
     "paneforge": "0.0.6"
   },
   "devDependencies": {
+    "@internationalized/date": "^3.6.0",
     "@sveltejs/adapter-node": "^5.2.9",
     "@sveltejs/adapter-static": "3.0.6",
     "@sveltejs/kit": "2.10.1",

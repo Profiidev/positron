@@ -46,7 +46,7 @@
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
 {#if !noLayout.includes($page.url.pathname)}
-  <Sidebar.Provider>
+  <Sidebar.Provider class="h-full">
     <SidebarApp />
     <Sidebar.Trigger class="absolute left-3 top-3 flex md:hidden" />
     <main class="w-full h-full">
