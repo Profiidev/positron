@@ -69,9 +69,10 @@ async fn edit(
 
   db.tables()
     .user()
-    .edit_user(user.id, req.0.permissions, req.0.name)
+    .edit_user(user.id, req.0.permissions, req.0.name.clone())
     .await?;
   updater.broadcast_message(UpdateType::User).await;
+  log::info!("User {} edited user {}", auth.sub, req.0.name);
 
   Ok(())
 }
@@ -106,7 +107,7 @@ async fn create(
     .user()
     .create_user(user::Model {
       id: Uuid::new_v4(),
-      name: req.0.name,
+      name: req.0.name.clone(),
       image: "".into(),
       email: req.0.email,
       password,
@@ -120,6 +121,7 @@ async fn create(
     })
     .await?;
   updater.broadcast_message(UpdateType::User).await;
+  log::info!("User {} created user {}", auth.sub, req.0.name);
 
   Ok(())
 }
@@ -142,6 +144,7 @@ async fn delete(
 
   db.tables().user().delete_user(req.uuid).await?;
   updater.broadcast_message(UpdateType::User).await;
+  log::info!("User {} deleted user {}", auth.sub, req.uuid);
 
   Ok(())
 }

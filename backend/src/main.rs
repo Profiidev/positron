@@ -28,6 +28,8 @@ async fn rocket() -> _ {
   #[cfg(debug_assertions)]
   dotenv().ok();
 
+  kafka_logger::init_from_env();
+
   let cors = cors();
 
   let url = std::env::var("DB_URL").expect("Failed to load DB_URL");

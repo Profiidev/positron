@@ -1,7 +1,7 @@
 import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
-} from "@simplewebauthn/types";
+} from "@simplewebauthn/browser";
 import { ContentType, RequestError, ResponseType } from "../types.svelte";
 import { get, post } from "../util.svelte";
 import type { Passkey } from "./types.svelte";

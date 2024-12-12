@@ -67,7 +67,7 @@ async fn create(
 
   let model = o_auth_scope::Model {
     id: Uuid::new_v4(),
-    name: req.0.name,
+    name: req.0.name.clone(),
     scope: req.0.scope,
   };
 
@@ -76,6 +76,7 @@ async fn create(
     .create_scope(model, policy)
     .await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
+  log::info!("User {} created oauth_scope {}", auth.sub, req.0.name);
 
   Ok(())
 }
@@ -97,6 +98,7 @@ async fn delete(
 
   db.tables().oauth_scope().delete_scope(req.0.uuid).await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
+  log::info!("User {} deleted oauth_scope {}", auth.sub, req.uuid);
 
   Ok(())
 }
@@ -126,8 +128,10 @@ async fn edit(
     .get_policy_by_info(req.policy.clone())
     .await?;
 
+  let name = req.name.clone();
   db.tables().oauth_scope().edit_scope(req.0, policy).await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
+  log::info!("User {} edited oauth_scope {}", auth.sub, name);
 
   Ok(())
 }

@@ -14,7 +14,7 @@ pub struct UpdateState {
   sessions: Sessions,
 }
 
-#[derive(Serialize, Copy, Clone)]
+#[derive(Serialize, Copy, Clone, Debug)]
 pub enum UpdateType {
   Passkey,
   User,
@@ -38,6 +38,7 @@ impl UpdateState {
   }
 
   pub async fn broadcast_message(&self, msg: UpdateType) {
+    log::debug!("Message Broadcast: {:?}", &msg);
     for sessions in self.sessions.lock().await.values() {
       for session in sessions.values() {
         let _ = session.send(msg).await;
@@ -46,6 +47,7 @@ impl UpdateState {
   }
 
   pub async fn send_message(&self, user: Uuid, msg: UpdateType) {
+    log::debug!("Message: {:?} to {}", &msg, user);
     if let Some(sessions) = self.sessions.lock().await.get(&user) {
       for session in sessions.values() {
         let _ = session.send(msg).await;

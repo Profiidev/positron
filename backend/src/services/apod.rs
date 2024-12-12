@@ -91,6 +91,7 @@ async fn set_good(
     .set_good(req.date.date_naive(), auth.sub, req.good)
     .await?;
 
+  log::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
   updater.broadcast_message(UpdateType::Apod).await;
 
   Ok(())

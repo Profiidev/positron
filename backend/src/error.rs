@@ -88,6 +88,7 @@ pub enum Error {
 
 impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
   fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+    log::error!("{:?}", &self);
     match self {
       Self::Unauthorized => Status::Unauthorized.respond_to(request),
       Self::Gone => Status::Gone.respond_to(request),
