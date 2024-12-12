@@ -2,7 +2,7 @@ import type { UserInfo } from "../management/types.svelte";
 
 export interface ApodInfo {
   title: string;
-  date: Date;
+  date: string;
   image: string;
   user: UserInfo;
 }

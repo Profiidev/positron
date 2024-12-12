@@ -3,9 +3,12 @@
   import * as Card from "$lib/components/ui/card";
   import type { ApodData, ApodInfo } from "$lib/backend/services/types.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { AspectRatio } from "$lib/components/ui/aspect-ratio";
   import Datepicker from "$lib/components/util/datepicker.svelte";
-  import { getLocalTimeZone, now } from "@internationalized/date";
+  import {
+    getLocalTimeZone,
+    now,
+    parseAbsolute,
+  } from "@internationalized/date";
   import {
     apod,
     getApodImage,
@@ -17,6 +20,7 @@
   import { set_good } from "$lib/backend/services/apod.svelte";
   import { LoaderCircle } from "lucide-svelte";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
+  import { DateTime } from "luxon";
 
   let current_data: ApodData | undefined = $derived(apod.value);
   let current_image: string | undefined = $derived(getApodImage());
@@ -25,6 +29,7 @@
   let imageLoading = $state(false);
   let isLoading = $state(false);
   let date = $state(getApodDate());
+  let currentTab = $state("today");
 
   $effect(() => {
     dataLoading = true;
@@ -49,9 +54,17 @@
     isLoading = true;
     await set_good(!current_data?.user, date.toDate().toISOString());
   };
+
+  const itemClick = (data: string) => {
+    date = parseAbsolute(data, getLocalTimeZone());
+    currentTab = "today";
+  };
 </script>
 
-<Tabs.Root value="today" class="p-4 h-full flex flex-col overflow-hidden">
+<Tabs.Root
+  bind:value={currentTab}
+  class="p-4 h-full flex flex-col overflow-hidden"
+>
   <Tabs.List class="ml-10 md:ml-0 w-fit">
     <Tabs.Trigger value="today">Today</Tabs.Trigger>
     <Tabs.Trigger value="library">Library</Tabs.Trigger>
@@ -68,14 +81,18 @@
       <Card.Content class="flex flex-col flex-1 min-h-0">
         {#if current_data && !imageLoading && current_image}
           <img
-            class="rounded flex-1 min-h-0 w-auto"
+            class="rounded flex-1 min-h-0 object-contain"
             src={`data:image/webp;base64, ${current_image}`}
             alt="Apod"
           />
         {:else}
-          <AspectRatio ratio={16 / 9} class="flex-1 min-h-0">
-            <Skeleton class="w-full h-full" />
-          </AspectRatio>
+          <div class="flex-1 min-h-0">
+            <div class="w-full h-full flex justify-center items-center">
+              <Skeleton
+                class="w-full h-auto aspect-video max-w-full max-h-full"
+              />
+            </div>
+          </div>
         {/if}
         <div class="flex flex-row mt-6">
           <Datepicker bind:value={date} end={now(getLocalTimeZone())} />
@@ -99,18 +116,29 @@
   <Tabs.Content value="library" class="flex-1 min-h-0">
     <ScrollArea orientation={"vertical"} class="h-full rounded">
       <div
-        class="grid w-full gap-3 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
+        class="grid w-full gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]"
       >
         {#if apods}
           {#each apods as apod}
             <div class="w-72 aspect-square">
-              <img
-                class="rounded object-contain h-auto w-auto"
-                src={`data:image/webp;base64, ${apod.image}`}
-                alt="Apod"
-              />
-              <p class="mt-1">{apod.title}</p>
-              <p class="text-muted-foreground">by {apod.user.name}</p>
+              <Button
+                variant="ghost"
+                class="h-full"
+                onclick={() => itemClick(apod.date)}
+              >
+                <img
+                  class="rounded object-contain h-auto w-auto"
+                  src={`data:image/webp;base64, ${apod.image}`}
+                  alt="Apod"
+                />
+              </Button>
+              <p class="mt-1 ml-4">{apod.title}</p>
+              <p class="text-muted-foreground ml-4">by {apod.user.name}</p>
+              <p class="text-muted-foreground ml-4">
+                on {DateTime.fromISO(apod.date)
+                  .setLocale("de")
+                  .toLocaleString(DateTime.DATE_MED)}
+              </p>
             </div>
           {/each}
         {/if}
