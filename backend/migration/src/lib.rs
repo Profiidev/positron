@@ -9,6 +9,7 @@ mod m20241204_191716_create_group_table;
 mod m20241204_195924_create_oauth_client_table;
 mod m20241204_195934_create_oauth_scope_table;
 mod m20241204_195941_create_oauth_policy_table;
+mod m20241209_084022_create_apod_table;
 
 pub struct Migrator;
 
@@ -25,6 +26,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20241204_195924_create_oauth_client_table::Migration),
       Box::new(m20241204_195934_create_oauth_scope_table::Migration),
       Box::new(m20241204_195941_create_oauth_policy_table::Migration),
+      Box::new(m20241209_084022_create_apod_table::Migration),
     ]
   }
 }

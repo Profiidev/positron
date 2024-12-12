@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Deserialize, Hash)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "permission")]
 pub enum Permission {
+  #[sea_orm(string_value = "apod_list")]
+  ApodList,
+  #[sea_orm(string_value = "apod_select")]
+  ApodSelect,
   #[sea_orm(string_value = "group_create")]
   GroupCreate,
   #[sea_orm(string_value = "group_delete")]
