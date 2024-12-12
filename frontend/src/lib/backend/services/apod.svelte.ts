@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from "../types.svelte";
+import { ContentType, RequestError, ResponseType } from "../types.svelte";
 import { get, post } from "../util.svelte";
 import type { Apod, ApodData, ApodInfo } from "./types.svelte";
 
@@ -21,6 +21,8 @@ export const get_image_info = async (date: string) => {
 
   if (typeof ret === "object") {
     return ret;
+  } else if (ret === RequestError.Gone) {
+    return null;
   }
 };
 

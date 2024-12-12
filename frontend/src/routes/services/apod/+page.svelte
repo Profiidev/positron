@@ -22,7 +22,7 @@
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { DateTime } from "luxon";
 
-  let current_data: ApodData | undefined = $derived(apod.value);
+  let current_data: ApodData | undefined | null = $derived(apod.value);
   let current_image: string | undefined = $derived(getApodImage());
   let apods: ApodInfo[] | undefined = $derived(apod_info_list.value);
   let dataLoading = $state(false);
@@ -74,7 +74,7 @@
       <Card.Header>
         {#if current_data && !dataLoading}
           {current_data.title}
-        {:else}
+        {:else if current_data !== null}
           <Skeleton class="h-5 w-52" />
         {/if}
       </Card.Header>
@@ -85,6 +85,10 @@
             src={`data:image/webp;base64, ${current_image}`}
             alt="Apod"
           />
+        {:else if current_data === null}
+          <div class="flex-1 min-h-0 flex justify-center items-center">
+            <p>No image available for today</p>
+          </div>
         {:else}
           <div class="flex-1 min-h-0">
             <div class="w-full h-full flex justify-center items-center">

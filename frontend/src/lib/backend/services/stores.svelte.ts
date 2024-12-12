@@ -19,7 +19,7 @@ export const getApodDate = () => {
   return apod_date;
 };
 
-export const apod = create_updater<ApodData>(UpdateType.Apod, async () => {
+export const apod = create_updater<ApodData | null>(UpdateType.Apod, async () => {
   controller.abort();
 
   let ret = await get_image_info(apod_date.toDate().toISOString());

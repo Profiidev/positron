@@ -73,6 +73,8 @@ const request = async <T>(
         return RequestError.Unauthorized;
       case 409:
         return RequestError.Conflict;
+      case 410:
+        return RequestError.Gone;
       default:
         return RequestError.Other;
     }
