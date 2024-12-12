@@ -122,6 +122,7 @@ async fn edit(
     .edit_client(req.0, client.id, users, groups)
     .await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;
+  log::info!("User {} updated oauth_client {}", auth.sub, client.name);
 
   Ok(())
 }
@@ -189,7 +190,7 @@ async fn create(
   db.tables()
     .oauth_client()
     .create_client(o_auth_client::Model {
-      name: req.0.name,
+      name: req.name.clone(),
       id: *client_id,
       redirect_uri: req.0.redirect_uri.to_string(),
       additional_redirect_uris: req
@@ -204,6 +205,7 @@ async fn create(
     })
     .await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;
+  log::info!("User {} created oauth_client {}", auth.sub, req.0.name);
 
   lock.remove(&auth.sub);
 
@@ -228,6 +230,7 @@ async fn delete(
   let uuid = Uuid::from_str(&req.uuid)?;
   db.tables().oauth_client().remove_client(uuid).await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;
+  log::info!("User {} deleted oauth_client {}", auth.sub, req.uuid);
 
   Ok(())
 }
@@ -244,12 +247,13 @@ struct ResetRes {
 
 #[post("/reset", data = "<req>")]
 async fn reset(
-  _auth: JwtClaims<JwtBase>,
+  auth: JwtClaims<JwtBase>,
   conn: Connection<'_, DB>,
   req: Json<ResetReq>,
   state: &State<ClientState>,
 ) -> Result<Json<ResetRes>> {
   let db = conn.into_inner();
+  Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
   let client = db.tables().oauth_client().get_client(req.client_id).await?;
 
   let mut rng = OsRng {};
@@ -260,6 +264,11 @@ async fn reset(
     .oauth_client()
     .set_secret_hash(client.id, client_secret)
     .await?;
+  log::info!(
+    "User {} reset secret for oauth_client {}",
+    auth.sub,
+    client.name
+  );
 
   Ok(Json(ResetRes { secret }))
 }

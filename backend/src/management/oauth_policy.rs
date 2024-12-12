@@ -66,7 +66,7 @@ async fn create(
 
   let model = o_auth_policy::Model {
     id: Uuid::new_v4(),
-    name: req.0.name,
+    name: req.name.clone(),
     claim: req.0.claim,
     default: req.0.default,
   };
@@ -76,6 +76,7 @@ async fn create(
     .create_policy(model, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
+  log::info!("User {} created oauth_policy {}", auth.sub, req.0.name);
 
   Ok(())
 }
@@ -97,6 +98,7 @@ async fn delete(
 
   db.tables().oauth_policy().delete_policy(req.0.uuid).await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
+  log::info!("User {} deleted oauth_policy {}", auth.sub, req.uuid);
 
   Ok(())
 }
@@ -124,11 +126,13 @@ async fn edit(
 
   let groups = db.tables().groups().get_groups_by_info(group).await?;
 
+  let name = req.name.clone();
   db.tables()
     .oauth_policy()
     .update_policy(req.0, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
+  log::info!("User {} edited oauth_policy {}", auth.sub, name);
 
   Ok(())
 }

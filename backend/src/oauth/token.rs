@@ -111,7 +111,7 @@ async fn token<'r>(
   let groups = groups.into_iter().map(|group| group.name).collect();
 
   let name = if code_info.scope.contains("profile") {
-    Some(user.name)
+    Some(user.name.clone())
   } else {
     None
   };
@@ -148,6 +148,7 @@ async fn token<'r>(
     None
   };
 
+  log::info!("Client {} got token for {}", auth.client_id, user.name);
   Ok(Json(TokenRes {
     access_token: token,
     id_token,

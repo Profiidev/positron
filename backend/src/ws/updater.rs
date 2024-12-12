@@ -20,6 +20,7 @@ async fn update(
   ws: WebSocket,
   state: &State<UpdateState>,
 ) -> Channel<'static> {
+  log::info!("User {} connected to updater ws", auth.sub);
   let (uuid, mut recv, sessions) = state.create_session(auth.sub).await;
 
   ws.channel(move |mut stream| {

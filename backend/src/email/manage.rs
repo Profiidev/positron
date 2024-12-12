@@ -98,6 +98,7 @@ async fn finish_change(
     .change_email(auth.sub, info.new_email.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::User).await;
+  log::info!("User {} changed their email to {}", auth.sub, info.new_email);
 
   state_lock.remove(&auth.sub);
 

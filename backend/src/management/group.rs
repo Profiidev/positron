@@ -70,6 +70,7 @@ async fn edit(
     .await?;
   db.tables().groups().edit(group.id, req.0, users).await?;
   updater.broadcast_message(UpdateType::Group).await;
+  log::info!("User {} updated group {}", auth.sub, group.name);
 
   Ok(())
 }
@@ -103,13 +104,14 @@ async fn create(
   db.tables()
     .groups()
     .create_group(group::Model {
-      name: req.0.name,
+      name: req.0.name.clone(),
       id: Uuid::new_v4(),
       access_level: req.0.access_level,
       permissions: Vec::new(),
     })
     .await?;
   updater.broadcast_message(UpdateType::Group).await;
+  log::info!("User {} created group {}", auth.sub, req.name);
 
   Ok(())
 }
@@ -135,6 +137,7 @@ async fn delete(
 
   db.tables().groups().delete_group(req.uuid).await?;
   updater.broadcast_message(UpdateType::Group).await;
+  log::info!("User {} deleted group {}", auth.sub, req.uuid);
 
   Ok(())
 }

@@ -105,6 +105,7 @@ async fn change_image(
 
   db.tables().user().change_image(auth.sub, cropped).await?;
   updater.broadcast_message(UpdateType::User).await;
+  log::info!("User {} changed their image", auth.sub);
 
   Ok(Status::Ok)
 }
@@ -128,6 +129,7 @@ async fn update_profile(
     .update_profile(auth.sub, req.0.name)
     .await?;
   updater.broadcast_message(UpdateType::User).await;
+  log::info!("User {} edited their profile", auth.sub);
 
   Ok(Status::Ok)
 }

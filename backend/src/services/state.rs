@@ -32,6 +32,7 @@ impl Default for ApodState {
 
 impl ApodState {
   pub async fn get_image(&self, date: DateTime<Utc>) -> Result<Option<Image>, reqwest::Error> {
+    log::debug!("Loading new Apod from {}", date);
     let formatted_date = date.date_naive().format("%Y-%m-%d").to_string();
 
     let res: ImageRes = self

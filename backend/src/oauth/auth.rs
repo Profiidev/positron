@@ -144,6 +144,7 @@ async fn authorize_confirm(
 
   let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
 
+  log::info!("User {} logged in to {}", auth.sub, client.name);
   Ok(Json(AuthRes {
     location: url.to_string(),
   }))
