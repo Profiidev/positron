@@ -4,6 +4,7 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use entity::{apod, sea_orm_active_enums::Permission};
 use image::{imageops::FilterType, ImageFormat};
+use rand::{rngs::OsRng, seq::SliceRandom};
 use rocket::{get, post, serde::json::Json, Route, State};
 use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
@@ -21,7 +22,7 @@ use crate::{
 use super::state::ApodState;
 
 pub fn routes() -> Vec<Route> {
-  rocket::routes![set_good, get_image_info, list, get_image]
+  rocket::routes![set_good, get_image_info, list, get_image, random]
     .into_iter()
     .flat_map(|route| route.map_base(|base| format!("{}{}", "/apod", base)))
     .collect()
@@ -194,4 +195,24 @@ async fn get_image(
   Ok(Json(GetRes {
     image: BASE64_STANDARD.encode(image),
   }))
+}
+
+#[get("/random")]
+async fn random(s3: &State<S3>, conn: Connection<'_, DB>) -> Result<Vec<u8>> {
+  let db = conn.into_inner();
+  let list = db.tables().apod().list().await?;
+
+  let mut rng = OsRng {};
+  let Some(choice) = list.choose(&mut rng) else {
+    return Err(Error::Gone);
+  };
+
+  let file_name = choice.date.format("%Y-%m-%d").to_string();
+  let image = s3
+    .folders()
+    .apod()
+    .download(&format!("{}.webp", file_name))
+    .await?;
+
+  Ok(image)
 }
