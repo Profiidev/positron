@@ -111,7 +111,8 @@
     const info = filter_keys
       .map((k) => (row.original as any)[k] as string)
       .filter(Boolean)
-      .join(" ");
+      .join(" ")
+      .toLowerCase();
 
     let searchTerms = Array.isArray(filterValues)
       ? filterValues
