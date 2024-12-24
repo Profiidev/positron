@@ -3,6 +3,7 @@
   import { Atom, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
   import User from "./user.svelte";
   import Main from "./main.svelte";
+  import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
 
   let sidebar = Sidebar.useSidebar();
   let isOpen = $derived(sidebar.props.open());
@@ -49,7 +50,9 @@
   </Sidebar.Header>
   <Sidebar.Separator />
   <Sidebar.Content>
-    <Main />
+    <ScrollArea orientation={"vertical"}>
+      <Main />
+    </ScrollArea>
   </Sidebar.Content>
   <Sidebar.Separator />
   <Sidebar.Footer>
