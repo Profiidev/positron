@@ -27,8 +27,8 @@ webauthn-rs = { version = "0.5.1", features = ["conditional-ui"] }
 webauthn-rs-proto = "0.5.0"
 entity = { path = "entity" }
 migration = { path = "migration" }
-sea-orm-rocket = "0.5.4"
+sea-orm-rocket = "0.5.5"
 rust-s3 = "0.35.1"
-reqwest = { version = "0.12.9", features = ["json"] }
+reqwest = { version = "0.12.10", features = ["json"] }
 log = "0.4.22"
 kafka-logger = "0.1.0"
