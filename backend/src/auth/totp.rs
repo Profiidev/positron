@@ -39,9 +39,9 @@ struct TotpSetupRes {
 }
 
 #[get("/start_setup")]
-async fn start_setup<'a>(
+async fn start_setup(
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'a, DB>,
+  conn: Connection<'_, DB>,
   state: &State<TotpState>,
 ) -> Result<Json<TotpSetupRes>> {
   let db = conn.into_inner();
