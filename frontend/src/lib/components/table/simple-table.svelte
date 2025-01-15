@@ -111,7 +111,8 @@
     const info = filter_keys
       .map((k) => (row.original as any)[k] as string)
       .filter(Boolean)
-      .join(" ");
+      .join(" ")
+      .toLowerCase();
 
     let searchTerms = Array.isArray(filterValues)
       ? filterValues
@@ -241,14 +242,14 @@
     {/if}
   {/snippet}
 </FormDialog>
-<div class="space-y-3 m-4">
+<div class="space-y-3 m-4 flex-1 flex flex-col">
   <div class="ml-7 md:m-0">
     <h3 class="text-xl font-medium">{title}</h3>
     <p class="text-muted-foreground text-sm">
       {description}
     </p>
   </div>
-  <Table filterColumn="name" {table}>
+  <Table filterColumn="name" {table} class="flex-1 min-h-0">
     <FormDialog
       title={`Create ${label}`}
       description={`Enter the details for the new ${labelLower} below`}

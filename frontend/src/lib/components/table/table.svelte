@@ -8,6 +8,7 @@
   import { Button } from "../ui/button";
   import { ChevronDown } from "lucide-svelte";
   import type { Snippet } from "svelte";
+  import { cn } from "$lib/utils";
 
   type T = $$Generic;
 
@@ -15,12 +16,13 @@
     table: TableType<T>;
     children?: Snippet;
     filterColumn: string;
+    class?: string;
   }
 
-  let { table, children, filterColumn }: Props = $props();
+  let { table, children, filterColumn, class: className }: Props = $props();
 </script>
 
-<div class="w-full">
+<div class={cn("w-full flex flex-col", className)}>
   <div class="flex items-center py-4">
     <Input
       placeholder="Filter entries"
@@ -57,7 +59,7 @@
     </Dropdown.Root>
     {@render children?.()}
   </div>
-  <ScrollArea class="rounded-md border grid" orientation="both">
+  <ScrollArea class="rounded-md border grid flex-1 min-h-0" orientation="both">
     <Table.Root
       class={`min-w-[${table.getHeaderGroups()[0].headers.length * 100}px]`}
     >
