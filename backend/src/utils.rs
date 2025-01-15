@@ -16,8 +16,8 @@ use crate::{
   error::Result,
 };
 
-pub async fn jwt_from_request<'r, C: DeserializeOwned, T: JwtType>(
-  req: &'r Request<'_>,
+pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(
+  req: &Request<'_>,
 ) -> Outcome<C, ()> {
   let mut token = match req.headers().get_one("Authorization") {
     Some(token) => token,

@@ -51,9 +51,9 @@ pub fn routes() -> Vec<Route> {
 }
 
 #[get("/start_registration")]
-async fn start_registration<'a>(
+async fn start_registration(
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'a, DB>,
+  conn: Connection<'_, DB>,
   webauthn: &State<Webauthn>,
   state: &State<PasskeyState>,
 ) -> Result<Json<CreationChallengeResponse>> {
