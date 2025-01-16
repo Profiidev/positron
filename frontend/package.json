@@ -24,10 +24,10 @@
     "paneforge": "0.0.6"
   },
   "devDependencies": {
-    "@internationalized/date": "^3.6.0",
+    "@internationalized/date": "^3.7.0",
     "@sveltejs/adapter-node": "^5.2.11",
     "@sveltejs/adapter-static": "3.0.8",
-    "@sveltejs/kit": "2.15.2",
+    "@sveltejs/kit": "2.15.3",
     "@sveltejs/vite-plugin-svelte": "5.0.3",
     "@tailwindcss/typography": "0.5.16",
     "@tanstack/table-core": "^8.20.5",
