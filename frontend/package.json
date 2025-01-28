@@ -16,7 +16,7 @@
     "@simplewebauthn/browser": "13.1.0",
     "@sveltejs/enhanced-img": "0.4.4",
     "@tauri-apps/api": "2.2.0",
-    "@tauri-apps/plugin-http": "^2.2.0",
+    "@tauri-apps/plugin-http": "^2.3.0",
     "@tauri-apps/plugin-shell": "2.2.0",
     "@types/luxon": "3.4.2",
     "jsencrypt": "3.3.2",
