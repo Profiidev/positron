@@ -22,7 +22,7 @@
   const { form: formData } = $derived(form);
 </script>
 
-<Form.Field {form} name={key}>
+<Form.Field {form} name={key} class="grid gap-1/2">
   <Form.Control>
     {#snippet children({ props })}
       <Form.Label>{label}</Form.Label>
