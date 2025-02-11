@@ -19,17 +19,20 @@ export const getApodDate = () => {
   return apod_date;
 };
 
-export const apod = create_updater<ApodData | null>(UpdateType.Apod, async () => {
-  controller.abort();
+export const apod = create_updater<ApodData | null>(
+  UpdateType.Apod,
+  async () => {
+    controller.abort();
 
-  let ret = await get_image_info(apod_date.toDate().toISOString());
+    let ret = await get_image_info(apod_date.toDate().toISOString());
 
-  controller = new AbortController();
-  get_image(apod_date.toDate().toISOString(), controller.signal).then(
-    (res) => (apod_image = res?.image),
-  );
-  return ret;
-});
+    controller = new AbortController();
+    get_image(apod_date.toDate().toISOString(), controller.signal).then(
+      (res) => (apod_image = res?.image),
+    );
+    return ret;
+  },
+);
 let controller = new AbortController();
 let apod_image: undefined | string = $state();
 

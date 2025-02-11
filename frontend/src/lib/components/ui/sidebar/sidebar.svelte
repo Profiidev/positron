@@ -26,7 +26,7 @@
 {#if collapsible === "none"}
   <div
     class={cn(
-      "bg-sidebar text-sidebar-foreground flex h-full w-[--sidebar-width] flex-col",
+      "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
       className,
     )}
     bind:this={ref}
@@ -36,15 +36,13 @@
   </div>
 {:else if sidebar.isMobile}
   <Sheet.Root
-    controlledOpen
-    open={sidebar.openMobile}
-    onOpenChange={sidebar.setOpenMobile}
+    bind:open={() => sidebar.openMobile, (v) => sidebar.setOpenMobile(v)}
     {...restProps}
   >
     <Sheet.Content
       data-sidebar="sidebar"
       data-mobile="true"
-      class="bg-sidebar text-sidebar-foreground w-[--sidebar-width] p-0 [&>button]:hidden"
+      class="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
       style="--sidebar-width: {SIDEBAR_WIDTH_MOBILE};"
       {side}
     >

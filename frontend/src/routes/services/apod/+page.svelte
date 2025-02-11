@@ -99,7 +99,11 @@
           </div>
         {/if}
         <div class="flex flex-row mt-6">
-          <Datepicker bind:value={date} end={now(getLocalTimeZone())} class={current_data ? "mr-5" : ""} />
+          <Datepicker
+            bind:value={date}
+            end={now(getLocalTimeZone())}
+            class={current_data ? "mr-5" : ""}
+          />
           {#if current_data}
             <Button
               variant={current_data.user ? "destructive" : "default"}

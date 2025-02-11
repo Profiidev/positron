@@ -91,7 +91,7 @@
         variant="outline"
         {...props}
         role="combobox"
-        class="h-10 text-wrap !opacity-100"
+        class="h-10 text-wrap opacity-100!"
         {disabled}
       >
         {#if selected.length === 0}
