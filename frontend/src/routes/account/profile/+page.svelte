@@ -96,11 +96,11 @@
         <div class="relative">
           <Avatar src={infoData.image} class="size-52 rounded-full" />
           <Button
-            class="group absolute hover:backdrop-blur-sm size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
+            class="group absolute hover:backdrop-blur-xs size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
             variant="ghost"
             onclick={startImageUpload}
           >
-            <Upload class="!size-12 hidden group-hover:block" />
+            <Upload class="size-12! hidden group-hover:block" />
             <Label class="sr-only" for="picture">Picture</Label>
             <Input
               bind:ref={imageInput}
@@ -141,7 +141,7 @@
         </div>
       {/snippet}
       {#snippet footer({ children })}
-        {@render children({ className: "!mt-8 ml-auto" })}
+        {@render children({ className: "mt-8! ml-auto" })}
       {/snippet}
     </Form>
   </div>
