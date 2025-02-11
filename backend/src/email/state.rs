@@ -8,7 +8,7 @@ use lettre::{
   transport::smtp::{self, authentication::Credentials},
   Message, SmtpTransport, Transport,
 };
-use rand::{distributions::Uniform, Rng};
+use rand::{distr::Uniform, Rng};
 use rocket::tokio::sync::Mutex;
 use thiserror::Error;
 use uuid::Uuid;
@@ -92,8 +92,8 @@ impl EmailState {
 }
 
 fn gen_code() -> String {
-  rand::thread_rng()
-    .sample_iter(Uniform::new(48, 58))
+  rand::rng()
+    .sample_iter(Uniform::new(48, 58).unwrap())
     .take(6)
     .map(char::from)
     .collect()

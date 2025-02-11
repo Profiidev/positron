@@ -6,7 +6,6 @@ use jsonwebtoken::{
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
-use rand::rngs::OsRng;
 use rocket::{
   async_trait,
   http::{Cookie, SameSite, Status},
@@ -19,6 +18,7 @@ use rocket::{
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
   pkcs8::LineEnding,
+  rand_core::OsRng,
   RsaPrivateKey, RsaPublicKey,
 };
 use sea_orm::DatabaseConnection;

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use rand::rngs::OsRng;
 use rocket::futures::lock::Mutex;
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
   pkcs8::LineEnding,
+  rand_core::OsRng,
   Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
 use sea_orm::DatabaseConnection;

@@ -4,7 +4,7 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use entity::{apod, sea_orm_active_enums::Permission};
 use image::{imageops::FilterType, ImageFormat};
-use rand::{rngs::OsRng, seq::SliceRandom};
+use rand::seq::IndexedRandom;
 use rocket::{get, post, serde::json::Json, Route, State};
 use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
@@ -203,8 +203,7 @@ async fn random(s3: &State<S3>, conn: Connection<'_, DB>) -> Result<Vec<u8>> {
   let db = conn.into_inner();
   let list = db.tables().apod().list().await?;
 
-  let mut rng = OsRng {};
-  let Some(choice) = list.choose(&mut rng) else {
+  let Some(choice) = list.choose(&mut rand::rng()) else {
     return Err(Error::Gone);
   };
 
