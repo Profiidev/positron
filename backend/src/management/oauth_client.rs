@@ -2,8 +2,9 @@ use std::str::FromStr;
 
 use argon2::password_hash::SaltString;
 use entity::{o_auth_client, sea_orm_active_enums::Permission};
-use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use rocket::{get, post, serde::json::Json, Route, State};
+use rsa::rand_core::OsRng;
 use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -138,7 +139,7 @@ async fn start_create(
 
   let mut lock = state.create.lock().await;
 
-  let mut rng = rand::thread_rng();
+  let mut rng = rand::rng();
   let secret: String = (0..32).map(|_| rng.sample(Alphanumeric) as char).collect();
   let client_id = Uuid::new_v4();
 
@@ -256,8 +257,9 @@ async fn reset(
   Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
   let client = db.tables().oauth_client().get_client(req.client_id).await?;
 
-  let mut rng = OsRng {};
-  let secret: String = (0..32).map(|_| rng.sample(Alphanumeric) as char).collect();
+  let secret: String = (0..32)
+    .map(|_| rand::rng().sample(Alphanumeric) as char)
+    .collect();
   let client_secret = hash_secret(&state.pepper, &client.salt, secret.as_bytes())?;
 
   db.tables()
