@@ -63,7 +63,7 @@
 
 <Tabs.Root
   bind:value={currentTab}
-  class="p-4 h-full flex flex-col overflow-hidden"
+  class="p-4 h-full flex flex-col overflow-hidden w-full"
 >
   <Tabs.List class="ml-10 md:ml-0 w-fit">
     <Tabs.Trigger value="today">Today</Tabs.Trigger>
