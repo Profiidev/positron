@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_SCOPES: [&str; 3] = ["openid", "email", "profile"];
+pub const DEFAULT_SCOPES: [&str; 4] = ["openid", "email", "profile", "image"];
 
 #[derive(Default, Clone)]
 pub struct Scope(Vec<String>);
