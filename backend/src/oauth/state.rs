@@ -34,16 +34,20 @@ pub struct AuthorizeState {
 pub struct ConfigurationState {
   pub issuer: String,
   pub backend_url: String,
+  pub backend_url_internal: String,
 }
 
 impl Default for ConfigurationState {
   fn default() -> Self {
     let issuer = std::env::var("OIDC_ISSUER").expect("Failed to load OIDC_ISSUER");
     let backend_url = std::env::var("OIDC_BACKEND_URL").expect("Failed to load OIDC_BACKEND_URL");
+    let backend_url_internal =
+      std::env::var("OIDC_BACKEND_INTERNAL").expect("Failed to load OIDC_BACKEND_INTERNAL");
 
     Self {
       issuer,
       backend_url,
+      backend_url_internal,
     }
   }
 }
