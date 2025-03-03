@@ -31,11 +31,12 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[get("/<client_id>/.well-known/openid-configuration")]
+#[get("/<client_id>/.well-known/openid-configuration?<internal>")]
 async fn config(
   client_id: &str,
   state: &State<ConfigurationState>,
   conn: Connection<'_, DB>,
+  internal: Option<bool>,
 ) -> Result<Json<Configuration>> {
   let db = conn.into_inner();
 
@@ -47,15 +48,21 @@ async fn config(
       .collect::<Vec<String>>(),
   );
 
+  let backend_url = if internal == Some(true) {
+    &state.backend_url_internal
+  } else {
+    &state.backend_url
+  };
+
   Ok(Json(Configuration {
     issuer: state.issuer.clone(),
-    authorization_endpoint: format!("{}/authorize", &state.backend_url),
-    token_endpoint: format!("{}/token", &state.backend_url),
-    userinfo_endpoint: format!("{}/user", &state.backend_url),
-    end_session_endpoint: format!("{}/logout/{}", &state.backend_url, client_id),
-    revocation_endpoint: format!("{}/revoke", &state.backend_url),
+    authorization_endpoint: format!("{}/authorize", backend_url),
+    token_endpoint: format!("{}/token", backend_url),
+    userinfo_endpoint: format!("{}/user", backend_url),
+    end_session_endpoint: format!("{}/logout/{}", backend_url, client_id),
+    revocation_endpoint: format!("{}/revoke", backend_url),
     response_types_supported: vec!["code".into()],
-    jwks_uri: format!("{}/jwks", &state.backend_url),
+    jwks_uri: format!("{}/jwks", backend_url),
     grant_type_supported: vec!["authorization_code".into()],
     id_token_signing_alg_values_supported: vec!["RS256".into()],
     subject_types_supported: vec!["public".into()],
