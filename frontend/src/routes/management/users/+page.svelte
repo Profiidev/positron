@@ -10,15 +10,17 @@
     remove_user,
     user_edit,
   } from "$lib/backend/management/user.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import SimpleTable from "$lib/components/table/simple-table.svelte";
+  import {
+    SimpleTable,
+    Multiselect,
+  } from "positron-components/components/table";
+  import { Label } from "positron-components/components/ui";
+  import { FormInput } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { PageServerData } from "./$types";
   import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
   import { columns } from "./table.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
-  import { Label } from "$lib/components/ui/label";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
@@ -70,7 +72,6 @@
   display={(item) => item?.name}
   title="Users"
   description="Modify, create, delete users and manage their permissions here"
-  createPermission={Permission.UserCreate}
   {createForm}
   {editForm}
   {deleteForm}
@@ -79,6 +80,11 @@
       field: "",
       error: "",
     },
+  }}
+  createButtonDisabled={!userInfo?.permissions.includes(Permission.UserCreate)}
+  columnData={{
+    access_level: userInfo?.access_level ?? 0,
+    allowed_permissions: userInfo?.permissions ?? [],
   }}
 >
   {#snippet editDialog({ props, item })}

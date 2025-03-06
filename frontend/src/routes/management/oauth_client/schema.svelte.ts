@@ -1,4 +1,4 @@
-import { isUrl } from "$lib/util/other.svelte";
+import { isUrl } from "positron-components/util";
 import { z } from "zod";
 
 export const createSchema = z.object({

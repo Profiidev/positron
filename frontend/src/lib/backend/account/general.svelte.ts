@@ -1,6 +1,10 @@
-import { base64ToArrayBuffer } from "$lib/util/convert.svelte";
-import { ContentType, ResponseType } from "../types.svelte";
-import { get, post } from "../util.svelte";
+import { base64ToArrayBuffer } from "positron-components/util";
+import {
+  get,
+  post,
+  ContentType,
+  ResponseType,
+} from "positron-components/backend";
 import type { ProfileInfo, UserInfo } from "./types.svelte";
 
 export const profile_info = async (uuid: string) => {

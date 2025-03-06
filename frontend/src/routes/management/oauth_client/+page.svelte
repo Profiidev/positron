@@ -18,21 +18,26 @@
     type OAuthClientCreate,
     type OAuthClientInfo,
   } from "$lib/backend/management/types.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
-  import SimpleTable from "$lib/components/table/simple-table.svelte";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
-  import { Separator } from "$lib/components/ui/separator";
+  import {
+    Multiselect,
+    SimpleTable,
+  } from "positron-components/components/table";
+  import {
+    Label,
+    Input,
+    Separator,
+    Button,
+  } from "positron-components/components/ui";
+  import { FormInput } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
+  import { deepCopy } from "positron-components/util";
   import { columns } from "./table.svelte";
   import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
-  import { Button } from "$lib/components/ui/button";
   import { LoaderCircle, RotateCw } from "lucide-svelte";
   import type { PageServerData } from "./$types";
   import type { SuperValidated } from "sveltekit-superforms";
   import { toast } from "svelte-sonner";
-  import { deepCopy } from "$lib/util/other.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
     data: PageServerData;
@@ -44,6 +49,7 @@
   let groups = $derived(group_info_list.value);
   let users = $derived(user_info_list.value);
   let scope_names = $derived(oauth_scope_names.value);
+  let userInfo = $derived(userData.value?.[0]);
 
   let isLoading = $state(false);
   let scope: string[] = $state([]);
@@ -159,7 +165,6 @@
   display={(item) => item?.name}
   title="Clients"
   description="Modify, create, delete clients and manage their settings here"
-  createPermission={Permission.OAuthClientCreate}
   {createForm}
   {editForm}
   {deleteForm}
@@ -175,6 +180,10 @@
   }}
   createClass="md:max-w-[750px]"
   editClass="md:max-w-[750px]"
+  createButtonDisabled={!userInfo?.permissions.includes(
+    Permission.OAuthClientCreate,
+  )}
+  columnData={userInfo?.permissions ?? []}
 >
   {#snippet editDialog({ props, item })}
     <div class="h-full w-full grid md:grid-cols-[1fr_60px_1fr]">
@@ -191,7 +200,7 @@
           {/if}
         </Label>
         {#if newSecret === ""}
-          <Button
+          <Button.Button
             disabled={isLoading}
             variant="destructive"
             onclick={() => resetSecret(item)}
@@ -200,7 +209,7 @@
               <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
             {/if}
             <RotateCw class="mr-2 h-4 w-4" />
-            Reset</Button
+            Reset</Button.Button
           >
         {:else}
           <Input id="secret" value={newSecret} readonly />

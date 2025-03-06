@@ -1,4 +1,3 @@
-import { isUrl } from "$lib/util/other.svelte";
 import { z } from "zod";
 
 export const createSchema = z.object({

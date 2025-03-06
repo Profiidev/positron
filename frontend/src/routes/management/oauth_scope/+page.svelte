@@ -12,15 +12,18 @@
     Permission,
     type OAuthPolicyInfo,
   } from "$lib/backend/management/types.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import SimpleTable from "$lib/components/table/simple-table.svelte";
+  import {
+    SimpleTable,
+    Multiselect,
+  } from "positron-components/components/table";
+  import { Label } from "positron-components/components/ui";
+  import { FormInput } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { PageServerData } from "./$types";
   import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
   import { columns } from "./table.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
-  import { Label } from "$lib/components/ui/label";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
     data: PageServerData;
@@ -31,6 +34,7 @@
   let scopes = $derived(oauth_scope_list.value);
   let policies = $derived(oauth_policy_info_list.value);
   let policy: OAuthPolicyInfo[] = $state([]);
+  let userInfo = $derived(userData.value?.[0]);
 
   const createItemFn = async (form: SuperValidated<any>) => {
     let scope = form.data;
@@ -66,7 +70,6 @@
   display={(item) => item?.name}
   title="Scopes"
   description="Modify, create, delete scopes and manage their settings here"
-  createPermission={Permission.OAuthClientCreate}
   {createForm}
   {editForm}
   {deleteForm}
@@ -76,6 +79,10 @@
       error: "Name already taken",
     },
   }}
+  createButtonDisabled={!userInfo?.permissions.includes(
+    Permission.OAuthClientCreate,
+  )}
+  columnData={userInfo?.permissions ?? []}
 >
   {#snippet editDialog({ props, item })}
     <FormInput label="Name" placeholder="Name" key="name" {...props} />

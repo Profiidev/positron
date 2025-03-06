@@ -1,14 +1,15 @@
 <script lang="ts">
+  import {
+    FormDialog,
+    FormInput,
+    type FormSchema,
+  } from "positron-components/components/form";
+  import { Separator, Skeleton } from "positron-components/components/ui";
+  import { DateTime } from "positron-components/util";
+  import { RequestError } from "positron-components/backend";
   import { userData } from "$lib/backend/account/info.svelte";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
   import { password_change } from "$lib/backend/auth/password.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
-  import type { FormSchema } from "$lib/components/form/form.svelte";
-  import { Separator } from "$lib/components/ui/separator";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import { DateTime } from "$lib/util/time.svelte";
   import { toast } from "svelte-sonner";
   import type { SuperValidated } from "sveltekit-superforms";
 

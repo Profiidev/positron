@@ -1,9 +1,14 @@
 <script lang="ts">
-  import * as Tabs from "$lib/components/ui/tabs";
-  import * as Card from "$lib/components/ui/card";
+  import {
+    Tabs,
+    Card,
+    Skeleton,
+    Button,
+    ScrollArea,
+  } from "positron-components/components/ui";
+  import { Datepicker } from "positron-components/components/util";
+  import { DateTime } from "positron-components/util";
   import type { ApodData, ApodInfo } from "$lib/backend/services/types.svelte";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import Datepicker from "$lib/components/util/datepicker.svelte";
   import {
     getLocalTimeZone,
     now,
@@ -16,11 +21,8 @@
     getApodDate,
     setApodDate,
   } from "$lib/backend/services/stores.svelte";
-  import { Button } from "$lib/components/ui/button";
   import { set_good } from "$lib/backend/services/apod.svelte";
   import { LoaderCircle } from "lucide-svelte";
-  import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
-  import { DateTime } from "$lib/util/time.svelte";
 
   let current_data: ApodData | undefined | null = $derived(apod.value);
   let current_image: string | undefined = $derived(getApodImage());
@@ -105,7 +107,7 @@
             class={current_data ? "mr-5" : ""}
           />
           {#if current_data}
-            <Button
+            <Button.Button
               variant={current_data.user ? "destructive" : "default"}
               class="ml-auto"
               onclick={select}
@@ -115,21 +117,21 @@
                 <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
               {/if}
               {current_data.user ? "Deselect" : "Select"}
-            </Button>
+            </Button.Button>
           {/if}
         </div>
       </Card.Content>
     </Card.Root>
   </Tabs.Content>
   <Tabs.Content value="library" class="flex-1 min-h-0">
-    <ScrollArea orientation={"vertical"} class="h-full rounded">
+    <ScrollArea.ScrollArea orientation={"vertical"} class="h-full rounded">
       <div
         class="grid w-full gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]"
       >
         {#if apods}
           {#each apods as apod}
             <div class="w-72 aspect-square">
-              <Button
+              <Button.Button
                 variant="ghost"
                 class="h-full"
                 onclick={() => itemClick(apod.date)}
@@ -139,7 +141,7 @@
                   src={`data:image/webp;base64, ${apod.image}`}
                   alt="Apod"
                 />
-              </Button>
+              </Button.Button>
               <p class="mt-1 ml-4">{apod.title}</p>
               <p class="text-muted-foreground ml-4">by {apod.user.name}</p>
               <p class="text-muted-foreground ml-4">
@@ -151,6 +153,6 @@
           {/each}
         {/if}
       </div>
-    </ScrollArea>
+    </ScrollArea.ScrollArea>
   </Tabs.Content>
 </Tabs.Root>

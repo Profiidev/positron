@@ -2,7 +2,7 @@ import { browser } from "$app/environment";
 import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
 import { tick } from "svelte";
 import { UpdateType } from "./types.svelte";
-import { sleep } from "$lib/util/interval.svelte";
+import { sleep } from "positron-components/util";
 import { getTokenCookie } from "../cookie.svelte";
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);

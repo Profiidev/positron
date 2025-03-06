@@ -1,13 +1,16 @@
 <script lang="ts">
-  import LoginOther from "$lib/components/form/login-other-options.svelte";
-  import * as Dialog from "$lib/components/ui/dialog";
-  import { interval } from "$lib/util/interval.svelte";
+  import {
+    LoginOtherOptions,
+    BaseForm,
+    FormInput,
+    type FormSchema,
+  } from "positron-components/components/form";
+  import { interval } from "positron-components/util";
+  import { RequestError } from "positron-components/backend";
+  import { Dialog } from "positron-components/components/ui";
   import { password_special_access } from "$lib/backend/auth/password.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
   import { passkey_special_access } from "$lib/backend/auth/passkey.svelte";
   import { browser } from "$app/environment";
-  import Form, { type FormSchema } from "$lib/components/form/form.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
@@ -94,7 +97,7 @@
       <Dialog.Title>Confirm Access</Dialog.Title>
       <Dialog.Description>Confirm access to your account</Dialog.Description>
     </Dialog.Header>
-    <Form
+    <BaseForm
       onsubmit={confirm}
       confirm="Confirm Access"
       bind:isLoading
@@ -115,7 +118,7 @@
       {#snippet footer({ children })}
         {@render children()}
       {/snippet}
-    </Form>
-    <LoginOther {isLoading} {passkeyError} {passkeyClick} />
+    </BaseForm>
+    <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />
   </Dialog.Content>
 </Dialog.Root>

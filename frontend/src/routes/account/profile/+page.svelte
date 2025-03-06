@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
-  import { Separator } from "$lib/components/ui/separator";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import { arrayBufferToBase64 } from "$lib/util/convert.svelte";
-  import { Upload, LoaderCircle } from "lucide-svelte";
+  import {
+    Button,
+    Input,
+    Label,
+    Separator,
+    Skeleton,
+  } from "positron-components/components/ui";
+  import { BaseForm, FormInput } from "positron-components/components/form";
+  import { arrayBufferToBase64 } from "positron-components/util";
+  import { Upload } from "lucide-svelte";
   import { toast } from "svelte-sonner";
-  import Avatar from "$lib/components/util/avatar.svelte";
+  import { SimpleAvatar } from "positron-components/components/util";
   import {
     profile_change_image,
     profile_update,
@@ -15,9 +18,7 @@
   import { userData } from "$lib/backend/account/info.svelte";
   import type { PageServerData } from "./$types";
   import { profileSchema } from "./schema.svelte";
-  import Form from "$lib/components/form/form.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
-  import FormInput from "$lib/components/form/form-input.svelte";
   import type { SvelteComponent } from "svelte";
 
   interface Props {
@@ -94,8 +95,8 @@
     <div class="space-y-3">
       {#if infoData}
         <div class="relative">
-          <Avatar src={infoData.image} class="size-52 rounded-full" />
-          <Button
+          <SimpleAvatar src={infoData.image} class="size-52 rounded-full" />
+          <Button.Button
             class="group absolute hover:backdrop-blur-xs size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
             variant="ghost"
             onclick={startImageUpload}
@@ -110,13 +111,13 @@
               class="hidden"
               onchange={updatePreview}
             />
-          </Button>
+          </Button.Button>
         </div>
       {:else}
         <Skeleton class="size-52 rounded-full" />
       {/if}
     </div>
-    <Form
+    <BaseForm
       class="mt-5 sm:mt-0 sm:pl-10 flex flex-col space-y-2"
       onsubmit={updateProfile}
       form={profileForm}
@@ -143,6 +144,6 @@
       {#snippet footer({ children })}
         {@render children({ className: "mt-8! ml-auto" })}
       {/snippet}
-    </Form>
+    </BaseForm>
   </div>
 </div>

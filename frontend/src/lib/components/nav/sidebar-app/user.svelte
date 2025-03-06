@@ -1,10 +1,12 @@
 <script lang="ts">
-  import * as Sidebar from "$lib/components/ui/sidebar";
-  import * as Dropdown from "$lib/components/ui/dropdown-menu";
+  import {
+    Sidebar,
+    DropdownMenu,
+    Skeleton,
+  } from "positron-components/components/ui";
+  import { SimpleAvatar } from "positron-components/components/util";
   import { ChevronsUpDown, LogOut, Settings } from "lucide-svelte";
   import { goto } from "$app/navigation";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import Avatar from "$lib/components/util/avatar.svelte";
   import { logout } from "$lib/backend/auth/other.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
 
@@ -23,8 +25,8 @@
 
 <Sidebar.Menu>
   <Sidebar.MenuItem>
-    <Dropdown.Root>
-      <Dropdown.Trigger>
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger>
         {#snippet child({ props })}
           <Sidebar.MenuButton
             size="lg"
@@ -32,7 +34,7 @@
             {...props}
           >
             {#if infoData}
-              <Avatar src={infoData.image} class="size-8" />
+              <SimpleAvatar src={infoData.image} class="size-8" />
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{infoData.name}</span>
                 <span class="truncate text-xs">{infoData.email}</span>
@@ -49,27 +51,27 @@
             <ChevronsUpDown class="ml-auto size-4" />
           </Sidebar.MenuButton>
         {/snippet}
-      </Dropdown.Trigger>
-      <Dropdown.Content
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content
         class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
         side={sidebar.isMobile ? "bottom" : "right"}
         align="end"
         sideOffset={4}
       >
-        <Dropdown.Group>
-          <Dropdown.Item onclick={settings}>
+        <DropdownMenu.Group>
+          <DropdownMenu.Item onclick={settings}>
             <Settings />
             Settings
-          </Dropdown.Item>
-        </Dropdown.Group>
-        <Dropdown.Separator />
-        <Dropdown.Group>
-          <Dropdown.Item onclick={logoutFn}>
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+        <DropdownMenu.Separator />
+        <DropdownMenu.Group>
+          <DropdownMenu.Item onclick={logoutFn}>
             <LogOut />
             Log out
-          </Dropdown.Item>
-        </Dropdown.Group>
-      </Dropdown.Content>
-    </Dropdown.Root>
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   </Sidebar.MenuItem>
 </Sidebar.Menu>
