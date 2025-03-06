@@ -1,22 +1,26 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
+  import {
+    Button,
+    Skeleton,
+    Separator,
+  } from "positron-components/components/ui";
+  import {
+    FormDialog,
+    FormInput,
+    type FormSchema,
+  } from "positron-components/components/form";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import { Separator } from "$lib/components/ui/separator";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
   import type { SvelteComponent } from "svelte";
   import { toast } from "svelte-sonner";
-  import { DateTime } from "$lib/util/time.svelte";
+  import { DateTime } from "positron-components/util";
+  import { RequestError } from "positron-components/backend";
   import {
     passkey_edit_name,
     passkey_register,
     passkey_remove,
   } from "$lib/backend/auth/passkey.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
   import { passkey_list } from "$lib/backend/auth/stores.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
-  import type { FormSchema } from "$lib/components/form/form.svelte";
 
   interface Props {
     valid: boolean;
@@ -211,22 +215,22 @@
             </p>
           </div>
         </div>
-        <Button
+        <Button.Button
           variant="outline"
           size="icon"
           class="m-2 ml-auto"
           onclick={() => startEditPasskey(passkey.name)}
         >
           <Pencil />
-        </Button>
-        <Button
+        </Button.Button>
+        <Button.Button
           variant="destructive"
           size="icon"
           class="m-2"
           onclick={() => startDeletePasskey(passkey.name)}
         >
           <Trash />
-        </Button>
+        </Button.Button>
       </div>
     {/each}
   {:else}

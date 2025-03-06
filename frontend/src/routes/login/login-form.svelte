@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
+  import {
+    LoginOtherOptions,
+    Totp_6,
+    BaseForm,
+    FormInput,
+    type FormSchema,
+  } from "positron-components/components/form";
+  import { cn } from "positron-components/utils";
   import { goto } from "$app/navigation";
-  import LoginOther from "../../lib/components/form/login-other-options.svelte";
-  import Totp_6 from "$lib/components/form/totp-6.svelte";
   import type { OAuthParams } from "$lib/backend/auth/types.svelte";
   import { totp_confirm } from "$lib/backend/auth/totp.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
+  import { RequestError } from "positron-components/backend";
   import { password_login } from "$lib/backend/auth/password.svelte";
   import { passkey_authenticate } from "$lib/backend/auth/passkey.svelte";
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
-  import Form, { type FormSchema } from "$lib/components/form/form.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { SvelteComponent } from "svelte";
 
@@ -102,7 +105,7 @@
 </script>
 
 <div class={cn("grid gap-6", className)}>
-  <Form
+  <BaseForm
     bind:this={formComp}
     onsubmit={onSubmit}
     confirm={enterEmail ? "Sign In" : "Confirm"}
@@ -143,6 +146,6 @@
     {#snippet footer({ children })}
       {@render children({ className: "mt-2" })}
     {/snippet}
-  </Form>
-  <LoginOther {isLoading} {passkeyError} {passkeyClick} />
+  </BaseForm>
+  <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />
 </div>

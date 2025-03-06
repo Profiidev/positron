@@ -1,13 +1,18 @@
 <script lang="ts">
-  import { Separator } from "$lib/components/ui/separator";
+  import {
+    Separator,
+    Label,
+    Skeleton,
+  } from "positron-components/components/ui";
+  import {
+    FormDialog,
+    FormInput,
+    Totp_6,
+  } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
   import type { SvelteComponent } from "svelte";
   import AccessConfirm from "../access-confirm.svelte";
-  import { Label } from "$lib/components/ui/label";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
-  import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
   import {
     email_finish_change,
     email_start_change,
@@ -17,7 +22,6 @@
   import { confirmSchema, emailChange } from "./schema.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import { get } from "svelte/store";
-  import FormInput from "$lib/components/form/form-input.svelte";
 
   interface Props {
     data: PageServerData;

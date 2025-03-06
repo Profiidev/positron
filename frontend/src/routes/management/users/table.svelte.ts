@@ -1,22 +1,23 @@
 import { Permission, type User } from "$lib/backend/management/types.svelte";
-import Actions from "$lib/components/table/actions.svelte";
-import { createColumn } from "$lib/components/table/helpers.svelte";
-import { renderComponent } from "$lib/components/ui/data-table";
-import Avatar from "$lib/components/util/avatar.svelte";
-import { DateTime } from "$lib/util/time.svelte";
 import type { ColumnDef } from "@tanstack/table-core";
+import { Actions, createColumn } from "positron-components/components/table";
+import { DataTable } from "positron-components/components/ui";
+import { SimpleAvatar } from "positron-components/components/util";
+import { DateTime } from "positron-components/util";
 
 export const columns = (
-  allowed_permissions: Permission[],
-  access_level: number,
   edit: (user: string) => void,
   remove: (user: string) => void,
+  data: {
+    allowed_permissions: Permission[];
+    access_level: number;
+  },
 ): ColumnDef<User>[] => [
   {
     accessorKey: "image",
     header: () => {},
     cell: ({ row }) => {
-      return renderComponent(Avatar, {
+      return DataTable.renderComponent(SimpleAvatar, {
         src: row.getValue("image") as string,
         class: "size-8",
       });
@@ -41,13 +42,13 @@ export const columns = (
     accessorKey: "actions",
     header: () => {},
     cell: ({ row }) => {
-      return renderComponent(Actions, {
+      return DataTable.renderComponent(Actions, {
         edit_disabled:
-          access_level <= row.getValue<number>("access_level") ||
-          !allowed_permissions.includes(Permission.UserEdit),
+          data.access_level <= row.getValue<number>("access_level") ||
+          !data.allowed_permissions.includes(Permission.UserEdit),
         delete_disabled:
-          access_level <= row.getValue<number>("access_level") ||
-          !allowed_permissions.includes(Permission.UserDelete),
+          data.access_level <= row.getValue<number>("access_level") ||
+          !data.allowed_permissions.includes(Permission.UserDelete),
         edit: () => edit(row.getValue("uuid")),
         remove: () => remove(row.getValue("uuid")),
       });

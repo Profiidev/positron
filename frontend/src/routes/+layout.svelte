@@ -1,10 +1,9 @@
 <script lang="ts">
+  import { Toaster, Sidebar } from "positron-components/components/ui";
   import { ModeWatcher } from "mode-watcher";
   import "../app.css";
   import { page } from "$app/stores";
-  import { Toaster } from "$lib/components/ui/sonner";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
-  import * as Sidebar from "$lib/components/ui/sidebar";
   import { connect_updater } from "$lib/backend/ws/updater.svelte";
   import { test_token } from "$lib/backend/auth/other.svelte";
   import { goto } from "$app/navigation";

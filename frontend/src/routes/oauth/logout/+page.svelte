@@ -1,9 +1,7 @@
 <script lang="ts">
-  import Button from "$lib/components/ui/button/button.svelte";
-  import * as Card from "$lib/components/ui/card";
-  import { Skeleton } from "$lib/components/ui/skeleton";
+  import { Button, Card, Skeleton } from "positron-components/components/ui";
+  import { SimpleAvatar } from "positron-components/components/util";
   import { goto } from "$app/navigation";
-  import Avatar from "$lib/components/util/avatar.svelte";
   import type { PageServerData } from "./$types";
   import { userData } from "$lib/backend/account/info.svelte";
 
@@ -40,7 +38,7 @@
     </Card.Header>
     <Card.Content class="flex items-center">
       {#if infoData}
-        <Avatar src={infoData.image} class="size-14" />
+        <SimpleAvatar src={infoData.image} class="size-14" />
         <div class="grid flex-1 text-left text-sm leading-tight ml-2">
           <span class="truncate font-semibold text-lg">{infoData.name}</span>
           <span class="truncate">{infoData.email}</span>
@@ -56,8 +54,10 @@
     <Card.Footer class="flex flex-col">
       <span class="text-destructive truncate text-sm">{error}</span>
       <div class="flex justify-between w-full">
-        <Button variant="secondary" onclick={cancel}>Cancel</Button>
-        <Button onclick={back}>Back</Button>
+        <Button.Button variant="secondary" onclick={cancel}
+          >Cancel</Button.Button
+        >
+        <Button.Button onclick={back}>Back</Button.Button>
       </div>
     </Card.Footer>
   </Card.Root>

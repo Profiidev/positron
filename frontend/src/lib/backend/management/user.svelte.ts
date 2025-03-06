@@ -1,6 +1,10 @@
 import { getEncrypt } from "../auth/password.svelte";
-import { ContentType, ResponseType } from "../types.svelte";
-import { get, post } from "../util.svelte";
+import {
+  get,
+  post,
+  ContentType,
+  ResponseType,
+} from "positron-components/backend";
 import type { Permission, User } from "./types.svelte";
 
 export const list_users = async () => {

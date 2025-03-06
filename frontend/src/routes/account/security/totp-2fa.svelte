@@ -1,12 +1,18 @@
 <script lang="ts">
-  import { Separator } from "$lib/components/ui/separator";
+  import {
+    Separator,
+    Skeleton,
+    Badge,
+  } from "positron-components/components/ui";
+  import {
+    Totp_6,
+    FormDialog,
+    type FormSchema,
+  } from "positron-components/components/form";
+  import { DateTime } from "positron-components/util";
+  import { RequestError } from "positron-components/backend";
   import { Clock9 } from "lucide-svelte";
-  import { Skeleton } from "$lib/components/ui/skeleton";
-  import { Badge } from "$lib/components/ui/badge";
-  import Totp_6 from "$lib/components/form/totp-6.svelte";
-  import FormDialog from "$lib/components/form/form-dialog.svelte";
   import { toast } from "svelte-sonner";
-  import { DateTime } from "$lib/util/time.svelte";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
   import {
     is_code,
@@ -14,9 +20,7 @@
     totp_get_setup_code,
     totp_remove,
   } from "$lib/backend/auth/totp.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
-  import type { FormSchema } from "$lib/components/form/form.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
@@ -100,9 +104,9 @@
       <h4>TOTP</h4>
       {#if userInfo}
         {#if userInfo.totp_enabled}
-          <Badge>Enabled</Badge>
+          <Badge.Badge>Enabled</Badge.Badge>
         {:else}
-          <Badge variant="destructive">Disabled</Badge>
+          <Badge.Badge variant="destructive">Disabled</Badge.Badge>
         {/if}
       {:else}
         <Skeleton class="h-6 w-16 rounded-full" />

@@ -3,16 +3,14 @@ import {
   type GroupInfo,
   type OAuthPolicy,
 } from "$lib/backend/management/types.svelte";
-import Actions from "$lib/components/table/actions.svelte";
-import { createColumn } from "$lib/components/table/helpers.svelte";
-import { renderComponent } from "$lib/components/ui/data-table";
+import { Actions, createColumn } from "positron-components/components/table";
+import { DataTable } from "positron-components/components/ui";
 import type { ColumnDef } from "@tanstack/table-core";
 
 export const columns = (
-  permissions: Permission[],
-  access_level: number,
   edit: (uuid: string) => void,
   remove: (uuid: string) => void,
+  data: Permission[],
 ): ColumnDef<OAuthPolicy>[] => [
   createColumn("name", "Name"),
   createColumn("claim", "Claim"),
@@ -28,9 +26,9 @@ export const columns = (
     accessorKey: "actions",
     header: () => {},
     cell: ({ row }) => {
-      return renderComponent(Actions, {
-        edit_disabled: !permissions.includes(Permission.OAuthClientEdit),
-        delete_disabled: !permissions.includes(Permission.OAuthClientDelete),
+      return DataTable.renderComponent(Actions, {
+        edit_disabled: !data.includes(Permission.OAuthClientEdit),
+        delete_disabled: !data.includes(Permission.OAuthClientDelete),
         edit: () => edit(row.getValue("uuid")),
         remove: () => remove(row.getValue("uuid")),
       });

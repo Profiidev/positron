@@ -2,8 +2,13 @@ import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
-import { ContentType, RequestError, ResponseType } from "../types.svelte";
-import { get, post } from "../util.svelte";
+import {
+  get,
+  post,
+  ContentType,
+  ResponseType,
+  RequestError,
+} from "positron-components/backend";
 import type { Passkey } from "./types.svelte";
 
 const isKeyCredCreate = (

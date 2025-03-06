@@ -12,15 +12,17 @@
     getPermissionGroups,
     Permission,
   } from "$lib/backend/management/types.svelte";
-  import Multiselect from "$lib/components/table/multiselect.svelte";
-  import SimpleTable from "$lib/components/table/simple-table.svelte";
-  import { Label } from "$lib/components/ui/label";
+  import {
+    Multiselect,
+    SimpleTable,
+  } from "positron-components/components/table";
+  import { Label } from "positron-components/components/ui";
+  import { FormInput } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
   import { columns } from "./table.svelte";
   import { createSchema, deleteSchema, editSchema } from "./schema.svelte";
   import type { PageServerData } from "./$types";
-  import FormInput from "$lib/components/form/form-input.svelte";
   import { userData } from "$lib/backend/account/info.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
 
   interface Props {
@@ -65,7 +67,6 @@
   display={(item) => item?.name}
   title="Groups"
   description="Modify, create, delete groups and manage their permissions and members here"
-  createPermission={Permission.GroupCreate}
   {createForm}
   {editForm}
   {deleteForm}
@@ -78,6 +79,11 @@
       field: "access_level",
       error: "You can only use access levels below yours",
     },
+  }}
+  createButtonDisabled={!userInfo?.permissions.includes(Permission.GroupCreate)}
+  columnData={{
+    access_level: userInfo?.access_level ?? 0,
+    allowed_permissions: userInfo?.permissions ?? [],
   }}
 >
   {#snippet editDialog({ props, item })}

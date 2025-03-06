@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Separator from "$lib/components/ui/separator/separator.svelte";
+  import { Separator } from "positron-components/components/ui";
   import PasskeyList from "./passkey-list.svelte";
   import Totp_2fa from "./totp-2fa.svelte";
   import AccessConfirm from "../access-confirm.svelte";

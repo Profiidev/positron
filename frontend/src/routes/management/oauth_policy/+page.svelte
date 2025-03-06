@@ -12,19 +12,22 @@
     Permission,
     type GroupInfo,
   } from "$lib/backend/management/types.svelte";
-  import { RequestError } from "$lib/backend/types.svelte";
-  import FormInput from "$lib/components/form/form-input.svelte";
-  import SimpleTable from "$lib/components/table/simple-table.svelte";
-  import { Button } from "$lib/components/ui/button";
-  import { Label } from "$lib/components/ui/label";
+  import { SimpleTable } from "positron-components/components/table";
+  import {
+    Label,
+    Input,
+    Select,
+    Button,
+  } from "positron-components/components/ui";
+  import { FormInput } from "positron-components/components/form";
+  import { RequestError } from "positron-components/backend";
+  import { deepCopy } from "positron-components/util";
   import { Plus, Trash } from "lucide-svelte";
   import type { PageServerData } from "./$types";
   import { createSchema, deleteSchema, editSchema } from "./schema.svelte";
   import { columns } from "./table.svelte";
-  import * as Select from "$lib/components/ui/select";
-  import { Input } from "$lib/components/ui/input";
-  import { deepCopy } from "$lib/util/other.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
+  import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
     data: PageServerData;
@@ -35,6 +38,7 @@
   let policies = $derived(oauth_policy_list.value);
   let groups = $derived(group_info_list.value);
   let group: [GroupInfo, string][] = $state([]);
+  let userInfo = $derived(userData.value?.[0]);
 
   const createItemFn = async (form: SuperValidated<any>) => {
     let policy = form.data;
@@ -70,7 +74,6 @@
   display={(item) => item?.name}
   title="Policies"
   description="Modify, create, delete policies and manage their settings here"
-  createPermission={Permission.OAuthClientCreate}
   {createForm}
   {editForm}
   {deleteForm}
@@ -80,6 +83,10 @@
       error: "Name already taken",
     },
   }}
+  createButtonDisabled={!userInfo?.permissions.includes(
+    Permission.OAuthClientCreate,
+  )}
+  columnData={userInfo?.permissions ?? []}
 >
   {#snippet editDialog({ props, item })}
     {@const groups_left_edit = deepCopy(
@@ -118,7 +125,7 @@
           required
           disabled={props.disabled}
         />
-        <Button
+        <Button.Button
           size="icon"
           variant="destructive"
           class="min-w-10"
@@ -129,11 +136,11 @@
           }}
         >
           <Trash />
-        </Button>
+        </Button.Button>
       </div>
     {/each}
     {#if groups_left_edit.length > 0}
-      <Button
+      <Button.Button
         size="icon"
         disabled={props.disabled}
         onclick={() => {
@@ -142,7 +149,7 @@
         }}
       >
         <Plus />
-      </Button>
+      </Button.Button>
     {/if}
   {/snippet}
   {#snippet createDialog({ props })}
@@ -182,7 +189,7 @@
           required
           disabled={props.disabled}
         />
-        <Button
+        <Button.Button
           size="icon"
           variant="destructive"
           class="min-w-10"
@@ -192,11 +199,11 @@
           }}
         >
           <Trash />
-        </Button>
+        </Button.Button>
       </div>
     {/each}
     {#if groups_left_create.length > 0}
-      <Button
+      <Button.Button
         size="icon"
         disabled={props.disabled}
         onclick={() => {
@@ -204,7 +211,7 @@
         }}
       >
         <Plus />
-      </Button>
+      </Button.Button>
     {/if}
   {/snippet}
 </SimpleTable>

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Sidebar from "$lib/components/nav/simple-sidebar.svelte";
-  import Separator from "$lib/components/ui/separator/separator.svelte";
+  import { Separator } from "positron-components/components/ui";
+  import { SimpleSidebar } from "positron-components/components/nav";
 
   const { children } = $props();
 
@@ -28,7 +28,7 @@
   <Separator class="my-6" />
   <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
     <aside class="lg:max-w-1/5 lg:w-52">
-      <Sidebar items={routes} class="" />
+      <SimpleSidebar items={routes} class="" />
     </aside>
     <div class="flex-1">
       {@render children()}
