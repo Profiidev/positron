@@ -5,11 +5,11 @@
     Label,
     Separator,
     Skeleton,
+    toast,
   } from "positron-components/components/ui";
   import { BaseForm, FormInput } from "positron-components/components/form";
   import { arrayBufferToBase64 } from "positron-components/util";
   import { Upload } from "lucide-svelte";
-  import { toast } from "svelte-sonner";
   import { SimpleAvatar } from "positron-components/components/util";
   import {
     profile_change_image,
@@ -96,7 +96,7 @@
       {#if infoData}
         <div class="relative">
           <SimpleAvatar src={infoData.image} class="size-52 rounded-full" />
-          <Button.Button
+          <Button
             class="group absolute hover:backdrop-blur-xs size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
             variant="ghost"
             onclick={startImageUpload}
@@ -111,7 +111,7 @@
               class="hidden"
               onchange={updatePreview}
             />
-          </Button.Button>
+          </Button>
         </div>
       {:else}
         <Skeleton class="size-52 rounded-full" />

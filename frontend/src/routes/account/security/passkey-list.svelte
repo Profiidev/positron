@@ -3,6 +3,7 @@
     Button,
     Skeleton,
     Separator,
+    toast,
   } from "positron-components/components/ui";
   import {
     FormDialog,
@@ -11,7 +12,6 @@
   } from "positron-components/components/form";
   import { KeyRound, Pencil, Trash } from "lucide-svelte";
   import type { SvelteComponent } from "svelte";
-  import { toast } from "svelte-sonner";
   import { DateTime } from "positron-components/util";
   import { RequestError } from "positron-components/backend";
   import {
@@ -215,22 +215,22 @@
             </p>
           </div>
         </div>
-        <Button.Button
+        <Button
           variant="outline"
           size="icon"
           class="m-2 ml-auto"
           onclick={() => startEditPasskey(passkey.name)}
         >
           <Pencil />
-        </Button.Button>
-        <Button.Button
+        </Button>
+        <Button
           variant="destructive"
           size="icon"
           class="m-2"
           onclick={() => startDeletePasskey(passkey.name)}
         >
           <Trash />
-        </Button.Button>
+        </Button>
       </div>
     {/each}
   {:else}

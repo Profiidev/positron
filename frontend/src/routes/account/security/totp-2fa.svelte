@@ -3,6 +3,7 @@
     Separator,
     Skeleton,
     Badge,
+    toast,
   } from "positron-components/components/ui";
   import {
     Totp_6,
@@ -12,7 +13,6 @@
   import { DateTime } from "positron-components/util";
   import { RequestError } from "positron-components/backend";
   import { Clock9 } from "lucide-svelte";
-  import { toast } from "svelte-sonner";
   import type { UserInfo } from "$lib/backend/account/types.svelte";
   import {
     is_code,
@@ -104,9 +104,9 @@
       <h4>TOTP</h4>
       {#if userInfo}
         {#if userInfo.totp_enabled}
-          <Badge.Badge>Enabled</Badge.Badge>
+          <Badge>Enabled</Badge>
         {:else}
-          <Badge.Badge variant="destructive">Disabled</Badge.Badge>
+          <Badge variant="destructive">Disabled</Badge>
         {/if}
       {:else}
         <Skeleton class="h-6 w-16 rounded-full" />

@@ -3,6 +3,7 @@
     Separator,
     Label,
     Skeleton,
+    toast,
   } from "positron-components/components/ui";
   import {
     FormDialog,
@@ -12,7 +13,6 @@
   import { RequestError } from "positron-components/backend";
   import type { SvelteComponent } from "svelte";
   import AccessConfirm from "../access-confirm.svelte";
-  import { toast } from "svelte-sonner";
   import {
     email_finish_change,
     email_start_change,

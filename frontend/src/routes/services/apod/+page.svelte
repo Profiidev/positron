@@ -107,7 +107,7 @@
             class={current_data ? "mr-5" : ""}
           />
           {#if current_data}
-            <Button.Button
+            <Button
               variant={current_data.user ? "destructive" : "default"}
               class="ml-auto"
               onclick={select}
@@ -117,7 +117,7 @@
                 <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
               {/if}
               {current_data.user ? "Deselect" : "Select"}
-            </Button.Button>
+            </Button>
           {/if}
         </div>
       </Card.Content>
@@ -131,7 +131,7 @@
         {#if apods}
           {#each apods as apod}
             <div class="w-72 aspect-square">
-              <Button.Button
+              <Button
                 variant="ghost"
                 class="h-full"
                 onclick={() => itemClick(apod.date)}
@@ -141,7 +141,7 @@
                   src={`data:image/webp;base64, ${apod.image}`}
                   alt="Apod"
                 />
-              </Button.Button>
+              </Button>
               <p class="mt-1 ml-4">{apod.title}</p>
               <p class="text-muted-foreground ml-4">by {apod.user.name}</p>
               <p class="text-muted-foreground ml-4">

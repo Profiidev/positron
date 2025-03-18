@@ -27,6 +27,7 @@
     Input,
     Separator,
     Button,
+    toast,
   } from "positron-components/components/ui";
   import { FormInput } from "positron-components/components/form";
   import { RequestError } from "positron-components/backend";
@@ -36,7 +37,6 @@
   import { LoaderCircle, RotateCw } from "lucide-svelte";
   import type { PageServerData } from "./$types";
   import type { SuperValidated } from "sveltekit-superforms";
-  import { toast } from "svelte-sonner";
   import { userData } from "$lib/backend/account/info.svelte";
 
   interface Props {
@@ -200,7 +200,7 @@
           {/if}
         </Label>
         {#if newSecret === ""}
-          <Button.Button
+          <Button
             disabled={isLoading}
             variant="destructive"
             onclick={() => resetSecret(item)}
@@ -209,7 +209,7 @@
               <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
             {/if}
             <RotateCw class="mr-2 h-4 w-4" />
-            Reset</Button.Button
+            Reset</Button
           >
         {:else}
           <Input id="secret" value={newSecret} readonly />
