@@ -54,10 +54,8 @@
     <Card.Footer class="flex flex-col">
       <span class="text-destructive truncate text-sm">{error}</span>
       <div class="flex justify-between w-full">
-        <Button.Button variant="secondary" onclick={cancel}
-          >Cancel</Button.Button
-        >
-        <Button.Button onclick={back}>Back</Button.Button>
+        <Button variant="secondary" onclick={cancel}>Cancel</Button>
+        <Button onclick={back}>Back</Button>
       </div>
     </Card.Footer>
   </Card.Root>

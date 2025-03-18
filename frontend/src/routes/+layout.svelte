@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { Toaster, Sidebar } from "positron-components/components/ui";
-  import { ModeWatcher } from "mode-watcher";
+  import {
+    Toaster,
+    Sidebar,
+    ModeWatcher,
+  } from "positron-components/components/ui";
   import "../app.css";
   import { page } from "$app/stores";
   import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";

@@ -125,7 +125,7 @@
           required
           disabled={props.disabled}
         />
-        <Button.Button
+        <Button
           size="icon"
           variant="destructive"
           class="min-w-10"
@@ -136,11 +136,11 @@
           }}
         >
           <Trash />
-        </Button.Button>
+        </Button>
       </div>
     {/each}
     {#if groups_left_edit.length > 0}
-      <Button.Button
+      <Button
         size="icon"
         disabled={props.disabled}
         onclick={() => {
@@ -149,7 +149,7 @@
         }}
       >
         <Plus />
-      </Button.Button>
+      </Button>
     {/if}
   {/snippet}
   {#snippet createDialog({ props })}
@@ -189,7 +189,7 @@
           required
           disabled={props.disabled}
         />
-        <Button.Button
+        <Button
           size="icon"
           variant="destructive"
           class="min-w-10"
@@ -199,11 +199,11 @@
           }}
         >
           <Trash />
-        </Button.Button>
+        </Button>
       </div>
     {/each}
     {#if groups_left_create.length > 0}
-      <Button.Button
+      <Button
         size="icon"
         disabled={props.disabled}
         onclick={() => {
@@ -211,7 +211,7 @@
         }}
       >
         <Plus />
-      </Button.Button>
+      </Button>
     {/if}
   {/snippet}
 </SimpleTable>

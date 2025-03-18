@@ -67,7 +67,7 @@
           <span class="truncate font-semibold text-lg">{infoData.name}</span>
           <span class="truncate">{infoData.email}</span>
         </div>
-        <Button.Button variant="link" onclick={change}>Change</Button.Button>
+        <Button variant="link" onclick={change}>Change</Button>
       {:else}
         <Skeleton class="size-14 rounded-full" />
         <div class="grid flex-1 text-left text-sm leading-tight space-y-2 ml-2">
@@ -79,10 +79,8 @@
     <Card.Footer class="flex flex-col">
       <span class="text-destructive truncate text-sm mb-4">{error}</span>
       <div class="flex justify-between w-full">
-        <Button.Button variant="secondary" onclick={cancel}
-          >Cancel</Button.Button
-        >
-        <Button.Button onclick={confirm}>Confirm</Button.Button>
+        <Button variant="secondary" onclick={cancel}>Cancel</Button>
+        <Button onclick={confirm}>Confirm</Button>
       </div>
     </Card.Footer>
   </Card.Root>
