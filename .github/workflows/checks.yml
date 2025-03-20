@@ -37,6 +37,7 @@ jobs:
         with:
           rustfmt: true
           clippy: true
+          clippy_args: "--no-deps"
           auto_fix: true
           prettier: true
           prettier_extensions: "css,html,js,json,jsx,md,sass,scss,ts,tsx,vue,yaml,yml,svelte"
