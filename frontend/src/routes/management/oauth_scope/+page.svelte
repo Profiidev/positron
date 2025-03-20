@@ -2,28 +2,28 @@
   import {
     create_scope,
     delete_scope,
-    edit_scope,
-  } from "$lib/backend/management/oauth_scope.svelte";
+    edit_scope
+  } from '$lib/backend/management/oauth_scope.svelte';
   import {
     oauth_policy_info_list,
-    oauth_scope_list,
-  } from "$lib/backend/management/stores.svelte";
+    oauth_scope_list
+  } from '$lib/backend/management/stores.svelte';
   import {
     Permission,
-    type OAuthPolicyInfo,
-  } from "$lib/backend/management/types.svelte";
+    type OAuthPolicyInfo
+  } from '$lib/backend/management/types.svelte';
   import {
     SimpleTable,
-    Multiselect,
-  } from "positron-components/components/table";
-  import { Label } from "positron-components/components/ui";
-  import { FormInput } from "positron-components/components/form";
-  import { RequestError } from "positron-components/backend";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import type { PageServerData } from "./$types";
-  import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
-  import { columns } from "./table.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
+    Multiselect
+  } from 'positron-components/components/table';
+  import { Label } from 'positron-components/components/ui';
+  import { FormInput } from 'positron-components/components/form';
+  import { RequestError } from 'positron-components/backend';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import type { PageServerData } from './$types';
+  import { createSchema, editSchema, deleteSchema } from './schema.svelte';
+  import { columns } from './table.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
 
   interface Props {
     data: PageServerData;
@@ -44,23 +44,23 @@
 
   const createForm = {
     schema: createSchema,
-    form: data.createForm,
+    form: data.createForm
   };
 
   const editForm = {
     schema: editSchema,
-    form: data.editForm,
+    form: data.editForm
   };
 
   const deleteForm = {
     schema: deleteSchema,
-    form: data.deleteForm,
+    form: data.deleteForm
   };
 </script>
 
 <SimpleTable
   data={scopes}
-  filter_keys={["name", "scope", "uuid"]}
+  filter_keys={['name', 'scope', 'uuid']}
   {columns}
   label="Scope"
   {createItemFn}
@@ -75,12 +75,12 @@
   {deleteForm}
   errorMappings={{
     [RequestError.Conflict]: {
-      field: "name",
-      error: "Name already taken",
-    },
+      field: 'name',
+      error: 'Name already taken'
+    }
   }}
   createButtonDisabled={!userInfo?.permissions.includes(
-    Permission.OAuthClientCreate,
+    Permission.OAuthClientCreate
   )}
   columnData={userInfo?.permissions ?? []}
 >
@@ -93,7 +93,7 @@
       label="Policies"
       data={policies?.map((g) => ({
         label: g.name,
-        value: g,
+        value: g
       })) || []}
       selected={item.policy}
       compare={(a, b) => a.uuid === b.uuid}
@@ -108,7 +108,7 @@
       label="Policies"
       data={policies?.map((g) => ({
         label: g.name,
-        value: g,
+        value: g
       })) || []}
       selected={policy}
       compare={(a, b) => a.uuid === b.uuid}

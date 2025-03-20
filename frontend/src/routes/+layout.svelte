@@ -2,44 +2,44 @@
   import {
     Toaster,
     Sidebar,
-    ModeWatcher,
-  } from "positron-components/components/ui";
-  import "../app.css";
-  import { page } from "$app/stores";
-  import SidebarApp from "$lib/components/nav/sidebar-app/sidebar-app.svelte";
-  import { connect_updater } from "$lib/backend/ws/updater.svelte";
-  import { test_token } from "$lib/backend/auth/other.svelte";
-  import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
-  import { getTokenCookie } from "$lib/backend/cookie.svelte";
-  import { get } from "svelte/store";
-  import { PUBLIC_IS_APP } from "$env/static/public";
-  import { browser } from "$app/environment";
+    ModeWatcher
+  } from 'positron-components/components/ui';
+  import '../app.css';
+  import { page } from '$app/stores';
+  import SidebarApp from '$lib/components/nav/sidebar-app/sidebar-app.svelte';
+  import { connect_updater } from '$lib/backend/ws/updater.svelte';
+  import { test_token } from '$lib/backend/auth/other.svelte';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { getTokenCookie } from '$lib/backend/cookie.svelte';
+  import { get } from 'svelte/store';
+  import { PUBLIC_IS_APP } from '$env/static/public';
+  import { browser } from '$app/environment';
 
   interface Props {
-    children?: import("svelte").Snippet;
+    children?: import('svelte').Snippet;
   }
 
   let { children }: Props = $props();
 
-  const noLayout = ["/login", "/oauth", "/oauth/logout"];
+  const noLayout = ['/login', '/oauth', '/oauth/logout'];
 
   connect_updater();
   test_token().then((valid) => {
     if (!valid && browser) {
       let url = get(page).url.pathname;
-      if (url !== "/login") {
-        goto("/login");
+      if (url !== '/login') {
+        goto('/login');
       }
     }
   });
 
   onMount(() => {
-    if (PUBLIC_IS_APP !== "true" || !browser) return;
+    if (PUBLIC_IS_APP !== 'true' || !browser) return;
 
     let url = get(page).url.pathname;
-    if (!getTokenCookie() && url !== "/login") {
-      goto("/login");
+    if (!getTokenCookie() && url !== '/login') {
+      goto('/login');
     }
   });
 </script>
@@ -50,8 +50,8 @@
 {#if !noLayout.includes($page.url.pathname)}
   <Sidebar.Provider class="h-full">
     <SidebarApp />
-    <Sidebar.Trigger class="absolute left-3 top-3 flex md:hidden" />
-    <main class="w-full h-full flex">
+    <Sidebar.Trigger class="absolute top-3 left-3 flex md:hidden" />
+    <main class="flex h-full w-full">
       {@render children?.()}
     </main>
   </Sidebar.Provider>

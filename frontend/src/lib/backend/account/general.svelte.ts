@@ -1,39 +1,39 @@
-import { base64ToArrayBuffer } from "positron-components/util";
+import { base64ToArrayBuffer } from 'positron-components/util';
 import {
   get,
   post,
   ContentType,
-  ResponseType,
-} from "positron-components/backend";
-import type { ProfileInfo, UserInfo } from "./types.svelte";
+  ResponseType
+} from 'positron-components/backend';
+import type { ProfileInfo, UserInfo } from './types.svelte';
 
 export const profile_info = async (uuid: string) => {
   return await get<ProfileInfo>(
     `/account/general/profile_info/${uuid}`,
-    ResponseType.Json,
+    ResponseType.Json
   );
 };
 
 export const user_info = async () => {
-  return await get<UserInfo>("/account/general/info", ResponseType.Json);
+  return await get<UserInfo>('/account/general/info', ResponseType.Json);
 };
 
 export const profile_change_image = async (image: string) => {
   return await post<undefined>(
-    "/account/general/change_image",
+    '/account/general/change_image',
     ResponseType.None,
     ContentType.Bytes,
-    base64ToArrayBuffer(image),
+    base64ToArrayBuffer(image)
   );
 };
 
 export const profile_update = async (name: string) => {
   return await post<undefined>(
-    "/account/general/update_profile",
+    '/account/general/update_profile',
     ResponseType.None,
     ContentType.Json,
     JSON.stringify({
-      name,
-    }),
+      name
+    })
   );
 };

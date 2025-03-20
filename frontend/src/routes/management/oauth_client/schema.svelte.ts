@@ -1,37 +1,37 @@
-import { isUrl } from "positron-components/util";
-import { z } from "zod";
+import { isUrl } from 'positron-components/util';
+import { z } from 'zod';
 
 export const createSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   redirect_uri: z.string().url(),
   additional_redirect_uris: z
     .preprocess((arg: any) => {
-      if (typeof arg === "string") {
+      if (typeof arg === 'string') {
         return arg
-          .split(" ")
+          .split(' ')
           .map((uri) => uri.trim())
-          .filter((uri) => uri !== "");
+          .filter((uri) => uri !== '');
       }
       return arg;
     }, z.array(z.string().url()).default([]))
     .refine((uris) => uris.every(isUrl), {
-      message: "Te",
-    }),
+      message: 'Te'
+    })
 });
 
 export const editSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   redirect_uri: z.string().url(),
   additional_redirect_uris: z.preprocess((arg: any) => {
-    if (typeof arg === "string") {
+    if (typeof arg === 'string') {
       return arg
-        .split(" ")
+        .split(' ')
         .map((uri) => uri.trim())
-        .filter((uri) => uri !== "");
+        .filter((uri) => uri !== '');
     }
     return arg;
   }, z.array(z.string().url()).default([])),
-  phantom: z.string().default("").optional(),
+  phantom: z.string().default('').optional()
 });
 
 export const deleteSchema = z.object({});

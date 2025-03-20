@@ -1,27 +1,27 @@
 <script lang="ts">
-  import { user_list } from "$lib/backend/management/stores.svelte";
+  import { user_list } from '$lib/backend/management/stores.svelte';
   import {
     getPermissionGroups,
     Permission,
-    type User,
-  } from "$lib/backend/management/types.svelte";
+    type User
+  } from '$lib/backend/management/types.svelte';
   import {
     create_user,
     remove_user,
-    user_edit,
-  } from "$lib/backend/management/user.svelte";
+    user_edit
+  } from '$lib/backend/management/user.svelte';
   import {
     SimpleTable,
-    Multiselect,
-  } from "positron-components/components/table";
-  import { Label } from "positron-components/components/ui";
-  import { FormInput } from "positron-components/components/form";
-  import { RequestError } from "positron-components/backend";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import type { PageServerData } from "./$types";
-  import { createSchema, editSchema, deleteSchema } from "./schema.svelte";
-  import { columns } from "./table.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
+    Multiselect
+  } from 'positron-components/components/table';
+  import { Label } from 'positron-components/components/ui';
+  import { FormInput } from 'positron-components/components/form';
+  import { RequestError } from 'positron-components/backend';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import type { PageServerData } from './$types';
+  import { createSchema, editSchema, deleteSchema } from './schema.svelte';
+  import { columns } from './table.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
 
   interface Props {
     data: PageServerData;
@@ -40,29 +40,29 @@
     return await create_user(
       form.data.name,
       form.data.email,
-      form.data.password,
+      form.data.password
     );
   };
 
   const createForm = {
     schema: createSchema,
-    form: data.createForm,
+    form: data.createForm
   };
 
   const editForm = {
     schema: editSchema,
-    form: data.editForm,
+    form: data.editForm
   };
 
   const deleteForm = {
     schema: deleteSchema,
-    form: data.deleteForm,
+    form: data.deleteForm
   };
 </script>
 
 <SimpleTable
   data={users}
-  filter_keys={["name"]}
+  filter_keys={['name']}
   {columns}
   label="User"
   {createItemFn}
@@ -77,14 +77,14 @@
   {deleteForm}
   errorMappings={{
     [RequestError.Conflict]: {
-      field: "",
-      error: "",
-    },
+      field: '',
+      error: ''
+    }
   }}
   createButtonDisabled={!userInfo?.permissions.includes(Permission.UserCreate)}
   columnData={{
     access_level: userInfo?.access_level ?? 0,
-    allowed_permissions: userInfo?.permissions ?? [],
+    allowed_permissions: userInfo?.permissions ?? []
   }}
 >
   {#snippet editDialog({ props, item })}

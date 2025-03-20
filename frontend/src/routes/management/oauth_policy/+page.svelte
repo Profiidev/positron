@@ -2,32 +2,32 @@
   import {
     create_policy,
     delete_policy,
-    edit_policy,
-  } from "$lib/backend/management/oauth_policy.svelte";
+    edit_policy
+  } from '$lib/backend/management/oauth_policy.svelte';
   import {
     group_info_list,
-    oauth_policy_list,
-  } from "$lib/backend/management/stores.svelte";
+    oauth_policy_list
+  } from '$lib/backend/management/stores.svelte';
   import {
     Permission,
-    type GroupInfo,
-  } from "$lib/backend/management/types.svelte";
-  import { SimpleTable } from "positron-components/components/table";
+    type GroupInfo
+  } from '$lib/backend/management/types.svelte';
+  import { SimpleTable } from 'positron-components/components/table';
   import {
     Label,
     Input,
     Select,
-    Button,
-  } from "positron-components/components/ui";
-  import { FormInput } from "positron-components/components/form";
-  import { RequestError } from "positron-components/backend";
-  import { deepCopy } from "positron-components/util";
-  import { Plus, Trash } from "lucide-svelte";
-  import type { PageServerData } from "./$types";
-  import { createSchema, deleteSchema, editSchema } from "./schema.svelte";
-  import { columns } from "./table.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import { userData } from "$lib/backend/account/info.svelte";
+    Button
+  } from 'positron-components/components/ui';
+  import { FormInput } from 'positron-components/components/form';
+  import { RequestError } from 'positron-components/backend';
+  import { deepCopy } from 'positron-components/util';
+  import { Plus, Trash } from 'lucide-svelte';
+  import type { PageServerData } from './$types';
+  import { createSchema, deleteSchema, editSchema } from './schema.svelte';
+  import { columns } from './table.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import { userData } from '$lib/backend/account/info.svelte';
 
   interface Props {
     data: PageServerData;
@@ -48,23 +48,23 @@
 
   const createForm = {
     schema: createSchema,
-    form: data.createForm,
+    form: data.createForm
   };
 
   const editForm = {
     schema: editSchema,
-    form: data.editForm,
+    form: data.editForm
   };
 
   const deleteForm = {
     schema: deleteSchema,
-    form: data.deleteForm,
+    form: data.deleteForm
   };
 </script>
 
 <SimpleTable
   data={policies}
-  filter_keys={["name", "claim", "uuid"]}
+  filter_keys={['name', 'claim', 'uuid']}
   {columns}
   label="Policy"
   {createItemFn}
@@ -79,19 +79,18 @@
   {deleteForm}
   errorMappings={{
     [RequestError.Conflict]: {
-      field: "name",
-      error: "Name already taken",
-    },
+      field: 'name',
+      error: 'Name already taken'
+    }
   }}
   createButtonDisabled={!userInfo?.permissions.includes(
-    Permission.OAuthClientCreate,
+    Permission.OAuthClientCreate
   )}
   columnData={userInfo?.permissions ?? []}
 >
   {#snippet editDialog({ props, item })}
     {@const groups_left_edit = deepCopy(
-      groups?.filter((g) => !item.group.some((p) => p[0].uuid === g.uuid)) ||
-        [],
+      groups?.filter((g) => !item.group.some((p) => p[0].uuid === g.uuid)) || []
     )}
     <FormInput label="Name" placeholder="Name" key="name" {...props} />
     <FormInput label="Claim" placeholder="Claim" key="claim" {...props} />
@@ -110,7 +109,7 @@
           allowDeselect={false}
           disabled={props.disabled}
           onValueChange={(v) =>
-            (group[0].name = groups?.find((g) => g.uuid === v)?.name || "")}
+            (group[0].name = groups?.find((g) => g.uuid === v)?.name || '')}
         >
           <Select.Trigger>{group[0].name}</Select.Trigger>
           <Select.Content>
@@ -145,7 +144,7 @@
         disabled={props.disabled}
         onclick={() => {
           if (!item) return;
-          item.group.push([groups_left_edit[0], ""]);
+          item.group.push([groups_left_edit[0], '']);
         }}
       >
         <Plus />
@@ -154,7 +153,7 @@
   {/snippet}
   {#snippet createDialog({ props })}
     {@const groups_left_create = deepCopy(
-      groups?.filter((g) => !group.some((p) => p[0].uuid === g.uuid)) || [],
+      groups?.filter((g) => !group.some((p) => p[0].uuid === g.uuid)) || []
     )}
     <FormInput label="Name" placeholder="Name" key="name" {...props} />
     <FormInput label="Claim" placeholder="Claim" key="claim" {...props} />
@@ -174,7 +173,7 @@
           disabled={props.disabled}
           onValueChange={(v) =>
             (group_item[0].name =
-              groups?.find((g) => g.uuid === v)?.name || "")}
+              groups?.find((g) => g.uuid === v)?.name || '')}
         >
           <Select.Trigger>{group_item[0].name}</Select.Trigger>
           <Select.Content>
@@ -207,7 +206,7 @@
         size="icon"
         disabled={props.disabled}
         onclick={() => {
-          group.push([groups_left_create[0], ""]);
+          group.push([groups_left_create[0], '']);
         }}
       >
         <Plus />

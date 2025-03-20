@@ -4,25 +4,25 @@
     Card,
     Skeleton,
     Button,
-    ScrollArea,
-  } from "positron-components/components/ui";
-  import { Datepicker } from "positron-components/components/util";
-  import { DateTime } from "positron-components/util";
-  import type { ApodData, ApodInfo } from "$lib/backend/services/types.svelte";
+    ScrollArea
+  } from 'positron-components/components/ui';
+  import { Datepicker } from 'positron-components/components/util';
+  import { DateTime } from 'positron-components/util';
+  import type { ApodData, ApodInfo } from '$lib/backend/services/types.svelte';
   import {
     getLocalTimeZone,
     now,
-    parseAbsolute,
-  } from "@internationalized/date";
+    parseAbsolute
+  } from '@internationalized/date';
   import {
     apod,
     getApodImage,
     apod_info_list,
     getApodDate,
-    setApodDate,
-  } from "$lib/backend/services/stores.svelte";
-  import { set_good } from "$lib/backend/services/apod.svelte";
-  import { LoaderCircle } from "lucide-svelte";
+    setApodDate
+  } from '$lib/backend/services/stores.svelte';
+  import { set_good } from '$lib/backend/services/apod.svelte';
+  import { LoaderCircle } from 'lucide-svelte';
 
   let current_data: ApodData | undefined | null = $derived(apod.value);
   let current_image: string | undefined = $derived(getApodImage());
@@ -31,7 +31,7 @@
   let imageLoading = $state(false);
   let isLoading = $state(false);
   let date = $state(getApodDate());
-  let currentTab = $state("today");
+  let currentTab = $state('today');
 
   $effect(() => {
     dataLoading = true;
@@ -59,20 +59,20 @@
 
   const itemClick = (data: string) => {
     date = parseAbsolute(data, getLocalTimeZone());
-    currentTab = "today";
+    currentTab = 'today';
   };
 </script>
 
 <Tabs.Root
   bind:value={currentTab}
-  class="p-4 h-full flex flex-col overflow-hidden w-full"
+  class="flex h-full w-full flex-col overflow-hidden p-4"
 >
-  <Tabs.List class="ml-10 md:ml-0 w-fit">
+  <Tabs.List class="ml-10 w-fit md:ml-0">
     <Tabs.Trigger value="today">Today</Tabs.Trigger>
     <Tabs.Trigger value="library">Library</Tabs.Trigger>
   </Tabs.List>
-  <Tabs.Content value="today" class="flex-1 min-h-0">
-    <Card.Root class="h-full flex flex-col">
+  <Tabs.Content value="today" class="min-h-0 flex-1">
+    <Card.Root class="flex h-full flex-col">
       <Card.Header>
         {#if current_data && !dataLoading}
           {current_data.title}
@@ -80,35 +80,35 @@
           <Skeleton class="h-5 w-52" />
         {/if}
       </Card.Header>
-      <Card.Content class="flex flex-col flex-1 min-h-0">
+      <Card.Content class="flex min-h-0 flex-1 flex-col">
         {#if current_data && !imageLoading && current_image}
           <img
-            class="rounded flex-1 min-h-0 object-contain"
+            class="min-h-0 flex-1 rounded object-contain"
             src={`data:image/webp;base64, ${current_image}`}
             alt="Apod"
           />
         {:else if current_data === null}
-          <div class="flex-1 min-h-0 flex justify-center items-center">
+          <div class="flex min-h-0 flex-1 items-center justify-center">
             <p>No image available for today</p>
           </div>
         {:else}
-          <div class="flex-1 min-h-0">
-            <div class="w-full h-full flex justify-center items-center">
+          <div class="min-h-0 flex-1">
+            <div class="flex h-full w-full items-center justify-center">
               <Skeleton
-                class="w-full h-auto aspect-video max-w-full max-h-full"
+                class="aspect-video h-auto max-h-full w-full max-w-full"
               />
             </div>
           </div>
         {/if}
-        <div class="flex flex-row mt-6">
+        <div class="mt-6 flex flex-row">
           <Datepicker
             bind:value={date}
             end={now(getLocalTimeZone())}
-            class={current_data ? "mr-5" : ""}
+            class={current_data ? 'mr-5' : ''}
           />
           {#if current_data}
             <Button
-              variant={current_data.user ? "destructive" : "default"}
+              variant={current_data.user ? 'destructive' : 'default'}
               class="ml-auto"
               onclick={select}
               disabled={isLoading}
@@ -116,28 +116,28 @@
               {#if isLoading}
                 <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
               {/if}
-              {current_data.user ? "Deselect" : "Select"}
+              {current_data.user ? 'Deselect' : 'Select'}
             </Button>
           {/if}
         </div>
       </Card.Content>
     </Card.Root>
   </Tabs.Content>
-  <Tabs.Content value="library" class="flex-1 min-h-0">
-    <ScrollArea.ScrollArea orientation={"vertical"} class="h-full rounded">
+  <Tabs.Content value="library" class="min-h-0 flex-1">
+    <ScrollArea.ScrollArea orientation={'vertical'} class="h-full rounded">
       <div
-        class="grid w-full gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]"
+        class="grid w-full grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-3"
       >
         {#if apods}
           {#each apods as apod}
-            <div class="w-72 aspect-square">
+            <div class="aspect-square w-72">
               <Button
                 variant="ghost"
                 class="h-full"
                 onclick={() => itemClick(apod.date)}
               >
                 <img
-                  class="rounded object-contain h-auto w-auto"
+                  class="h-auto w-auto rounded object-contain"
                   src={`data:image/webp;base64, ${apod.image}`}
                   alt="Apod"
                 />
@@ -146,7 +146,7 @@
               <p class="text-muted-foreground ml-4">by {apod.user.name}</p>
               <p class="text-muted-foreground ml-4">
                 on {DateTime.fromISO(apod.date)
-                  .setLocale("de")
+                  .setLocale('de')
                   .toLocaleString(DateTime.DATE_MED)}
               </p>
             </div>

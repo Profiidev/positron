@@ -2,24 +2,24 @@
   import {
     Sidebar,
     DropdownMenu,
-    Skeleton,
-  } from "positron-components/components/ui";
-  import { SimpleAvatar } from "positron-components/components/util";
-  import { ChevronsUpDown, LogOut, Settings } from "lucide-svelte";
-  import { goto } from "$app/navigation";
-  import { logout } from "$lib/backend/auth/other.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
+    Skeleton
+  } from 'positron-components/components/ui';
+  import { SimpleAvatar } from 'positron-components/components/util';
+  import { ChevronsUpDown, LogOut, Settings } from 'lucide-svelte';
+  import { goto } from '$app/navigation';
+  import { logout } from '$lib/backend/auth/other.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
 
   let infoData = $derived(userData.value?.[1]);
   let sidebar = Sidebar.useSidebar();
 
   const settings = () => {
-    goto("/account");
+    goto('/account');
   };
 
   const logoutFn = async () => {
     await logout();
-    goto("/login");
+    goto('/login');
   };
 </script>
 
@@ -42,7 +42,7 @@
             {:else}
               <Skeleton class="size-8 rounded-full" />
               <div
-                class="grid flex-1 text-left text-sm leading-tight space-y-1"
+                class="grid flex-1 space-y-1 text-left text-sm leading-tight"
               >
                 <Skeleton class="h-4" />
                 <Skeleton class="h-3" />
@@ -54,7 +54,7 @@
       </DropdownMenu.Trigger>
       <DropdownMenu.Content
         class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
-        side={sidebar.isMobile ? "bottom" : "right"}
+        side={sidebar.isMobile ? 'bottom' : 'right'}
         align="end"
         sideOffset={4}
       >

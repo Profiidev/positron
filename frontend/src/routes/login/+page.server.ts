@@ -1,37 +1,37 @@
-import { PUBLIC_IS_APP } from "$env/static/public";
-import type { OAuthParams } from "$lib/backend/auth/types.svelte.js";
-import { redirect } from "@sveltejs/kit";
-import { superValidate } from "sveltekit-superforms";
-import { zod } from "sveltekit-superforms/adapters";
-import { loginSchema } from "./schema.svelte.js";
+import { PUBLIC_IS_APP } from '$env/static/public';
+import type { OAuthParams } from '$lib/backend/auth/types.svelte.js';
+import { redirect } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { loginSchema } from './schema.svelte.js';
 
 export const load = async ({ cookies, url }) => {
-  if (PUBLIC_IS_APP === "true")
+  if (PUBLIC_IS_APP === 'true')
     return {
-      loginForm: await superValidate(zod(loginSchema)),
+      loginForm: await superValidate(zod(loginSchema))
     };
 
-  let cookie = cookies.get("token");
+  let cookie = cookies.get('token');
 
-  let code = url.searchParams.get("code");
-  let name = url.searchParams.get("name");
+  let code = url.searchParams.get('code');
+  let name = url.searchParams.get('name');
 
   if (cookie) {
     if (code && name) {
       redirect(302, `/oauth?code=${code}&name=${name}`);
     } else {
-      redirect(302, "/");
+      redirect(302, '/');
     }
   } else if (code && name) {
     return {
       oauth_params: {
         code,
-        name,
+        name
       } as OAuthParams,
-      loginForm: await superValidate(zod(loginSchema)),
+      loginForm: await superValidate(zod(loginSchema))
     };
   }
   return {
-    loginForm: await superValidate(zod(loginSchema)),
+    loginForm: await superValidate(zod(loginSchema))
   };
 };

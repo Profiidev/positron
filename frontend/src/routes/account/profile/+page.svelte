@@ -5,21 +5,21 @@
     Label,
     Separator,
     Skeleton,
-    toast,
-  } from "positron-components/components/ui";
-  import { BaseForm, FormInput } from "positron-components/components/form";
-  import { arrayBufferToBase64 } from "positron-components/util";
-  import { Upload } from "lucide-svelte";
-  import { SimpleAvatar } from "positron-components/components/util";
+    toast
+  } from 'positron-components/components/ui';
+  import { BaseForm, FormInput } from 'positron-components/components/form';
+  import { arrayBufferToBase64 } from 'positron-components/util';
+  import { Upload } from 'lucide-svelte';
+  import { SimpleAvatar } from 'positron-components/components/util';
   import {
     profile_change_image,
-    profile_update,
-  } from "$lib/backend/account/general.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
-  import type { PageServerData } from "./$types";
-  import { profileSchema } from "./schema.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import type { SvelteComponent } from "svelte";
+    profile_update
+  } from '$lib/backend/account/general.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
+  import type { PageServerData } from './$types';
+  import { profileSchema } from './schema.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import type { SvelteComponent } from 'svelte';
 
   interface Props {
     data: PageServerData;
@@ -44,12 +44,12 @@
       let ret = await profile_change_image(image);
 
       if (ret) {
-        toast.error("Update Error", {
-          description: "Error while uploading image",
+        toast.error('Update Error', {
+          description: 'Error while uploading image'
         });
       } else {
-        toast.success("Upload successful", {
-          description: "Your profile profile image was updated successfully",
+        toast.success('Upload successful', {
+          description: 'Your profile profile image was updated successfully'
         });
       }
     }
@@ -67,12 +67,12 @@
     isLoading = false;
 
     if (ret) {
-      toast.error("Update Error", {
-        description: "There was an error while updating your profile",
+      toast.error('Update Error', {
+        description: 'There was an error while updating your profile'
       });
     } else {
-      toast.success("Successfully Update", {
-        description: "Your profile was updated successfully",
+      toast.success('Successfully Update', {
+        description: 'Your profile was updated successfully'
       });
     }
 
@@ -81,7 +81,7 @@
 
   const profileForm = {
     form: data.profile,
-    schema: profileSchema,
+    schema: profileSchema
   };
 </script>
 
@@ -97,11 +97,11 @@
         <div class="relative">
           <SimpleAvatar src={infoData.image} class="size-52 rounded-full" />
           <Button
-            class="group absolute hover:backdrop-blur-xs size-52 rounded-full inset-0 flex items-center justify-center hover:bg-transparent"
+            class="group absolute inset-0 flex size-52 items-center justify-center rounded-full hover:bg-transparent hover:backdrop-blur-xs"
             variant="ghost"
             onclick={startImageUpload}
           >
-            <Upload class="size-12! hidden group-hover:block" />
+            <Upload class="hidden size-12! group-hover:block" />
             <Label class="sr-only" for="picture">Picture</Label>
             <Input
               bind:ref={imageInput}
@@ -118,7 +118,7 @@
       {/if}
     </div>
     <BaseForm
-      class="mt-5 sm:mt-0 sm:pl-10 flex flex-col space-y-2"
+      class="mt-5 flex flex-col space-y-2 sm:mt-0 sm:pl-10"
       onsubmit={updateProfile}
       form={profileForm}
       bind:isLoading
@@ -129,20 +129,20 @@
         <div class="relative">
           <FormInput
             label="Username"
-            placeholder={infoData ? "Username" : ""}
+            placeholder={infoData ? 'Username' : ''}
             key="name"
             class="sm:max-w-72"
             {...props}
           />
           {#if !infoData}
-            <div class="absolute inset-0 size-full flex mt-11 ml-2">
+            <div class="absolute inset-0 mt-11 ml-2 flex size-full">
               <Skeleton class="h-5 w-32" />
             </div>
           {/if}
         </div>
       {/snippet}
       {#snippet footer({ children })}
-        {@render children({ className: "mt-8! ml-auto" })}
+        {@render children({ className: 'mt-8! ml-auto' })}
       {/snippet}
     </BaseForm>
   </div>

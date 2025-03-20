@@ -1,14 +1,14 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const createSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  access_level: z.number(),
+  name: z.string().min(1, 'Name is required'),
+  access_level: z.number()
 });
 
 export const editSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   access_level: z.number(),
-  phantom: z.string().default("").optional(),
+  phantom: z.string().default('').optional()
 });
 
 export const deleteSchema = z.object({});

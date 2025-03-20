@@ -3,25 +3,25 @@
     Separator,
     Label,
     Skeleton,
-    toast,
-  } from "positron-components/components/ui";
+    toast
+  } from 'positron-components/components/ui';
   import {
     FormDialog,
     FormInput,
-    Totp_6,
-  } from "positron-components/components/form";
-  import { RequestError } from "positron-components/backend";
-  import type { SvelteComponent } from "svelte";
-  import AccessConfirm from "../access-confirm.svelte";
+    Totp_6
+  } from 'positron-components/components/form';
+  import { RequestError } from 'positron-components/backend';
+  import type { SvelteComponent } from 'svelte';
+  import AccessConfirm from '../access-confirm.svelte';
   import {
     email_finish_change,
-    email_start_change,
-  } from "$lib/backend/email.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
-  import type { PageServerData } from "./$types";
-  import { confirmSchema, emailChange } from "./schema.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import { get } from "svelte/store";
+    email_start_change
+  } from '$lib/backend/email.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
+  import type { PageServerData } from './$types';
+  import { confirmSchema, emailChange } from './schema.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import { get } from 'svelte/store';
 
   interface Props {
     data: PageServerData;
@@ -31,12 +31,12 @@
 
   let confirmForm = {
     form: data.confirm,
-    schema: confirmSchema,
+    schema: confirmSchema
   };
 
   let changeEmailForm = {
     form: data.emailChange,
-    schema: emailChange,
+    schema: emailChange
   };
 
   let infoData = $derived(userData.value?.[1]);
@@ -44,7 +44,7 @@
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
   let requestAccess: () => Promise<boolean> = $derived(
-    accessConfirm?.requestAccess || (() => false),
+    accessConfirm?.requestAccess || (() => false)
   );
 
   let enteringCodes = $state(false);
@@ -73,16 +73,16 @@
 
     if (ret) {
       if (ret === RequestError.Conflict) {
-        return { field: "email", error: "This email is already taken" };
+        return { field: 'email', error: 'This email is already taken' };
       } else {
-        return { error: "There was an error while sending your emails" };
+        return { error: 'There was an error while sending your emails' };
       }
     } else {
       enteringCodes = true;
       emailFormComp?.setValue({
-        email_input: false,
+        email_input: false
       });
-      return { error: "" };
+      return { error: '' };
     }
   };
 
@@ -91,14 +91,14 @@
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return { error: "Invalid confirm code", field: "new_code" };
+        return { error: 'Invalid confirm code', field: 'new_code' };
       } else {
-        return { error: "There was an error while updating your email" };
+        return { error: 'There was an error while updating your email' };
       }
     } else {
       enteringCodes = false;
-      toast.success("Update successful", {
-        description: "Your email address was updated successfully",
+      toast.success('Update successful', {
+        description: 'Your email address was updated successfully'
       });
     }
   };
@@ -116,21 +116,21 @@
       {#if infoData}
         <p>{infoData.email}</p>
       {:else}
-        <Skeleton class="h-5 w-48 mt-1" />
+        <Skeleton class="mt-1 h-5 w-48" />
       {/if}
     </div>
     <FormDialog
       bind:this={emailFormComp}
       title="Change Email"
       description={enteringCodes
-        ? "Enter the code send to your old and new email below"
-        : "Enter your new email below"}
-      confirm={enteringCodes ? "Confirm" : "Change"}
+        ? 'Enter the code send to your old and new email below'
+        : 'Enter your new email below'}
+      confirm={enteringCodes ? 'Confirm' : 'Change'}
       trigger={{
-        text: "Change Email",
-        variant: "secondary",
-        class: "ml-auto",
-        loadIcon: true,
+        text: 'Change Email',
+        variant: 'secondary',
+        class: 'ml-auto',
+        loadIcon: true
       }}
       onopen={startChangeEmail}
       onsubmit={changeEmail}

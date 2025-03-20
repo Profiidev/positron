@@ -4,18 +4,18 @@
     Totp_6,
     BaseForm,
     FormInput,
-    type FormSchema,
-  } from "positron-components/components/form";
-  import { cn } from "positron-components/utils";
-  import { goto } from "$app/navigation";
-  import type { OAuthParams } from "$lib/backend/auth/types.svelte";
-  import { totp_confirm } from "$lib/backend/auth/totp.svelte";
-  import { RequestError } from "positron-components/backend";
-  import { password_login } from "$lib/backend/auth/password.svelte";
-  import { passkey_authenticate } from "$lib/backend/auth/passkey.svelte";
-  import { connect_updater } from "$lib/backend/ws/updater.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import type { SvelteComponent } from "svelte";
+    type FormSchema
+  } from 'positron-components/components/form';
+  import { cn } from 'positron-components/utils';
+  import { goto } from '$app/navigation';
+  import type { OAuthParams } from '$lib/backend/auth/types.svelte';
+  import { totp_confirm } from '$lib/backend/auth/totp.svelte';
+  import { RequestError } from 'positron-components/backend';
+  import { password_login } from '$lib/backend/auth/password.svelte';
+  import { passkey_authenticate } from '$lib/backend/auth/passkey.svelte';
+  import { connect_updater } from '$lib/backend/ws/updater.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
+  import type { SvelteComponent } from 'svelte';
 
   interface Props {
     class?: string | undefined | null;
@@ -26,25 +26,25 @@
   let {
     class: className = undefined,
     oauth_params,
-    loginForm,
+    loginForm
   }: Props = $props();
 
   let enterEmail = $state(true);
   let isLoading = $state(false);
-  let passkeyError = $state("");
+  let passkeyError = $state('');
   let formComp: SvelteComponent | undefined = $state();
 
   const onSubmit = async (form: SuperValidated<any>) => {
     if (!enterEmail) {
-      passkeyError = "";
+      passkeyError = '';
 
       let ret = await totp_confirm(form.data.totp);
 
       if (ret) {
         if (ret === RequestError.Unauthorized) {
-          return { field: "totp", error: "Wrong TOTP Code" };
+          return { field: 'totp', error: 'Wrong TOTP Code' };
         } else {
-          return { error: "There was and Error while checking TOTP Code" };
+          return { error: 'There was and Error while checking TOTP Code' };
         }
       } else {
         login_success();
@@ -52,31 +52,31 @@
       }
     }
 
-    passkeyError = "";
+    passkeyError = '';
 
     let ret = await password_login(form.data.email, form.data.password);
 
-    if (typeof ret === "boolean") {
+    if (typeof ret === 'boolean') {
       if (ret) {
         enterEmail = false;
         formComp?.setValue({
-          code_input: true,
+          code_input: true
         });
-        return { error: "" };
+        return { error: '' };
       } else {
         login_success();
       }
     } else {
       if (ret === RequestError.Unauthorized) {
-        return { field: "password", error: "Wrong Email or Password" };
+        return { field: 'password', error: 'Wrong Email or Password' };
       } else {
-        return { error: "There was an Error while signing in" };
+        return { error: 'There was an Error while signing in' };
       }
     }
   };
 
   const passkeyClick = async () => {
-    passkeyError = "";
+    passkeyError = '';
     isLoading = true;
 
     let ret = await passkey_authenticate();
@@ -85,9 +85,9 @@
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        passkeyError = "There was an Error with your passkey";
+        passkeyError = 'There was an Error with your passkey';
       } else {
-        passkeyError = "There was an Error while signing in";
+        passkeyError = 'There was an Error while signing in';
       }
     } else {
       login_success();
@@ -99,16 +99,16 @@
     if (oauth_params) {
       goto(`/oauth?code=${oauth_params.code}&name=${oauth_params.name}`);
     } else {
-      goto("/");
+      goto('/');
     }
   };
 </script>
 
-<div class={cn("grid gap-6", className)}>
+<div class={cn('grid gap-6', className)}>
   <BaseForm
     bind:this={formComp}
     onsubmit={onSubmit}
-    confirm={enterEmail ? "Sign In" : "Confirm"}
+    confirm={enterEmail ? 'Sign In' : 'Confirm'}
     bind:isLoading
     form={loginForm}
     class="gap-0"
@@ -138,13 +138,13 @@
         <Totp_6
           label="TOTP"
           key="totp"
-          class="flex w-full sm:w-[350px] justify-between"
+          class="flex w-full justify-between sm:w-[350px]"
           {...props}
         />
       {/if}
     {/snippet}
     {#snippet footer({ children })}
-      {@render children({ className: "mt-2" })}
+      {@render children({ className: 'mt-2' })}
     {/snippet}
   </BaseForm>
   <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />

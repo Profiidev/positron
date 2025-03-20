@@ -76,33 +76,33 @@ export interface OAuthScopeCreate {
 
 export enum Permission {
   //user page
-  UserList = "UserList",
-  UserEdit = "UserEdit",
-  UserCreate = "UserCreate",
-  UserDelete = "UserDelete",
+  UserList = 'UserList',
+  UserEdit = 'UserEdit',
+  UserCreate = 'UserCreate',
+  UserDelete = 'UserDelete',
 
   //group page
-  GroupList = "GroupList",
-  GroupEdit = "GroupEdit",
-  GroupCreate = "GroupCreate",
-  GroupDelete = "GroupDelete",
+  GroupList = 'GroupList',
+  GroupEdit = 'GroupEdit',
+  GroupCreate = 'GroupCreate',
+  GroupDelete = 'GroupDelete',
 
   //oauth client page
-  OAuthClientCreate = "OAuthClientCreate",
-  OAuthClientDelete = "OAuthClientDelete",
-  OAuthClientList = "OAuthClientList",
-  OAuthClientEdit = "OAuthClientEdit",
+  OAuthClientCreate = 'OAuthClientCreate',
+  OAuthClientDelete = 'OAuthClientDelete',
+  OAuthClientList = 'OAuthClientList',
+  OAuthClientEdit = 'OAuthClientEdit',
 
   //apod list
-  ApodList = "ApodList",
-  ApodSelect = "ApodSelect",
+  ApodList = 'ApodList',
+  ApodSelect = 'ApodSelect'
 }
 
 enum PermissionGroups {
-  User = "User",
-  Group = "Group",
-  OAuthClient = "OAuthClient",
-  Apod = "Apod",
+  User = 'User',
+  Group = 'Group',
+  OAuthClient = 'OAuthClient',
+  Apod = 'Apod'
 }
 
 export const getPermissionGroups = () => {
@@ -113,8 +113,8 @@ export const getPermissionGroups = () => {
         .filter((p) => p.startsWith(g))
         .map((p) => ({
           label: p,
-          value: p as Permission,
-        })),
+          value: p as Permission
+        }))
     };
   });
 };

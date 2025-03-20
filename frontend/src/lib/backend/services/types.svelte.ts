@@ -1,4 +1,4 @@
-import type { UserInfo } from "../management/types.svelte";
+import type { UserInfo } from '../management/types.svelte';
 
 export interface ApodInfo {
   title: string;

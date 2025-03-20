@@ -1,12 +1,12 @@
-import type JSEncrypt from "jsencrypt";
+import type JSEncrypt from 'jsencrypt';
 import {
   get,
   post,
   ContentType,
   ResponseType,
-  RequestError,
-} from "positron-components/backend";
-import { browser } from "$app/environment";
+  RequestError
+} from 'positron-components/backend';
+import { browser } from '$app/environment';
 
 let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
 
@@ -19,15 +19,15 @@ export const fetch_key = async () => {
     return RequestError.Other;
   }
 
-  let key = await get<{ key: string }>("/auth/password/key", ResponseType.Json);
+  let key = await get<{ key: string }>('/auth/password/key', ResponseType.Json);
 
-  if (typeof key !== "object") {
+  if (typeof key !== 'object') {
     return key;
   }
 
-  const JSEncrypt = (await import("jsencrypt")).JSEncrypt;
+  const JSEncrypt = (await import('jsencrypt')).JSEncrypt;
 
-  encrypt = new JSEncrypt({ default_key_size: "4096" });
+  encrypt = new JSEncrypt({ default_key_size: '4096' });
   encrypt.setPublicKey(key.key);
 };
 fetch_key();
@@ -39,16 +39,16 @@ export const password_login = async (email: string, password: string) => {
 
   let encrypted_password = encrypt.encrypt(password);
   let res = await post<{ totp: boolean }>(
-    "/auth/password/authenticate",
+    '/auth/password/authenticate',
     ResponseType.Json,
     ContentType.Json,
     JSON.stringify({
       email,
-      password: encrypted_password,
-    }),
+      password: encrypted_password
+    })
   );
 
-  if (typeof res !== "object") {
+  if (typeof res !== 'object') {
     if (res === RequestError.Unauthorized) {
       fetch_key();
     }
@@ -65,12 +65,12 @@ export const password_special_access = async (password: string) => {
 
   let encrypted_password = encrypt.encrypt(password);
   let res = await post<undefined>(
-    "/auth/password/special_access",
+    '/auth/password/special_access',
     ResponseType.None,
     ContentType.Json,
     JSON.stringify({
-      password: encrypted_password,
-    }),
+      password: encrypted_password
+    })
   );
 
   if (res && res === RequestError.Unauthorized) {
@@ -81,7 +81,7 @@ export const password_special_access = async (password: string) => {
 
 export const password_change = async (
   password: string,
-  password_confirm: string,
+  password_confirm: string
 ) => {
   if (!encrypt) {
     return RequestError.Other;
@@ -90,13 +90,13 @@ export const password_change = async (
   let encrypted_password = encrypt.encrypt(password);
   let encrypted_password_confirm = encrypt.encrypt(password_confirm);
   let res = await post<undefined>(
-    "/auth/password/change",
+    '/auth/password/change',
     ResponseType.None,
     ContentType.Json,
     JSON.stringify({
       password: encrypted_password,
-      password_confirm: encrypted_password_confirm,
-    }),
+      password_confirm: encrypted_password_confirm
+    })
   );
 
   if (res && res === RequestError.Unauthorized) {
