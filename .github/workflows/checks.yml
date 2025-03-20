@@ -30,7 +30,7 @@ jobs:
 
       - name: Set frontend env
         run: |
-          echo "PUBLIC_IS_APP=false" > frontend/.env
+          printf "PUBLIC_IS_APP=false\nPUBLIC_BACKEND_URL=http://localhost" > frontend/.env
       - name: Generate svelte data
         run: |
           cd frontend && npm run sync
