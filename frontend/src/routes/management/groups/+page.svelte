@@ -2,28 +2,28 @@
   import {
     create_group,
     delete_group,
-    edit_group,
-  } from "$lib/backend/management/group.svelte";
+    edit_group
+  } from '$lib/backend/management/group.svelte';
   import {
     group_list,
-    user_info_list,
-  } from "$lib/backend/management/stores.svelte";
+    user_info_list
+  } from '$lib/backend/management/stores.svelte';
   import {
     getPermissionGroups,
-    Permission,
-  } from "$lib/backend/management/types.svelte";
+    Permission
+  } from '$lib/backend/management/types.svelte';
   import {
     Multiselect,
-    SimpleTable,
-  } from "positron-components/components/table";
-  import { Label } from "positron-components/components/ui";
-  import { FormInput } from "positron-components/components/form";
-  import { RequestError } from "positron-components/backend";
-  import { columns } from "./table.svelte";
-  import { createSchema, deleteSchema, editSchema } from "./schema.svelte";
-  import type { PageServerData } from "./$types";
-  import { userData } from "$lib/backend/account/info.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
+    SimpleTable
+  } from 'positron-components/components/table';
+  import { Label } from 'positron-components/components/ui';
+  import { FormInput } from 'positron-components/components/form';
+  import { RequestError } from 'positron-components/backend';
+  import { columns } from './table.svelte';
+  import { createSchema, deleteSchema, editSchema } from './schema.svelte';
+  import type { PageServerData } from './$types';
+  import { userData } from '$lib/backend/account/info.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     data: PageServerData;
@@ -41,23 +41,23 @@
 
   const createForm = {
     schema: createSchema,
-    form: data.createForm,
+    form: data.createForm
   };
 
   const editForm = {
     schema: editSchema,
-    form: data.editForm,
+    form: data.editForm
   };
 
   const deleteForm = {
     schema: deleteSchema,
-    form: data.deleteForm,
+    form: data.deleteForm
   };
 </script>
 
 <SimpleTable
   data={groups}
-  filter_keys={["name", "uuid"]}
+  filter_keys={['name', 'uuid']}
   {columns}
   label="Group"
   {createItemFn}
@@ -72,18 +72,18 @@
   {deleteForm}
   errorMappings={{
     [RequestError.Conflict]: {
-      field: "name",
-      error: "Name already taken",
+      field: 'name',
+      error: 'Name already taken'
     },
     [RequestError.Unauthorized]: {
-      field: "access_level",
-      error: "You can only use access levels below yours",
-    },
+      field: 'access_level',
+      error: 'You can only use access levels below yours'
+    }
   }}
   createButtonDisabled={!userInfo?.permissions.includes(Permission.GroupCreate)}
   columnData={{
     access_level: userInfo?.access_level ?? 0,
-    allowed_permissions: userInfo?.permissions ?? [],
+    allowed_permissions: userInfo?.permissions ?? []
   }}
 >
   {#snippet editDialog({ props, item })}
@@ -109,7 +109,7 @@
       label="Users"
       data={users?.map((u) => ({
         label: u.name,
-        value: u,
+        value: u
       })) || []}
       bind:selected={item.users}
       compare={(a, b) => a.uuid === b.uuid}

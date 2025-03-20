@@ -1,6 +1,6 @@
-import { superValidate } from "sveltekit-superforms";
-import type { PageServerLoad } from "./$types";
-import { zod } from "sveltekit-superforms/adapters";
+import { superValidate } from 'sveltekit-superforms';
+import type { PageServerLoad } from './$types';
+import { zod } from 'sveltekit-superforms/adapters';
 import {
   confirmSchema,
   passkeyCreateSchema,
@@ -8,8 +8,8 @@ import {
   passkeyEditSchema,
   passwordChange,
   totpAdd,
-  totpRemove,
-} from "./schema.svelte";
+  totpRemove
+} from './schema.svelte';
 
 export const load: PageServerLoad = async () => {
   return {
@@ -19,6 +19,6 @@ export const load: PageServerLoad = async () => {
     confirmForm: await superValidate(zod(confirmSchema)),
     passwordChange: await superValidate(zod(passwordChange)),
     totpRemove: await superValidate(zod(totpRemove)),
-    totpAdd: await superValidate(zod(totpAdd)),
+    totpAdd: await superValidate(zod(totpAdd))
   };
 };

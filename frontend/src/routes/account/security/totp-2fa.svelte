@@ -3,25 +3,25 @@
     Separator,
     Skeleton,
     Badge,
-    toast,
-  } from "positron-components/components/ui";
+    toast
+  } from 'positron-components/components/ui';
   import {
     Totp_6,
     FormDialog,
-    type FormSchema,
-  } from "positron-components/components/form";
-  import { DateTime } from "positron-components/util";
-  import { RequestError } from "positron-components/backend";
-  import { Clock9 } from "lucide-svelte";
-  import type { UserInfo } from "$lib/backend/account/types.svelte";
+    type FormSchema
+  } from 'positron-components/components/form';
+  import { DateTime } from 'positron-components/util';
+  import { RequestError } from 'positron-components/backend';
+  import { Clock9 } from 'lucide-svelte';
+  import type { UserInfo } from '$lib/backend/account/types.svelte';
   import {
     is_code,
     totp_confirm_setup,
     totp_get_setup_code,
-    totp_remove,
-  } from "$lib/backend/auth/totp.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
+    totp_remove
+  } from '$lib/backend/auth/totp.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -34,8 +34,8 @@
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
-  let totpQr = $state("");
-  let totpCode = $state("");
+  let totpQr = $state('');
+  let totpCode = $state('');
 
   const startRemoveTotp = async () => {
     if (!valid) {
@@ -50,10 +50,10 @@
     let ret = await totp_remove();
 
     if (ret) {
-      return { error: "Error while removing TOTP" };
+      return { error: 'Error while removing TOTP' };
     } else {
-      toast.success("Remove successful", {
-        description: "TOTP was removed successfully from your account",
+      toast.success('Remove successful', {
+        description: 'TOTP was removed successfully from your account'
       });
     }
   };
@@ -65,7 +65,7 @@
       }
     }
 
-    totpQr = "";
+    totpQr = '';
 
     const fetch = async () => {
       let code = await totp_get_setup_code();
@@ -85,13 +85,13 @@
 
     if (res) {
       if (res === RequestError.Unauthorized) {
-        return { error: "TOTP code invalid", field: "code" };
+        return { error: 'TOTP code invalid', field: 'code' };
       } else {
-        return { error: "Error while adding TOTP" };
+        return { error: 'Error while adding TOTP' };
       }
     } else {
-      toast.success("Addition successful", {
-        description: "TOTP was added successfully to your account",
+      toast.success('Addition successful', {
+        description: 'TOTP was added successfully to your account'
       });
     }
   };
@@ -117,22 +117,22 @@
         <p class="text-muted-foreground text-sm">
           Created on {userInfo.totp_enabled
             ? DateTime.fromISO(userInfo.totp_created!).toLocaleString(
-                DateTime.DATE_MED,
+                DateTime.DATE_MED
               )
-            : "-"}
+            : '-'}
         </p>
-        <Separator orientation={"vertical"} />
+        <Separator orientation={'vertical'} />
         <p class="text-muted-foreground text-sm">
           Last used on {userInfo.totp_enabled
             ? DateTime.fromISO(userInfo.totp_last_used!).toLocaleString(
-                DateTime.DATE_MED,
+                DateTime.DATE_MED
               )
-            : "-"}
+            : '-'}
         </p>
       {:else}
         <div class="flex space-x-2">
           <Skeleton class="h-4 w-36" />
-          <Separator orientation={"vertical"} />
+          <Separator orientation={'vertical'} />
           <Skeleton class="h-4 w-40" />
         </div>
       {/if}
@@ -146,10 +146,10 @@
         confirm="Remove"
         confirmVariant="destructive"
         trigger={{
-          text: "Remove",
-          variant: "destructive",
-          class: "m-2 ml-auto",
-          loadIcon: true,
+          text: 'Remove',
+          variant: 'destructive',
+          class: 'm-2 ml-auto',
+          loadIcon: true
         }}
         onopen={startRemoveTotp}
         onsubmit={removeTotp}
@@ -160,21 +160,21 @@
         title="Add TOTP"
         description="Scan the QR-Code below or enter the code manually and enter the TOTP code"
         confirm="Add"
-        trigger={{ text: "Add", class: "m-2 ml-auto", loadIcon: true }}
+        trigger={{ text: 'Add', class: 'm-2 ml-auto', loadIcon: true }}
         onopen={startAddTotp}
         onsubmit={addTotp}
         form={addForm}
       >
         {#snippet children({ props })}
-          <div class="flex items-center flex-col space-y-2">
-            {#if totpQr !== ""}
+          <div class="flex flex-col items-center space-y-2">
+            {#if totpQr !== ''}
               <img
                 class="size-60"
                 src={`data:image/png;base64, ${totpQr}`}
                 alt="QR"
               />
               <p class="text-muted-foreground">Or use the code</p>
-              <p class="bg-muted px-1 rounded">{totpCode}</p>
+              <p class="bg-muted rounded px-1">{totpCode}</p>
             {:else}
               <Skeleton class="size-60" />
               <p class="text-muted-foreground">Or use the code</p>

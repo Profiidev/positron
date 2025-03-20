@@ -1,9 +1,9 @@
-import { browser } from "$app/environment";
-import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from "$env/static/public";
-import { tick } from "svelte";
-import { UpdateType } from "./types.svelte";
-import { sleep } from "positron-components/util";
-import { getTokenCookie } from "../cookie.svelte";
+import { browser } from '$app/environment';
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
+import { tick } from 'svelte';
+import { UpdateType } from './types.svelte';
+import { sleep } from 'positron-components/util';
+import { getTokenCookie } from '../cookie.svelte';
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -22,19 +22,19 @@ export const connect_updater = () => {
 };
 
 const create_websocket = () => {
-  let token = "";
-  if (PUBLIC_IS_APP === "true") {
+  let token = '';
+  if (PUBLIC_IS_APP === 'true') {
     token = `?token=${getTokenCookie()}`;
   }
 
   updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
 
-  updater.addEventListener("message", (event) => {
+  updater.addEventListener('message', (event) => {
     let msg: UpdateType = JSON.parse(event.data);
     Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
   });
 
-  updater.addEventListener("close", async () => {
+  updater.addEventListener('close', async () => {
     clearInterval(interval);
     await sleep(1000);
     create_websocket();
@@ -50,11 +50,11 @@ const create_websocket = () => {
       return;
     }
 
-    updater.send("heartbeat");
+    updater.send('heartbeat');
   }, 10000);
 
   Array.from(updater_cbs.values()).forEach((types) =>
-    Array.from(types.values()).forEach((cb) => cb()),
+    Array.from(types.values()).forEach((cb) => cb())
   );
 };
 
@@ -75,7 +75,7 @@ export const unregister_cb = (uuid: string, type: UpdateType) => {
 
 export const create_updater = <T>(
   type: UpdateType,
-  update: () => Promise<T | undefined>,
+  update: () => Promise<T | undefined>
 ) => {
   let value: T | undefined = $state();
 
@@ -110,6 +110,6 @@ export const create_updater = <T>(
     },
     update: async () => {
       update().then((v) => (value = v));
-    },
+    }
   };
 };

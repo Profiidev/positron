@@ -1,12 +1,12 @@
-import { UpdateType } from "../ws/types.svelte";
-import { create_updater } from "../ws/updater.svelte";
-import { profile_info, user_info } from "./general.svelte";
+import { UpdateType } from '../ws/types.svelte';
+import { create_updater } from '../ws/updater.svelte';
+import { profile_info, user_info } from './general.svelte';
 import {
   isProfileInfo,
   isUserInfo,
   type ProfileInfo,
-  type UserInfo,
-} from "./types.svelte";
+  type UserInfo
+} from './types.svelte';
 
 const updateUserInfo = async () => {
   let ret = await user_info();
@@ -33,5 +33,5 @@ const updateProfileInfo = async () => {
 
 export const userData = create_updater<[UserInfo, ProfileInfo]>(
   UpdateType.User,
-  updateProfileInfo,
+  updateProfileInfo
 );

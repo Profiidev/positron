@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Sidebar, ScrollArea } from "positron-components/components/ui";
-  import { Atom, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
-  import User from "./user.svelte";
-  import Main from "./main.svelte";
+  import { Sidebar, ScrollArea } from 'positron-components/components/ui';
+  import { Atom, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import User from './user.svelte';
+  import Main from './main.svelte';
 
   let sidebar = Sidebar.useSidebar();
   let isOpen = $derived(sidebar.props.open());
@@ -11,22 +11,22 @@
 <Sidebar.Root collapsible="icon" variant="floating">
   <Sidebar.Header>
     <Sidebar.Menu>
-      <Sidebar.MenuItem class="flex-row flex">
+      <Sidebar.MenuItem class="flex flex-row">
         <Sidebar.MenuButton
           size="lg"
-          class="max-w-52 md:max-w-0 data-[open=true]:max-w-40 overflow-hidden transition-all ease-linear"
+          class="max-w-52 overflow-hidden transition-all ease-linear data-[open=true]:max-w-40 md:max-w-0"
           data-open={isOpen}
         >
           <div
-            class="flex bg-sidebar-primary text-sidebar-primary-foreground aspect-square size-8 items-center justify-center rounded-lg"
+            class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
           >
             <Atom />
           </div>
-          <a class="font-semibold text-lg" href="/">Positron</a>
+          <a class="text-lg font-semibold" href="/">Positron</a>
         </Sidebar.MenuButton>
         <Sidebar.MenuButton
           size="lg"
-          class="size-12 ml-auto"
+          class="ml-auto size-12"
           onclick={sidebar.toggle}
           aria-label="Open/Close Sidebar"
         >
@@ -49,7 +49,7 @@
   </Sidebar.Header>
   <Sidebar.Separator />
   <Sidebar.Content>
-    <ScrollArea.ScrollArea orientation={"vertical"}>
+    <ScrollArea.ScrollArea orientation={'vertical'}>
       <Main />
     </ScrollArea.ScrollArea>
   </Sidebar.Content>

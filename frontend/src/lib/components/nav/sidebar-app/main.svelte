@@ -1,72 +1,72 @@
 <script lang="ts">
-  import { Sidebar, Collapsible } from "positron-components/components/ui";
-  import { ChevronRight, Image, KeyRound, Users } from "lucide-svelte";
-  import { page } from "$app/stores";
-  import { Permission } from "$lib/backend/management/types.svelte";
-  import { userData } from "$lib/backend/account/info.svelte";
+  import { Sidebar, Collapsible } from 'positron-components/components/ui';
+  import { ChevronRight, Image, KeyRound, Users } from 'lucide-svelte';
+  import { page } from '$app/stores';
+  import { Permission } from '$lib/backend/management/types.svelte';
+  import { userData } from '$lib/backend/account/info.svelte';
 
   const allItems = [
     {
-      title: "Services",
+      title: 'Services',
       items: [
         {
-          title: "Image",
+          title: 'Image',
           icon: Image,
           isActive: true,
           items: [
             {
-              title: "Apod",
-              url: "/services/apod",
-              permission: Permission.ApodList,
-            },
-          ],
-        },
-      ],
+              title: 'Apod',
+              url: '/services/apod',
+              permission: Permission.ApodList
+            }
+          ]
+        }
+      ]
     },
     {
-      title: "Management",
+      title: 'Management',
       items: [
         {
-          title: "User Management",
+          title: 'User Management',
           icon: Users,
           isActive: true,
           items: [
             {
-              title: "Users",
-              url: "/management/users",
-              permission: Permission.UserList,
+              title: 'Users',
+              url: '/management/users',
+              permission: Permission.UserList
             },
             {
-              title: "Groups",
-              url: "/management/groups",
-              permission: Permission.GroupList,
-            },
-          ],
+              title: 'Groups',
+              url: '/management/groups',
+              permission: Permission.GroupList
+            }
+          ]
         },
         {
-          title: "Auth Provider",
+          title: 'Auth Provider',
           icon: KeyRound,
           isActive: true,
           items: [
             {
-              title: "OAuth / OpenID Clients",
-              url: "/management/oauth_client",
-              permission: Permission.OAuthClientList,
+              title: 'OAuth / OpenID Clients',
+              url: '/management/oauth_client',
+              permission: Permission.OAuthClientList
             },
             {
-              title: "OAuth Scopes",
-              url: "/management/oauth_scope",
-              permission: Permission.OAuthClientList,
+              title: 'OAuth Scopes',
+              url: '/management/oauth_scope',
+              permission: Permission.OAuthClientList
             },
             {
-              title: "OAuth Policies",
-              url: "/management/oauth_policy",
-              permission: Permission.OAuthClientList,
-            },
-          ],
-        },
-      ],
-    },
+              title: 'OAuth Policies',
+              url: '/management/oauth_policy',
+              permission: Permission.OAuthClientList
+            }
+          ]
+        }
+      ]
+    }
   ];
 
   let permissions = $derived(userData.value?.[0].permissions);

@@ -3,24 +3,24 @@
     Button,
     Skeleton,
     Separator,
-    toast,
-  } from "positron-components/components/ui";
+    toast
+  } from 'positron-components/components/ui';
   import {
     FormDialog,
     FormInput,
-    type FormSchema,
-  } from "positron-components/components/form";
-  import { KeyRound, Pencil, Trash } from "lucide-svelte";
-  import type { SvelteComponent } from "svelte";
-  import { DateTime } from "positron-components/util";
-  import { RequestError } from "positron-components/backend";
+    type FormSchema
+  } from 'positron-components/components/form';
+  import { KeyRound, Pencil, Trash } from 'lucide-svelte';
+  import type { SvelteComponent } from 'svelte';
+  import { DateTime } from 'positron-components/util';
+  import { RequestError } from 'positron-components/backend';
   import {
     passkey_edit_name,
     passkey_register,
-    passkey_remove,
-  } from "$lib/backend/auth/passkey.svelte";
-  import { passkey_list } from "$lib/backend/auth/stores.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
+    passkey_remove
+  } from '$lib/backend/auth/passkey.svelte';
+  import { passkey_list } from '$lib/backend/auth/stores.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -34,7 +34,7 @@
     $props();
 
   let passkeys = $derived(passkey_list.value);
-  let editing = $state("");
+  let editing = $state('');
   let editDialog: SvelteComponent | undefined = $state();
   let deleteDialog: SvelteComponent | undefined = $state();
 
@@ -53,15 +53,15 @@
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return { error: "There was an error with your passkey" };
+        return { error: 'There was an error with your passkey' };
       } else if (ret === RequestError.Conflict) {
-        return { field: "name", error: "Name already taken" };
+        return { field: 'name', error: 'Name already taken' };
       } else {
-        return { error: "There was an error while creating passkey" };
+        return { error: 'There was an error while creating passkey' };
       }
     } else {
-      toast.success("Creation successful", {
-        description: "Passkey was successfully added to your account",
+      toast.success('Creation successful', {
+        description: 'Passkey was successfully added to your account'
       });
     }
   };
@@ -81,10 +81,10 @@
     let ret = await passkey_remove(editing);
 
     if (ret) {
-      return { error: "There was an error while deleting your passkey" };
+      return { error: 'There was an error while deleting your passkey' };
     } else {
-      toast.success("Deletion successful", {
-        description: `Passkey "${editing}" was successfully removed from your account`,
+      toast.success('Deletion successful', {
+        description: `Passkey "${editing}" was successfully removed from your account`
       });
     }
   };
@@ -106,30 +106,30 @@
 
     if (ret) {
       if (ret === RequestError.Conflict) {
-        return { field: "name", error: "Name already taken" };
+        return { field: 'name', error: 'Name already taken' };
       } else {
-        return { error: "There was an error while editing passkey name" };
+        return { error: 'There was an error while editing passkey name' };
       }
     } else {
-      toast.success("Edit successful", {
-        description: `Passkey name was changed successfully from ${editing} to ${form.data.name}`,
+      toast.success('Edit successful', {
+        description: `Passkey name was changed successfully from ${editing} to ${form.data.name}`
       });
     }
   };
 </script>
 
-<div class="border rounded-xl">
+<div class="rounded-xl border">
   <div class="flex items-center p-3">
-    <p class="rounded-lg text-muted-foreground">Your Passkeys</p>
+    <p class="text-muted-foreground rounded-lg">Your Passkeys</p>
     <FormDialog
       title="Create new Passkey"
       description="Enter the name for your new passkey"
       confirm="Create"
       trigger={{
-        text: "Create new",
-        variant: "secondary",
-        class: "ml-auto",
-        loadIcon: true,
+        text: 'Create new',
+        variant: 'secondary',
+        class: 'ml-auto',
+        loadIcon: true
       }}
       onopen={startCreatePasskey}
       onsubmit={createPasskey}
@@ -175,15 +175,15 @@
   </div>
   <Separator />
   {#if !passkeys}
-    <div class="flex p-2 items-center">
+    <div class="flex items-center p-2">
       <div class="space-y-2 p-2">
-        <div class="flex space-x-2 items-center">
+        <div class="flex items-center space-x-2">
           <Skeleton class="size-7 rounded-full" />
           <Skeleton class="h-5 w-20" />
         </div>
         <div class="flex space-x-2">
           <Skeleton class="h-4 w-36" />
-          <Separator orientation={"vertical"} />
+          <Separator orientation={'vertical'} />
           <Skeleton class="h-4 w-40" />
         </div>
       </div>
@@ -195,7 +195,7 @@
       {#if i > 0}
         <Separator />
       {/if}
-      <div class="flex p-2 items-center">
+      <div class="flex items-center p-2">
         <div class="space-y-2 p-2">
           <div class="flex space-x-2">
             <KeyRound class="size-5" />
@@ -204,13 +204,13 @@
           <div class="flex space-x-2">
             <p class="text-muted-foreground text-sm">
               Created on {DateTime.fromISO(passkey.created).toLocaleString(
-                DateTime.DATE_MED,
+                DateTime.DATE_MED
               )}
             </p>
-            <Separator orientation={"vertical"} />
+            <Separator orientation={'vertical'} />
             <p class="text-muted-foreground text-sm">
               Last used on {DateTime.fromISO(passkey.used).toLocaleString(
-                DateTime.DATE_MED,
+                DateTime.DATE_MED
               )}
             </p>
           </div>
@@ -234,6 +234,6 @@
       </div>
     {/each}
   {:else}
-    <div class="flex justify-center rounded-lg m-5">No passkeys found</div>
+    <div class="m-5 flex justify-center rounded-lg">No passkeys found</div>
   {/if}
 </div>

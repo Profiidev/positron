@@ -2,19 +2,19 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema,
-  } from "positron-components/components/form";
+    type FormSchema
+  } from 'positron-components/components/form';
   import {
     Separator,
     Skeleton,
-    toast,
-  } from "positron-components/components/ui";
-  import { DateTime } from "positron-components/util";
-  import { RequestError } from "positron-components/backend";
-  import { userData } from "$lib/backend/account/info.svelte";
-  import type { UserInfo } from "$lib/backend/account/types.svelte";
-  import { password_change } from "$lib/backend/auth/password.svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
+    toast
+  } from 'positron-components/components/ui';
+  import { DateTime } from 'positron-components/util';
+  import { RequestError } from 'positron-components/backend';
+  import { userData } from '$lib/backend/account/info.svelte';
+  import type { UserInfo } from '$lib/backend/account/types.svelte';
+  import { password_change } from '$lib/backend/auth/password.svelte';
+  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -38,45 +38,45 @@
 
   const changeConfirm = async (form: SuperValidated<any>) => {
     if (form.data.password !== form.data.password_confirm) {
-      return { error: "Passwords are not equal", field: "password_confirm" };
+      return { error: 'Passwords are not equal', field: 'password_confirm' };
     }
 
     let ret = await password_change(
       form.data.password,
-      form.data.password_confirm,
+      form.data.password_confirm
     );
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
-        return { error: "Passwords are not equal", field: "password_confirm" };
+        return { error: 'Passwords are not equal', field: 'password_confirm' };
       } else {
-        return { error: "Error while updating password" };
+        return { error: 'Error while updating password' };
       }
     } else {
-      toast.success("Update successful", {
-        description: "Password was changed successfully",
+      toast.success('Update successful', {
+        description: 'Password was changed successfully'
       });
     }
   };
 </script>
 
 <div class="flex items-center">
-  <div class="flex h-6 space-x-2 mr-2">
+  <div class="mr-2 flex h-6 space-x-2">
     {#if userInfo}
       <p class="text-muted-foreground text-sm">
         Last login {DateTime.fromISO(userInfo.last_login).toLocaleString(
-          DateTime.DATE_MED,
+          DateTime.DATE_MED
         )}
       </p>
-      <Separator orientation={"vertical"} />
+      <Separator orientation={'vertical'} />
       <p class="text-muted-foreground text-sm">
         Last special access {DateTime.fromISO(
-          userInfo.last_special_access,
+          userInfo.last_special_access
         ).toLocaleString(DateTime.DATE_MED)}
       </p>
     {:else}
       <Skeleton class="h-6 w-40" />
-      <Separator orientation={"vertical"} />
+      <Separator orientation={'vertical'} />
       <Skeleton class="h-6 w-56" />
     {/if}
   </div>
@@ -85,10 +85,10 @@
     description="Enter your new password below"
     confirm="Change Password"
     trigger={{
-      text: "Change Password",
-      variant: "secondary",
-      class: "ml-auto",
-      loadIcon: true,
+      text: 'Change Password',
+      variant: 'secondary',
+      class: 'ml-auto',
+      loadIcon: true
     }}
     onopen={startChange}
     onsubmit={changeConfirm}
