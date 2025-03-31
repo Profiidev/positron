@@ -8,7 +8,7 @@ argon2 = { version = "0.5.3", features = ["std"] }
 base64 = "0.22.1"
 chrono = { version = "0.4.40", features = ["serde"]}
 dotenv = "0.15.0"
-image = { version = "0.25.5", default-features = false, features = ["webp", "png", "jpeg"]}
+image = { version = "0.25.6", default-features = false, features = ["webp", "png", "jpeg"]}
 jsonwebtoken = "9.3.1"
 lettre = "0.11.15"
 openssl = { version = "0.10.71", features = ["vendored"] }
@@ -17,7 +17,7 @@ rocket = { version = "0.5.1", features = ["json"] }
 rocket_cors = "0.6.0"
 rocket_ws = "0.1.1"
 rsa = "0.9.8"
-sea-orm = { version = "1.1.7", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+sea-orm = { version = "1.1.8", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_urlencoded = "0.7.1"
 thiserror = "2.0.12"
@@ -30,5 +30,5 @@ migration = { path = "migration" }
 sea-orm-rocket = "0.5.5"
 rust-s3 = "0.35.1"
 reqwest = { version = "0.12.15", features = ["json"] }
-log = "0.4.26"
+log = "0.4.27"
 loki-logger = "0.1.3"
