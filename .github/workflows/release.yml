@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - master
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   build:
@@ -13,8 +17,8 @@ jobs:
       matrix:
         item:
           [
-            { df_path: ./frontend, image: positron },
-            { df_path: ./backend, image: positron-backend },
+            { df_path: ./frontend, image: "${{ github.repository}}/positron-frontend" },
+            { df_path: ./backend, image: "${{ github.repository }}/positron-backend" },
           ]
     steps:
       - name: Checkout repository
@@ -28,24 +32,57 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ matrix.item.image }}
+
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: ./
           file: ${{ matrix.item.df_path }}/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.item.image }}:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: URL=${{ secrets.BACKEND_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        if: github.event_name != 'pull_request'
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ matrix.item.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.30.0
+        if: github.event_name == 'pull_request'
+        with:
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          sarif_file: "trivy-results.sarif"
 
   publish:
     name: Update Server
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name != 'pull_request'
     steps:
       - name: Update via Webhook
         uses: newarifrh/portainer-service-webhook@v1
