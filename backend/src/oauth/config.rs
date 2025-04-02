@@ -55,7 +55,7 @@ async fn config(
   };
 
   Ok(Json(Configuration {
-    issuer: state.issuer.clone(),
+    issuer: format!("{}/{}", state.issuer, client_id),
     authorization_endpoint: format!("{}/authorize", state.backend_url),
     token_endpoint: format!("{}/token", backend_url),
     userinfo_endpoint: format!("{}/user", backend_url),
