@@ -21,10 +21,6 @@ jobs:
       id-token: write
       security-events: write
 
-    outputs:
-      frontend: ${{ secrets.PORTAINER_BACKEND_WEBHOOK }}
-      backend: ${{ secrets.PORTAINER_FRONTEND_WEBHOOK }}
-
     strategy:
       matrix:
         item:
@@ -97,9 +93,9 @@ jobs:
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
-        url: [ "${{ needs.build.outputs.backend }}", "${{ needs.build.outputs.frontend }}" ]
+        url: [ "1", "2" ]
     steps:
       - name: Update via Webhook
         uses: newarifrh/portainer-service-webhook@v1
         with:
-          webhook_url: ${{ matrix.url }}
+          webhook_url: ${{ matrix.url == '1' && secrets.PORTAINER_BACKEND_WEBHOOK || secrets.PORTAINER_FRONTEND_WEBHOOK }}
