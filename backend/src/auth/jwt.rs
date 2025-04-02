@@ -200,7 +200,6 @@ impl JwtState {
     let decoding_key =
       DecodingKey::from_rsa_pem(public_key_pem.as_bytes()).expect("Failed to create decoding key");
     let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[iss.as_str()]);
     validation.validate_aud = false;
 
     Self {

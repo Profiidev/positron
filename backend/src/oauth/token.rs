@@ -15,7 +15,7 @@ use super::{
   client_auth::{ClientAuth, Error},
   jwt::OAuthClaims,
   scope::Scope,
-  state::{get_timestamp_10_min, AuthorizeState},
+  state::{get_timestamp_10_min, AuthorizeState, ConfigurationState},
 };
 
 pub fn routes() -> Vec<Route> {
@@ -47,6 +47,7 @@ async fn token<'r>(
   state: &State<AuthorizeState>,
   jwt: &State<JwtState>,
   conn: Connection<'r, DB>,
+  config: &State<ConfigurationState>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
   let db = conn.into_inner();
 
@@ -125,7 +126,7 @@ async fn token<'r>(
   let claims = OAuthClaims {
     sub: code_info.user,
     exp: get_timestamp_10_min(),
-    iss: jwt.iss.clone(),
+    iss: format!("{}/{}", config.issuer, code_info.client_id),
     aud: code_info.client_id,
     iat: time,
     auth_time: time,
