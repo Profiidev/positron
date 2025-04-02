@@ -56,10 +56,10 @@ async fn config(
 
   Ok(Json(Configuration {
     issuer: state.issuer.clone(),
-    authorization_endpoint: format!("{}/authorize", backend_url),
+    authorization_endpoint: format!("{}/authorize", state.backend_url),
     token_endpoint: format!("{}/token", backend_url),
     userinfo_endpoint: format!("{}/user", backend_url),
-    end_session_endpoint: format!("{}/logout/{}", backend_url, client_id),
+    end_session_endpoint: format!("{}/logout/{}", state.backend_url, client_id),
     revocation_endpoint: format!("{}/revoke", backend_url),
     response_types_supported: vec!["code".into()],
     jwks_uri: format!("{}/jwks", backend_url),
