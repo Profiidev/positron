@@ -177,6 +177,7 @@
   startCreate={startCreateClient}
   startEdit={(item) => {
     scope = item.default_scope.split(' ');
+    newSecret = '';
   }}
   createClass="md:max-w-[750px]"
   editClass="md:max-w-[750px]"
@@ -192,10 +193,11 @@
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
-        <Label for="secret"
+        <Label for="secret" class="flex"
           >Client Secret
           {#if newSecret !== ''}
-            <span class="text-destructive ml-14">WILL NOT BE VISIBLE AGAIN</span
+            <span class="text-destructive ml-auto"
+              >WILL NOT BE VISIBLE AGAIN</span
             >
           {/if}
         </Label>
@@ -205,10 +207,7 @@
             variant="destructive"
             onclick={() => resetSecret(item)}
           >
-            {#if isLoading}
-              <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
-            {/if}
-            <RotateCw class="mr-2 h-4 w-4" />
+            <RotateCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
             Reset</Button
           >
         {:else}
