@@ -62,7 +62,7 @@
       value: startCreate?.client_id
     },
     {
-      name: "Client Secret <span class='text-destructive ml-14'>WILL NOT BE VISIBLE AGAIN</span>",
+      name: "Client Secret <span class='text-destructive ml-auto'>WILL NOT BE VISIBLE AGAIN</span>",
       value: startCreate?.secret
     }
   ]);
@@ -277,7 +277,7 @@
       <Separator orientation="vertical" class="mx-[30px]" />
       <div class="grid h-fit gap-1 space-y-1">
         {#each clientInfo as info}
-          <Label for={info.name}>{@html info.name}</Label>
+          <Label for={info.name} class="flex">{@html info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
         <FormInput label="Name" placeholder="Name" key="name" {...props} />
