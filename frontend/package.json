@@ -18,7 +18,7 @@
     "@sveltejs/enhanced-img": "0.4.4",
     "@tauri-apps/api": "2.4.0",
     "@tauri-apps/plugin-http": "^2.4.2",
-    "@tauri-apps/plugin-shell": "2.2.0",
+    "@tauri-apps/plugin-shell": "2.2.1",
     "@types/luxon": "3.4.2",
     "jsencrypt": "3.3.2",
     "luxon": "3.6.0",
