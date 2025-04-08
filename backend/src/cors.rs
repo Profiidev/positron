@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use rocket::http::Method;
-use rocket_cors::{AllOrSome, AllowedHeaders, AllowedOrigins, Cors};
+use rocket_cors::{AllOrSome, AllowedOrigins, Cors};
 
 pub fn cors() -> Cors {
   let mut allowed_origins = AllowedOrigins::some_exact(
@@ -27,7 +27,6 @@ pub fn cors() -> Cors {
       .into_iter()
       .map(From::from)
       .collect(),
-    allowed_headers: AllowedHeaders::some(&["Accept", "Content-Type", "Authorization"]),
     allow_credentials: true,
     ..Default::default()
   }
