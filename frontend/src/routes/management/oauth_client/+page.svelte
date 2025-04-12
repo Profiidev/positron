@@ -34,10 +34,12 @@
   import { deepCopy } from 'positron-components/util';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
-  import { LoaderCircle, RotateCw } from 'lucide-svelte';
+  import { RotateCw } from 'lucide-svelte';
   import type { PageServerData } from './$types';
   import type { SuperValidated } from 'sveltekit-superforms';
   import { userData } from '$lib/backend/account/info.svelte';
+  import FormSwitch from './FormSwitch.svelte';
+  import HidableInput from '$lib/components/form/HidableInput.svelte';
 
   interface Props {
     data: PageServerData;
@@ -102,7 +104,8 @@
       form.data.name,
       form.data.redirect_uri,
       form.data.additional_redirect_uris,
-      scope.join(' ')
+      scope.join(' '),
+      form.data.confidential
     );
   };
 
@@ -201,7 +204,9 @@
             >
           {/if}
         </Label>
-        {#if newSecret === ''}
+        {#if !item.confidential}
+          <p class="ml-2">Client is not confidential</p>
+        {:else if newSecret === ''}
           <Button
             disabled={isLoading}
             variant="destructive"
@@ -276,10 +281,19 @@
       </div>
       <Separator orientation="vertical" class="mx-[30px]" />
       <div class="grid h-fit gap-1 space-y-1">
-        {#each clientInfo as info}
-          <Label for={info.name} class="flex">{@html info.name}</Label>
-          <Input id={info.name} value={info.value} readonly />
-        {/each}
+        <Label for="client-id" class="flex">Client ID</Label>
+        <Input id="client-id" value={startCreate?.client_id} readonly />
+        <FormSwitch label="Confidential" key="confidential" {...props} />
+        <HidableInput
+          id="client-secret"
+          value={startCreate?.secret}
+          key="confidential"
+          {...props}
+        >
+          Client Secret <span class="text-destructive ml-auto"
+            >WILL NOT BE VISIBLE AGAIN</span
+          >
+        </HidableInput>
         <FormInput label="Name" placeholder="Name" key="name" {...props} />
         <Label for="scope">Scope</Label>
         <Multiselect
