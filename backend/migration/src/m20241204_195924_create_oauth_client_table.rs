@@ -104,7 +104,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum OAuthClient {
+pub enum OAuthClient {
   Table,
   Id,
   Name,

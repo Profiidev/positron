@@ -29,6 +29,7 @@ export interface GroupInfo {
 export interface OAuthClientInfo {
   name: string;
   client_id: string;
+  confidential: boolean;
   redirect_uri: string;
   additional_redirect_uris: string[];
   default_scope: string;

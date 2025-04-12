@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const createSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   redirect_uri: z.string().url(),
+  confidential: z.boolean().default(true),
   additional_redirect_uris: z
     .preprocess((arg: any) => {
       if (typeof arg === 'string') {

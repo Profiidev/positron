@@ -74,7 +74,8 @@ export const create_client = async (
   name: string,
   redirect_uri: string,
   additional_redirect_uris: string[],
-  scope: string
+  scope: string,
+  confidential: string
 ) => {
   return await post<undefined>(
     '/management/oauth_client/create',
@@ -84,7 +85,8 @@ export const create_client = async (
       name,
       redirect_uri,
       additional_redirect_uris,
-      scope
+      scope,
+      confidential
     })
   );
 };
