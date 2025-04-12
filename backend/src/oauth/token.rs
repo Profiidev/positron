@@ -27,6 +27,7 @@ struct TokenReq {
   grant_type: String,
   code: String,
   redirect_uri: Option<String>,
+  client_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -43,14 +44,15 @@ struct TokenRes {
 async fn token<'r>(
   req_p: Option<TokenReq>,
   req_b: Option<Form<TokenReq>>,
-  auth: ClientAuth,
+  auth: Option<ClientAuth>,
   state: &State<AuthorizeState>,
   jwt: &State<JwtState>,
   conn: Connection<'r, DB>,
   config: &State<ConfigurationState>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
   let db = conn.into_inner();
-
+  dbg!(&req_p);
+  dbg!(&req_b);
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
@@ -58,6 +60,25 @@ async fn token<'r>(
   } else {
     return Err(Error::from_str("invalid_request"));
   };
+
+  let client_id = if let Some(client_id) = &req.client_id {
+    Uuid::from_str(client_id).unwrap_or_default()
+  } else if let Some(auth) = &auth {
+    auth.client_id
+  } else {
+    return Err(Error::from_str("invalid_request"));
+  };
+
+  let client = db
+    .tables()
+    .oauth_client()
+    .get_client(client_id)
+    .await
+    .map_err(|_| Error::from_str("invalid_client"))?;
+  if client.confidential && auth.is_none() {
+    return Err(Error::from_str("unauthorized_client"));
+  }
+
   let uuid = Uuid::from_str(&req.code).unwrap_or_default();
 
   let mut lock = state.auth_codes.lock().await;
@@ -71,7 +92,7 @@ async fn token<'r>(
   if &req.grant_type != "authorization_code" {
     return Err(Error::from_str("unsupported_grant_type"));
   }
-  if code_info.client_id != auth.client_id {
+  if code_info.client_id != client_id {
     return Err(Error::from_str("invalid_client"));
   }
 
@@ -149,7 +170,7 @@ async fn token<'r>(
     None
   };
 
-  log::info!("Client {} got token for {}", auth.client_id, user.name);
+  log::info!("Client {} got token for {}", client_id, user.name);
   Ok(Json(TokenRes {
     access_token: token,
     id_token,

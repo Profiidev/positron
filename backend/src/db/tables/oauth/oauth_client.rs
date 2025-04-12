@@ -21,6 +21,7 @@ pub struct OAuthClientInfo {
   pub default_scope: Scope,
   pub group_access: Vec<BasicGroupInfo>,
   pub user_access: Vec<BasicUserInfo>,
+  pub confidential: bool,
 }
 
 pub struct OauthClientTable<'db> {
@@ -125,6 +126,7 @@ impl<'db> OauthClientTable<'db> {
             uuid: u.id,
           })
           .collect(),
+        confidential: c.confidential,
       })
     }
 
