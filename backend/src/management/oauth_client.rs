@@ -160,6 +160,7 @@ struct ClientCreate {
   redirect_uri: Url,
   additional_redirect_uris: Vec<Url>,
   scope: Scope,
+  confidential: bool,
 }
 
 #[post("/create", data = "<req>")]
@@ -203,6 +204,7 @@ async fn create(
       default_scope: req.0.scope.to_string(),
       client_secret,
       salt,
+      confidential: req.0.confidential,
     })
     .await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;

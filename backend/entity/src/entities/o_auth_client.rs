@@ -13,6 +13,7 @@ pub struct Model {
   pub default_scope: String,
   pub client_secret: String,
   pub salt: String,
+  pub confidential: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
