@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Input, Label } from 'positron-components/components/ui';
-    import type { Snippet } from 'svelte';
-    import type { SuperForm } from 'sveltekit-superforms';
+  import type { Snippet } from 'svelte';
+  import type { SuperForm } from 'sveltekit-superforms';
 
   interface Props {
     formData: SuperForm<any>;
@@ -19,5 +19,5 @@
   <Label for={id} class="flex">
     {@render children()}
   </Label>
-  <Input id={id} value={value} readonly />
+  <Input {id} {value} readonly />
 {/if}
