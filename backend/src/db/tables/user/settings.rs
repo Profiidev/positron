@@ -23,10 +23,17 @@ impl<'db> SettingsTable<'db> {
       .filter(settings::Column::User.eq(user))
       .all(self.db)
       .await?;
-    let res = res.into_iter().next();
-    res
-      .ok_or(DbErr::RecordNotFound("Not Found".into()))
-      .map(|res| res.0)
+    if let Some(res) = res.into_iter().next() {
+      Ok(res.0)
+    } else {
+      let settings = settings::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        user: Set(user),
+        o_auth_instant_confirm: Set(false),
+      };
+
+      settings.insert(self.db).await
+    }
   }
 
   pub async fn get(&self, user: Uuid) -> Result<SettingsInfo, DbErr> {

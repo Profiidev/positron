@@ -24,3 +24,7 @@ export interface UserInfo {
   permissions: Permission[];
   access_level: number;
 }
+
+export interface Settings {
+  o_auth_instant_confirm: boolean;
+}

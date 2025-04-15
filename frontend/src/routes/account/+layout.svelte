@@ -16,6 +16,10 @@
     {
       title: 'Email',
       href: '/account/email'
+    },
+    {
+      title: 'OAuth / OpenID',
+      href: '/account/oauth'
     }
   ];
 </script>
