@@ -6,6 +6,8 @@
   import { logout, oauth_auth } from '$lib/backend/auth/other.svelte';
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
+  import { onMount } from 'svelte';
+  import { user_settings } from '$lib/backend/account/settings.svelte';
 
   interface Props {
     data: PageServerData;
@@ -50,6 +52,12 @@
     await logout();
     goto(`/login?code=${oauth_params?.code}&name=${oauth_params?.name}`);
   };
+
+  onMount(async () => {
+    let settings = await user_settings();
+    if (!settings || !settings.o_auth_instant_confirm) return;
+    confirm();
+  });
 </script>
 
 <div class="flex h-full items-center justify-center">

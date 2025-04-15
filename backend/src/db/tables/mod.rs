@@ -5,7 +5,7 @@ use oauth::{
 };
 use sea_orm::DatabaseConnection;
 use services::apod::ApodTable;
-use user::{group::GroupTable, passkey::PasskeyTable, user::UserTable};
+use user::{group::GroupTable, passkey::PasskeyTable, settings::SettingsTable, user::UserTable};
 
 pub mod invalid_jwt;
 pub mod key;
@@ -57,5 +57,9 @@ impl<'db> Tables<'db> {
 
   pub fn apod(self) -> ApodTable<'db> {
     ApodTable::new(self.db)
+  }
+
+  pub fn settings(self) -> SettingsTable<'db> {
+    SettingsTable::new(self.db)
   }
 }
