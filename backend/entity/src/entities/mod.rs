@@ -16,4 +16,5 @@ pub mod o_auth_scope;
 pub mod o_auth_scope_o_auth_policy;
 pub mod passkey;
 pub mod sea_orm_active_enums;
+pub mod settings;
 pub mod user;
