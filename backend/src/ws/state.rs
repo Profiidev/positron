@@ -32,6 +32,7 @@ pub enum UpdateType {
   OAuthPolicy,
   OAuthClient,
   Apod,
+  Settings,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
