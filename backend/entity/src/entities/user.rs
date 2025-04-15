@@ -31,7 +31,7 @@ pub enum Relation {
   OAuthClientUser,
   #[sea_orm(has_many = "super::passkey::Entity")]
   Passkey,
-  #[sea_orm(has_many = "super::settings::Entity")]
+  #[sea_orm(has_one = "super::settings::Entity")]
   Settings,
 }
 

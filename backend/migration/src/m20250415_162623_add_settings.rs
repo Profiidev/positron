@@ -14,7 +14,7 @@ impl MigrationTrait for Migration {
           .table(Settings::Table)
           .if_not_exists()
           .col(pk_uuid(Settings::Id))
-          .col(uuid(Settings::User))
+          .col(uuid_uniq(Settings::User))
           .col(boolean(Settings::OAuthInstantConfirm))
           .foreign_key(
             ForeignKey::create()
