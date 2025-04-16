@@ -21,6 +21,7 @@ services:
       - ./backend:/app
     networks:
       - nginx
+      - nats
     tty: true
     entrypoint: ['tini', '--']
     command: ['cargo', 'watch', '-x', 'run']
@@ -63,5 +64,24 @@ services:
       start_period: 10s
       start_interval: 1s
 
+  nats:
+    image: nats:latest
+    tty: true
+    networks:
+      - nats
+    ports:
+      - 4222:4222
+
+  nats-ui:
+    image: ghcr.io/nats-nui/nui
+    ports:
+      - 31311:31311
+    volumes:
+      - ./nats/db:/db
+      - ./nats/nats:/nats-creds:ro
+    networks:
+      - nats
+
 networks:
   nginx:
+  nats:

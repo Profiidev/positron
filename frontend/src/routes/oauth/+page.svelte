@@ -7,7 +7,10 @@
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
   import { onMount } from 'svelte';
-  import { user_settings } from '$lib/backend/account/settings.svelte';
+  import {
+    user_settings,
+    user_settings_get
+  } from '$lib/backend/account/settings.svelte';
 
   interface Props {
     data: PageServerData;
@@ -54,7 +57,7 @@
   };
 
   onMount(async () => {
-    let settings = await user_settings();
+    let settings = await user_settings_get();
     if (!settings || !settings.o_auth_instant_confirm) return;
     confirm();
   });

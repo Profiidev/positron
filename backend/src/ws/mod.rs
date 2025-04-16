@@ -11,6 +11,6 @@ pub fn routes() -> Vec<Route> {
     .collect()
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(UpdateState::default())
+pub async fn state(server: Rocket<Build>) -> Rocket<Build> {
+  server.manage(UpdateState::init().await)
 }

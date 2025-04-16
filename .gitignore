@@ -3,3 +3,4 @@ target
 node_modules
 backend/Cargo.lock
 postgres/
+nats/

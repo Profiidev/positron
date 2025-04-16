@@ -10,13 +10,8 @@
     Switch,
     Tooltip
   } from 'positron-components/components/ui';
-  import { onMount } from 'svelte';
 
-  let settings: Settings | undefined = $state();
-
-  onMount(async () => {
-    settings = await user_settings();
-  });
+  let settings: Settings | undefined = $derived(user_settings.value);
 
   const update = () => {
     if (settings) {

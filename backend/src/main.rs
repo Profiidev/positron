@@ -87,7 +87,6 @@ fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = auth::state(server);
   let server = oauth::state(server);
   let server = management::state(server);
-  let server = ws::state(server);
   let server = services::state(server);
   email::state(server)
 }
@@ -99,6 +98,7 @@ async fn init_state_with_db(server: Rocket<Build>) -> fairing::Result {
   let server = states.add(server);
 
   let server = s3::async_state(server).await;
+  let server = ws::state(server).await;
 
   Ok(server)
 }
