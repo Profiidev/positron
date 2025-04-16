@@ -38,7 +38,7 @@ impl<'db> UserTable<'db> {
 
   pub async fn get_user_by_email(&self, email: &str) -> Result<user::Model, DbErr> {
     let user = User::find()
-      .filter(user::Column::Email.eq(email))
+      .filter(user::Column::Email.eq(email.to_lowercase()))
       .one(self.db)
       .await?;
 
@@ -139,7 +139,7 @@ impl<'db> UserTable<'db> {
   pub async fn change_email(&self, uuid: Uuid, new_email: String) -> Result<(), DbErr> {
     let mut user: user::ActiveModel = self.get_user(uuid).await?.into();
 
-    user.email = Set(new_email);
+    user.email = Set(new_email.to_lowercase());
 
     user.update(self.db).await?;
 
@@ -237,7 +237,7 @@ impl<'db> UserTable<'db> {
 
   pub async fn user_exists(&self, email: String) -> Result<bool, DbErr> {
     let user = User::find()
-      .filter(user::Column::Email.eq(email))
+      .filter(user::Column::Email.eq(email.to_lowercase()))
       .one(self.db)
       .await?;
 
