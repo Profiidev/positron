@@ -51,8 +51,6 @@ async fn token<'r>(
   config: &State<ConfigurationState>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
   let db = conn.into_inner();
-  dbg!(&req_p);
-  dbg!(&req_b);
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
