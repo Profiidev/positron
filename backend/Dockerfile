@@ -8,9 +8,8 @@ WORKDIR /app
 
 FROM chef AS planner
 
-COPY backend/src ./src
-COPY backend/entity ./entity
-COPY backend/migration ./migration
+COPY backend/entity/Cargo.toml ./entity/Cargo.toml
+COPY backend/migration/Cargo.toml ./migration/Cargo.toml
 COPY backend/Cargo.toml ./Cargo.lock ./
 
 RUN echo "[workspace]" >> Cargo.toml && \
