@@ -1,0 +1,18 @@
+name: Helm Chart Version Bump
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger helm chart bump workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          event-type: bump-chart
+          repository: profiidev/server-config
+          token: ${{ secrets.DUMPER_TOKEN }}
+          client-payload: '{"chart_name": "positron", "chart_version": "${{ github.ref_name }}" }'
