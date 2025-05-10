@@ -10,11 +10,15 @@
     "shell:allow-open",
     {
       "identifier": "http:default",
-      "allow": [{
-        "url": "https://*.profidev.io"
-      }, {
-        "url": "https://profidev.io"
-      }]
-    }
+      "allow": [
+        {
+          "url": "https://*.profidev.io"
+        },
+        {
+          "url": "https://profidev.io"
+        }
+      ]
+    },
+    "websocket:default"
   ]
 }
