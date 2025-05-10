@@ -56,9 +56,7 @@ const create_websocket = async () => {
   });
 
   interval = setInterval(() => {
-    if (
-      !updater
-    ) {
+    if (!updater) {
       clearInterval(interval);
       return;
     }
