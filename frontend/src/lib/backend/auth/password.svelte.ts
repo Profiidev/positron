@@ -1,12 +1,11 @@
 import type JSEncrypt from 'jsencrypt';
 import {
-  get,
-  post,
   ContentType,
   ResponseType,
   RequestError
 } from 'positron-components/backend';
 import { browser } from '$app/environment';
+import { get, post } from '../util.svelte';
 
 let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
 

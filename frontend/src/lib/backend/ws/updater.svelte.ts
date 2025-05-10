@@ -1,9 +1,10 @@
 import { browser } from '$app/environment';
-import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
 import { sleep } from 'positron-components/util';
+import WebSocket from '@tauri-apps/plugin-websocket';
 import { getTokenCookie } from '../cookie.svelte';
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
@@ -21,31 +22,41 @@ export const connect_updater = () => {
   create_websocket();
 };
 
-const create_websocket = () => {
-  let token = '';
-  if (PUBLIC_IS_APP === 'true') {
-    token = `?token=${getTokenCookie()}`;
-  }
+const create_websocket = async () => {
+  let token = getTokenCookie();
 
-  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater${token}`);
-
-  updater.addEventListener('message', (event) => {
-    let msg: UpdateType = JSON.parse(event.data);
-    Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
-  });
-
-  updater.addEventListener('close', async () => {
+  try {
+    updater = await WebSocket.connect(
+      `${PUBLIC_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/updater`,
+      {
+        headers: {
+          Cookie: `token=${token}`
+        }
+      }
+    );
+  } catch (e) {
     clearInterval(interval);
     await sleep(1000);
     create_websocket();
+    return;
+  }
+
+  updater.addListener(async (event) => {
+    switch (event.type) {
+      case 'Text':
+        let msg: UpdateType = JSON.parse(event.data);
+        Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
+        break;
+      case 'Close':
+        clearInterval(interval);
+        await sleep(1000);
+        create_websocket();
+        break;
+    }
   });
 
   interval = setInterval(() => {
-    if (
-      !updater ||
-      updater.readyState === updater.CLOSING ||
-      updater.readyState === updater.CLOSED
-    ) {
+    if (!updater) {
       clearInterval(interval);
       return;
     }
