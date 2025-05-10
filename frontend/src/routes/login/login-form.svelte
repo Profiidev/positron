@@ -94,12 +94,14 @@
     }
   };
 
-  const login_success = () => {
+  const login_success = async () => {
     connect_updater();
     if (oauth_params) {
       goto(`/oauth?code=${oauth_params.code}&name=${oauth_params.name}`);
     } else {
-      goto('/');
+      setTimeout(() => {
+        goto('/');
+      });
     }
   };
 </script>
