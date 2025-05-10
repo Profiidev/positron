@@ -1,12 +1,8 @@
-import {
-  ContentType,
-  get,
-  post,
-  ResponseType
-} from 'positron-components/backend';
+import { ContentType, ResponseType } from 'positron-components/backend';
 import type { Settings } from './types.svelte';
 import { create_updater } from '../ws/updater.svelte';
 import { UpdateType } from '../ws/types.svelte';
+import { get, post } from '../util.svelte';
 
 export const user_settings_get = async () => {
   let ret = await get<Settings>('/account/settings/get', ResponseType.Json);

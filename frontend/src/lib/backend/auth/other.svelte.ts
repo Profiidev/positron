@@ -1,10 +1,6 @@
-import {
-  get,
-  post,
-  ContentType,
-  ResponseType
-} from 'positron-components/backend';
+import { ContentType, ResponseType } from 'positron-components/backend';
 import type { OAuthParams } from './types.svelte';
+import { get, post } from '../util.svelte';
 
 export const logout = async () => {
   return await post<undefined>(

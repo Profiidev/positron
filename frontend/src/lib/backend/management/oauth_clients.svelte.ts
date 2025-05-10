@@ -1,15 +1,11 @@
-import {
-  get,
-  post,
-  ContentType,
-  ResponseType
-} from 'positron-components/backend';
+import { ContentType, ResponseType } from 'positron-components/backend';
 import type {
   GroupInfo,
   OAuthClientCreate,
   OAuthClientInfo,
   UserInfo
 } from './types.svelte';
+import { get, post } from '../util.svelte';
 
 const isCreate = (object: any): object is OAuthClientCreate => {
   return typeof object === 'object' && object !== null && 'secret' in object;
