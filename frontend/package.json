@@ -24,7 +24,7 @@
     "jsencrypt": "3.3.2",
     "luxon": "3.6.1",
     "paneforge": "0.0.6",
-    "positron-components": "^1.2.0"
+    "positron-components": "^1.2.2"
   },
   "devDependencies": {
     "@internationalized/date": "^3.8.0",
