@@ -21,7 +21,7 @@ rocket = { version = "0.5.1", features = ["json"] }
 rocket_cors = "0.6.0"
 rocket_ws = "0.1.1"
 rsa = "0.9.8"
-sea-orm = { version = "1.1.10", features = [
+sea-orm = { version = "1.1.11", features = [
   "sqlx-postgres",
   "runtime-tokio-rustls",
 ] }
