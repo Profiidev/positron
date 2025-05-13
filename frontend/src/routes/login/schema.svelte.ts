@@ -35,7 +35,7 @@ export const loginSchema = z
           code: z.ZodIssueCode.invalid_string,
           path: ['passkey_email'],
           validation: 'email'
-        })
+        });
       }
     } else {
       if (!val.email || !isEmail(val.email)) {
