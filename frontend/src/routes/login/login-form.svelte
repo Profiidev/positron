@@ -106,10 +106,13 @@
     if (ret) {
       if (ret === RequestError.Unauthorized) {
         passkeyError = 'There was an Error with your passkey';
-      } else {
+      } else if (ret === RequestError.Conflict) {
+        passkeySecondTry = true;
         formComp?.setValue({
           passkey_email_input: true
         });
+      } else {
+        passkeyError = 'There was an Error while signing in';
       }
     } else {
       login_success();
@@ -132,7 +135,11 @@
   <BaseForm
     bind:this={formComp}
     onsubmit={onSubmit}
-    confirm={enterEmail ? 'Sign In' : 'Confirm'}
+    confirm={passkeySecondTry
+      ? 'Sign In with Passkey'
+      : enterEmail
+        ? 'Sign In'
+        : 'Confirm'}
     bind:isLoading
     form={loginForm}
     class="gap-0"
@@ -181,5 +188,7 @@
       {@render children({ className: 'mt-2' })}
     {/snippet}
   </BaseForm>
-  <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />
+  {#if !passkeySecondTry}
+    <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />
+  {/if}
 </div>
