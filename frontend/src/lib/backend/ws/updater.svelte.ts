@@ -1,12 +1,15 @@
 import { browser } from '$app/environment';
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
 import { sleep } from 'positron-components/util';
-import WebSocket from '@tauri-apps/plugin-websocket';
 import { getTokenCookie } from '../cookie.svelte';
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
+import type TauriWebSocket from '@tauri-apps/plugin-websocket';
 
-let updater: WebSocket | undefined | false = $state(browser && undefined);
+type CondWebsocket<T extends string> =
+  T extends "true" ? TauriWebSocket : WebSocket;
+
+let updater: CondWebsocket<typeof PUBLIC_IS_APP> | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
 let interval: number;
 
@@ -22,10 +25,42 @@ export const connect_updater = () => {
   create_websocket();
 };
 
-const create_websocket = async () => {
+const create_websocket = PUBLIC_IS_APP !== "true" ? () => {
+  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
+
+  updater.addEventListener('message', (event) => {
+    let msg: UpdateType = JSON.parse(event.data);
+    Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
+  });
+
+  updater.addEventListener('close', async () => {
+    clearInterval(interval);
+    await sleep(1000);
+    create_websocket();
+  });
+
+  interval = setInterval(() => {
+    if (
+      !updater ||
+      updater.readyState === updater.CLOSING ||
+      updater.readyState === updater.CLOSED
+    ) {
+      clearInterval(interval);
+      return;
+    }
+
+    updater.send('heartbeat');
+  }, 10000);
+
+  Array.from(updater_cbs.values()).forEach((types) =>
+    Array.from(types.values()).forEach((cb) => cb())
+  );
+} : async () => {
+  const WebSocket = (await import('@tauri-apps/plugin-websocket')).default;
   let token = getTokenCookie();
 
   try {
+    // @ts-ignore
     updater = await WebSocket.connect(
       `${PUBLIC_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/updater`,
       {
@@ -41,6 +76,7 @@ const create_websocket = async () => {
     return;
   }
 
+  // @ts-ignore
   updater.addListener(async (event) => {
     switch (event.type) {
       case 'Text':
