@@ -22,6 +22,7 @@ mod permission;
 mod s3;
 mod services;
 mod utils;
+mod well_known;
 mod ws;
 
 #[launch]
@@ -80,6 +81,7 @@ fn routes() -> Vec<Route> {
     .chain(management::routes())
     .chain(ws::routes())
     .chain(services::routes())
+    .chain(well_known::route())
     .collect()
 }
 
@@ -88,6 +90,7 @@ fn state(server: Rocket<Build>) -> Rocket<Build> {
   let server = oauth::state(server);
   let server = management::state(server);
   let server = services::state(server);
+  let server = well_known::state(server);
   email::state(server)
 }
 
