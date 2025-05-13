@@ -21,6 +21,7 @@ use crate::db::DBTrait;
 pub struct PasskeyState {
   pub reg_state: Mutex<HashMap<Uuid, PasskeyRegistration>>,
   pub auth_state: Mutex<HashMap<Uuid, DiscoverableAuthentication>>,
+  pub non_discover_auth_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
   pub special_access_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
 }
 

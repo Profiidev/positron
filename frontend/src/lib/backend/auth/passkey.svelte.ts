@@ -96,6 +96,36 @@ export const passkey_authenticate = async () => {
   return done;
 };
 
+export const passkey_authenticate_by_email = async (email: string) => {
+  let res = await get<{
+    res: { publicKey: PublicKeyCredentialRequestOptionsJSON };
+    id: string;
+  }>(`/auth/passkey/start_authentication/${email}`, ResponseType.Json);
+
+  if (!isKeyCredRequest(res)) {
+    return res;
+  }
+
+  let optionsJSON = res.res.publicKey;
+  let ret;
+  try {
+    const startAuthentication = (await import('@simplewebauthn/browser'))
+      .startAuthentication;
+    ret = await startAuthentication({ optionsJSON });
+  } catch (_) {
+    return RequestError.Unauthorized;
+  }
+
+  let done = await post<undefined>(
+    `/auth/passkey/finish_authentication_by_email/${res.id}`,
+    ResponseType.None,
+    ContentType.Json,
+    JSON.stringify(ret)
+  );
+
+  return done;
+};
+
 export const passkey_special_access = async () => {
   let res = await get<{
     publicKey: PublicKeyCredentialRequestOptionsJSON;

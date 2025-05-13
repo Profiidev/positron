@@ -38,6 +38,8 @@ pub fn routes() -> Vec<Route> {
     start_registration,
     finish_registration,
     start_authentication,
+    start_authentication_by_email,
+    finish_authentication_by_email,
     finish_authentication,
     start_special_access,
     finish_special_access,
@@ -150,6 +152,38 @@ async fn start_authentication(
   }))
 }
 
+#[get("/start_authentication/<email>")]
+async fn start_authentication_by_email(
+  email: &str,
+  webauthn: &State<Webauthn>,
+  state: &State<PasskeyState>,
+  conn: Connection<'_, DB>,
+) -> Result<Json<AuthStartRes>> {
+  let db = conn.into_inner();
+
+  let user = db.tables().user().get_user_by_email(email).await?;
+  let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+
+  let passkeys = passkeys
+    .into_iter()
+    .flat_map(|p| json::from_str::<Passkey>(&p.data))
+    .collect::<Vec<Passkey>>();
+
+  let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
+
+  let auth_id = Uuid::new_v4();
+  state
+    .non_discover_auth_state
+    .lock()
+    .await
+    .insert(auth_id, auth_state);
+
+  Ok(Json(AuthStartRes {
+    res: rcr,
+    id: auth_id,
+  }))
+}
+
 #[post("/finish_authentication/<id>", data = "<auth>")]
 async fn finish_authentication(
   id: &str,
@@ -191,6 +225,52 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
+  db.tables().user().logged_in(user.id).await?;
+
+  let cookie = jwt.create_token::<JwtBase>(user.id)?;
+  cookies.add(cookie);
+
+  Ok(TokenRes::default())
+}
+
+#[post("/finish_authentication_by_email/<id>", data = "<auth>")]
+async fn finish_authentication_by_email(
+  id: &str,
+  auth: Json<PublicKeyCredential>,
+  conn: Connection<'_, DB>,
+  webauthn: &State<Webauthn>,
+  state: &State<PasskeyState>,
+  jwt: &State<JwtState>,
+  cookies: &CookieJar<'_>,
+) -> Result<TokenRes> {
+  let db = conn.into_inner();
+  let auth_id = Uuid::from_str(id)?;
+
+  let mut states = state.non_discover_auth_state.lock().await;
+  let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
+
+  let res = webauthn.finish_passkey_authentication(&auth, &auth_state)?;
+
+  let passkey_db = db
+    .tables()
+    .passkey()
+    .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
+    .await?;
+  let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+
+  if res.needs_update() {
+    passkey.update_credential(&res);
+  }
+
+  let json_key = json::to_string(&passkey)?;
+
+  let _ = db
+    .tables()
+    .passkey()
+    .update_passkey_record(passkey_db.id, json_key)
+    .await;
+
+  let user = db.tables().user().get_user(passkey_db.user).await?;
   db.tables().user().logged_in(user.id).await?;
 
   let cookie = jwt.create_token::<JwtBase>(user.id)?;

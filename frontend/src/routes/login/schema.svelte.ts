@@ -13,7 +13,9 @@ const isEmail = (test: string) => {
 
 export const loginSchema = z
   .object({
+    passkey_email_input: z.boolean().default(false),
     code_input: z.boolean().default(false),
+    passkey_email: z.string().default(''),
     email: z.string().default(''),
     password: z.string().default(''),
     totp: z.string().default('')
@@ -25,6 +27,14 @@ export const loginSchema = z
           code: z.ZodIssueCode.custom,
           path: ['totp'],
           message: 'Code must be 6 characters long'
+        });
+      }
+    } else if (val.passkey_email_input) {
+      if (!val.passkey_email || !isEmail(val.passkey_email)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.invalid_string,
+          path: ['passkey_email'],
+          validation: 'email'
         });
       }
     } else {
