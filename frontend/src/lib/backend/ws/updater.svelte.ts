@@ -1,12 +1,18 @@
 import { browser } from '$app/environment';
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
 import { sleep } from 'positron-components/util';
-import WebSocket from '@tauri-apps/plugin-websocket';
 import { getTokenCookie } from '../cookie.svelte';
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
+import type TauriWebSocket from '@tauri-apps/plugin-websocket';
 
-let updater: WebSocket | undefined | false = $state(browser && undefined);
+type CondWebsocket<T extends string> = T extends 'true'
+  ? TauriWebSocket
+  : WebSocket;
+
+let updater: CondWebsocket<typeof PUBLIC_IS_APP> | undefined | false = $state(
+  browser && undefined
+);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();
 let interval: number;
 
@@ -22,52 +28,93 @@ export const connect_updater = () => {
   create_websocket();
 };
 
-const create_websocket = async () => {
-  let token = getTokenCookie();
+const create_websocket =
+  PUBLIC_IS_APP !== 'true'
+    ? () => {
+        updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
 
-  try {
-    updater = await WebSocket.connect(
-      `${PUBLIC_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/updater`,
-      {
-        headers: {
-          Cookie: `token=${token}`
-        }
+        updater.addEventListener('message', (event) => {
+          let msg: UpdateType = JSON.parse(event.data);
+          Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) =>
+            cb()
+          );
+        });
+
+        updater.addEventListener('close', async () => {
+          clearInterval(interval);
+          await sleep(1000);
+          create_websocket();
+        });
+
+        interval = setInterval(() => {
+          if (
+            !updater ||
+            updater.readyState === updater.CLOSING ||
+            updater.readyState === updater.CLOSED
+          ) {
+            clearInterval(interval);
+            return;
+          }
+
+          updater.send('heartbeat');
+        }, 10000);
+
+        Array.from(updater_cbs.values()).forEach((types) =>
+          Array.from(types.values()).forEach((cb) => cb())
+        );
       }
-    );
-  } catch (e) {
-    clearInterval(interval);
-    await sleep(1000);
-    create_websocket();
-    return;
-  }
+    : async () => {
+        const WebSocket = (await import('@tauri-apps/plugin-websocket'))
+          .default;
+        let token = getTokenCookie();
 
-  updater.addListener(async (event) => {
-    switch (event.type) {
-      case 'Text':
-        let msg: UpdateType = JSON.parse(event.data);
-        Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) => cb());
-        break;
-      case 'Close':
-        clearInterval(interval);
-        await sleep(1000);
-        create_websocket();
-        break;
-    }
-  });
+        try {
+          // @ts-ignore
+          updater = await WebSocket.connect(
+            `${PUBLIC_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/updater`,
+            {
+              headers: {
+                Cookie: `token=${token}`
+              }
+            }
+          );
+        } catch (e) {
+          clearInterval(interval);
+          await sleep(1000);
+          create_websocket();
+          return;
+        }
 
-  interval = setInterval(() => {
-    if (!updater) {
-      clearInterval(interval);
-      return;
-    }
+        // @ts-ignore
+        updater.addListener(async (event) => {
+          switch (event.type) {
+            case 'Text':
+              let msg: UpdateType = JSON.parse(event.data);
+              Array.from(updater_cbs.get(msg)?.values() || []).forEach((cb) =>
+                cb()
+              );
+              break;
+            case 'Close':
+              clearInterval(interval);
+              await sleep(1000);
+              create_websocket();
+              break;
+          }
+        });
 
-    updater.send('heartbeat');
-  }, 10000);
+        interval = setInterval(() => {
+          if (!updater) {
+            clearInterval(interval);
+            return;
+          }
 
-  Array.from(updater_cbs.values()).forEach((types) =>
-    Array.from(types.values()).forEach((cb) => cb())
-  );
-};
+          updater.send('heartbeat');
+        }, 10000);
+
+        Array.from(updater_cbs.values()).forEach((types) =>
+          Array.from(types.values()).forEach((cb) => cb())
+        );
+      };
 
 export const register_cb = (type: UpdateType, cb: () => void) => {
   let uuid = crypto.randomUUID().toString();
