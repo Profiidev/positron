@@ -5,13 +5,12 @@ import {
   RequestError,
   ResponseType
 } from 'positron-components/backend';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { setTokenCookie } from './cookie.svelte';
 
 let fetchFn: typeof fetch | undefined = undefined;
 const set_fetch = async () => {
   if (PUBLIC_IS_APP === 'true') {
-    fetchFn = tauriFetch;
+    fetchFn = (await import('@tauri-apps/plugin-http')).fetch;
   } else {
     fetchFn = fetch;
   }
