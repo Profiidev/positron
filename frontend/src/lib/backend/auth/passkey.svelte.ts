@@ -9,6 +9,7 @@ import {
 } from 'positron-components/backend';
 import type { Passkey } from './types.svelte';
 import { get, post } from '../util.svelte';
+import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
 
 const isKeyCredCreate = (
   object: any
@@ -46,9 +47,18 @@ export const passkey_register = async (name: string) => {
   let optionsJSON = ret.publicKey;
   let reg;
   try {
-    const startRegistration = (await import('@simplewebauthn/browser'))
-      .startRegistration;
-    reg = await startRegistration({ optionsJSON });
+    if (PUBLIC_IS_APP !== 'true') {
+      const startRegistration = (await import('@simplewebauthn/browser'))
+        .startRegistration;
+      reg = await startRegistration({ optionsJSON });
+    } else {
+      let url = new URL(PUBLIC_BACKEND_URL);
+      url.pathname = '';
+      let origin = url.toString();
+
+      const register = (await import('tauri-plugin-webauthn-api')).register;
+      reg = await register(origin, optionsJSON);
+    }
   } catch (_) {
     return RequestError.Unauthorized;
   }
@@ -79,9 +89,19 @@ export const passkey_authenticate = async () => {
   let optionsJSON = res.res.publicKey;
   let ret;
   try {
-    const startAuthentication = (await import('@simplewebauthn/browser'))
-      .startAuthentication;
-    ret = await startAuthentication({ optionsJSON });
+    if (PUBLIC_IS_APP !== 'true') {
+      const startAuthentication = (await import('@simplewebauthn/browser'))
+        .startAuthentication;
+      ret = await startAuthentication({ optionsJSON });
+    } else {
+      let url = new URL(PUBLIC_BACKEND_URL);
+      url.pathname = '';
+      let origin = url.toString();
+
+      const authenticate = (await import('tauri-plugin-webauthn-api'))
+        .authenticate;
+      ret = await authenticate(origin, optionsJSON);
+    }
   } catch (_) {
     return RequestError.Unauthorized;
   }
@@ -109,9 +129,19 @@ export const passkey_authenticate_by_email = async (email: string) => {
   let optionsJSON = res.res.publicKey;
   let ret;
   try {
-    const startAuthentication = (await import('@simplewebauthn/browser'))
-      .startAuthentication;
-    ret = await startAuthentication({ optionsJSON });
+    if (PUBLIC_IS_APP !== 'true') {
+      const startAuthentication = (await import('@simplewebauthn/browser'))
+        .startAuthentication;
+      ret = await startAuthentication({ optionsJSON });
+    } else {
+      let url = new URL(PUBLIC_BACKEND_URL);
+      url.pathname = '';
+      let origin = url.toString();
+
+      const authenticate = (await import('tauri-plugin-webauthn-api'))
+        .authenticate;
+      ret = await authenticate(origin, optionsJSON);
+    }
   } catch (_) {
     return RequestError.Unauthorized;
   }
@@ -138,9 +168,19 @@ export const passkey_special_access = async () => {
   let optionsJSON = res.publicKey;
   let ret;
   try {
-    const startAuthentication = (await import('@simplewebauthn/browser'))
-      .startAuthentication;
-    ret = await startAuthentication({ optionsJSON });
+    if (PUBLIC_IS_APP !== 'true') {
+      const startAuthentication = (await import('@simplewebauthn/browser'))
+        .startAuthentication;
+      ret = await startAuthentication({ optionsJSON });
+    } else {
+      let url = new URL(PUBLIC_BACKEND_URL);
+      url.pathname = '';
+      let origin = url.toString();
+
+      const authenticate = (await import('tauri-plugin-webauthn-api'))
+        .authenticate;
+      ret = await authenticate(origin, optionsJSON);
+    }
   } catch (_) {
     return RequestError.Unauthorized;
   }
