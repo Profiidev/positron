@@ -11,6 +11,7 @@
   import { test_token } from '$lib/backend/auth/other.svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import { onMount } from 'svelte';
 
   interface Props {
     children?: import('svelte').Snippet;
@@ -21,13 +22,15 @@
   const noLayout = ['/login', '/oauth', '/oauth/logout'];
 
   connect_updater();
-  test_token().then((valid) => {
-    if (!valid && browser) {
-      let url = page.url.pathname;
-      if (url !== '/login') {
-        goto('/login');
+  onMount(() => {
+    test_token().then((valid) => {
+      if (!valid && browser) {
+        let url = page.url.pathname;
+        if (url !== '/login') {
+          goto('/login');
+        }
       }
-    }
+    });
   });
 </script>
 

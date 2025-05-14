@@ -6,6 +6,7 @@
   import { browser } from '$app/environment';
   import { loginSchema } from './schema.svelte';
   import { test_token } from '$lib/backend/auth/other.svelte';
+  import { onMount } from 'svelte';
 
   interface Props {
     data: PageServerData;
@@ -14,10 +15,12 @@
   let { data }: Props = $props();
   let oauth_params: OAuthParams | undefined = $derived(data.oauth_params);
 
-  test_token().then((valid) => {
-    if (valid && browser) {
-      goto('/');
-    }
+  onMount(() => {
+    test_token().then((valid) => {
+      if (valid && browser) {
+        goto('/');
+      }
+    });
   });
 
   const loginForm = {
