@@ -11,7 +11,7 @@
     type FormSchema
   } from 'positron-components/components/form';
   import { KeyRound, Pencil, Trash } from 'lucide-svelte';
-  import type { SvelteComponent } from 'svelte';
+  import { onDestroy, onMount, type SvelteComponent } from 'svelte';
   import { DateTime } from 'positron-components/util';
   import { RequestError } from 'positron-components/backend';
   import {
@@ -21,6 +21,11 @@
   } from '$lib/backend/auth/passkey.svelte';
   import { passkey_list } from '$lib/backend/auth/stores.svelte';
   import type { SuperValidated } from 'sveltekit-superforms';
+  import {
+    registerListener,
+    sendPin,
+    WebauthnEventType
+  } from 'tauri-plugin-webauthn-api';
 
   interface Props {
     valid: boolean;
@@ -28,15 +33,23 @@
     createSchema: FormSchema<any>;
     editSchema: FormSchema<any>;
     deleteSchema: FormSchema<any>;
+    pinSchema: FormSchema<any>;
   }
 
-  let { valid, requestAccess, createSchema, editSchema, deleteSchema }: Props =
-    $props();
+  let {
+    valid,
+    requestAccess,
+    createSchema,
+    editSchema,
+    deleteSchema,
+    pinSchema
+  }: Props = $props();
 
   let passkeys = $derived(passkey_list.value);
   let editing = $state('');
   let editDialog: SvelteComponent | undefined = $state();
   let deleteDialog: SvelteComponent | undefined = $state();
+  let pinDialog: boolean = $state(false);
 
   const startCreatePasskey = async () => {
     if (!valid) {
@@ -116,6 +129,40 @@
       });
     }
   };
+
+  const pinSend = async (form: SuperValidated<any>) => {
+    try {
+      await sendPin(form.data.pin);
+    } catch (e) {
+      if (e instanceof Error) {
+        return { error: e.message };
+      }
+    }
+  };
+
+  let unregister = () => {};
+  let touchToast: number | string | undefined;
+
+  onMount(async () => {
+    await registerListener((event) => {
+      console.log('Event:', event);
+      switch (event.type) {
+        case WebauthnEventType.RequestPin:
+          pinDialog = true;
+          break;
+        case WebauthnEventType.RequestTouch:
+          touchToast = toast.info(
+            'Please touch your security key to continue',
+            {
+              id: touchToast
+            }
+          );
+          break;
+      }
+    });
+  });
+
+  onDestroy(unregister);
 </script>
 
 <div class="rounded-xl border">
@@ -172,6 +219,25 @@
       bind:this={deleteDialog}
       form={deleteSchema}
     ></FormDialog>
+    <FormDialog
+      title="Enter your PIN"
+      description="Enter your security key PIN to continue"
+      confirm="Confirm"
+      trigger={undefined}
+      onsubmit={pinSend}
+      bind:open={pinDialog}
+      form={pinSchema}
+    >
+      {#snippet children({ props })}
+        <FormInput
+          label="PIN"
+          placeholder="PIN"
+          type="password"
+          key="pin"
+          {...props}
+        />
+      {/snippet}
+    </FormDialog>
   </div>
   <Separator />
   {#if !passkeys}

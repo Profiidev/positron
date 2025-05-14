@@ -28,6 +28,10 @@ export const totpRemove = z.object({
   phantom: z.string().default('').optional()
 });
 
+export const pin = z.object({
+  pin: z.string().min(1, 'Pin is required')
+});
+
 export type PasskeyCreateSchemaType = typeof passkeyCreateSchema;
 export type PasskeyEditSchemaType = typeof passkeyEditSchema;
 export type PasskeyDeleteSchemaType = typeof passkeyDeleteSchema;

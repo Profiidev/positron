@@ -12,6 +12,7 @@
     passkeyDeleteSchema,
     passkeyEditSchema,
     passwordChange,
+    pin,
     totpAdd,
     totpRemove
   } from './schema.svelte';
@@ -62,6 +63,11 @@
     form: data.totpRemove,
     schema: totpRemove
   };
+
+  const pinForm = {
+    form: data.pin,
+    schema: pin
+  };
 </script>
 
 <div class="space-y-6">
@@ -88,6 +94,7 @@
       createSchema={passkeyCreate}
       editSchema={passkeyEdit}
       deleteSchema={passkeyDelete}
+      pinSchema={pinForm}
     />
   </div>
   <div class="space-y-3">
