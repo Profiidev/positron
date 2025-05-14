@@ -4517,6 +4517,8 @@ dependencies = [
 name = "positron"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "cookie_store",
  "serde",
  "serde_json",
  "tauri",
@@ -4525,6 +4527,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-webauthn",
  "tauri-plugin-websocket",
+ "tokio",
 ]
 
 [[package]]

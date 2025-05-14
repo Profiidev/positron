@@ -8,8 +8,8 @@ import {
   RequestError
 } from 'positron-components/backend';
 import type { Passkey } from './types.svelte';
-import { get, post } from '../util.svelte';
-import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
+import { BASE_URL, get, post } from '../util.svelte';
+import { PUBLIC_IS_APP } from '$env/static/public';
 
 const isKeyCredCreate = (
   object: any
@@ -52,12 +52,8 @@ export const passkey_register = async (name: string) => {
         .startRegistration;
       reg = await startRegistration({ optionsJSON });
     } else {
-      let url = new URL(PUBLIC_BACKEND_URL);
-      url.pathname = '';
-      let origin = url.toString();
-
       const register = (await import('tauri-plugin-webauthn-api')).register;
-      reg = await register(origin, optionsJSON);
+      reg = await register(BASE_URL, optionsJSON);
     }
   } catch (_) {
     return RequestError.Unauthorized;
@@ -94,13 +90,9 @@ export const passkey_authenticate = async () => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      let url = new URL(PUBLIC_BACKEND_URL);
-      url.pathname = '';
-      let origin = url.toString();
-
       const authenticate = (await import('tauri-plugin-webauthn-api'))
         .authenticate;
-      ret = await authenticate(origin, optionsJSON);
+      ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
     return RequestError.Unauthorized;
@@ -134,13 +126,9 @@ export const passkey_authenticate_by_email = async (email: string) => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      let url = new URL(PUBLIC_BACKEND_URL);
-      url.pathname = '';
-      let origin = url.toString();
-
       const authenticate = (await import('tauri-plugin-webauthn-api'))
         .authenticate;
-      ret = await authenticate(origin, optionsJSON);
+      ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
     return RequestError.Unauthorized;
@@ -173,13 +161,9 @@ export const passkey_special_access = async () => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      let url = new URL(PUBLIC_BACKEND_URL);
-      url.pathname = '';
-      let origin = url.toString();
-
       const authenticate = (await import('tauri-plugin-webauthn-api'))
         .authenticate;
-      ret = await authenticate(origin, optionsJSON);
+      ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
     return RequestError.Unauthorized;
