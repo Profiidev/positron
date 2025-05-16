@@ -24,7 +24,8 @@
     "jsencrypt": "3.3.2",
     "luxon": "3.6.1",
     "paneforge": "0.0.6",
-    "positron-components": "^1.2.2"
+    "positron-components": "^1.2.3",
+    "tauri-plugin-webauthn-api": "^0.2.0"
   },
   "devDependencies": {
     "@internationalized/date": "^3.8.0",

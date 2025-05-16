@@ -12,9 +12,12 @@
     passkeyDeleteSchema,
     passkeyEditSchema,
     passwordChange,
+    pin,
     totpAdd,
     totpRemove
   } from './schema.svelte';
+  import PasskeyOptions from './passkey-options.svelte';
+  import { PUBLIC_IS_APP } from '$env/static/public';
 
   interface Props {
     data: PageServerData;
@@ -62,6 +65,11 @@
     form: data.totpRemove,
     schema: totpRemove
   };
+
+  const pinForm = {
+    form: data.pin,
+    schema: pin
+  };
 </script>
 
 <div class="space-y-6">
@@ -107,3 +115,6 @@
   bind:this={accessConfirm}
   formData={confirm}
 />
+{#if PUBLIC_IS_APP === 'true'}
+  <PasskeyOptions form={pinForm} />
+{/if}

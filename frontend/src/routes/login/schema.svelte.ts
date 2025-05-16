@@ -55,3 +55,7 @@ export const loginSchema = z
       }
     }
   });
+
+export const pin = z.object({
+  pin: z.string().min(1, 'Pin is required')
+});

@@ -5,7 +5,6 @@ import {
   RequestError,
   ResponseType
 } from 'positron-components/backend';
-import { setTokenCookie } from './cookie.svelte';
 
 let fetchFn: typeof fetch | undefined = undefined;
 const set_fetch = async () => {
@@ -76,7 +75,11 @@ const request = async <T>(
     if (PUBLIC_IS_APP === 'true') {
       let cookie = res.headers.get('Set-Cookie');
       if (cookie) {
-        setTokenCookie(cookie);
+        let invoke = (await import('@tauri-apps/api/core')).invoke;
+        invoke('set_cookie', {
+          cookie,
+          url: BASE_URL
+        });
       }
     }
 
@@ -95,3 +98,8 @@ const request = async <T>(
     return RequestError.Other;
   }
 };
+
+let url = new URL(PUBLIC_BACKEND_URL);
+url.pathname = '/';
+
+export const BASE_URL = url.toString();

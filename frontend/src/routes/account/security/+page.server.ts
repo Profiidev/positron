@@ -7,6 +7,7 @@ import {
   passkeyDeleteSchema,
   passkeyEditSchema,
   passwordChange,
+  pin,
   totpAdd,
   totpRemove
 } from './schema.svelte';
@@ -19,6 +20,7 @@ export const load: PageServerLoad = async () => {
     confirmForm: await superValidate(zod(confirmSchema)),
     passwordChange: await superValidate(zod(passwordChange)),
     totpRemove: await superValidate(zod(totpRemove)),
-    totpAdd: await superValidate(zod(totpAdd))
+    totpAdd: await superValidate(zod(totpAdd)),
+    pin: await superValidate(zod(pin))
   };
 };

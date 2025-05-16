@@ -3,8 +3,8 @@ import { PUBLIC_BACKEND_URL, PUBLIC_IS_APP } from '$env/static/public';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
 import { sleep } from 'positron-components/util';
-import { getTokenCookie } from '../cookie.svelte';
 import type TauriWebSocket from '@tauri-apps/plugin-websocket';
+import { BASE_URL } from '../util.svelte';
 
 type CondWebsocket<T extends string> = T extends 'true'
   ? TauriWebSocket
@@ -64,10 +64,19 @@ const create_websocket =
         );
       }
     : async () => {
+        let token: string | undefined = undefined;
+        try {
+          token = await (
+            await import('@tauri-apps/api/core')
+          ).invoke('get_cookie', {
+            key: 'token',
+            url: BASE_URL
+          });
+        } catch (_) {}
+        console.log('token', token);
+
         const WebSocket = (await import('@tauri-apps/plugin-websocket'))
           .default;
-        let token = getTokenCookie();
-
         try {
           // @ts-ignore
           updater = await WebSocket.connect(
@@ -79,6 +88,7 @@ const create_websocket =
             }
           );
         } catch (e) {
+          console.error('Failed to connect to updater', e);
           clearInterval(interval);
           await sleep(1000);
           create_websocket();
