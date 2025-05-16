@@ -42,10 +42,20 @@ pub fn webauthn() -> Webauthn {
     Url::parse(&std::env::var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
       .expect("Failed to parse WEBAUTHN_ORIGIN");
   let rp_name = std::env::var("WEBAUTHN_NAME").expect("Failed to load WEBAUTHN_NAME");
+  let additional_origins = std::env::var("WEBAUTHN_ADDITIONAL_ORIGINS")
+    .unwrap_or_default()
+    .split(',')
+    .filter_map(|s| Url::parse(s).ok())
+    .collect::<Vec<_>>();
 
-  let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
+  let mut webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
     .expect("Failed creating WebauthnBuilder")
     .rp_name(&rp_name);
+
+  for origin in additional_origins {
+    webauthn = webauthn.append_allowed_origin(&origin);
+  }
+
   webauthn.build().expect("Failed creating Webauthn")
 }
 
