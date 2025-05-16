@@ -10,6 +10,8 @@ import {
 import type { Passkey } from './types.svelte';
 import { BASE_URL, get, post } from '../util.svelte';
 import { PUBLIC_IS_APP } from '$env/static/public';
+import { onDestroy, onMount } from 'svelte';
+import { toast } from 'positron-components';
 
 const isKeyCredCreate = (
   object: any
@@ -52,7 +54,8 @@ export const passkey_register = async (name: string) => {
         .startRegistration;
       reg = await startRegistration({ optionsJSON });
     } else {
-      const register = (await import('tauri-plugin-webauthn-api')).register;
+      const { register, cancel } = await import('tauri-plugin-webauthn-api');
+      await cancel();
       reg = await register(BASE_URL, optionsJSON);
     }
   } catch (_) {
@@ -90,8 +93,10 @@ export const passkey_authenticate = async () => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      const authenticate = (await import('tauri-plugin-webauthn-api'))
-        .authenticate;
+      const { authenticate, cancel } = await import(
+        'tauri-plugin-webauthn-api'
+      );
+      await cancel();
       ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
@@ -126,8 +131,10 @@ export const passkey_authenticate_by_email = async (email: string) => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      const authenticate = (await import('tauri-plugin-webauthn-api'))
-        .authenticate;
+      const { authenticate, cancel } = await import(
+        'tauri-plugin-webauthn-api'
+      );
+      await cancel();
       ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
@@ -161,8 +168,10 @@ export const passkey_special_access = async () => {
         .startAuthentication;
       ret = await startAuthentication({ optionsJSON });
     } else {
-      const authenticate = (await import('tauri-plugin-webauthn-api'))
-        .authenticate;
+      const { authenticate, cancel } = await import(
+        'tauri-plugin-webauthn-api'
+      );
+      await cancel();
       ret = await authenticate(BASE_URL, optionsJSON);
     }
   } catch (_) {
@@ -207,4 +216,54 @@ export const passkey_edit_name = async (name: string, old_name: string) => {
       old_name
     })
   );
+};
+
+export const createEventListener = (openPinDialog: () => void) => {
+  let unregister = () => {};
+  let pinDescription = $state('');
+
+  onMount(async () => {
+    const { registerListener, WebauthnEventType, PinEventType } = await import(
+      'tauri-plugin-webauthn-api'
+    );
+    unregister = await registerListener((event) => {
+      switch (event.type) {
+        case WebauthnEventType.PinEvent:
+          switch (event.event.type) {
+            case PinEventType.InvalidPin:
+              openPinDialog();
+              pinDescription =
+                'Invalid PIN. Please try again.' +
+                event.event.attempts_remaining
+                  ? ` (${event.event.attempts_remaining} attempts remaining)`
+                  : '';
+              break;
+            case PinEventType.PinRequired:
+              openPinDialog();
+              pinDescription = 'Please enter your security key PIN to continue';
+              break;
+            case PinEventType.PinAuthBlocked:
+            case PinEventType.PinBlocked:
+              toast.error('Security key is blocked. Please contact support.');
+              break;
+          }
+          break;
+        case WebauthnEventType.PresenceRequired:
+          toast.info('Please touch your security key to continue');
+          break;
+        case WebauthnEventType.SelectDevice:
+          toast.info('Please select your security key by touching it');
+          break;
+        case WebauthnEventType.SelectKey:
+          toast.error('Not Implemented');
+          break;
+      }
+    });
+  });
+
+  onDestroy(unregister);
+
+  return {
+    pinDescription: () => pinDescription
+  };
 };

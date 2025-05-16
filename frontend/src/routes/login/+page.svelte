@@ -4,9 +4,11 @@
   import Login from './login-form.svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { loginSchema } from './schema.svelte';
+  import { loginSchema, pin } from './schema.svelte';
   import { test_token } from '$lib/backend/auth/other.svelte';
   import { onMount } from 'svelte';
+  import { PUBLIC_IS_APP } from '$env/static/public';
+  import PasskeyOptions from '../account/security/passkey-options.svelte';
 
   interface Props {
     data: PageServerData;
@@ -26,6 +28,11 @@
   const loginForm = {
     form: data.loginForm,
     schema: loginSchema
+  };
+
+  const pinForm = {
+    form: data.pin,
+    schema: pin
   };
 </script>
 
@@ -52,6 +59,9 @@
     </div>
   </div>
 </div>
+{#if PUBLIC_IS_APP === 'true'}
+  <PasskeyOptions form={pinForm} />
+{/if}
 
 <style>
   .background-img {
