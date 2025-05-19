@@ -10,7 +10,7 @@
     FormInput,
     type FormSchema
   } from 'positron-components/components/form';
-  import { KeyRound, Pencil, Trash } from 'lucide-svelte';
+  import { KeyRound, Pencil, Trash } from '@lucide/svelte';
   import { type SvelteComponent } from 'svelte';
   import { DateTime } from 'positron-components/util';
   import { RequestError } from 'positron-components/backend';

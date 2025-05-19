@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Sidebar, Collapsible } from 'positron-components/components/ui';
-  import { ChevronRight, Image, KeyRound, Users } from 'lucide-svelte';
-  import { page } from '$app/stores';
+  import { ChevronRight, Image, KeyRound, Users } from '@lucide/svelte';
+  import { page } from '$app/state';
   import { Permission } from '$lib/backend/management/types.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
 
@@ -137,7 +137,7 @@
                         {#each mainItem.items as subItem (subItem.title)}
                           <Sidebar.MenuSubItem>
                             <Sidebar.MenuSubButton
-                              isActive={$page.url.pathname === subItem.url}
+                              isActive={page.url.pathname === subItem.url}
                               class="h-8"
                             >
                               {#snippet child({ props })}

@@ -5,7 +5,7 @@
     Skeleton
   } from 'positron-components/components/ui';
   import { SimpleAvatar } from 'positron-components/components/util';
-  import { ChevronsUpDown, LogOut, Settings } from 'lucide-svelte';
+  import { ChevronsUpDown, LogOut, Settings } from '@lucide/svelte';
   import { goto } from '$app/navigation';
   import { logout } from '$lib/backend/auth/other.svelte';
   import { userData } from '$lib/backend/account/info.svelte';

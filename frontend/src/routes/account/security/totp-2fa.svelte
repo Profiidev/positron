@@ -12,7 +12,7 @@
   } from 'positron-components/components/form';
   import { DateTime } from 'positron-components/util';
   import { RequestError } from 'positron-components/backend';
-  import { Clock9 } from 'lucide-svelte';
+  import { Clock9 } from '@lucide/svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import {
     is_code,

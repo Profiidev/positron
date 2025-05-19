@@ -34,7 +34,7 @@
   import { deepCopy } from 'positron-components/util';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
-  import { RotateCw } from 'lucide-svelte';
+  import { RotateCw } from '@lucide/svelte';
   import type { PageServerData } from './$types';
   import type { SuperValidated } from 'sveltekit-superforms';
   import { userData } from '$lib/backend/account/info.svelte';
