@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Sidebar, ScrollArea } from 'positron-components/components/ui';
-  import { Atom, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Atom, PanelLeftClose, PanelLeftOpen } from '@lucide/svelte';
   import User from './user.svelte';
   import Main from './main.svelte';
 

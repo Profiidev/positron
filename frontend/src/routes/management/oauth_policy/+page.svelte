@@ -22,7 +22,7 @@
   import { FormInput } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
   import { deepCopy } from 'positron-components/util';
-  import { Plus, Trash } from 'lucide-svelte';
+  import { Plus, Trash } from '@lucide/svelte';
   import type { PageServerData } from './$types';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { columns } from './table.svelte';

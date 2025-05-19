@@ -11,7 +11,7 @@ import type { Passkey } from './types.svelte';
 import { BASE_URL, get, post } from '../util.svelte';
 import { PUBLIC_IS_APP } from '$env/static/public';
 import { onDestroy, onMount } from 'svelte';
-import { toast } from 'positron-components';
+import { toast } from 'positron-components/components/ui';
 
 const isKeyCredCreate = (
   object: any

@@ -34,7 +34,7 @@
   import { deepCopy } from 'positron-components/util';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
-  import { RotateCw } from 'lucide-svelte';
+  import { RotateCw } from '@lucide/svelte';
   import type { PageServerData } from './$types';
   import type { SuperValidated } from 'sveltekit-superforms';
   import { userData } from '$lib/backend/account/info.svelte';
@@ -273,7 +273,7 @@
   {/snippet}
   {#snippet createDialog({ props })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
-      <div class="space-y-1">
+      <div class="grid gap-1 space-y-1">
         {#each backendURLs(startCreate?.client_id) as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
