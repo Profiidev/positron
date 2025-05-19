@@ -273,7 +273,7 @@
   {/snippet}
   {#snippet createDialog({ props })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
-      <div class="space-y-1 grid gap-1">
+      <div class="grid gap-1 space-y-1">
         {#each backendURLs(startCreate?.client_id) as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
