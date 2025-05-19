@@ -1,6 +1,10 @@
 <script lang="ts">
   import { createEventListener } from '$lib/backend/auth/passkey.svelte';
-  import { FormDialog, FormInput, type FormSchema } from 'positron-components';
+  import {
+    FormDialog,
+    FormInput,
+    type FormSchema
+  } from 'positron-components/components/form';
   import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
