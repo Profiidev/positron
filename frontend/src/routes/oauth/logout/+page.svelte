@@ -36,7 +36,7 @@
         >Do you want to got back to {oauth_logout?.name} or to Positron?</Card.Description
       >
     </Card.Header>
-    <Card.Content class="flex items-center">
+    <Card.Content class="flex w-100 items-center">
       {#if infoData}
         <SimpleAvatar src={infoData.image} class="size-14" />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">

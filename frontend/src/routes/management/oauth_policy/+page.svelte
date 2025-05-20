@@ -111,7 +111,7 @@
           onValueChange={(v) =>
             (group[0].name = groups?.find((g) => g.uuid === v)?.name || '')}
         >
-          <Select.Trigger>{group[0].name}</Select.Trigger>
+          <Select.Trigger class="w-full">{group[0].name}</Select.Trigger>
           <Select.Content>
             {#each [group[0], ...groups_left_edit] as option}
               <Select.Item value={option.uuid} label={option.name} />

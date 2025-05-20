@@ -71,7 +71,7 @@
         >Do you want to log in to {oauth_params?.name} with the account below?</Card.Description
       >
     </Card.Header>
-    <Card.Content class="flex items-center">
+    <Card.Content class="flex w-100 items-center">
       {#if infoData}
         <SimpleAvatar src={infoData.image} class="size-14" />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
