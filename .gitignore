@@ -4,3 +4,13 @@ node_modules
 backend/Cargo.lock
 postgres/
 nats/
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
