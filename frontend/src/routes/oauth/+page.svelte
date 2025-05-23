@@ -7,10 +7,8 @@
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
   import { onMount } from 'svelte';
-  import {
-    user_settings,
-    user_settings_get
-  } from '$lib/backend/account/settings.svelte';
+  import { user_settings_get } from '$lib/backend/account/settings.svelte';
+  import { LoaderCircle } from '@lucide/svelte';
 
   interface Props {
     data: PageServerData;
@@ -78,7 +76,9 @@
           <span class="truncate text-lg font-semibold">{infoData.name}</span>
           <span class="truncate">{infoData.email}</span>
         </div>
-        <Button variant="link" onclick={change}>Change</Button>
+        <Button variant="link" onclick={change} disabled={isLoading}
+          >Change</Button
+        >
       {:else}
         <Skeleton class="size-14 rounded-full" />
         <div class="ml-2 grid flex-1 space-y-2 text-left text-sm leading-tight">
@@ -90,8 +90,15 @@
     <Card.Footer class="flex flex-col">
       <span class="text-destructive mb-4 truncate text-sm">{error}</span>
       <div class="flex w-full justify-between">
-        <Button variant="secondary" onclick={cancel}>Cancel</Button>
-        <Button onclick={confirm}>Confirm</Button>
+        <Button variant="secondary" onclick={cancel} disabled={isLoading}
+          >Cancel</Button
+        >
+        <Button onclick={confirm} disabled={isLoading}>
+          {#if isLoading}
+            <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
+          {/if}
+          Confirm
+        </Button>
       </div>
     </Card.Footer>
   </Card.Root>
