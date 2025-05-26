@@ -26,5 +26,5 @@ tauri-plugin-http = "2"
 tauri-plugin-websocket = "2"
 tauri-plugin-webauthn = "0.2.0"
 cookie_store = { version = "0.21.1", features = ["serde"] }
-tokio = { version = "1.45.0", features = ["sync", "macros"] }
+tokio = { version = "1.45.1", features = ["sync", "macros"] }
 bytes = "1.10.1"
