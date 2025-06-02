@@ -16,5 +16,6 @@
     libsoup_3
     pango
     webkitgtk_4_1
+    nodejs_22
   ];
 }
