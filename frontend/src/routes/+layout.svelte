@@ -1,8 +1,8 @@
 <script lang="ts">
   import {
-    Toaster,
     Sidebar,
-    ModeWatcher
+    ModeWatcher,
+    Toaster
   } from 'positron-components/components/ui';
   import '../app.css';
   import { page } from '$app/state';
