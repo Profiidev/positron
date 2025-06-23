@@ -17,13 +17,15 @@
     SimpleTable
   } from 'positron-components/components/table';
   import { Label } from 'positron-components/components/ui';
-  import { FormInput } from 'positron-components/components/form';
+  import {
+    FormInput,
+    type FormType
+  } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
   import { columns } from './table.svelte';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     data: PageServerData;
@@ -35,7 +37,7 @@
   let users = $derived(user_info_list.value);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: SuperValidated<any>) => {
+  const createItemFn = async (form: FormType<any>) => {
     return await create_group(form.data.name, Number(form.data.access_level));
   };
 

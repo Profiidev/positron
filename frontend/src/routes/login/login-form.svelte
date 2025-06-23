@@ -4,7 +4,8 @@
     Totp_6,
     BaseForm,
     FormInput,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
   import { cn } from 'positron-components/utils';
   import { goto } from '$app/navigation';
@@ -17,7 +18,6 @@
     passkey_authenticate_by_email
   } from '$lib/backend/auth/passkey.svelte';
   import { connect_updater } from '$lib/backend/ws/updater.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import type { SvelteComponent } from 'svelte';
 
   interface Props {
@@ -38,7 +38,7 @@
   let passkeyError = $state('');
   let formComp: SvelteComponent | undefined = $state();
 
-  const onSubmit = async (form: SuperValidated<any>) => {
+  const onSubmit = async (form: FormType<any>) => {
     if (passkeySecondTry) {
       passkeyError = '';
 

@@ -2,7 +2,8 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
   import {
     Separator,
@@ -14,7 +15,6 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import { password_change } from '$lib/backend/auth/password.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -36,7 +36,7 @@
     return true;
   };
 
-  const changeConfirm = async (form: SuperValidated<any>) => {
+  const changeConfirm = async (form: FormType<any>) => {
     if (form.data.password !== form.data.password_confirm) {
       return { error: 'Passwords are not equal', field: 'password_confirm' };
     }

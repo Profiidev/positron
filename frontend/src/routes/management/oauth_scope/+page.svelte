@@ -17,9 +17,11 @@
     Multiselect
   } from 'positron-components/components/table';
   import { Label } from 'positron-components/components/ui';
-  import { FormInput } from 'positron-components/components/form';
+  import {
+    FormInput,
+    type FormType
+  } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import type { PageServerData } from './$types';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { columns } from './table.svelte';
@@ -36,7 +38,7 @@
   let policy: OAuthPolicyInfo[] = $state([]);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: SuperValidated<any>) => {
+  const createItemFn = async (form: FormType<any>) => {
     let scope = form.data;
     scope.policy = policy;
     return await create_scope(scope);

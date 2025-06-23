@@ -7,7 +7,11 @@
     Skeleton,
     toast
   } from 'positron-components/components/ui';
-  import { BaseForm, FormInput } from 'positron-components/components/form';
+  import {
+    BaseForm,
+    FormInput,
+    type FormType
+  } from 'positron-components/components/form';
   import { arrayBufferToBase64 } from 'positron-components/util';
   import { Upload } from '@lucide/svelte';
   import { SimpleAvatar } from 'positron-components/components/util';
@@ -18,7 +22,6 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import type { PageServerData } from './$types';
   import { profileSchema } from './schema.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import type { SvelteComponent } from 'svelte';
 
   interface Props {
@@ -59,7 +62,7 @@
     imageInput?.click();
   };
 
-  const updateProfile = async (form: SuperValidated<any>) => {
+  const updateProfile = async (form: FormType<any>) => {
     isLoading = true;
 
     let ret = await profile_update(form.data.name);

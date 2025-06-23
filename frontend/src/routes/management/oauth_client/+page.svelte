@@ -29,14 +29,16 @@
     Button,
     toast
   } from 'positron-components/components/ui';
-  import { FormInput } from 'positron-components/components/form';
+  import {
+    FormInput,
+    type FormType
+  } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
   import { deepCopy } from 'positron-components/util';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { RotateCw } from '@lucide/svelte';
   import type { PageServerData } from './$types';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import { userData } from '$lib/backend/account/info.svelte';
   import FormSwitch from './FormSwitch.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
@@ -99,7 +101,7 @@
     }
   ];
 
-  const createItemFn = async (form: SuperValidated<any>) => {
+  const createItemFn = async (form: FormType<any>) => {
     return await create_client(
       form.data.name,
       form.data.redirect_uri,

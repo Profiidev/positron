@@ -19,14 +19,16 @@
     Select,
     Button
   } from 'positron-components/components/ui';
-  import { FormInput } from 'positron-components/components/form';
+  import {
+    FormInput,
+    type FormType
+  } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
   import { deepCopy } from 'positron-components/util';
   import { Plus, Trash } from '@lucide/svelte';
   import type { PageServerData } from './$types';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { columns } from './table.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import { userData } from '$lib/backend/account/info.svelte';
 
   interface Props {
@@ -40,7 +42,7 @@
   let group: [GroupInfo, string][] = $state([]);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: SuperValidated<any>) => {
+  const createItemFn = async (form: FormType<any>) => {
     let policy = form.data;
     policy.group = group;
     return await create_policy(policy);

@@ -3,7 +3,8 @@
     LoginOtherOptions,
     BaseForm,
     FormInput,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
   import { interval } from 'positron-components/util';
   import { RequestError } from 'positron-components/backend';
@@ -11,7 +12,6 @@
   import { password_special_access } from '$lib/backend/auth/password.svelte';
   import { passkey_special_access } from '$lib/backend/auth/passkey.svelte';
   import { browser } from '$app/environment';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     specialAccessValid: boolean;
@@ -47,7 +47,7 @@
     });
   };
 
-  const confirm = async (form: SuperValidated<any>) => {
+  const confirm = async (form: FormType<any>) => {
     passkeyError = '';
 
     let ret = await password_special_access(form.data.password);
