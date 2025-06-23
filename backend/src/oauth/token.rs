@@ -145,7 +145,7 @@ async fn token<'r>(
   let claims = OAuthClaims {
     sub: code_info.user,
     exp: get_timestamp_10_min(),
-    iss: format!("{}/{}", config.issuer, code_info.client_id),
+    iss: config.issuer.clone(),
     aud: code_info.client_id,
     iat: time,
     auth_time: time,

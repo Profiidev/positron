@@ -60,17 +60,7 @@
   let startCreate: OAuthClientCreate | undefined = $state();
   let newSecret = $state('');
 
-  let clientInfo = $derived([
-    {
-      name: 'Client ID',
-      value: startCreate?.client_id
-    },
-    {
-      name: "Client Secret <span class='text-destructive ml-auto'>WILL NOT BE VISIBLE AGAIN</span>",
-      value: startCreate?.secret
-    }
-  ]);
-  let backendURLs = (client_id: string | undefined) => [
+  let backendURLs = (client_id: string) => [
     {
       name: 'Authorization URL',
       value: `${PUBLIC_BACKEND_URL}/oauth/authorize`
@@ -85,7 +75,7 @@
     },
     {
       name: 'Logout URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${startCreate?.client_id || client_id || ''}`
+      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${client_id}`
     },
     {
       name: 'Revoke URL',
@@ -97,7 +87,7 @@
     },
     {
       name: 'OIDC Configuration URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/${startCreate?.client_id || client_id || ''}/.well-known/openid-configuration`
+      value: `${PUBLIC_BACKEND_URL}/oauth/.well-known/openid-configuration`
     }
   ];
 
@@ -276,7 +266,7 @@
   {#snippet createDialog({ props })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
       <div class="grid gap-1 space-y-1">
-        {#each backendURLs(startCreate?.client_id) as info}
+        {#each backendURLs(startCreate?.client_id || '') as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
