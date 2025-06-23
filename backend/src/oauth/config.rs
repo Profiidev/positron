@@ -31,9 +31,8 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[get("/<client_id>/.well-known/openid-configuration?<internal>")]
+#[get("/.well-known/openid-configuration?<internal>")]
 async fn config(
-  client_id: &str,
   state: &State<ConfigurationState>,
   conn: Connection<'_, DB>,
   internal: Option<bool>,
@@ -55,11 +54,11 @@ async fn config(
   };
 
   Ok(Json(Configuration {
-    issuer: format!("{}/{}", state.issuer, client_id),
+    issuer: state.issuer.clone(),
     authorization_endpoint: format!("{}/authorize", state.backend_url),
     token_endpoint: format!("{}/token", backend_url),
     userinfo_endpoint: format!("{}/user", backend_url),
-    end_session_endpoint: format!("{}/logout/{}", state.backend_url, client_id),
+    end_session_endpoint: format!("{}/logout", state.backend_url),
     revocation_endpoint: format!("{}/revoke", backend_url),
     response_types_supported: vec!["code".into()],
     jwks_uri: format!("{}/jwks", backend_url),
