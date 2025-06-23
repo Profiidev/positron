@@ -1,6 +1,6 @@
 use rocket::{Build, Rocket, Route};
-use state::{AuthorizeState, ClientState};
 pub use state::ConfigurationState;
+use state::{AuthorizeState, ClientState};
 
 mod auth;
 mod client_auth;
