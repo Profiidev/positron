@@ -60,7 +60,7 @@
   let startCreate: OAuthClientCreate | undefined = $state();
   let newSecret = $state('');
 
-  let backendURLs = [
+  let backendURLs = (client_id: string) => [
     {
       name: 'Authorization URL',
       value: `${PUBLIC_BACKEND_URL}/oauth/authorize`
@@ -75,7 +75,7 @@
     },
     {
       name: 'Logout URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/logout`
+      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${client_id}`
     },
     {
       name: 'Revoke URL',
@@ -184,7 +184,7 @@
   {#snippet editDialog({ props, item })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
       <div class="grid gap-1 space-y-1">
-        {#each backendURLs as info}
+        {#each backendURLs(item.client_id) as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
@@ -266,7 +266,7 @@
   {#snippet createDialog({ props })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
       <div class="grid gap-1 space-y-1">
-        {#each backendURLs as info}
+        {#each backendURLs(startCreate?.client_id || '') as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
