@@ -8,7 +8,8 @@
   import {
     FormDialog,
     FormInput,
-    Totp_6
+    Totp_6,
+    type FormType
   } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
   import type { SvelteComponent } from 'svelte';
@@ -20,7 +21,6 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import type { PageServerData } from './$types';
   import { confirmSchema, emailChange } from './schema.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
   import { get } from 'svelte/store';
 
   interface Props {
@@ -60,7 +60,7 @@
     return true;
   };
 
-  const changeEmail = async (form: SuperValidated<any>) => {
+  const changeEmail = async (form: FormType<any>) => {
     if (enteringCodes) {
       return enterCodes(form);
     } else {
@@ -68,7 +68,7 @@
     }
   };
 
-  const enterEmail = async (form: SuperValidated<any>) => {
+  const enterEmail = async (form: FormType<any>) => {
     let ret = await email_start_change(form.data.email);
 
     if (ret) {
@@ -86,7 +86,7 @@
     }
   };
 
-  const enterCodes = async (form: SuperValidated<any>) => {
+  const enterCodes = async (form: FormType<any>) => {
     let ret = await email_finish_change(form.data.old_code, form.data.new_code);
 
     if (ret) {

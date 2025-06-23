@@ -8,7 +8,8 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
   import { KeyRound, Pencil, Trash } from '@lucide/svelte';
   import { type SvelteComponent } from 'svelte';
@@ -20,7 +21,6 @@
     passkey_remove
   } from '$lib/backend/auth/passkey.svelte';
   import { passkey_list } from '$lib/backend/auth/stores.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -48,7 +48,7 @@
     return true;
   };
 
-  const createPasskey = async (form: SuperValidated<any>) => {
+  const createPasskey = async (form: FormType<any>) => {
     let ret = await passkey_register(form.data.name);
 
     if (ret) {
@@ -101,7 +101,7 @@
     editDialog?.setValue({ name });
   };
 
-  const editPasskey = async (form: SuperValidated<any>) => {
+  const editPasskey = async (form: FormType<any>) => {
     let ret = await passkey_edit_name(form.data.name, editing);
 
     if (ret) {

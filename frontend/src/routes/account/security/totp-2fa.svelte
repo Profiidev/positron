@@ -8,7 +8,8 @@
   import {
     Totp_6,
     FormDialog,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
   import { DateTime } from 'positron-components/util';
   import { RequestError } from 'positron-components/backend';
@@ -21,7 +22,6 @@
     totp_remove
   } from '$lib/backend/auth/totp.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     valid: boolean;
@@ -80,7 +80,7 @@
     return true;
   };
 
-  const addTotp = async (form: SuperValidated<any>) => {
+  const addTotp = async (form: FormType<any>) => {
     let res = await totp_confirm_setup(form.data.code);
 
     if (res) {

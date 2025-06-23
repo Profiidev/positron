@@ -3,9 +3,9 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema
+    type FormSchema,
+    type FormType
   } from 'positron-components/components/form';
-  import type { SuperValidated } from 'sveltekit-superforms';
 
   interface Props {
     form: FormSchema<any>;
@@ -15,7 +15,7 @@
 
   let pinDialog: boolean = $state(false);
 
-  const pinSend = async (form: SuperValidated<any>) => {
+  const pinSend = async (form: FormType<any>) => {
     try {
       const sendPin = (await import('tauri-plugin-webauthn-api')).sendPin;
       await sendPin(form.data.pin);
