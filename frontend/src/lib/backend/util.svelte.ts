@@ -52,7 +52,7 @@ const request = async <T>(
   try {
     await wait_for(() => fetchFn !== undefined);
 
-    let res = await fetchFn!(`${PUBLIC_BACKEND_URL}${path}`, {
+    let res = await fetchFn!(`/backend${path}`, {
       method,
       headers,
       body,
