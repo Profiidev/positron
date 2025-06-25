@@ -10,8 +10,8 @@ pub fn router() -> Router {
     .route("/webfinger", get(webfinger))
 }
 
-pub fn state(config: &Config) -> StaticFiles {
-  StaticFiles::init(config)
+pub fn state(config: &Config) -> Extension<StaticFiles> {
+  Extension(StaticFiles::init(config))
 }
 
 #[derive(Clone)]

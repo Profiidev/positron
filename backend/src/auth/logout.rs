@@ -1,33 +1,37 @@
+use axum::{
+  routing::{get, post},
+  Extension, Json, Router,
+};
+use axum_extra::extract::CookieJar;
 use chrono::DateTime;
-use rocket::{get, http::CookieJar, post, serde::json::Json, time::Duration, Route, State};
-use sea_orm_rocket::Connection;
+use time::Duration;
 
 use crate::{
-  db::{DBTrait, DB},
-  error::Result,
+  db::{Connection, DBTrait},
+  error::{Error, Result},
 };
 
 use super::jwt::{JwtBase, JwtClaims, JwtInvalidState, JwtState, TokenRes};
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![logout, test_token]
+pub fn router() -> Router {
+  Router::new()
+    .route("/logout", post(logout))
+    .route("/test_token", get(test_token))
 }
 
-#[post("/logout")]
 async fn logout(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  cookies: &CookieJar<'_>,
-  state: &State<JwtInvalidState>,
-  jwt: &State<JwtState>,
-) -> Result<TokenRes> {
-  let cookie = cookies.get("token").unwrap();
-
+  db: Connection,
+  mut cookies: CookieJar,
+  Extension(state): Extension<JwtInvalidState>,
+  Extension(jwt): Extension<JwtState>,
+) -> Result<(TokenRes, CookieJar)> {
   let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
-  reset_cookie.set_max_age(Duration::seconds(0));
-  cookies.remove(reset_cookie);
+  reset_cookie.set_max_age(Some(Duration::seconds(0)));
+  cookies = cookies.remove(reset_cookie);
 
-  let db = conn.into_inner();
+  let cookie = cookies.get("token").ok_or(Error::BadRequest)?;
+
   let mut count = state.count.lock().await;
   db.tables()
     .invalid_jwt()
@@ -37,22 +41,21 @@ async fn logout(
       &mut count,
     )
     .await?;
-  Ok(TokenRes::default())
+  Ok((TokenRes::default(), cookies))
 }
 
-#[get("/test_token")]
 async fn test_token(
   auth: Option<JwtClaims<JwtBase>>,
-  cookies: &CookieJar<'_>,
-  jwt: &State<JwtState>,
-) -> Json<bool> {
+  mut cookies: CookieJar,
+  Extension(jwt): Extension<JwtState>,
+) -> (Json<bool>, CookieJar) {
   if auth.is_none() {
     let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
-    reset_cookie.set_max_age(Duration::seconds(0));
-    cookies.remove(reset_cookie);
+    reset_cookie.set_max_age(Some(Duration::seconds(0)));
+    cookies = cookies.remove(reset_cookie);
 
-    Json(false)
+    (Json(false), cookies)
   } else {
-    Json(true)
+    (Json(true), cookies)
   }
 }

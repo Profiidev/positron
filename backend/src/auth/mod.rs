@@ -1,7 +1,10 @@
+use axum::{Extension, Router};
 use jwt::{JwtInvalidState, JwtState};
-use rocket::{Build, Rocket, Route};
 use sea_orm::DatabaseConnection;
 use state::{webauthn, PasskeyState, PasswordState, TotpState};
+use tower::{Layer, ServiceBuilder};
+
+use crate::config::Config;
 
 pub mod jwt;
 mod logout;
@@ -10,38 +13,20 @@ mod password;
 pub mod state;
 mod totp;
 
-pub fn routes() -> Vec<Route> {
-  passkey::routes()
-    .into_iter()
-    .chain(password::routes())
-    .chain(totp::routes())
-    .chain(logout::routes())
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/auth", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .nest("/passkey", passkey::router())
+    .nest("/password", password::router())
+    .nest("/totp", totp::router())
+    .merge(logout::router())
 }
 
-pub struct AsyncAuthStates {
-  password: PasswordState,
-  jwt: JwtState,
-}
-
-impl AsyncAuthStates {
-  pub async fn new(db: &DatabaseConnection) -> Self {
-    Self {
-      password: PasswordState::init(db).await,
-      jwt: JwtState::init(db).await,
-    }
-  }
-
-  pub fn add(self, server: Rocket<Build>) -> Rocket<Build> {
-    server.manage(self.password).manage(self.jwt)
-  }
-}
-
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server
-    .manage(PasskeyState::default())
-    .manage(TotpState::default())
-    .manage(JwtInvalidState::default())
-    .manage(webauthn())
+pub async fn state<S>(config: &Config, db: &DatabaseConnection) -> impl Layer<S> {
+  ServiceBuilder::new()
+    .layer(Extension(PasskeyState::init()))
+    .layer(Extension(PasswordState::init(config, db).await))
+    .layer(Extension(TotpState::init(config)))
+    .layer(Extension(JwtState::init(db).await))
+    .layer(Extension(JwtInvalidState::init()))
+    .layer(Extension(webauthn(config)))
 }

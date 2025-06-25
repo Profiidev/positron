@@ -1,16 +1,15 @@
 use std::str::FromStr;
 
+use axum::{
+  extract::Path,
+  routing::{get, post},
+  Extension, Json, Router,
+};
+use axum_extra::extract::CookieJar;
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use entity::passkey;
-use rocket::{
-  get,
-  http::{CookieJar, Status},
-  post,
-  serde::json::{self, Json},
-  Route, State,
-};
-use sea_orm_rocket::Connection;
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::{
@@ -23,7 +22,7 @@ use webauthn_rs::{
 use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -33,39 +32,42 @@ use super::{
   state::PasskeyState,
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![
-    start_registration,
-    finish_registration,
-    start_authentication,
-    start_authentication_by_email,
-    finish_authentication_by_email,
-    finish_authentication,
-    start_special_access,
-    finish_special_access,
-    list,
-    remove,
-    edit_name,
-  ]
-  .into_iter()
-  .flat_map(|route| route.map_base(|base| format!("{}{}", "/passkey", base)))
-  .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/start_registration", get(start_registration))
+    .route("/finish_registration", post(finish_registration))
+    .route("/start_authentication", get(start_authentication))
+    .route(
+      "/start_authentication/{email}",
+      get(start_authentication_by_email),
+    )
+    .route(
+      "/finish_authentication/{id}",
+      post(finish_authentication_by_email),
+    )
+    .route(
+      "/finish_authentication_by_email/{id}",
+      post(finish_authentication),
+    )
+    .route("/start_special_access", get(start_special_access))
+    .route("/finish_special_access", post(finish_special_access))
+    .route("/list", get(list))
+    .route("/remove", post(remove))
+    .route("/edit_name", post(edit_name))
 }
 
-#[get("/start_registration")]
 async fn start_registration(
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
+  db: Connection,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
 ) -> Result<Json<CreationChallengeResponse>> {
-  let db = conn.into_inner();
   let user = db.tables().user().get_user(auth.sub).await?;
 
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
     .into_iter()
-    .flat_map(|p| json::from_str::<Passkey>(&p.data))
+    .flat_map(|p| serde_json::from_str::<Passkey>(&p.data))
     .map(|p| p.cred_id().clone())
     .collect();
 
@@ -86,16 +88,14 @@ struct RegFinishReq {
   name: String,
 }
 
-#[post("/finish_registration", data = "<reg>")]
 async fn finish_registration(
   auth: JwtClaims<JwtSpecial>,
   reg: Json<RegFinishReq>,
-  conn: Connection<'_, DB>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
+  db: Connection,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  Extension(updater): Extension<UpdateState>,
+) -> Result<StatusCode> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
   if db
@@ -112,7 +112,7 @@ async fn finish_registration(
 
   let key = webauthn.finish_passkey_registration(&reg.reg, &reg_state)?;
 
-  let json_key = json::to_string(&key)?;
+  let json_key = serde_json::to_string(&key)?;
   db.tables()
     .passkey()
     .create_passkey_record(passkey::Model {
@@ -127,7 +127,7 @@ async fn finish_registration(
     .await?;
   updater.send_message(auth.sub, UpdateType::Passkey).await;
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }
 
 #[derive(Serialize)]
@@ -136,10 +136,9 @@ struct AuthStartRes {
   id: Uuid,
 }
 
-#[get("/start_authentication")]
 async fn start_authentication(
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
 ) -> Result<Json<AuthStartRes>> {
   let (rcr, auth_state) = webauthn.start_discoverable_authentication()?;
 
@@ -152,21 +151,18 @@ async fn start_authentication(
   }))
 }
 
-#[get("/start_authentication/<email>")]
 async fn start_authentication_by_email(
-  email: &str,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  conn: Connection<'_, DB>,
+  Path(email): Path<String>,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  db: Connection,
 ) -> Result<Json<AuthStartRes>> {
-  let db = conn.into_inner();
-
-  let user = db.tables().user().get_user_by_email(email).await?;
+  let user = db.tables().user().get_user_by_email(&email).await?;
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
 
   let passkeys = passkeys
     .into_iter()
-    .flat_map(|p| json::from_str::<Passkey>(&p.data))
+    .flat_map(|p| serde_json::from_str::<Passkey>(&p.data))
     .collect::<Vec<Passkey>>();
 
   let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
@@ -184,18 +180,16 @@ async fn start_authentication_by_email(
   }))
 }
 
-#[post("/finish_authentication/<id>", data = "<auth>")]
 async fn finish_authentication(
-  id: &str,
+  Path(id): Path<String>,
   auth: Json<PublicKeyCredential>,
-  conn: Connection<'_, DB>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  jwt: &State<JwtState>,
-  cookies: &CookieJar<'_>,
-) -> Result<TokenRes> {
-  let db = conn.into_inner();
-  let auth_id = Uuid::from_str(id)?;
+  db: Connection,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  Extension(jwt): Extension<JwtState>,
+  mut cookies: CookieJar,
+) -> Result<(TokenRes, CookieJar)> {
+  let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
@@ -207,7 +201,7 @@ async fn finish_authentication(
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(cred_id))
     .await?;
-  let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+  let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
   let user = db.tables().user().get_user(passkey_db.user).await?;
 
@@ -217,7 +211,7 @@ async fn finish_authentication(
     passkey.update_credential(&res);
   }
 
-  let json_key = json::to_string(&passkey)?;
+  let json_key = serde_json::to_string(&passkey)?;
 
   let _ = db
     .tables()
@@ -228,23 +222,21 @@ async fn finish_authentication(
   db.tables().user().logged_in(user.id).await?;
 
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
-  cookies.add(cookie);
+  cookies = cookies.add(cookie);
 
-  Ok(TokenRes::default())
+  Ok((TokenRes::default(), cookies))
 }
 
-#[post("/finish_authentication_by_email/<id>", data = "<auth>")]
 async fn finish_authentication_by_email(
-  id: &str,
+  Path(id): Path<String>,
   auth: Json<PublicKeyCredential>,
-  conn: Connection<'_, DB>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  jwt: &State<JwtState>,
-  cookies: &CookieJar<'_>,
-) -> Result<TokenRes> {
-  let db = conn.into_inner();
-  let auth_id = Uuid::from_str(id)?;
+  db: Connection,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  Extension(jwt): Extension<JwtState>,
+  mut cookies: CookieJar,
+) -> Result<(TokenRes, CookieJar)> {
+  let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.non_discover_auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
@@ -256,13 +248,13 @@ async fn finish_authentication_by_email(
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
     .await?;
-  let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+  let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
   if res.needs_update() {
     passkey.update_credential(&res);
   }
 
-  let json_key = json::to_string(&passkey)?;
+  let json_key = serde_json::to_string(&passkey)?;
 
   let _ = db
     .tables()
@@ -274,24 +266,22 @@ async fn finish_authentication_by_email(
   db.tables().user().logged_in(user.id).await?;
 
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
-  cookies.add(cookie);
+  cookies = cookies.add(cookie);
 
-  Ok(TokenRes::default())
+  Ok((TokenRes::default(), cookies))
 }
 
-#[get("/start_special_access")]
 async fn start_special_access(
   auth: JwtClaims<JwtBase>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  conn: Connection<'_, DB>,
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  db: Connection,
 ) -> Result<Json<RequestChallengeResponse>> {
-  let db = conn.into_inner();
   let user = db.tables().user().get_user(auth.sub).await?;
   let passkey_records = db.tables().passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkey_records
     .into_iter()
-    .flat_map(|p| json::from_str(&p.data))
+    .flat_map(|p| serde_json::from_str(&p.data))
     .collect::<Vec<Passkey>>();
 
   let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
@@ -305,17 +295,15 @@ async fn start_special_access(
   Ok(Json(rcr))
 }
 
-#[post("/finish_special_access", data = "<req>")]
 async fn finish_special_access(
   req: Json<PublicKeyCredential>,
   auth: JwtClaims<JwtBase>,
-  webauthn: &State<Webauthn>,
-  state: &State<PasskeyState>,
-  conn: Connection<'_, DB>,
-  jwt: &State<JwtState>,
-  cookies: &CookieJar<'_>,
-) -> Result<TokenRes> {
-  let db = conn.into_inner();
+  Extension(webauthn): Extension<Webauthn>,
+  Extension(state): Extension<PasskeyState>,
+  Extension(jwt): Extension<JwtState>,
+  db: Connection,
+  mut cookies: CookieJar,
+) -> Result<(TokenRes, CookieJar)> {
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
     return Err(Error::BadRequest);
   };
@@ -327,13 +315,13 @@ async fn finish_special_access(
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
     .await?;
-  let mut passkey = json::from_str::<Passkey>(&passkey_db.data)?;
+  let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
   if res.needs_update() {
     passkey.update_credential(&res);
   }
 
-  let json_key = json::to_string(&passkey)?;
+  let json_key = serde_json::to_string(&passkey)?;
   let _ = db
     .tables()
     .passkey()
@@ -343,10 +331,11 @@ async fn finish_special_access(
   db.tables().user().used_special_access(auth.sub).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(auth.sub)?;
-  cookies.add(cookie);
-  cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
+  cookies = cookies.add(cookie);
+  cookies =
+    cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
 
-  Ok(TokenRes::default())
+  Ok((TokenRes::default(), cookies))
 }
 
 #[derive(Serialize)]
@@ -356,12 +345,7 @@ struct PasskeyInfo {
   used: DateTime<Utc>,
 }
 
-#[get("/list")]
-async fn list(
-  auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-) -> Result<Json<Vec<PasskeyInfo>>> {
-  let db = conn.into_inner();
+async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<PasskeyInfo>>> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
 
@@ -382,14 +366,12 @@ struct PasskeyRemove {
   name: String,
 }
 
-#[post("/remove", data = "<req>")]
 async fn remove(
   req: Json<PasskeyRemove>,
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  Extension(updater): Extension<UpdateState>,
 ) -> Result<()> {
-  let db = conn.into_inner();
   let user = db.tables().user().get_user(auth.sub).await?;
 
   db.tables()
@@ -407,14 +389,12 @@ struct PasskeyEdit {
   old_name: String,
 }
 
-#[post("/edit_name", data = "<req>")]
 async fn edit_name(
   req: Json<PasskeyEdit>,
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  Extension(updater): Extension<UpdateState>,
 ) -> Result<()> {
-  let db = conn.into_inner();
   let user = db.tables().user().get_user(auth.sub).await?;
 
   if db

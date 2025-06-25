@@ -6,6 +6,7 @@ use clap::Parser;
 use cors::cors;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
+use sea_orm::DatabaseConnection;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
@@ -46,7 +47,7 @@ async fn main() {
     ServiceBuilder::new()
       .layer(TraceLayer::new_for_http())
       .layer(cors(&config).expect("Failed to create CORS layer"))
-      .layer(state().await)
+      .layer(state(&config, &db).await)
       .layer(Extension(db)),
   );
 
@@ -58,7 +59,8 @@ async fn main() {
 }
 
 fn routes() -> Router {
-  auth::router()
+  Router::new()
+    .nest("/auth", auth::router())
     .merge(account::router())
     .merge(email::router())
     .merge(oauth::router())
@@ -68,9 +70,9 @@ fn routes() -> Router {
     .merge(well_known::router())
 }
 
-async fn state<L>(config: &Config) -> ServiceBuilder<L> {
+async fn state<L>(config: &Config, db: &DatabaseConnection) -> ServiceBuilder<L> {
   ServiceBuilder::new()
-    .layer(auth::state())
+    .layer(auth::state(config, db).await)
     .layer(email::state())
     .layer(oauth::state())
     .layer(management::state())
@@ -78,9 +80,4 @@ async fn state<L>(config: &Config) -> ServiceBuilder<L> {
     .layer(well_known::state(config))
     .layer(s3::state().await)
     .layer(ws::state().await)
-}
-
-async fn init_state_with_db(server: Rocket<Build>) -> fairing::Result {
-  let states = AsyncAuthStates::new(db).await;
-  let server = states.add(server);
 }

@@ -90,9 +90,15 @@ impl JwtType for JwtTotpRequired {
   }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct JwtInvalidState {
   pub count: Mutex<i32>,
+}
+
+impl JwtInvalidState {
+  pub fn init() -> Self {
+    Self::default()
+  }
 }
 
 #[derive(Clone)]
