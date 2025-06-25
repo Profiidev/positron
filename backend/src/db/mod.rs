@@ -1,25 +1,35 @@
+use std::{convert::Infallible, ops::Deref, time::Duration};
+
+use axum::extract::{FromRequest, Request};
 use migration::MigratorTrait;
-use pool::SeaOrmPool;
-use rocket::{
-  fairing::{self, AdHoc},
-  Build, Rocket,
-};
-use sea_orm::DatabaseConnection;
-use sea_orm_rocket::Database;
+use sea_orm::{ConnectOptions, DatabaseConnection};
 use tables::Tables;
 
-mod pool;
+use crate::{config::Config, error::Result};
+
 pub mod tables;
 
-#[derive(Database, Debug)]
-#[database("sea_orm")]
-pub struct DB(SeaOrmPool);
+pub struct Connection(DatabaseConnection);
 
-impl DB {
-  pub fn attach(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket
-      .attach(DB::init())
-      .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
+impl Deref for Connection {
+  type Target = DatabaseConnection;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl<S: Sync> FromRequest<S> for Connection {
+  type Rejection = Infallible;
+  async fn from_request(req: Request, _state: &S) -> std::result::Result<Self, Self::Rejection> {
+    Ok(
+      req
+        .extensions()
+        .get::<DatabaseConnection>()
+        .cloned()
+        .map(Connection)
+        .expect("DatabaseConnection should be added as a extension"),
+    )
   }
 }
 
@@ -33,8 +43,16 @@ impl DBTrait for DatabaseConnection {
   }
 }
 
-async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
-  let conn = &DB::fetch(&rocket).unwrap().conn;
-  let _ = migration::Migrator::up(conn, None).await;
-  Ok(rocket)
+pub async fn init_db(config: &Config) -> Result<DatabaseConnection> {
+  let mut options = ConnectOptions::new(&config.db_url);
+  options
+    .max_connections(1024)
+    .min_connections(0)
+    .connect_timeout(Duration::from_secs(5))
+    .sqlx_logging(config.db_logging);
+
+  let conn = sea_orm::Database::connect(options).await?;
+  migration::Migrator::up(&conn, None).await?;
+
+  Ok(conn)
 }

@@ -1,4 +1,5 @@
-use rocket::{http::Status, response::Responder, serde::json};
+use axum::response::{IntoResponse, Response};
+use http::StatusCode;
 use thiserror::Error;
 use webauthn_rs::prelude::WebauthnError;
 
@@ -19,84 +20,48 @@ pub enum Error {
   Conflict,
   #[error("Gone")]
   Gone,
-  #[error("SerdeJson Error {source:?}")]
-  SerdeJson {
-    #[from]
-    source: json::serde_json::Error,
-  },
-  #[error("NotFound")]
-  Webauthn {
-    #[from]
-    source: WebauthnError,
-  },
-  #[error("DB error {source:?}")]
-  DB {
-    #[from]
-    source: sea_orm::DbErr,
-  },
-  #[error("Rsa error {source:?}")]
-  Rsa {
-    #[from]
-    source: rsa::errors::Error,
-  },
-  #[error("Argon2 Error {source:?}")]
-  Argon2 {
-    #[from]
-    source: argon2::password_hash::Error,
-  },
-  #[error("Base64 Error {source:?}")]
-  Base64 {
-    #[from]
-    source: base64::DecodeError,
-  },
-  #[error("Uuid Error {source:?}")]
-  Uuid {
-    #[from]
-    source: uuid::Error,
-  },
-  #[error("Jwt Error {source:?}")]
-  Jwt {
-    #[from]
-    source: jsonwebtoken::errors::Error,
-  },
-  #[error("Image Error {source:?}")]
-  Image {
-    #[from]
-    source: image::error::ImageError,
-  },
-  #[error("Io Error {source:?}")]
-  IO {
-    #[from]
-    source: std::io::Error,
-  },
-  #[error("Mail Error {source:?}")]
-  Mail {
-    #[from]
-    source: MailError,
-  },
-  #[error("Reqwest Error {source:?}")]
-  Reqwest {
-    #[from]
-    source: reqwest::Error,
-  },
-  #[error("S3 Error {source:?}")]
-  S3 {
-    #[from]
-    source: crate::s3::error::S3Error,
-  },
+  #[error(transparent)]
+  SerdeJson(#[from] serde_json::Error),
+  #[error(transparent)]
+  Webauthn(#[from] WebauthnError),
+  #[error(transparent)]
+  DB(#[from] sea_orm::DbErr),
+  #[error(transparent)]
+  Rsa(#[from] rsa::errors::Error),
+  #[error(transparent)]
+  Argon2(#[from] argon2::password_hash::Error),
+  #[error(transparent)]
+  Base64(#[from] base64::DecodeError),
+  #[error(transparent)]
+  Uuid(#[from] uuid::Error),
+  #[error(transparent)]
+  Jwt(#[from] jsonwebtoken::errors::Error),
+  #[error(transparent)]
+  Image(#[from] image::error::ImageError),
+  #[error(transparent)]
+  IO(#[from] std::io::Error),
+  #[error(transparent)]
+  Mail(#[from] MailError),
+  #[error(transparent)]
+  Reqwest(#[from] reqwest::Error),
+  #[error(transparent)]
+  S3(#[from] crate::s3::error::S3Error),
+  #[error(transparent)]
+  InvalidHeaderValue(#[from] http::header::InvalidHeaderValue),
 }
 
-impl<'r, 'o: 'r> Responder<'r, 'o> for Error {
-  fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-    log::error!("{:?}", &self);
+impl IntoResponse for Error {
+  fn into_response(self) -> Response {
+    tracing::error!("{:?}", &self);
     match self {
-      Self::Unauthorized => Status::Unauthorized.respond_to(request),
-      Self::Gone => Status::Gone.respond_to(request),
-      Self::InternalServerError | Self::Mail { .. } | Self::Reqwest { .. } => {
-        Status::InternalServerError.respond_to(request)
+      Self::BadRequest => StatusCode::BAD_REQUEST.into_response(),
+      Self::Unauthorized => StatusCode::UNAUTHORIZED.into_response(),
+      Self::InternalServerError | Self::Mail(_) | Self::Reqwest(_) => {
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
       }
-      Self::Conflict => Status::Conflict.respond_to(request),
-      _ => Status::BadRequest.respond_to(request),
+      Self::Conflict => StatusCode::CONFLICT.into_response(),
+      Self::Gone => StatusCode::GONE.into_response(),
+      _ => StatusCode::BAD_REQUEST.into_response(),
     }
   }
 }
