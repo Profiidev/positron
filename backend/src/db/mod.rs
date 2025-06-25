@@ -1,6 +1,7 @@
 use std::{convert::Infallible, ops::Deref, time::Duration};
 
-use axum::extract::{FromRequest, Request};
+use axum::{extract::FromRequestParts, Extension, RequestPartsExt};
+use http::request::Parts;
 use migration::MigratorTrait;
 use sea_orm::{ConnectOptions, DatabaseConnection};
 use tables::Tables;
@@ -19,15 +20,17 @@ impl Deref for Connection {
   }
 }
 
-impl<S: Sync> FromRequest<S> for Connection {
+impl<S: Sync> FromRequestParts<S> for Connection {
   type Rejection = Infallible;
-  async fn from_request(req: Request, _state: &S) -> std::result::Result<Self, Self::Rejection> {
+  async fn from_request_parts(
+    parts: &mut Parts,
+    _state: &S,
+  ) -> std::result::Result<Self, Self::Rejection> {
     Ok(
-      req
-        .extensions()
-        .get::<DatabaseConnection>()
-        .cloned()
-        .map(Connection)
+      parts
+        .extract::<Extension<DatabaseConnection>>()
+        .await
+        .map(|Extension(conn)| Connection(conn))
         .expect("DatabaseConnection should be added as a extension"),
     )
   }

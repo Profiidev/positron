@@ -1,19 +1,17 @@
-use std::io::Cursor;
-
+use axum::{
+  extract::FromRequestParts,
+  response::{IntoResponse, Response},
+};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::{Duration, Utc};
+use http::{
+  header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
+  request::Parts,
+};
 use jsonwebtoken::{
   decode, encode,
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
-};
-use rocket::{
-  async_trait,
-  http::{Cookie, SameSite, Status},
-  request::{FromRequest, Outcome, Request},
-  response::Responder,
-  serde::json,
-  tokio::sync::Mutex,
-  Response,
 };
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -23,6 +21,7 @@ use rsa::{
 };
 use sea_orm::DatabaseConnection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{db::DBTrait, utils::jwt_from_request};
@@ -96,6 +95,7 @@ pub struct JwtInvalidState {
   pub count: Mutex<i32>,
 }
 
+#[derive(Clone)]
 pub struct JwtState {
   header: Header,
   encoding_key: EncodingKey,
@@ -141,10 +141,7 @@ impl JwtState {
   ) -> Cookie<'c> {
     Cookie::build((name, value))
       .http_only(http)
-      .max_age(rocket::time::Duration::seconds(T::duration(
-        self.exp,
-        self.short_exp,
-      )))
+      .max_age(Duration::seconds(T::duration(self.exp, self.short_exp)))
       .same_site(SameSite::Lax)
       .secure(true)
       .build()
@@ -216,32 +213,28 @@ impl JwtState {
   }
 }
 
-#[async_trait]
-impl<'r, T> FromRequest<'r> for JwtClaims<T>
+impl<S: Sync, T> FromRequestParts<S> for JwtClaims<T>
 where
   for<'de> T: JwtType + Deserialize<'de>,
 {
-  type Error = ();
+  type Rejection = crate::error::Error;
 
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    jwt_from_request::<JwtClaims<T>, T>(req).await
+  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    jwt_from_request::<JwtClaims<T>, T, S>(parts, state).await
   }
 }
 
-#[async_trait]
-impl<'r, 'o: 'r, T: Serialize> Responder<'r, 'o> for TokenRes<T> {
-  fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-    let body = json::to_string(&self.body).map_err(|_| Status::InternalServerError)?;
+impl<T: Serialize> IntoResponse for TokenRes<T> {
+  fn into_response(self) -> Response {
+    let Ok(body) = serde_json::to_string(&self.body) else {
+      return crate::error::Error::InternalServerError.into_response();
+    };
 
-    let response = Response::build()
-      .header(rocket::http::Header::new("Cache-Control", "no-store"))
-      .header(rocket::http::Header::new("Pragma", "no-cache"))
-      .header(rocket::http::Header::new(
-        "Content-Type",
-        "application/json",
-      ))
-      .sized_body(body.len(), Cursor::new(body))
-      .finalize();
-    Ok(response)
+    Response::builder()
+      .header(CACHE_CONTROL, "no-store")
+      .header(PRAGMA, "no-cache")
+      .header(CONTENT_TYPE, "application/json")
+      .body(body)
+      .unwrap()
   }
 }
