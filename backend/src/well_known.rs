@@ -1,32 +1,33 @@
-use rocket::{get, serde::json::Json, Build, Rocket, Route, State};
-use serde::Serialize;
+use axum::{extract::Query, routing::get, Extension, Json, Router};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::oauth::ConfigurationState;
+use crate::{config::Config, oauth::ConfigurationState};
 
-pub fn route() -> Vec<Route> {
-  rocket::routes![assetlinks, webfinger]
+pub fn router() -> Router {
+  Router::new()
+    .route("/assetlinks.json", get(assetlinks))
+    .route("/webfinger", get(webfinger))
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(StaticFiles::default())
+pub fn state(config: &Config) -> StaticFiles {
+  StaticFiles::init(config)
 }
 
+#[derive(Clone)]
 struct StaticFiles {
   assetlinks: Value,
 }
 
-impl Default for StaticFiles {
-  fn default() -> Self {
+impl StaticFiles {
+  fn init(config: &Config) -> Self {
     Self {
-      assetlinks: serde_json::from_str(&std::env::var("ASSETLINKS").expect("ASSETLINKS not set"))
-        .expect("Failed to parse ASSETLINKS"),
+      assetlinks: serde_json::from_str(&config.assetlinks).expect("Failed to parse ASSETLINKS"),
     }
   }
 }
 
-#[get("/assetlinks.json")]
-fn assetlinks(state: &State<StaticFiles>) -> Json<Value> {
+fn assetlinks(Extension(state): Extension<StaticFiles>) -> Json<Value> {
   Json(state.assetlinks.clone())
 }
 
@@ -42,8 +43,15 @@ struct Link {
   href: String,
 }
 
-#[get("/webfinger?<resource>")]
-fn webfinger(resource: &str, state: &State<ConfigurationState>) -> Json<WebFinger> {
+#[derive(Deserialize)]
+struct Resource {
+  resource: String,
+}
+
+fn webfinger(
+  Query(resource): Query<Resource>,
+  Extension(state): Extension<ConfigurationState>,
+) -> Json<WebFinger> {
   Json(WebFinger {
     subject: resource.to_string(),
     links: vec![Link {

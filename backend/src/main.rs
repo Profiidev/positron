@@ -9,7 +9,7 @@ use dotenv::dotenv;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
-use crate::db::init_db;
+use crate::{config::Config, db::init_db};
 
 mod account;
 mod auth;
@@ -32,7 +32,7 @@ async fn main() {
   #[cfg(debug_assertions)]
   dotenv().ok();
 
-  let config = config::Config::parse();
+  let config = Config::parse();
 
   tracing_subscriber::fmt()
     .with_max_level(config.log_level)
@@ -68,14 +68,14 @@ fn routes() -> Router {
     .merge(well_known::router())
 }
 
-async fn state<L>() -> ServiceBuilder<L> {
+async fn state<L>(config: &Config) -> ServiceBuilder<L> {
   ServiceBuilder::new()
     .layer(auth::state())
     .layer(email::state())
     .layer(oauth::state())
     .layer(management::state())
     .layer(services::state())
-    .layer(well_known::state())
+    .layer(well_known::state(config))
     .layer(s3::state().await)
     .layer(ws::state().await)
 }

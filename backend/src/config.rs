@@ -17,4 +17,7 @@ pub struct Config {
 
   #[clap(long, env, default_value = "")]
   pub allowed_origins: String,
+
+  #[clap(long, env)]
+  pub assetlinks: String,
 }
