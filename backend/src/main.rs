@@ -7,7 +7,6 @@ use cors::cors;
 use dotenv::dotenv;
 use tokio::signal;
 use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
 
 use crate::{config::Config, db::init_db};
 
@@ -18,6 +17,7 @@ mod cors;
 mod db;
 mod email;
 mod error;
+mod logging;
 mod macros;
 mod management;
 mod oauth;
@@ -49,7 +49,6 @@ async fn main() {
     .await
     .layer(
       ServiceBuilder::new()
-        .layer(TraceLayer::new_for_http())
         .layer(cors(&config).expect("Failed to create CORS layer"))
         .layer(Extension(db)),
     );
@@ -76,7 +75,7 @@ fn routes() -> Router {
     .merge(well_known::router())
 }
 
-collect_state!(auth, email, oauth, management, services, s3, ws, well_known);
+collect_state!(auth, email, oauth, management, services, s3, ws, well_known, logging);
 
 async fn shutdown_signal() {
   let ctrl_c = async {
