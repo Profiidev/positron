@@ -90,11 +90,11 @@ struct RegFinishReq {
 
 async fn finish_registration(
   auth: JwtClaims<JwtSpecial>,
-  reg: Json<RegFinishReq>,
   db: Connection,
   Extension(webauthn): Extension<Webauthn>,
   Extension(state): Extension<PasskeyState>,
   Extension(updater): Extension<UpdateState>,
+  reg: Json<RegFinishReq>,
 ) -> Result<StatusCode> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
@@ -182,13 +182,13 @@ async fn start_authentication_by_email(
 
 async fn finish_authentication(
   Path(id): Path<String>,
-  auth: Json<PublicKeyCredential>,
   db: Connection,
   Extension(webauthn): Extension<Webauthn>,
   Extension(state): Extension<PasskeyState>,
   Extension(jwt): Extension<JwtState>,
   mut cookies: CookieJar,
-) -> Result<(TokenRes, CookieJar)> {
+  auth: Json<PublicKeyCredential>,
+) -> Result<(CookieJar, TokenRes)> {
   let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.auth_state.lock().await;
@@ -224,18 +224,18 @@ async fn finish_authentication(
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
   cookies = cookies.add(cookie);
 
-  Ok((TokenRes::default(), cookies))
+  Ok((cookies, TokenRes::default()))
 }
 
 async fn finish_authentication_by_email(
   Path(id): Path<String>,
-  auth: Json<PublicKeyCredential>,
   db: Connection,
   Extension(webauthn): Extension<Webauthn>,
   Extension(state): Extension<PasskeyState>,
   Extension(jwt): Extension<JwtState>,
   mut cookies: CookieJar,
-) -> Result<(TokenRes, CookieJar)> {
+  auth: Json<PublicKeyCredential>,
+) -> Result<(CookieJar, TokenRes)> {
   let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.non_discover_auth_state.lock().await;
@@ -268,7 +268,7 @@ async fn finish_authentication_by_email(
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
   cookies = cookies.add(cookie);
 
-  Ok((TokenRes::default(), cookies))
+  Ok((cookies, TokenRes::default()))
 }
 
 async fn start_special_access(
@@ -296,14 +296,14 @@ async fn start_special_access(
 }
 
 async fn finish_special_access(
-  req: Json<PublicKeyCredential>,
   auth: JwtClaims<JwtBase>,
   Extension(webauthn): Extension<Webauthn>,
   Extension(state): Extension<PasskeyState>,
   Extension(jwt): Extension<JwtState>,
   db: Connection,
   mut cookies: CookieJar,
-) -> Result<(TokenRes, CookieJar)> {
+  req: Json<PublicKeyCredential>,
+) -> Result<(CookieJar, TokenRes)> {
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
     return Err(Error::BadRequest);
   };
@@ -335,7 +335,7 @@ async fn finish_special_access(
   cookies =
     cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
 
-  Ok((TokenRes::default(), cookies))
+  Ok((cookies, TokenRes::default()))
 }
 
 #[derive(Serialize)]
@@ -367,10 +367,10 @@ struct PasskeyRemove {
 }
 
 async fn remove(
-  req: Json<PasskeyRemove>,
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
   Extension(updater): Extension<UpdateState>,
+  req: Json<PasskeyRemove>,
 ) -> Result<()> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
@@ -390,10 +390,10 @@ struct PasskeyEdit {
 }
 
 async fn edit_name(
-  req: Json<PasskeyEdit>,
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
   Extension(updater): Extension<UpdateState>,
+  req: Json<PasskeyEdit>,
 ) -> Result<()> {
   let user = db.tables().user().get_user(auth.sub).await?;
 

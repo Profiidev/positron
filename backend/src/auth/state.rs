@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -19,10 +19,10 @@ use crate::{config::Config, db::DBTrait};
 
 #[derive(Default, Clone)]
 pub struct PasskeyState {
-  pub reg_state: Mutex<HashMap<Uuid, PasskeyRegistration>>,
-  pub auth_state: Mutex<HashMap<Uuid, DiscoverableAuthentication>>,
-  pub non_discover_auth_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
-  pub special_access_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
+  pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
+  pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
+  pub non_discover_auth_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
+  pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
 
 #[derive(Clone)]
@@ -35,7 +35,7 @@ pub struct PasswordState {
 #[derive(Clone)]
 pub struct TotpState {
   pub issuer: String,
-  pub reg_state: Mutex<HashMap<Uuid, TOTP>>,
+  pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
 
 pub fn webauthn(config: &Config) -> Webauthn {

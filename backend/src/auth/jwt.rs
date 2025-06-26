@@ -1,5 +1,8 @@
+use std::{convert::Infallible, sync::Arc};
+
 use axum::{
-  extract::FromRequestParts,
+  body::Body,
+  extract::{FromRequestParts, OptionalFromRequestParts},
   response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
@@ -92,7 +95,7 @@ impl JwtType for JwtTotpRequired {
 
 #[derive(Default, Clone)]
 pub struct JwtInvalidState {
-  pub count: Mutex<i32>,
+  pub count: Arc<Mutex<i32>>,
 }
 
 impl JwtInvalidState {
@@ -147,7 +150,10 @@ impl JwtState {
   ) -> Cookie<'c> {
     Cookie::build((name, value))
       .http_only(http)
-      .max_age(Duration::seconds(T::duration(self.exp, self.short_exp)))
+      .max_age(time::Duration::seconds(T::duration(
+        self.exp,
+        self.short_exp,
+      )))
       .same_site(SameSite::Lax)
       .secure(true)
       .build()
@@ -225,8 +231,22 @@ where
 {
   type Rejection = crate::error::Error;
 
-  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-    jwt_from_request::<JwtClaims<T>, T, S>(parts, state).await
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    jwt_from_request::<JwtClaims<T>, T>(parts).await
+  }
+}
+
+impl<S: Sync, T> OptionalFromRequestParts<S> for JwtClaims<T>
+where
+  for<'de> T: JwtType + Deserialize<'de>,
+{
+  type Rejection = Infallible;
+
+  async fn from_request_parts(
+    parts: &mut Parts,
+    _state: &S,
+  ) -> Result<Option<Self>, Self::Rejection> {
+    Ok(jwt_from_request::<JwtClaims<T>, T>(parts).await.ok())
   }
 }
 
@@ -240,7 +260,7 @@ impl<T: Serialize> IntoResponse for TokenRes<T> {
       .header(CACHE_CONTROL, "no-store")
       .header(PRAGMA, "no-cache")
       .header(CONTENT_TYPE, "application/json")
-      .body(body)
+      .body(Body::new(body))
       .unwrap()
   }
 }

@@ -2,9 +2,9 @@ use axum::{Extension, Router};
 use jwt::{JwtInvalidState, JwtState};
 use sea_orm::DatabaseConnection;
 use state::{webauthn, PasskeyState, PasswordState, TotpState};
-use tower::{Layer, ServiceBuilder};
+use tower::ServiceBuilder;
 
-use crate::config::Config;
+use crate::{config::Config, Test};
 
 pub mod jwt;
 mod logout;
@@ -21,7 +21,7 @@ pub fn router() -> Router {
     .merge(logout::router())
 }
 
-pub async fn state<S>(config: &Config, db: &DatabaseConnection) -> impl Layer<S> {
+pub async fn state(config: &Config, db: &DatabaseConnection) -> impl Test {
   ServiceBuilder::new()
     .layer(Extension(PasskeyState::init()))
     .layer(Extension(PasswordState::init(config, db).await))

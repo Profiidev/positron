@@ -71,10 +71,10 @@ async fn start_setup(
 
 async fn finish_setup(
   auth: JwtClaims<JwtSpecial>,
-  req: Json<TotpReq>,
   Extension(state): Extension<TotpState>,
   db: Connection,
   Extension(updater): Extension<UpdateState>,
+  req: Json<TotpReq>,
 ) -> Result<StatusCode> {
   let mut lock = state.reg_state.lock().await;
   let totp = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
@@ -95,12 +95,12 @@ async fn finish_setup(
 }
 
 async fn confirm(
-  req: Json<TotpReq>,
   auth: JwtClaims<JwtTotpRequired>,
   db: Connection,
   Extension(jwt): Extension<JwtState>,
   mut cookies: CookieJar,
-) -> Result<(TokenRes, CookieJar)> {
+  req: Json<TotpReq>,
+) -> Result<(CookieJar, TokenRes)> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
@@ -118,7 +118,7 @@ async fn confirm(
     let cookie = jwt.create_token::<JwtBase>(auth.sub)?;
     cookies = cookies.add(cookie);
 
-    Ok((TokenRes::default(), cookies))
+    Ok((cookies, TokenRes::default()))
   }
 }
 

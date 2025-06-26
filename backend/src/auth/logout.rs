@@ -25,7 +25,7 @@ async fn logout(
   mut cookies: CookieJar,
   Extension(state): Extension<JwtInvalidState>,
   Extension(jwt): Extension<JwtState>,
-) -> Result<(TokenRes, CookieJar)> {
+) -> Result<(CookieJar, TokenRes)> {
   let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
   reset_cookie.set_max_age(Some(Duration::seconds(0)));
   cookies = cookies.remove(reset_cookie);
@@ -41,21 +41,21 @@ async fn logout(
       &mut count,
     )
     .await?;
-  Ok((TokenRes::default(), cookies))
+  Ok((cookies, TokenRes::default()))
 }
 
 async fn test_token(
   auth: Option<JwtClaims<JwtBase>>,
   mut cookies: CookieJar,
   Extension(jwt): Extension<JwtState>,
-) -> (Json<bool>, CookieJar) {
+) -> (CookieJar, Json<bool>) {
   if auth.is_none() {
     let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
     reset_cookie.set_max_age(Some(Duration::seconds(0)));
     cookies = cookies.remove(reset_cookie);
 
-    (Json(false), cookies)
+    (cookies, Json(false))
   } else {
-    (Json(true), cookies)
+    (cookies, Json(true))
   }
 }

@@ -36,7 +36,7 @@ struct KeyRes {
   key: String,
 }
 
-fn key(Extension(state): Extension<PasswordState>) -> Json<KeyRes> {
+async fn key(Extension(state): Extension<PasswordState>) -> Json<KeyRes> {
   Json(KeyRes { key: state.pub_key })
 }
 
@@ -46,12 +46,12 @@ struct AuthRes {
 }
 
 async fn authenticate(
-  req: Json<LoginReq>,
   Extension(state): Extension<PasswordState>,
   Extension(jwt): Extension<JwtState>,
   db: Connection,
   mut cookies: CookieJar,
-) -> Result<(TokenRes<AuthRes>, CookieJar)> {
+  req: Json<LoginReq>,
+) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;
 
@@ -70,10 +70,10 @@ async fn authenticate(
   cookies = cookies.add(cookie);
 
   Ok((
+    cookies,
     TokenRes {
       body: AuthRes { totp },
     },
-    cookies,
   ))
 }
 
@@ -83,13 +83,13 @@ struct SpecialAccess {
 }
 
 async fn special_access(
-  req: Json<SpecialAccess>,
   auth: JwtClaims<JwtBase>,
   Extension(state): Extension<PasswordState>,
   Extension(jwt): Extension<JwtState>,
   db: Connection,
   mut cookies: CookieJar,
-) -> Result<(TokenRes, CookieJar)> {
+  req: Json<SpecialAccess>,
+) -> Result<(CookieJar, TokenRes)> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;
 
@@ -104,7 +104,7 @@ async fn special_access(
   cookies =
     cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
 
-  Ok((TokenRes::default(), cookies))
+  Ok((cookies, TokenRes::default()))
 }
 
 #[derive(Deserialize)]
@@ -114,10 +114,10 @@ struct PasswordChange {
 }
 
 async fn change(
-  req: Json<PasswordChange>,
   auth: JwtClaims<JwtSpecial>,
   Extension(state): Extension<PasswordState>,
   db: Connection,
+  req: Json<PasswordChange>,
 ) -> Result<StatusCode> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;

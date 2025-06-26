@@ -1,13 +1,12 @@
-use std::net::SocketAddr;
+use std::{convert::Infallible, net::SocketAddr};
 
-use auth::AsyncAuthStates;
-use axum::{serve, Extension, Router};
+use axum::{extract::Request, response::IntoResponse, routing::Route, serve, Extension, Router};
 use clap::Parser;
 use cors::cors;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
 use sea_orm::DatabaseConnection;
-use tower::ServiceBuilder;
+use tower::{Layer, Service, ServiceBuilder};
 use tower_http::trace::TraceLayer;
 
 use crate::{config::Config, db::init_db};

@@ -2,10 +2,7 @@ use argon2::{
   password_hash::{PasswordHasher, SaltString},
   Argon2,
 };
-use axum::{
-  extract::{FromRequestParts, Query},
-  Extension, RequestPartsExt,
-};
+use axum::{extract::Query, Extension, RequestPartsExt};
 use axum_extra::{
   extract::CookieJar,
   headers::{authorization::Bearer, Authorization},
@@ -29,10 +26,7 @@ struct Token {
   token: String,
 }
 
-pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType, S: Sync>(
-  req: &mut Parts,
-  state: &S,
-) -> Result<C> {
+pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(req: &mut Parts) -> Result<C> {
   let bearer = req
     .extract::<TypedHeader<Authorization<Bearer>>>()
     .await
@@ -60,7 +54,7 @@ pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType, S: Sync>(
   let Ok(Extension(jwt)) = req.extract::<Extension<JwtState>>().await else {
     return Err(Error::InternalServerError);
   };
-  let Ok(db) = Connection::from_request_parts(req, state).await;
+  let Ok(db) = req.extract::<Connection>().await;
 
   let Ok(valid) = db
     .tables()
