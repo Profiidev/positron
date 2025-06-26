@@ -1,12 +1,12 @@
-use std::{convert::Infallible, net::SocketAddr};
+use std::net::SocketAddr;
 
-use axum::{extract::Request, response::IntoResponse, routing::Route, serve, Extension, Router};
+use axum::{serve, Extension, Router};
 use clap::Parser;
 use cors::cors;
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use sea_orm::DatabaseConnection;
-use tower::{Layer, Service, ServiceBuilder};
+use tokio::signal;
+use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
 use crate::{config::Config, db::init_db};
@@ -18,6 +18,7 @@ mod cors;
 mod db;
 mod email;
 mod error;
+mod macros;
 mod management;
 mod oauth;
 mod permission;
@@ -42,19 +43,25 @@ async fn main() {
     .await
     .expect("Failed to initialize database");
 
-  let app = Router::new().merge(routes()).layer(
-    ServiceBuilder::new()
-      .layer(TraceLayer::new_for_http())
-      .layer(cors(&config).expect("Failed to create CORS layer"))
-      .layer(state(&config, &db).await)
-      .layer(Extension(db)),
-  );
+  let app = Router::new()
+    .merge(routes())
+    .state(&config, &db)
+    .await
+    .layer(
+      ServiceBuilder::new()
+        .layer(TraceLayer::new_for_http())
+        .layer(cors(&config).expect("Failed to create CORS layer"))
+        .layer(Extension(db)),
+    );
 
   let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
   let listener = tokio::net::TcpListener::bind(addr)
     .await
     .expect("Failed to bind TCP listener");
-  serve(listener, app).await.expect("Failed to start server");
+  serve(listener, app)
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .expect("Failed to start server");
 }
 
 fn routes() -> Router {
@@ -69,26 +76,24 @@ fn routes() -> Router {
     .merge(well_known::router())
 }
 
-async fn state<L>(config: &Config, db: &DatabaseConnection) -> ServiceBuilder<L> {
-  ServiceBuilder::new()
-    .layer(auth::state(config, db).await)
-    .layer(email::state(config))
-    .layer(oauth::state(config))
-    .layer(management::state(config))
-    .layer(services::state(config))
-    .layer(well_known::state(config))
-    .layer(s3::state(config).await)
-    .layer(ws::state(config).await)
-}
+collect_state!(auth, email, oauth, management, services, s3, ws, well_known);
 
-trait Test: Layer<Route> + Clone + Send + Sync + 'static {}
+async fn shutdown_signal() {
+  let ctrl_c = async {
+    signal::ctrl_c()
+      .await
+      .expect("failed to install Ctrl+C handler");
+  };
 
-impl<L> Test for L
-where
-  L: Layer<Route> + Clone + Send + Sync + 'static,
-  L::Service: Service<Request> + Clone + Send + Sync + 'static,
-  <L::Service as Service<Request>>::Response: IntoResponse + 'static,
-  <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
-  <L::Service as Service<Request>>::Future: Send + 'static,
-{
+  let terminate = async {
+    signal::unix::signal(signal::unix::SignalKind::terminate())
+      .expect("failed to install signal handler")
+      .recv()
+      .await;
+  };
+
+  tokio::select! {
+      _ = ctrl_c => {},
+      _ = terminate => {},
+  }
 }

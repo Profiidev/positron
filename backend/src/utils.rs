@@ -102,36 +102,6 @@ pub fn hash_secret(pepper: &[u8], salt: &str, passphrase: &[u8]) -> Result<Strin
   )
 }
 
-#[macro_export]
-macro_rules! from_req_extension {
-  ($type:ty) => {
-    impl<S: Sync> axum::extract::FromRequestParts<S> for $type {
-      type Rejection = std::convert::Infallible;
-
-      async fn from_request_parts(
-        parts: &mut http::request::Parts,
-        _state: &S,
-      ) -> Result<Self, Self::Rejection> {
-        use axum::RequestPartsExt;
-
-        Ok(
-          parts
-            .extract::<axum::Extension<Self>>()
-            .await
-            .expect(
-              format!(
-                "Should not fail. Did you add Extension({}) to your app?",
-                std::any::type_name::<Self>()
-              )
-              .as_str(),
-            )
-            .0,
-        )
-      }
-    }
-  };
-}
-
 pub fn empty_string_as_none<'de, D, T>(de: D) -> std::result::Result<Option<T>, D::Error>
 where
   D: Deserializer<'de>,

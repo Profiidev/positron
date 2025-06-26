@@ -1,8 +1,8 @@
 use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::UpdateState;
-use tower::ServiceBuilder;
 
-use crate::config::Config;
+use crate::{config::Config, state_trait};
 
 pub mod state;
 mod updater;
@@ -11,6 +11,8 @@ pub fn router() -> Router {
   Router::new().merge(updater::router())
 }
 
-pub async fn state<L>(config: &Config) -> ServiceBuilder<L> {
-  ServiceBuilder::new().layer(Extension(UpdateState::init(config).await))
-}
+state_trait!(
+  async fn ws(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(UpdateState::init(config).await))
+  }
+);

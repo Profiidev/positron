@@ -1,10 +1,9 @@
 use axum::{Extension, Router};
 use jwt::{JwtInvalidState, JwtState};
 use sea_orm::DatabaseConnection;
-use state::{webauthn, PasskeyState, PasswordState, TotpState};
-use tower::ServiceBuilder;
+use state::{PasskeyState, PasswordState, TotpState};
 
-use crate::{config::Config, Test};
+use crate::{auth::state::WebauthnState, config::Config, state_trait};
 
 pub mod jwt;
 mod logout;
@@ -21,12 +20,14 @@ pub fn router() -> Router {
     .merge(logout::router())
 }
 
-pub async fn state(config: &Config, db: &DatabaseConnection) -> impl Test {
-  ServiceBuilder::new()
-    .layer(Extension(PasskeyState::init()))
-    .layer(Extension(PasswordState::init(config, db).await))
-    .layer(Extension(TotpState::init(config)))
-    .layer(Extension(JwtState::init(config, db).await))
-    .layer(Extension(JwtInvalidState::init()))
-    .layer(Extension(webauthn(config)))
-}
+state_trait!(
+  async fn auth(self, config: &Config, db: &DatabaseConnection) -> Self {
+    self
+      .layer(Extension(PasskeyState::init()))
+      .layer(Extension(PasswordState::init(config, db).await))
+      .layer(Extension(TotpState::init(config)))
+      .layer(Extension(JwtState::init(config, db).await))
+      .layer(Extension(JwtInvalidState::init()))
+      .layer(Extension(WebauthnState::init(config)))
+  }
+);

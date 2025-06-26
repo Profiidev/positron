@@ -1,16 +1,9 @@
-use std::convert::Infallible;
-
-use axum::{
-  extract::{Query, Request},
-  response::IntoResponse,
-  routing::get,
-  Extension, Json, Router,
-};
+use axum::{extract::Query, routing::get, Extension, Json, Router};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tower::{Layer, Service};
 
-use crate::{config::Config, from_req_extension, oauth::ConfigurationState};
+use crate::{config::Config, from_req_extension, oauth::ConfigurationState, state_trait};
 
 pub fn router() -> Router {
   Router::new()
@@ -18,15 +11,11 @@ pub fn router() -> Router {
     .route("/webfinger", get(webfinger))
 }
 
-pub fn state<S>(config: &Config) -> impl Layer<S>
-where
-  S: Service<Request> + Clone + Send + Sync + 'static,
-  <S as Service<Request>>::Response: IntoResponse + 'static,
-  <S as Service<Request>>::Error: Into<Infallible> + 'static,
-  <S as Service<Request>>::Future: Send + 'static,
-{
-  Extension(StaticFiles::init(config))
-}
+state_trait!(
+  async fn well_known(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(StaticFiles::init(config)))
+  }
+);
 
 #[derive(Clone)]
 struct StaticFiles {

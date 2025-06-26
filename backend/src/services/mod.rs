@@ -1,8 +1,8 @@
 use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::ApodState;
-use tower::ServiceBuilder;
 
-use crate::config::Config;
+use crate::{config::Config, state_trait};
 
 mod apod;
 mod state;
@@ -11,6 +11,8 @@ pub fn router() -> Router {
   Router::new().nest("/apod", apod::router())
 }
 
-pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
-  ServiceBuilder::new().layer(Extension(ApodState::init(config)))
-}
+state_trait!(
+  async fn services(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(ApodState::init(config)))
+  }
+);

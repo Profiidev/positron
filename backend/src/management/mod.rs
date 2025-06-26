@@ -1,8 +1,8 @@
 use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::ClientState;
-use tower::ServiceBuilder;
 
-use crate::config::Config;
+use crate::{config::Config, state_trait};
 
 mod group;
 mod oauth_client;
@@ -20,6 +20,8 @@ pub fn router() -> Router {
     .nest("/oauth_scope", oauth_scope::router())
 }
 
-pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
-  ServiceBuilder::new().layer(Extension(ClientState::init(config)))
-}
+state_trait!(
+  async fn management(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(ClientState::init(config)))
+  }
+);

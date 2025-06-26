@@ -1,18 +1,20 @@
+extern crate s3 as s3_crate;
+
 use std::sync::Arc;
 
 use axum::Extension;
 use folders::Folders;
-use s3::{creds::Credentials, Bucket, Region};
-use tower::ServiceBuilder;
+use s3_crate::{creds::Credentials, Bucket, Region};
+use sea_orm::DatabaseConnection;
 
-use crate::{config::Config, from_req_extension};
+use crate::{config::Config, from_req_extension, state_trait};
 
 pub mod error;
 pub mod folders;
 
 #[derive(Clone)]
 pub struct S3 {
-  bucket: Arc<Box<Bucket>>,
+  bucket: Arc<Bucket>,
 }
 from_req_extension!(S3);
 
@@ -44,7 +46,7 @@ impl S3 {
     }
 
     Self {
-      bucket: Arc::new(bucket),
+      bucket: Arc::new(*bucket),
     }
   }
 
@@ -53,6 +55,8 @@ impl S3 {
   }
 }
 
-pub async fn state<L>(config: &Config) -> ServiceBuilder<L> {
-  ServiceBuilder::new().layer(Extension(S3::init(config).await))
-}
+state_trait!(
+  async fn s3(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(S3::init(config).await))
+  }
+);

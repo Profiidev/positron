@@ -1,9 +1,9 @@
 use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 pub use state::ConfigurationState;
 use state::{AuthorizeState, ClientState};
-use tower::ServiceBuilder;
 
-use crate::config::Config;
+use crate::{config::Config, state_trait};
 
 mod auth;
 mod client_auth;
@@ -24,9 +24,11 @@ pub fn router() -> Router {
     .merge(user::router())
 }
 
-pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
-  ServiceBuilder::new()
-    .layer(Extension(AuthorizeState::init(config)))
-    .layer(Extension(ClientState::init(config)))
-    .layer(Extension(ConfigurationState::init(config)))
-}
+state_trait!(
+  async fn oauth(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self
+      .layer(Extension(AuthorizeState::init(config)))
+      .layer(Extension(ClientState::init(config)))
+      .layer(Extension(ConfigurationState::init(config)))
+  }
+);
