@@ -24,6 +24,31 @@ pub fn router() -> Router {
     .route("/revoke", post(revoke))
 }
 
+#[derive(Deserialize)]
+struct TokenReqOption {
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  grant_type: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  code: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  client_id: Option<String>,
+}
+
+impl TokenReqOption {
+  fn try_into(self) -> Option<TokenReq> {
+    let grant_type = self.grant_type?;
+    let code = self.code?;
+    Some(TokenReq {
+      grant_type,
+      code,
+      redirect_uri: self.redirect_uri,
+      client_id: self.client_id,
+    })
+  }
+}
+
 #[derive(Deserialize, Debug)]
 struct TokenReq {
   grant_type: String,
@@ -45,17 +70,17 @@ struct TokenRes {
 }
 
 async fn token(
-  Query(req_p): Query<Option<TokenReq>>,
+  Query(req_p): Query<TokenReqOption>,
   auth: Option<ClientAuth>,
   state: AuthorizeState,
   jwt: JwtState,
   db: Connection,
   config: ConfigurationState,
-  Form(req_b): Form<Option<TokenReq>>,
+  Form(req_b): Form<TokenReqOption>,
 ) -> Result<Json<TokenRes>, Error> {
-  let req = if let Some(req) = req_p {
+  let req = if let Some(req) = req_p.try_into() {
     req
-  } else if let Some(req) = req_b {
+  } else if let Some(req) = req_b.try_into() {
     req
   } else {
     return Err(Error::from_str("invalid_request"));
@@ -181,20 +206,33 @@ async fn token(
 }
 
 #[derive(Deserialize)]
+struct RevokeReqOption {
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  token: Option<String>,
+}
+
+impl RevokeReqOption {
+  fn try_into(self) -> Option<RevokeReq> {
+    let token = self.token?;
+    Some(RevokeReq { token })
+  }
+}
+
+#[derive(Deserialize)]
 struct RevokeReq {
   token: String,
 }
 
 async fn revoke(
-  Query(req_p): Query<Option<RevokeReq>>,
+  Query(req_p): Query<RevokeReqOption>,
   db: Connection,
   state: JwtState,
   invalidate: JwtInvalidState,
-  Form(req_b): Form<Option<RevokeReq>>,
+  Form(req_b): Form<RevokeReqOption>,
 ) -> crate::error::Result<()> {
-  let req = if let Some(req) = req_p {
+  let req = if let Some(req) = req_p.try_into() {
     req
-  } else if let Some(req) = req_b {
+  } else if let Some(req) = req_b.try_into() {
     req
   } else {
     return Err(crate::error::Error::BadRequest);
