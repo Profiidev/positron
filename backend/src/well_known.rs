@@ -1,32 +1,37 @@
-use rocket::{get, serde::json::Json, Build, Rocket, Route, State};
-use serde::Serialize;
+use axum::{extract::Query, routing::get, Extension, Json, Router};
+use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::oauth::ConfigurationState;
+use crate::{config::Config, from_req_extension, oauth::ConfigurationState, state_trait};
 
-pub fn route() -> Vec<Route> {
-  rocket::routes![assetlinks, webfinger]
+pub fn router() -> Router {
+  Router::new()
+    .route("/assetlinks.json", get(assetlinks))
+    .route("/webfinger", get(webfinger))
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(StaticFiles::default())
-}
+state_trait!(
+  async fn well_known(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(StaticFiles::init(config)))
+  }
+);
 
+#[derive(Clone)]
 struct StaticFiles {
   assetlinks: Value,
 }
+from_req_extension!(StaticFiles);
 
-impl Default for StaticFiles {
-  fn default() -> Self {
+impl StaticFiles {
+  fn init(config: &Config) -> Self {
     Self {
-      assetlinks: serde_json::from_str(&std::env::var("ASSETLINKS").expect("ASSETLINKS not set"))
-        .expect("Failed to parse ASSETLINKS"),
+      assetlinks: serde_json::from_str(&config.assetlinks).expect("Failed to parse ASSETLINKS"),
     }
   }
 }
 
-#[get("/assetlinks.json")]
-fn assetlinks(state: &State<StaticFiles>) -> Json<Value> {
+async fn assetlinks(state: StaticFiles) -> Json<Value> {
   Json(state.assetlinks.clone())
 }
 
@@ -42,13 +47,17 @@ struct Link {
   href: String,
 }
 
-#[get("/webfinger?<resource>")]
-fn webfinger(resource: &str, state: &State<ConfigurationState>) -> Json<WebFinger> {
+#[derive(Deserialize)]
+struct Resource {
+  resource: String,
+}
+
+async fn webfinger(Query(resource): Query<Resource>, state: ConfigurationState) -> Json<WebFinger> {
   Json(WebFinger {
-    subject: resource.to_string(),
+    subject: resource.resource,
     links: vec![Link {
       rel: "http://openid.net/specs/connect/1.0/issuer".to_string(),
-      href: state.issuer.clone(),
+      href: state.issuer,
     }],
   })
 }

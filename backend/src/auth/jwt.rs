@@ -1,19 +1,20 @@
-use std::io::Cursor;
+use std::{convert::Infallible, sync::Arc};
 
+use axum::{
+  body::Body,
+  extract::{FromRequestParts, OptionalFromRequestParts},
+  response::{IntoResponse, Response},
+};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::{Duration, Utc};
+use http::{
+  header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
+  request::Parts,
+};
 use jsonwebtoken::{
   decode, encode,
   errors::{Error, ErrorKind},
   Algorithm, DecodingKey, EncodingKey, Header, Validation,
-};
-use rocket::{
-  async_trait,
-  http::{Cookie, SameSite, Status},
-  request::{FromRequest, Outcome, Request},
-  response::Responder,
-  serde::json,
-  tokio::sync::Mutex,
-  Response,
 };
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -23,9 +24,10 @@ use rsa::{
 };
 use sea_orm::DatabaseConnection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{db::DBTrait, utils::jwt_from_request};
+use crate::{config::Config, db::DBTrait, from_req_extension, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -91,11 +93,19 @@ impl JwtType for JwtTotpRequired {
   }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct JwtInvalidState {
-  pub count: Mutex<i32>,
+  pub count: Arc<Mutex<i32>>,
+}
+from_req_extension!(JwtInvalidState);
+
+impl JwtInvalidState {
+  pub fn init() -> Self {
+    Self::default()
+  }
 }
 
+#[derive(Clone)]
 pub struct JwtState {
   header: Header,
   encoding_key: EncodingKey,
@@ -107,6 +117,7 @@ pub struct JwtState {
   pub kid: String,
   pub public_key: RsaPublicKey,
 }
+from_req_extension!(JwtState);
 
 impl JwtState {
   pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
@@ -141,12 +152,13 @@ impl JwtState {
   ) -> Cookie<'c> {
     Cookie::build((name, value))
       .http_only(http)
-      .max_age(rocket::time::Duration::seconds(T::duration(
+      .max_age(time::Duration::seconds(T::duration(
         self.exp,
         self.short_exp,
       )))
       .same_site(SameSite::Lax)
       .secure(true)
+      .path("/")
       .build()
   }
 
@@ -154,17 +166,7 @@ impl JwtState {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(db: &DatabaseConnection) -> Self {
-    let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
-    let exp = std::env::var("AUTH_JWT_EXPIRATION")
-      .expect("Failed to load JwtExpiration")
-      .parse()
-      .expect("Failed to parse JwtExpiration");
-    let short_exp = std::env::var("AUTH_JWT_EXPIRATION_SHORT")
-      .expect("Failed to load JwtExpiration short")
-      .parse()
-      .expect("Failed to parse JwtExpiration short");
-
+  pub async fn init(config: &Config, db: &DatabaseConnection) -> Self {
     let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
       (key.private_key, key.id.to_string())
     } else {
@@ -207,41 +209,51 @@ impl JwtState {
       encoding_key,
       decoding_key,
       validation,
-      iss,
-      exp,
-      short_exp,
+      iss: config.auth_issuer.clone(),
+      exp: config.auth_jwt_expiration,
+      short_exp: config.auth_jwt_expiration_short,
       kid,
       public_key,
     }
   }
 }
 
-#[async_trait]
-impl<'r, T> FromRequest<'r> for JwtClaims<T>
+impl<S: Sync, T> FromRequestParts<S> for JwtClaims<T>
 where
   for<'de> T: JwtType + Deserialize<'de>,
 {
-  type Error = ();
+  type Rejection = crate::error::Error;
 
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    jwt_from_request::<JwtClaims<T>, T>(req).await
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    jwt_from_request::<JwtClaims<T>, T>(parts).await
   }
 }
 
-#[async_trait]
-impl<'r, 'o: 'r, T: Serialize> Responder<'r, 'o> for TokenRes<T> {
-  fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-    let body = json::to_string(&self.body).map_err(|_| Status::InternalServerError)?;
+impl<S: Sync, T> OptionalFromRequestParts<S> for JwtClaims<T>
+where
+  for<'de> T: JwtType + Deserialize<'de>,
+{
+  type Rejection = Infallible;
 
-    let response = Response::build()
-      .header(rocket::http::Header::new("Cache-Control", "no-store"))
-      .header(rocket::http::Header::new("Pragma", "no-cache"))
-      .header(rocket::http::Header::new(
-        "Content-Type",
-        "application/json",
-      ))
-      .sized_body(body.len(), Cursor::new(body))
-      .finalize();
-    Ok(response)
+  async fn from_request_parts(
+    parts: &mut Parts,
+    _state: &S,
+  ) -> Result<Option<Self>, Self::Rejection> {
+    Ok(jwt_from_request::<JwtClaims<T>, T>(parts).await.ok())
+  }
+}
+
+impl<T: Serialize> IntoResponse for TokenRes<T> {
+  fn into_response(self) -> Response {
+    let Ok(body) = serde_json::to_string(&self.body) else {
+      return crate::error::Error::InternalServerError.into_response();
+    };
+
+    Response::builder()
+      .header(CACHE_CONTROL, "no-store")
+      .header(PRAGMA, "no-cache")
+      .header(CONTENT_TYPE, "application/json")
+      .body(Body::new(body))
+      .unwrap()
   }
 }

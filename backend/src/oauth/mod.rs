@@ -1,6 +1,9 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 pub use state::ConfigurationState;
 use state::{AuthorizeState, ClientState};
+
+use crate::{config::Config, state_trait};
 
 mod auth;
 mod client_auth;
@@ -12,20 +15,20 @@ mod state;
 mod token;
 mod user;
 
-pub fn routes() -> Vec<Route> {
-  auth::routes()
-    .into_iter()
-    .chain(token::routes())
-    .chain(user::routes())
-    .chain(config::routes())
-    .chain(jwk::routes())
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .merge(auth::router())
+    .merge(config::router())
+    .merge(jwk::router())
+    .merge(token::router())
+    .merge(user::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server
-    .manage(AuthorizeState::default())
-    .manage(ClientState::default())
-    .manage(ConfigurationState::default())
-}
+state_trait!(
+  async fn oauth(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self
+      .layer(Extension(AuthorizeState::init(config)))
+      .layer(Extension(ClientState::init(config)))
+      .layer(Extension(ConfigurationState::init(config)))
+  }
+);

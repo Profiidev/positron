@@ -1,49 +1,65 @@
+use std::{fmt, str::FromStr};
+
 use argon2::{
   password_hash::{PasswordHasher, SaltString},
   Argon2,
 };
+use axum::{extract::Query, Extension, RequestPartsExt};
+use axum_extra::{
+  extract::CookieJar,
+  headers::{authorization::Bearer, Authorization},
+  TypedHeader,
+};
 use base64::prelude::*;
-use rocket::{http::Status, request::Outcome, Request, State};
-use sea_orm_rocket::Connection;
-use serde::de::DeserializeOwned;
+use http::request::Parts;
+use serde::{
+  de::{self, DeserializeOwned},
+  Deserialize, Deserializer,
+};
 
 use crate::{
   auth::{
     jwt::{JwtState, JwtType},
     state::PasswordState,
   },
-  db::{DBTrait, DB},
-  error::Result,
+  db::{Connection, DBTrait},
+  error::{Error, Result},
 };
 
-pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(
-  req: &Request<'_>,
-) -> Outcome<C, ()> {
-  let mut token = match req.headers().get_one("Authorization") {
+#[derive(Deserialize)]
+struct Token {
+  token: String,
+}
+
+pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(req: &mut Parts) -> Result<C> {
+  let bearer = req
+    .extract::<TypedHeader<Authorization<Bearer>>>()
+    .await
+    .ok()
+    .map(|TypedHeader(Authorization(bearer))| bearer.token().to_string());
+
+  let token = match bearer {
     Some(token) => token,
-    None => match req.cookies().get(T::cookie_name()) {
-      Some(token) => token.value(),
+    None => match req.extract::<CookieJar>().await.ok().and_then(|jar| {
+      jar
+        .get(T::cookie_name())
+        .map(|cookie| cookie.value().to_string())
+    }) {
+      Some(token) => token,
       None => {
-        let Some(Ok(token)) = req.query_value::<&str>("token") else {
-          return Outcome::Error((Status::BadRequest, ()));
+        let Some(Query(token)) = req.extract::<Query<Token>>().await.ok() else {
+          return Err(Error::BadRequest);
         };
 
-        token
+        token.token
       }
     },
   };
 
-  if let Some(stripped) = token.strip_prefix("Bearer ") {
-    token = stripped;
-  }
-
-  let Some(jwt) = req.guard::<&State<JwtState>>().await.succeeded() else {
-    return Outcome::Error((Status::InternalServerError, ()));
+  let Ok(Extension(jwt)) = req.extract::<Extension<JwtState>>().await else {
+    return Err(Error::InternalServerError);
   };
-  let Some(conn) = req.guard::<Connection<'_, DB>>().await.succeeded() else {
-    return Outcome::Error((Status::InternalServerError, ()));
-  };
-  let db = conn.into_inner();
+  let Ok(db) = req.extract::<Connection>().await;
 
   let Ok(valid) = db
     .tables()
@@ -51,20 +67,20 @@ pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(
     .is_token_valid(token.to_string())
     .await
   else {
-    return Outcome::Error((Status::InternalServerError, ()));
+    return Err(Error::InternalServerError);
   };
   if !valid {
-    return Outcome::Error((Status::Unauthorized, ()));
+    return Err(Error::Unauthorized);
   }
 
-  let Ok(claims) = jwt.validate_token(token) else {
-    return Outcome::Error((Status::Unauthorized, ()));
+  let Ok(claims) = jwt.validate_token(&token) else {
+    return Err(Error::Unauthorized);
   };
 
-  Outcome::Success(claims)
+  Ok(claims)
 }
 
-pub fn hash_password(state: &State<PasswordState>, salt: &str, password: &str) -> Result<String> {
+pub fn hash_password(state: &PasswordState, salt: &str, password: &str) -> Result<String> {
   let bytes = BASE64_STANDARD.decode(password)?;
   let pw_bytes = state.decrypt(&bytes)?;
 
@@ -84,4 +100,17 @@ pub fn hash_secret(pepper: &[u8], salt: &str, passphrase: &[u8]) -> Result<Strin
       .hash_password(password.as_bytes(), salt_string.as_salt())?
       .to_string(),
   )
+}
+
+pub fn empty_string_as_none<'de, D, T>(de: D) -> std::result::Result<Option<T>, D::Error>
+where
+  D: Deserializer<'de>,
+  T: FromStr,
+  T::Err: fmt::Display,
+{
+  let opt = Option::<String>::deserialize(de)?;
+  match opt.as_deref() {
+    None | Some("") => Ok(None),
+    Some(s) => FromStr::from_str(s).map_err(de::Error::custom).map(Some),
+  }
 }

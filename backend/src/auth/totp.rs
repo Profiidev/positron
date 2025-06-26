@@ -1,16 +1,14 @@
-use rocket::{
-  get,
-  http::{CookieJar, Status},
-  post,
-  serde::json::Json,
-  Route, State,
+use axum::{
+  routing::{get, post},
+  Json, Router,
 };
-use sea_orm_rocket::Connection;
+use axum_extra::extract::CookieJar;
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
 
 use crate::{
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -20,11 +18,12 @@ use super::{
   state::TotpState,
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![start_setup, finish_setup, confirm, remove]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/totp", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/start_setup", get(start_setup))
+    .route("/finish_setup", post(finish_setup))
+    .route("/confirm", post(confirm))
+    .route("/remove", post(remove))
 }
 
 #[derive(Deserialize)]
@@ -38,13 +37,11 @@ struct TotpSetupRes {
   code: String,
 }
 
-#[get("/start_setup")]
 async fn start_setup(
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  state: &State<TotpState>,
+  db: Connection,
+  state: TotpState,
 ) -> Result<Json<TotpSetupRes>> {
-  let db = conn.into_inner();
   let user = db.tables().user().get_user(auth.sub).await?;
   if user.totp.is_some() {
     return Err(Error::BadRequest);
@@ -72,15 +69,13 @@ async fn start_setup(
   Ok(Json(TotpSetupRes { qr, code }))
 }
 
-#[post("/finish_setup", data = "<req>")]
 async fn finish_setup(
   auth: JwtClaims<JwtSpecial>,
-  req: Json<TotpReq>,
-  state: &State<TotpState>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
+  state: TotpState,
+  db: Connection,
+  updater: UpdateState,
+  Json(req): Json<TotpReq>,
+) -> Result<StatusCode> {
   let mut lock = state.reg_state.lock().await;
   let totp = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
   let valid = totp.check_current(&req.code).unwrap();
@@ -96,18 +91,16 @@ async fn finish_setup(
   lock.remove(&auth.sub);
   updater.send_message(auth.sub, UpdateType::User).await;
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }
 
-#[post("/confirm", data = "<req>")]
 async fn confirm(
-  req: Json<TotpReq>,
   auth: JwtClaims<JwtTotpRequired>,
-  conn: Connection<'_, DB>,
-  jwt: &State<JwtState>,
-  cookies: &CookieJar<'_>,
-) -> Result<TokenRes> {
-  let db = conn.into_inner();
+  db: Connection,
+  jwt: JwtState,
+  mut cookies: CookieJar,
+  Json(req): Json<TotpReq>,
+) -> Result<(CookieJar, TokenRes)> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
@@ -123,21 +116,19 @@ async fn confirm(
     db.tables().user().logged_in(auth.sub).await?;
 
     let cookie = jwt.create_token::<JwtBase>(auth.sub)?;
-    cookies.add(cookie);
+    cookies = cookies.add(cookie);
 
-    Ok(TokenRes::default())
+    Ok((cookies, TokenRes::default()))
   }
 }
 
-#[post("/remove")]
 async fn remove(
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
+  db: Connection,
+  updater: UpdateState,
+) -> Result<StatusCode> {
   db.tables().user().totp_remove(auth.sub).await?;
   updater.send_message(auth.sub, UpdateType::User).await;
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }

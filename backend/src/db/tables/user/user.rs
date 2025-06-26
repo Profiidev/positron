@@ -81,7 +81,7 @@ impl<'db> UserTable<'db> {
     user.last_login = Set(Utc::now().naive_utc());
 
     user.update(self.db).await?;
-    log::info!("User {} logged in", uuid);
+    tracing::info!("User {} logged in", uuid);
 
     Ok(())
   }

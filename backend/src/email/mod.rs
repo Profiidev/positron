@@ -1,19 +1,21 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::{EmailState, Mailer};
+
+use crate::{config::Config, state_trait};
 
 mod manage;
 pub mod state;
 mod templates;
 
-pub fn routes() -> Vec<Route> {
-  manage::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/email", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().nest("/manage", manage::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server
-    .manage(Mailer::default())
-    .manage(EmailState::default())
-}
+state_trait!(
+  async fn email(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self
+      .layer(Extension(Mailer::init(config)))
+      .layer(Extension(EmailState::init(config)))
+  }
+);

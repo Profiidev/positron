@@ -1,58 +1,67 @@
-use rocket::{
-  futures::{SinkExt, StreamExt},
-  get,
-  serde::json,
-  tokio, Route, State,
+use axum::{
+  extract::{
+    ws::{Message, WebSocket},
+    WebSocketUpgrade,
+  },
+  response::IntoResponse,
+  routing::any,
+  Router,
 };
-use rocket_ws::{result::Error, Channel, Message, WebSocket};
+use futures::StreamExt;
+use tokio::sync::mpsc::Receiver;
+use uuid::Uuid;
 
-use crate::auth::jwt::{JwtBase, JwtClaims};
+use crate::{
+  auth::jwt::{JwtBase, JwtClaims},
+  ws::state::{Sessions, UpdateType},
+};
 
 use super::state::UpdateState;
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![update]
+pub fn router() -> Router {
+  Router::new().route("/updater", any(update))
 }
 
-#[get("/updater")]
 async fn update(
   auth: JwtClaims<JwtBase>,
-  ws: WebSocket,
-  state: &State<UpdateState>,
-) -> Channel<'static> {
-  log::info!("User {} connected to updater ws", auth.sub);
-  let (uuid, mut recv, sessions) = state.create_session(auth.sub).await;
+  ws: WebSocketUpgrade,
+  state: UpdateState,
+) -> impl IntoResponse {
+  tracing::info!("User {} connected to updater ws", auth.sub);
+  let (uuid, recv, sessions) = state.create_session(auth.sub).await;
 
-  ws.channel(move |mut stream| {
-    Box::pin(async move {
-      loop {
-        tokio::select! {
-          update = recv.recv() => {
-            match update {
-              Some(message) => {
-                let message = json::to_string(&message).unwrap();
-                let message = Message::Text(message);
+  ws.on_upgrade(move |socket| handle_socket(socket, uuid, recv, sessions))
+}
 
-                let _ = stream.send(message).await;
-              }
-              None => {
-                let _ = stream.close(None).await;
-                sessions.lock().await.remove(&uuid);
-                break;
-              }
-            }
+async fn handle_socket(
+  mut socket: WebSocket,
+  uuid: Uuid,
+  mut recv: Receiver<UpdateType>,
+  sessions: Sessions,
+) {
+  loop {
+    tokio::select! {
+      update = recv.recv() => {
+        match update {
+          Some(message) => {
+            let message = serde_json::to_string(&message).unwrap();
+            let message = Message::Text(message.into());
+
+            let _ = socket.send(message).await;
           }
-
-          ws_msg = stream.next() => {
-            if let Some(Ok(Message::Close(_)) | Err(Error::AlreadyClosed | Error::ConnectionClosed)) | None = ws_msg {
-              sessions.lock().await.remove(&uuid);
-              break;
-            }
+          None => {
+            sessions.lock().await.remove(&uuid);
+            break;
           }
         }
       }
 
-      Ok(())
-    })
-  })
+      ws_msg = socket.next() => {
+        if let Some(Ok(Message::Close(_)) | Err(_)) | None = ws_msg {
+          sessions.lock().await.remove(&uuid);
+          break;
+        }
+      }
+    }
+  }
 }

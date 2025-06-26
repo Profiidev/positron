@@ -1,18 +1,20 @@
 use std::io::Cursor;
 
+use axum::{
+  routing::{get, post},
+  Json, Router,
+};
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use entity::{apod, sea_orm_active_enums::Permission};
 use image::{imageops::FilterType, ImageFormat};
 use rand::seq::IndexedRandom;
-use rocket::{get, post, serde::json::Json, Route, State};
-use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::user::BasicUserInfo, DBTrait, DB},
+  db::{tables::user::user::BasicUserInfo, Connection, DBTrait},
   error::{Error, Result},
   permission::PermissionTrait,
   s3::S3,
@@ -21,11 +23,13 @@ use crate::{
 
 use super::state::ApodState;
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![set_good, get_image_info, list, get_image, random]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/apod", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/list", get(list))
+    .route("/set_good", post(set_good))
+    .route("/get_image_info", post(get_image_info))
+    .route("/get_image", post(get_image))
+    .route("/random", get(random))
 }
 
 #[derive(Serialize)]
@@ -36,14 +40,8 @@ struct ListRes {
   user: BasicUserInfo,
 }
 
-#[get("/list")]
-async fn list(
-  auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  s3: &State<S3>,
-) -> Result<Json<Vec<ListRes>>> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::ApodList).await?;
+async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
+  Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
   let apods = db.tables().apod().list().await?;
   let mut apod_infos = Vec::new();
@@ -76,22 +74,20 @@ struct SetGoodReq {
   good: bool,
 }
 
-#[post("/set_good", data = "<req>")]
 async fn set_good(
   auth: JwtClaims<JwtBase>,
-  req: Json<SetGoodReq>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  updater: UpdateState,
+  Json(req): Json<SetGoodReq>,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::ApodSelect).await?;
+  Permission::check(&db, auth.sub, Permission::ApodSelect).await?;
 
   db.tables()
     .apod()
     .set_good(req.date.date_naive(), auth.sub, req.good)
     .await?;
 
-  log::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
+  tracing::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
   updater.broadcast_message(UpdateType::Apod).await;
 
   Ok(())
@@ -108,16 +104,14 @@ struct GetInfoRes {
   user: Option<BasicUserInfo>,
 }
 
-#[post("/get_image_info", data = "<req>")]
 async fn get_image_info(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  state: &State<ApodState>,
-  s3: &State<S3>,
-  req: Json<GetReq>,
+  db: Connection,
+  state: ApodState,
+  s3: S3,
+  Json(req): Json<GetReq>,
 ) -> Result<Json<GetInfoRes>> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::ApodList).await?;
+  Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
   let res = if let Some((apod, user)) = db
     .tables()
@@ -177,15 +171,13 @@ struct GetRes {
   image: String,
 }
 
-#[post("/get_image", data = "<req>")]
 async fn get_image(
   auth: JwtClaims<JwtBase>,
-  s3: &State<S3>,
-  req: Json<GetReq>,
-  conn: Connection<'_, DB>,
+  s3: S3,
+  db: Connection,
+  Json(req): Json<GetReq>,
 ) -> Result<Json<GetRes>> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::ApodList).await?;
+  Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
   let image = s3
@@ -198,9 +190,7 @@ async fn get_image(
   }))
 }
 
-#[get("/random")]
-async fn random(s3: &State<S3>, conn: Connection<'_, DB>) -> Result<Vec<u8>> {
-  let db = conn.into_inner();
+async fn random(s3: S3, db: Connection) -> Result<Vec<u8>> {
   let list = db.tables().apod().list().await?;
 
   let Some(choice) = list.choose(&mut rand::rng()) else {

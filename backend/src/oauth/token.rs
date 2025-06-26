@@ -1,14 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
+use axum::{extract::Query, routing::post, Form, Json, Router};
 use chrono::{DateTime, Utc};
-use rocket::{form::Form, post, serde::json::Json, FromForm, Route, State};
-use sea_orm_rocket::Connection;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
+  utils::empty_string_as_none,
 };
 
 use super::{
@@ -18,15 +18,44 @@ use super::{
   state::{get_timestamp_10_min, AuthorizeState, ConfigurationState},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![token, revoke]
+pub fn router() -> Router {
+  Router::new()
+    .route("/token", post(token))
+    .route("/revoke", post(revoke))
 }
 
-#[derive(FromForm, Debug)]
+#[derive(Deserialize)]
+struct TokenReqOption {
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  grant_type: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  code: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  client_id: Option<String>,
+}
+
+impl TokenReqOption {
+  fn try_into(self) -> Option<TokenReq> {
+    let grant_type = self.grant_type?;
+    let code = self.code?;
+    Some(TokenReq {
+      grant_type,
+      code,
+      redirect_uri: self.redirect_uri,
+      client_id: self.client_id,
+    })
+  }
+}
+
+#[derive(Deserialize, Debug)]
 struct TokenReq {
   grant_type: String,
   code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   client_id: Option<String>,
 }
 
@@ -40,21 +69,19 @@ struct TokenRes {
   scope: Scope,
 }
 
-#[post("/token?<req_p..>", data = "<req_b>")]
-async fn token<'r>(
-  req_p: Option<TokenReq>,
-  req_b: Option<Form<TokenReq>>,
+async fn token(
+  Query(req_p): Query<TokenReqOption>,
   auth: Option<ClientAuth>,
-  state: &State<AuthorizeState>,
-  jwt: &State<JwtState>,
-  conn: Connection<'r, DB>,
-  config: &State<ConfigurationState>,
-) -> Result<Json<TokenRes>, Error<'r>> {
-  let db = conn.into_inner();
-  let req = if let Some(req) = req_p {
+  state: AuthorizeState,
+  jwt: JwtState,
+  db: Connection,
+  config: ConfigurationState,
+  Form(req_b): Form<TokenReqOption>,
+) -> Result<Json<TokenRes>, Error> {
+  let req = if let Some(req) = req_p.try_into() {
     req
-  } else if let Some(req) = req_b {
-    req.into_inner()
+  } else if let Some(req) = req_b.try_into() {
+    req
   } else {
     return Err(Error::from_str("invalid_request"));
   };
@@ -168,7 +195,7 @@ async fn token<'r>(
     None
   };
 
-  log::info!("Client {} got token for {}", client_id, user.name);
+  tracing::info!("Client {} got token for {}", client_id, user.name);
   Ok(Json(TokenRes {
     access_token: token,
     id_token,
@@ -178,25 +205,35 @@ async fn token<'r>(
   }))
 }
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
+struct RevokeReqOption {
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  token: Option<String>,
+}
+
+impl RevokeReqOption {
+  fn try_into(self) -> Option<RevokeReq> {
+    let token = self.token?;
+    Some(RevokeReq { token })
+  }
+}
+
+#[derive(Deserialize)]
 struct RevokeReq {
   token: String,
 }
 
-#[post("/revoke?<req_p..>", data = "<req_b>")]
 async fn revoke(
-  req_p: Option<RevokeReq>,
-  req_b: Option<Form<RevokeReq>>,
-  conn: Connection<'_, DB>,
-  state: &State<JwtState>,
-  invalidate: &State<JwtInvalidState>,
+  Query(req_p): Query<RevokeReqOption>,
+  db: Connection,
+  state: JwtState,
+  invalidate: JwtInvalidState,
+  Form(req_b): Form<RevokeReqOption>,
 ) -> crate::error::Result<()> {
-  let db = conn.into_inner();
-
-  let req = if let Some(req) = req_p {
+  let req = if let Some(req) = req_p.try_into() {
     req
-  } else if let Some(req) = req_b {
-    req.into_inner()
+  } else if let Some(req) = req_b.try_into() {
+    req
   } else {
     return Err(crate::error::Error::BadRequest);
   };

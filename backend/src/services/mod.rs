@@ -1,16 +1,18 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::ApodState;
+
+use crate::{config::Config, state_trait};
 
 mod apod;
 mod state;
 
-pub fn routes() -> Vec<Route> {
-  apod::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/services", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().nest("/apod", apod::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(ApodState::default())
-}
+state_trait!(
+  async fn services(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(ApodState::init(config)))
+  }
+);

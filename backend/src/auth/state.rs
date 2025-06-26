@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use rocket::futures::lock::Mutex;
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
   pkcs8::LineEnding,
@@ -8,6 +7,7 @@ use rsa::{
   Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey,
 };
 use sea_orm::DatabaseConnection;
+use tokio::sync::Mutex;
 use totp_rs::TOTP;
 use uuid::Uuid;
 use webauthn_rs::{
@@ -15,59 +15,78 @@ use webauthn_rs::{
   Webauthn, WebauthnBuilder,
 };
 
-use crate::db::DBTrait;
+use crate::{config::Config, db::DBTrait, from_req_extension};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PasskeyState {
-  pub reg_state: Mutex<HashMap<Uuid, PasskeyRegistration>>,
-  pub auth_state: Mutex<HashMap<Uuid, DiscoverableAuthentication>>,
-  pub non_discover_auth_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
-  pub special_access_state: Mutex<HashMap<Uuid, PasskeyAuthentication>>,
+  pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
+  pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
+  pub non_discover_auth_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
+  pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
+from_req_extension!(PasskeyState);
 
+#[derive(Clone)]
 pub struct PasswordState {
   key: RsaPrivateKey,
   pub pub_key: String,
   pub pepper: Vec<u8>,
 }
+from_req_extension!(PasswordState);
 
+#[derive(Clone)]
 pub struct TotpState {
   pub issuer: String,
-  pub reg_state: Mutex<HashMap<Uuid, TOTP>>,
+  pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
+from_req_extension!(TotpState);
 
-pub fn webauthn() -> Webauthn {
-  let rp_id = std::env::var("WEBAUTHN_ID").expect("Failed to load WEBAUTHN_ID");
-  let rp_origin =
-    Url::parse(&std::env::var("WEBAUTHN_ORIGIN").expect("Failed to load WEBAUTHN_ORIGIN"))
-      .expect("Failed to parse WEBAUTHN_ORIGIN");
-  let rp_name = std::env::var("WEBAUTHN_NAME").expect("Failed to load WEBAUTHN_NAME");
-  let additional_origins = std::env::var("WEBAUTHN_ADDITIONAL_ORIGINS")
-    .unwrap_or_default()
-    .split(',')
-    .filter_map(|s| Url::parse(s).ok())
-    .collect::<Vec<_>>();
+#[derive(Clone)]
+pub struct WebauthnState(Webauthn);
+from_req_extension!(WebauthnState);
 
-  let mut webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
-    .expect("Failed creating WebauthnBuilder")
-    .rp_name(&rp_name);
+impl Deref for WebauthnState {
+  type Target = Webauthn;
 
-  for origin in additional_origins {
-    webauthn = webauthn.append_allowed_origin(&origin);
+  fn deref(&self) -> &Self::Target {
+    &self.0
   }
-
-  webauthn.build().expect("Failed creating Webauthn")
 }
 
-impl Default for TotpState {
-  fn default() -> Self {
-    let issuer = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
-    if issuer.contains(":") {
+impl WebauthnState {
+  pub fn init(config: &Config) -> Self {
+    let additional_origins = config
+      .webauthn_additional_origins
+      .split(',')
+      .filter_map(|s| Url::parse(s).ok())
+      .collect::<Vec<_>>();
+
+    let mut webauthn = WebauthnBuilder::new(&config.webauthn_id, &config.webauthn_origin)
+      .expect("Failed creating WebauthnBuilder")
+      .rp_name(&config.webauthn_name);
+
+    for origin in additional_origins {
+      webauthn = webauthn.append_allowed_origin(&origin);
+    }
+
+    Self(webauthn.build().expect("Failed creating Webauthn"))
+  }
+}
+
+impl PasskeyState {
+  pub fn init() -> Self {
+    Self::default()
+  }
+}
+
+impl TotpState {
+  pub fn init(config: &Config) -> Self {
+    if config.auth_issuer.contains(":") {
       panic!("Issuer can not contain ':'");
     }
 
     Self {
-      issuer,
+      issuer: config.auth_issuer.clone(),
       reg_state: Default::default(),
     }
   }
@@ -78,7 +97,7 @@ impl PasswordState {
     self.key.decrypt(Pkcs1v15Encrypt, message)
   }
 
-  pub async fn init(db: &DatabaseConnection) -> Self {
+  pub async fn init(config: &Config, db: &DatabaseConnection) -> Self {
     let key = if let Ok(key) = db.tables().key().get_key_by_name("password".into()).await {
       RsaPrivateKey::from_pkcs1_pem(&key.private_key).expect("Failed to parse private password key")
     } else {
@@ -102,10 +121,7 @@ impl PasswordState {
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export Rsa Public Key");
 
-    let pepper = std::env::var("AUTH_PEPPER")
-      .expect("Failed to read Pepper")
-      .as_bytes()
-      .to_vec();
+    let pepper = config.auth_pepper.as_bytes().to_vec();
     if pepper.len() > 32 {
       panic!("Pepper is longer than 32 characters");
     }

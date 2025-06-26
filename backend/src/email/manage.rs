@@ -1,10 +1,10 @@
-use rocket::{http::Status, post, serde::json::Json, Route, State};
-use sea_orm_rocket::Connection;
+use axum::{routing::post, Json, Router};
+use http::StatusCode;
 use serde::Deserialize;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
@@ -14,11 +14,10 @@ use super::{
   templates::confirm_code,
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![start_change, finish_change]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/manage", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/start_change", post(start_change))
+    .route("/finish_change", post(finish_change))
 }
 
 #[derive(Deserialize)]
@@ -26,15 +25,13 @@ struct EmailChange {
   new_email: String,
 }
 
-#[post("/start_change", data = "<req>")]
 async fn start_change(
-  req: Json<EmailChange>,
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  mailer: &State<Mailer>,
-  state: &State<EmailState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
+  db: Connection,
+  mailer: Mailer,
+  state: EmailState,
+  Json(req): Json<EmailChange>,
+) -> Result<StatusCode> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
   if db
@@ -66,7 +63,7 @@ async fn start_change(
     confirm_code(&code.new_code, false, &mailer.site_link),
   )?;
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }
 
 #[derive(Deserialize)]
@@ -75,21 +72,19 @@ struct EmailCode {
   new_code: String,
 }
 
-#[post("/finish_change", data = "<req>")]
 async fn finish_change(
-  req: Json<EmailCode>,
   auth: JwtClaims<JwtSpecial>,
-  conn: Connection<'_, DB>,
-  state: &State<EmailState>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
+  db: Connection,
+  state: EmailState,
+  updater: UpdateState,
+  Json(req): Json<EmailCode>,
+) -> Result<StatusCode> {
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {
     return Err(Error::BadRequest);
   };
 
-  if !info.check_old(req.0.old_code) || !info.check_new(req.0.new_code) {
+  if !info.check_old(req.old_code) || !info.check_new(req.new_code) {
     return Err(Error::Unauthorized);
   }
 
@@ -98,7 +93,7 @@ async fn finish_change(
     .change_email(auth.sub, info.new_email.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::User).await;
-  log::info!(
+  tracing::info!(
     "User {} changed their email to {}",
     auth.sub,
     info.new_email
@@ -106,5 +101,5 @@ async fn finish_change(
 
   state_lock.remove(&auth.sub);
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }

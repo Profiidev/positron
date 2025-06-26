@@ -1,18 +1,25 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::{Duration, Utc};
-use rocket::{tokio::sync::Mutex, FromForm};
+use serde::Deserialize;
+use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use crate::{config::Config, from_req_extension, utils::empty_string_as_none};
 
 use super::scope::Scope;
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 pub struct AuthReq {
   pub response_type: String,
   pub client_id: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   pub scope: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   pub state: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   pub nonce: Option<String>,
 }
 
@@ -25,39 +32,36 @@ pub struct CodeReq {
   pub nonce: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct AuthorizeState {
   pub frontend_url: String,
-  pub auth_pending: Mutex<HashMap<Uuid, (i64, AuthReq)>>,
-  pub auth_codes: Mutex<HashMap<Uuid, CodeReq>>,
+  pub auth_pending: Arc<Mutex<HashMap<Uuid, (i64, AuthReq)>>>,
+  pub auth_codes: Arc<Mutex<HashMap<Uuid, CodeReq>>>,
 }
+from_req_extension!(AuthorizeState);
 
+#[derive(Clone)]
 pub struct ConfigurationState {
   pub issuer: String,
   pub backend_url: String,
   pub backend_url_internal: String,
 }
+from_req_extension!(ConfigurationState);
 
-impl Default for ConfigurationState {
-  fn default() -> Self {
-    let issuer = std::env::var("OIDC_ISSUER").expect("Failed to load OIDC_ISSUER");
-    let backend_url = std::env::var("OIDC_BACKEND_URL").expect("Failed to load OIDC_BACKEND_URL");
-    let backend_url_internal =
-      std::env::var("OIDC_BACKEND_INTERNAL").expect("Failed to load OIDC_BACKEND_INTERNAL");
-
+impl ConfigurationState {
+  pub fn init(config: &Config) -> Self {
     Self {
-      issuer,
-      backend_url,
-      backend_url_internal,
+      issuer: config.oidc_issuer.clone(),
+      backend_url: config.oidc_backend_url.clone(),
+      backend_url_internal: config.oidc_backend_internal.clone(),
     }
   }
 }
 
-impl Default for AuthorizeState {
-  fn default() -> Self {
-    let frontend_url = std::env::var("FRONTEND_URL").expect("Failed to load FRONTEND_URL");
-
+impl AuthorizeState {
+  pub fn init(config: &Config) -> Self {
     Self {
-      frontend_url,
+      frontend_url: config.frontend_url.clone(),
       auth_pending: Default::default(),
       auth_codes: Default::default(),
     }
@@ -71,16 +75,15 @@ pub fn get_timestamp_10_min() -> i64 {
     .timestamp()
 }
 
+#[derive(Clone)]
 pub struct ClientState {
   pub pepper: Vec<u8>,
 }
+from_req_extension!(ClientState);
 
-impl Default for ClientState {
-  fn default() -> Self {
-    let pepper = std::env::var("AUTH_PEPPER")
-      .expect("Failed to read Pepper")
-      .as_bytes()
-      .to_vec();
+impl ClientState {
+  pub fn init(config: &Config) -> Self {
+    let pepper = config.auth_pepper.as_bytes().to_vec();
 
     Self { pepper }
   }

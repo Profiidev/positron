@@ -1,28 +1,32 @@
-use std::{io::Cursor, str::FromStr};
+use std::io::Cursor;
 
+use axum::{
+  body::Bytes,
+  extract::Path,
+  routing::{get, post},
+  Json, Router,
+};
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use entity::sea_orm_active_enums::Permission;
+use http::StatusCode;
 use image::{imageops::FilterType, ImageFormat};
-use rocket::{
-  fs::TempFile, get, http::Status, post, serde::json::Json, tokio::io::AsyncReadExt, Route, State,
-};
-use sea_orm_rocket::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::Result,
   ws::state::{UpdateState, UpdateType},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![profile_info, info, change_image, update_profile]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/general", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/profile_info/{uuid}", get(profile_info))
+    .route("/info", get(info))
+    .route("/change_image", post(change_image))
+    .route("/update_profile", post(update_profile))
 }
 
 #[derive(Serialize)]
@@ -32,15 +36,11 @@ struct ProfileInfo {
   email: String,
 }
 
-#[get("/profile_info/<uuid>")]
 async fn profile_info(
   _auth: JwtClaims<JwtBase>,
-  uuid: &str,
-  conn: Connection<'_, DB>,
+  Path(uuid): Path<Uuid>,
+  db: Connection,
 ) -> Result<Json<ProfileInfo>> {
-  let db = conn.into_inner();
-
-  let uuid = Uuid::from_str(uuid)?;
   let user = db.tables().user().get_user(uuid).await?;
 
   Ok(Json(ProfileInfo {
@@ -62,9 +62,7 @@ struct UserInfo {
   access_level: i32,
 }
 
-#[get("/info")]
-async fn info(auth: JwtClaims<JwtBase>, conn: Connection<'_, DB>) -> Result<Json<UserInfo>> {
-  let db = conn.into_inner();
+async fn info(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<UserInfo>> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let permissions = db.tables().user().list_permissions(auth.sub).await?;
   let access_level = db.tables().user().access_level(auth.sub).await?;
@@ -81,20 +79,13 @@ async fn info(auth: JwtClaims<JwtBase>, conn: Connection<'_, DB>) -> Result<Json
   }))
 }
 
-#[post("/change_image", data = "<req>")]
 async fn change_image(
-  req: TempFile<'_>,
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
-
-  let mut bytes = Vec::new();
-  let mut temp = req.open().await?;
-  temp.read_to_end(&mut bytes).await?;
-
-  let image = image::load_from_memory(&bytes)?;
+  db: Connection,
+  updater: UpdateState,
+  body: Bytes,
+) -> Result<StatusCode> {
+  let image = image::load_from_memory(&body)?;
 
   let scaled = image.resize_to_fill(256, 256, FilterType::Lanczos3);
 
@@ -105,9 +96,9 @@ async fn change_image(
 
   db.tables().user().change_image(auth.sub, cropped).await?;
   updater.broadcast_message(UpdateType::User).await;
-  log::info!("User {} changed their image", auth.sub);
+  tracing::info!("User {} changed their image", auth.sub);
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }
 
 #[derive(Deserialize)]
@@ -115,21 +106,18 @@ struct UpdateReq {
   name: String,
 }
 
-#[post("/update_profile", data = "<req>")]
 async fn update_profile(
-  req: Json<UpdateReq>,
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
-) -> Result<Status> {
-  let db = conn.into_inner();
-
+  db: Connection,
+  updater: UpdateState,
+  Json(req): Json<UpdateReq>,
+) -> Result<StatusCode> {
   db.tables()
     .user()
-    .update_profile(auth.sub, req.0.name)
+    .update_profile(auth.sub, req.name)
     .await?;
   updater.broadcast_message(UpdateType::User).await;
-  log::info!("User {} edited their profile", auth.sub);
+  tracing::info!("User {} edited their profile", auth.sub);
 
-  Ok(Status::Ok)
+  Ok(StatusCode::OK)
 }

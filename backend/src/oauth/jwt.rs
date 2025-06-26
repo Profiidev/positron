@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use rocket::{
-  async_trait,
-  request::{FromRequest, Outcome, Request},
-};
+use axum::extract::FromRequestParts;
+use http::request::Parts;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -33,11 +31,10 @@ pub struct OAuthClaims {
   pub rest: HashMap<String, String>,
 }
 
-#[async_trait]
-impl<'r> FromRequest<'r> for OAuthClaims {
-  type Error = ();
+impl<S: Sync> FromRequestParts<S> for OAuthClaims {
+  type Rejection = crate::error::Error;
 
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    jwt_from_request::<OAuthClaims, JwtBase>(req).await
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    jwt_from_request::<OAuthClaims, JwtBase>(parts).await
   }
 }

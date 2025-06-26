@@ -1,16 +1,18 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
+use sea_orm::DatabaseConnection;
 use state::UpdateState;
+
+use crate::{config::Config, state_trait};
 
 pub mod state;
 mod updater;
 
-pub fn routes() -> Vec<Route> {
-  updater::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/ws", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().merge(updater::router())
 }
 
-pub async fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(UpdateState::init().await)
-}
+state_trait!(
+  async fn ws(self, config: &Config, _db: &DatabaseConnection) -> Self {
+    self.layer(Extension(UpdateState::init(config).await))
+  }
+);

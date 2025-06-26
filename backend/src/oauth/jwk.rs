@@ -1,12 +1,12 @@
+use axum::{routing::get, Json, Router};
 use base64::prelude::*;
-use rocket::{get, serde::json::Json, Route, State};
 use rsa::traits::PublicKeyParts;
 use serde::Serialize;
 
 use crate::auth::jwt::JwtState;
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![jwks]
+pub fn router() -> Router {
+  Router::new().route("/jwks", get(jwks))
 }
 
 #[derive(Serialize)]
@@ -25,8 +25,7 @@ struct Key {
   e: String,
 }
 
-#[get("/jwks")]
-fn jwks(state: &State<JwtState>) -> Json<JwtRes> {
+async fn jwks(state: JwtState) -> Json<JwtRes> {
   let n = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.n().to_bytes_be());
   let e = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.e().to_bytes_be());
 

@@ -1,27 +1,28 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use async_nats::{connect, Client, Subject};
-use rocket::{
-  futures::StreamExt,
-  serde::json,
-  tokio::{
-    spawn,
-    sync::{
-      mpsc::{self, Receiver, Sender},
-      Mutex,
-    },
+use futures::StreamExt;
+use serde::{Deserialize, Serialize};
+use tokio::{
+  spawn,
+  sync::{
+    mpsc::{self, Receiver, Sender},
+    Mutex,
   },
 };
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-type Sessions = Arc<Mutex<HashMap<Uuid, HashMap<Uuid, Sender<UpdateType>>>>>;
+use crate::{config::Config, from_req_extension};
 
+pub type Sessions = Arc<Mutex<HashMap<Uuid, HashMap<Uuid, Sender<UpdateType>>>>>;
+
+#[derive(Clone)]
 pub struct UpdateState {
   sessions: Sessions,
   sender: Client,
   subject: Subject,
 }
+from_req_extension!(UpdateState);
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum UpdateType {
@@ -42,10 +43,9 @@ struct UpdateMessage {
 }
 
 impl UpdateState {
-  pub async fn init() -> Self {
-    let nats_url = env::var("NATS_URL").expect("Failed to load NATS_URL");
-    let nats_update_subject =
-      env::var("NATS_UPDATE_SUBJECT").expect("Failed to load NATS_UPDATE_SUBJECT");
+  pub async fn init(config: &Config) -> Self {
+    let nats_url = config.nats_url.clone();
+    let nats_update_subject = config.nats_update_subject.clone();
 
     let sessions: Sessions = Default::default();
     let sender = connect(&nats_url).await.expect("Failed to connect to nats");
@@ -60,7 +60,7 @@ impl UpdateState {
         .expect("Failed to subscribe to subject");
 
       while let Some(msg) = sub.next().await {
-        let Ok(update) = json::from_slice::<UpdateMessage>(&msg.payload) else {
+        let Ok(update) = serde_json::from_slice::<UpdateMessage>(&msg.payload) else {
           continue;
         };
         if let Some(user) = update.user {
@@ -90,8 +90,8 @@ impl UpdateState {
   }
 
   pub async fn broadcast_message(&self, msg: UpdateType) {
-    log::debug!("Nats Message Broadcast: {:?}", &msg);
-    if let Ok(payload) = json::to_string(&UpdateMessage {
+    tracing::debug!("Nats Message Broadcast: {:?}", &msg);
+    if let Ok(payload) = serde_json::to_string(&UpdateMessage {
       user: None,
       r#type: msg,
     }) {
@@ -103,8 +103,8 @@ impl UpdateState {
   }
 
   pub async fn send_message(&self, user: Uuid, msg: UpdateType) {
-    log::debug!("Nats Message: {:?} to {}", &msg, user);
-    if let Ok(payload) = json::to_string(&UpdateMessage {
+    tracing::debug!("Nats Message: {:?} to {}", &msg, user);
+    if let Ok(payload) = serde_json::to_string(&UpdateMessage {
       user: Some(user),
       r#type: msg,
     }) {
@@ -117,7 +117,7 @@ impl UpdateState {
 }
 
 pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
-  log::debug!("Websocket Message Broadcast: {:?}", &msg);
+  tracing::debug!("Websocket Message Broadcast: {:?}", &msg);
   for sessions in sessions.lock().await.values() {
     for session in sessions.values() {
       let _ = session.send(msg).await;
@@ -126,7 +126,7 @@ pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
 }
 
 pub async fn send_message(sessions: &Sessions, user: Uuid, msg: UpdateType) {
-  log::debug!("Websocket Message: {:?} to {}", &msg, user);
+  tracing::debug!("Websocket Message: {:?} to {}", &msg, user);
   if let Some(sessions) = sessions.lock().await.get(&user) {
     for session in sessions.values() {
       let _ = session.send(msg).await;
