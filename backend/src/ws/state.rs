@@ -90,7 +90,7 @@ impl UpdateState {
   }
 
   pub async fn broadcast_message(&self, msg: UpdateType) {
-    log::debug!("Nats Message Broadcast: {:?}", &msg);
+    tracing::debug!("Nats Message Broadcast: {:?}", &msg);
     if let Ok(payload) = json::to_string(&UpdateMessage {
       user: None,
       r#type: msg,
@@ -103,7 +103,7 @@ impl UpdateState {
   }
 
   pub async fn send_message(&self, user: Uuid, msg: UpdateType) {
-    log::debug!("Nats Message: {:?} to {}", &msg, user);
+    tracing::debug!("Nats Message: {:?} to {}", &msg, user);
     if let Ok(payload) = json::to_string(&UpdateMessage {
       user: Some(user),
       r#type: msg,
@@ -117,7 +117,7 @@ impl UpdateState {
 }
 
 pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
-  log::debug!("Websocket Message Broadcast: {:?}", &msg);
+  tracing::debug!("Websocket Message Broadcast: {:?}", &msg);
   for sessions in sessions.lock().await.values() {
     for session in sessions.values() {
       let _ = session.send(msg).await;
@@ -126,7 +126,7 @@ pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
 }
 
 pub async fn send_message(sessions: &Sessions, user: Uuid, msg: UpdateType) {
-  log::debug!("Websocket Message: {:?} to {}", &msg, user);
+  tracing::debug!("Websocket Message: {:?} to {}", &msg, user);
   if let Some(sessions) = sessions.lock().await.get(&user) {
     for session in sessions.values() {
       let _ = session.send(msg).await;

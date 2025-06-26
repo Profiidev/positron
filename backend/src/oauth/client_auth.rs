@@ -76,8 +76,7 @@ impl<'r> FromRequest<'r> for ClientAuth {
       return Error::outcome_from_str("invalid_request");
     };
 
-    let db = conn.into_inner();
-    let Ok(client) = db.tables().oauth_client().get_client(client_id).await else {
+      let Ok(client) = db.tables().oauth_client().get_client(client_id).await else {
       return Error::outcome_from_str("invalid_client");
     };
 

@@ -1,6 +1,8 @@
+use axum::{
+  routing::{get, post},
+  Json, Router,
+};
 use entity::{o_auth_policy, sea_orm_active_enums::Permission};
-use rocket::{get, post, serde::json::Json, Route, State};
-use sea_orm_rocket::Connection;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -8,27 +10,23 @@ use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
     tables::{oauth::oauth_policy::OAuthPolicyInfo, user::group::BasicGroupInfo},
-    DBTrait, DB,
+    Connection, DBTrait,
   },
   error::{Error, Result},
   permission::PermissionTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![list, create, delete, edit]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth_policy", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/list", get(list))
+    .route("/create", post(create))
+    .route("/delete", post(delete))
+    .route("/edit", post(edit))
 }
 
-#[get("/list")]
-async fn list(
-  conn: Connection<'_, DB>,
-  auth: JwtClaims<JwtBase>,
-) -> Result<Json<Vec<OAuthPolicyInfo>>> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::OAuthClientList).await?;
+async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuthPolicyInfo>>> {
+  Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
   Ok(Json(db.tables().oauth_policy().list().await?))
 }
@@ -41,15 +39,13 @@ struct CreateReq {
   pub group: Vec<(BasicGroupInfo, String)>,
 }
 
-#[post("/create", data = "<req>")]
 async fn create(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   req: Json<CreateReq>,
-  updater: &State<UpdateState>,
+  updater: UpdateState,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::OAuthClientCreate).await?;
+  Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
   if db
     .tables()
@@ -76,7 +72,7 @@ async fn create(
     .create_policy(model, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  log::info!("User {} created oauth_policy {}", auth.sub, req.0.name);
+  tracing::info!("User {} created oauth_policy {}", auth.sub, req.0.name);
 
   Ok(())
 }
@@ -86,32 +82,28 @@ struct DeleteReq {
   uuid: Uuid,
 }
 
-#[post("/delete", data = "<req>")]
 async fn delete(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   req: Json<DeleteReq>,
-  updater: &State<UpdateState>,
+  updater: UpdateState,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::OAuthClientDelete).await?;
+  Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
   db.tables().oauth_policy().delete_policy(req.0.uuid).await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  log::info!("User {} deleted oauth_policy {}", auth.sub, req.uuid);
+  tracing::info!("User {} deleted oauth_policy {}", auth.sub, req.uuid);
 
   Ok(())
 }
 
-#[post("/edit", data = "<req>")]
 async fn edit(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   req: Json<OAuthPolicyInfo>,
-  updater: &State<UpdateState>,
+  updater: UpdateState,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::OAuthClientEdit).await?;
+  Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
     .tables()
@@ -132,7 +124,7 @@ async fn edit(
     .update_policy(req.0, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  log::info!("User {} edited oauth_policy {}", auth.sub, name);
+  tracing::info!("User {} edited oauth_policy {}", auth.sub, name);
 
   Ok(())
 }

@@ -14,17 +14,16 @@ pub fn routes() -> Vec<Route> {
 }
 
 #[get("/user")]
-async fn user(claims: OAuthClaims, conn: Connection<'_, DB>) -> Json<UserInfo> {
+async fn user(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   user_internal(claims, conn).await
 }
 
 #[post("/user")]
-async fn user_post(claims: OAuthClaims, conn: Connection<'_, DB>) -> Json<UserInfo> {
+async fn user_post(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   user_internal(claims, conn).await
 }
 
-async fn user_internal(claims: OAuthClaims, conn: Connection<'_, DB>) -> Json<UserInfo> {
-  let db = conn.into_inner();
+async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   let mut claims: UserInfo = claims.into();
 
   if claims.scope.contains("image") {

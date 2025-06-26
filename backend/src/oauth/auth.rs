@@ -27,7 +27,7 @@ pub fn routes() -> Vec<Route> {
 async fn authorize_get(
   req: AuthReq,
   state: &State<AuthorizeState>,
-  conn: Connection<'_, DB>,
+  db: Connection,
 ) -> Result<Redirect> {
   authorize_start(req, state, conn).await
 }
@@ -36,7 +36,7 @@ async fn authorize_get(
 async fn authorize_post(
   req: Form<AuthReq>,
   state: &State<AuthorizeState>,
-  conn: Connection<'_, DB>,
+  db: Connection,
 ) -> Result<Redirect> {
   authorize_start(req.into_inner(), state, conn).await
 }
@@ -44,12 +44,11 @@ async fn authorize_post(
 async fn authorize_start(
   req: AuthReq,
   state: &State<AuthorizeState>,
-  conn: Connection<'_, DB>,
+  db: Connection,
 ) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
   let client_id = req.client_id.parse()?;
 
-  let db = conn.into_inner();
   let client = db.tables().oauth_client().get_client(client_id).await?;
 
   state
@@ -77,12 +76,10 @@ struct AuthRes {
 async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
   state: &State<AuthorizeState>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   code: &str,
   allow: Option<bool>,
 ) -> Result<Json<AuthRes>> {
-  let db = conn.into_inner();
-
   let mut lock = state.auth_pending.lock().await;
   let code = Uuid::from_str(code)?;
 
@@ -144,7 +141,7 @@ async fn authorize_confirm(
 
   let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
 
-  log::info!("User {} logged in to {}", auth.sub, client.name);
+  tracing::info!("User {} logged in to {}", auth.sub, client.name);
   Ok(Json(AuthRes {
     location: url.to_string(),
   }))
@@ -189,11 +186,10 @@ fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'st
 
 #[get("/logout/<client_id>")]
 async fn logout(
-  conn: Connection<'_, DB>,
+  db: Connection,
   client_id: String,
   state: &State<AuthorizeState>,
 ) -> Result<Redirect> {
-  let db = conn.into_inner();
   let client_id = client_id.parse()?;
 
   let client = db.tables().oauth_client().get_client(client_id).await?;

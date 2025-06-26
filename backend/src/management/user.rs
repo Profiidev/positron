@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 
 use argon2::password_hash::SaltString;
+use axum::{
+  routing::{get, post},
+  Json, Router,
+};
 use chrono::Utc;
 use entity::{sea_orm_active_enums::Permission, user};
-use rocket::{get, post, serde::json::Json, Route, State};
 use rsa::rand_core::OsRng;
-use sea_orm_rocket::Connection;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -14,24 +16,23 @@ use crate::{
     jwt::{JwtBase, JwtClaims},
     state::PasswordState,
   },
-  db::{tables::user::user::UserInfo, DBTrait, DB},
+  db::{tables::user::user::UserInfo, Connection, DBTrait},
   error::{Error, Result},
   permission::PermissionTrait,
   utils::hash_password,
   ws::state::{UpdateState, UpdateType},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![list, edit, create, delete]
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/user", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .route("/list", get(list))
+    .route("/edit", post(edit))
+    .route("/create", post(create))
+    .route("/delete", post(delete))
 }
 
-#[get("/list")]
-async fn list(auth: JwtClaims<JwtBase>, conn: Connection<'_, DB>) -> Result<Json<Vec<UserInfo>>> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::UserList).await?;
+async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<UserInfo>>> {
+  Permission::check(&db, auth.sub, Permission::UserList).await?;
 
   let users = db.tables().user().list().await?;
 
@@ -45,16 +46,14 @@ struct UserEdit {
   permissions: Vec<Permission>,
 }
 
-#[post("/edit", data = "<req>")]
 async fn edit(
-  req: Json<UserEdit>,
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  updater: UpdateState,
+  Json(req): Json<UserEdit>,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::UserEdit).await?;
-  Permission::is_privileged_enough(db, auth.sub, req.user).await?;
+  Permission::check(&db, auth.sub, Permission::UserEdit).await?;
+  Permission::is_privileged_enough(&db, auth.sub, req.user).await?;
 
   let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
   let user = db.tables().user().get_user(req.user).await?;
@@ -69,10 +68,10 @@ async fn edit(
 
   db.tables()
     .user()
-    .edit_user(user.id, req.0.permissions, req.0.name.clone())
+    .edit_user(user.id, req.permissions, req.name.clone())
     .await?;
   updater.broadcast_message(UpdateType::User).await;
-  log::info!("User {} edited user {}", auth.sub, req.0.name);
+  tracing::info!("User {} edited user {}", auth.sub, req.name);
 
   Ok(())
 }
@@ -84,16 +83,14 @@ struct UserCreateReq {
   password: String,
 }
 
-#[post("/create", data = "<req>")]
 async fn create(
-  req: Json<UserCreateReq>,
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  pw: &State<PasswordState>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  pw: PasswordState,
+  updater: UpdateState,
+  Json(req): Json<UserCreateReq>,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::UserCreate).await?;
+  Permission::check(&db, auth.sub, Permission::UserCreate).await?;
 
   let exists = db.tables().user().user_exists(req.email.clone()).await?;
   if exists {
@@ -101,15 +98,15 @@ async fn create(
   }
 
   let salt = SaltString::generate(OsRng {}).to_string();
-  let password = hash_password(pw, &salt, &req.password)?;
+  let password = hash_password(&pw, &salt, &req.password)?;
 
   db.tables()
     .user()
     .create_user(user::Model {
       id: Uuid::new_v4(),
-      name: req.0.name.clone(),
+      name: req.name.clone(),
       image: "".into(),
-      email: req.0.email,
+      email: req.email,
       password,
       salt,
       totp: None,
@@ -121,7 +118,7 @@ async fn create(
     })
     .await?;
   updater.broadcast_message(UpdateType::User).await;
-  log::info!("User {} created user {}", auth.sub, req.0.name);
+  tracing::info!("User {} created user {}", auth.sub, req.name);
 
   Ok(())
 }
@@ -131,20 +128,18 @@ struct UserDelete {
   uuid: Uuid,
 }
 
-#[post("/delete", data = "<req>")]
 async fn delete(
-  req: Json<UserDelete>,
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  updater: UpdateState,
+  Json(req): Json<UserDelete>,
 ) -> Result<()> {
-  let db = conn.into_inner();
-  Permission::check(db, auth.sub, Permission::UserDelete).await?;
-  Permission::is_privileged_enough(db, auth.sub, req.uuid).await?;
+  Permission::check(&db, auth.sub, Permission::UserDelete).await?;
+  Permission::is_privileged_enough(&db, auth.sub, req.uuid).await?;
 
   db.tables().user().delete_user(req.uuid).await?;
   updater.broadcast_message(UpdateType::User).await;
-  log::info!("User {} deleted user {}", auth.sub, req.uuid);
+  tracing::info!("User {} deleted user {}", auth.sub, req.uuid);
 
   Ok(())
 }

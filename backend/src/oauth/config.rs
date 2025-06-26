@@ -34,10 +34,9 @@ struct Configuration {
 #[get("/.well-known/openid-configuration?<internal>")]
 async fn config(
   state: &State<ConfigurationState>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   internal: Option<bool>,
 ) -> Result<Json<Configuration>> {
-  let db = conn.into_inner();
 
   let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(

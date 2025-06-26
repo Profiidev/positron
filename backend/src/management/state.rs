@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use rocket::tokio::sync::Mutex;
 use serde::Serialize;
+use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use crate::from_req_extension;
 
 #[derive(Serialize)]
 pub struct ClientCreateStart {
@@ -10,10 +12,12 @@ pub struct ClientCreateStart {
   pub client_id: Uuid,
 }
 
+#[derive(Clone)]
 pub struct ClientState {
-  pub create: Mutex<HashMap<Uuid, ClientCreateStart>>,
+  pub create: Arc<Mutex<HashMap<Uuid, ClientCreateStart>>>,
   pub pepper: Vec<u8>,
 }
+from_req_extension!(ClientState);
 
 impl Default for ClientState {
   fn default() -> Self {

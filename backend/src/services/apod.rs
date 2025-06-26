@@ -39,10 +39,9 @@ struct ListRes {
 #[get("/list")]
 async fn list(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   s3: &State<S3>,
 ) -> Result<Json<Vec<ListRes>>> {
-  let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
   let apods = db.tables().apod().list().await?;
@@ -80,10 +79,9 @@ struct SetGoodReq {
 async fn set_good(
   auth: JwtClaims<JwtBase>,
   req: Json<SetGoodReq>,
-  conn: Connection<'_, DB>,
-  updater: &State<UpdateState>,
+  db: Connection,
+  updater: UpdateState,
 ) -> Result<()> {
-  let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodSelect).await?;
 
   db.tables()
@@ -91,7 +89,7 @@ async fn set_good(
     .set_good(req.date.date_naive(), auth.sub, req.good)
     .await?;
 
-  log::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
+  tracing::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
   updater.broadcast_message(UpdateType::Apod).await;
 
   Ok(())
@@ -111,12 +109,11 @@ struct GetInfoRes {
 #[post("/get_image_info", data = "<req>")]
 async fn get_image_info(
   auth: JwtClaims<JwtBase>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   state: &State<ApodState>,
   s3: &State<S3>,
   req: Json<GetReq>,
 ) -> Result<Json<GetInfoRes>> {
-  let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
   let res = if let Some((apod, user)) = db
@@ -182,9 +179,8 @@ async fn get_image(
   auth: JwtClaims<JwtBase>,
   s3: &State<S3>,
   req: Json<GetReq>,
-  conn: Connection<'_, DB>,
+  db: Connection,
 ) -> Result<Json<GetRes>> {
-  let db = conn.into_inner();
   Permission::check(db, auth.sub, Permission::ApodList).await?;
 
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
@@ -199,8 +195,7 @@ async fn get_image(
 }
 
 #[get("/random")]
-async fn random(s3: &State<S3>, conn: Connection<'_, DB>) -> Result<Vec<u8>> {
-  let db = conn.into_inner();
+async fn random(s3: &State<S3>, db: Connection) -> Result<Vec<u8>> {
   let list = db.tables().apod().list().await?;
 
   let Some(choice) = list.choose(&mut rand::rng()) else {

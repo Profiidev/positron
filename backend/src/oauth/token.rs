@@ -50,7 +50,6 @@ async fn token<'r>(
   conn: Connection<'r, DB>,
   config: &State<ConfigurationState>,
 ) -> Result<Json<TokenRes>, Error<'r>> {
-  let db = conn.into_inner();
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
@@ -168,7 +167,7 @@ async fn token<'r>(
     None
   };
 
-  log::info!("Client {} got token for {}", client_id, user.name);
+  tracing::info!("Client {} got token for {}", client_id, user.name);
   Ok(Json(TokenRes {
     access_token: token,
     id_token,
@@ -187,12 +186,10 @@ struct RevokeReq {
 async fn revoke(
   req_p: Option<RevokeReq>,
   req_b: Option<Form<RevokeReq>>,
-  conn: Connection<'_, DB>,
+  db: Connection,
   state: &State<JwtState>,
   invalidate: &State<JwtInvalidState>,
 ) -> crate::error::Result<()> {
-  let db = conn.into_inner();
-
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
