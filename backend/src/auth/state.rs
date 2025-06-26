@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -41,22 +41,36 @@ pub struct TotpState {
 }
 from_req_extension!(TotpState);
 
-pub fn webauthn(config: &Config) -> Webauthn {
-  let additional_origins = config
-    .webauthn_additional_origins
-    .split(',')
-    .filter_map(|s| Url::parse(s).ok())
-    .collect::<Vec<_>>();
+#[derive(Clone)]
+pub struct WebauthnState(Webauthn);
+from_req_extension!(WebauthnState);
 
-  let mut webauthn = WebauthnBuilder::new(&config.webauthn_id, &config.webauthn_origin)
-    .expect("Failed creating WebauthnBuilder")
-    .rp_name(&config.webauthn_name);
+impl Deref for WebauthnState {
+  type Target = Webauthn;
 
-  for origin in additional_origins {
-    webauthn = webauthn.append_allowed_origin(&origin);
+  fn deref(&self) -> &Self::Target {
+    &self.0
   }
+}
 
-  webauthn.build().expect("Failed creating Webauthn")
+impl WebauthnState {
+  pub fn init(config: &Config) -> Self {
+    let additional_origins = config
+      .webauthn_additional_origins
+      .split(',')
+      .filter_map(|s| Url::parse(s).ok())
+      .collect::<Vec<_>>();
+
+    let mut webauthn = WebauthnBuilder::new(&config.webauthn_id, &config.webauthn_origin)
+      .expect("Failed creating WebauthnBuilder")
+      .rp_name(&config.webauthn_name);
+
+    for origin in additional_origins {
+      webauthn = webauthn.append_allowed_origin(&origin);
+    }
+
+    Self(webauthn.build().expect("Failed creating Webauthn"))
+  }
 }
 
 impl PasskeyState {

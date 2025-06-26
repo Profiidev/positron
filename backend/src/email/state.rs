@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::{DateTime, Duration, Utc};
 use lettre::{
@@ -25,7 +25,7 @@ from_req_extension!(Mailer);
 
 #[derive(Clone)]
 pub struct EmailState {
-  pub change_req: Mutex<HashMap<Uuid, ChangeInfo>>,
+  pub change_req: Arc<Mutex<HashMap<Uuid, ChangeInfo>>>,
   pub exp: i64,
 }
 from_req_extension!(EmailState);
@@ -102,7 +102,7 @@ fn gen_code() -> String {
 
 impl Mailer {
   pub fn init(config: &Config) -> Self {
-    let credentials = Credentials::new(config.smtp_username, config.smtp_password);
+    let credentials = Credentials::new(config.smtp_username.clone(), config.smtp_password.clone());
     let transport = SmtpTransport::relay(&config.smtp_domain)
       .expect("Failed to initialize Smtp Transport")
       .credentials(credentials)

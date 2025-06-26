@@ -42,8 +42,8 @@ struct CreateReq {
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  req: Json<CreateReq>,
   updater: UpdateState,
+  Json(req): Json<CreateReq>,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -63,8 +63,8 @@ async fn create(
   let model = o_auth_policy::Model {
     id: Uuid::new_v4(),
     name: req.name.clone(),
-    claim: req.0.claim,
-    default: req.0.default,
+    claim: req.claim,
+    default: req.default,
   };
 
   db.tables()
@@ -72,7 +72,7 @@ async fn create(
     .create_policy(model, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  tracing::info!("User {} created oauth_policy {}", auth.sub, req.0.name);
+  tracing::info!("User {} created oauth_policy {}", auth.sub, req.name);
 
   Ok(())
 }
@@ -85,12 +85,12 @@ struct DeleteReq {
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  req: Json<DeleteReq>,
   updater: UpdateState,
+  Json(req): Json<DeleteReq>,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
-  db.tables().oauth_policy().delete_policy(req.0.uuid).await?;
+  db.tables().oauth_policy().delete_policy(req.uuid).await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
   tracing::info!("User {} deleted oauth_policy {}", auth.sub, req.uuid);
 
@@ -100,8 +100,8 @@ async fn delete(
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  req: Json<OAuthPolicyInfo>,
   updater: UpdateState,
+  Json(req): Json<OAuthPolicyInfo>,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 
@@ -121,7 +121,7 @@ async fn edit(
   let name = req.name.clone();
   db.tables()
     .oauth_policy()
-    .update_policy(req.0, groups, content)
+    .update_policy(req, groups, content)
     .await?;
   updater.broadcast_message(UpdateType::OAuthPolicy).await;
   tracing::info!("User {} edited oauth_policy {}", auth.sub, name);

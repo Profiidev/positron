@@ -199,8 +199,8 @@ struct ClientDelete {
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  req: Json<ClientDelete>,
   updater: UpdateState,
+  Json(req): Json<ClientDelete>,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
@@ -225,8 +225,8 @@ struct ResetRes {
 async fn reset(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  req: Json<ResetReq>,
   state: ClientState,
+  Json(req): Json<ResetReq>,
 ) -> Result<Json<ResetRes>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
   let client = db.tables().oauth_client().get_client(req.client_id).await?;

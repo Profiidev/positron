@@ -12,16 +12,14 @@ use entity::passkey;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use webauthn_rs::{
-  prelude::{
-    CreationChallengeResponse, Passkey, PublicKeyCredential, RegisterPublicKeyCredential,
-    RequestChallengeResponse,
-  },
-  Webauthn,
+use webauthn_rs::prelude::{
+  CreationChallengeResponse, Passkey, PublicKeyCredential, RegisterPublicKeyCredential,
+  RequestChallengeResponse,
 };
 use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
+  auth::state::WebauthnState,
   db::{Connection, DBTrait},
   error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
@@ -59,7 +57,7 @@ pub fn router() -> Router {
 async fn start_registration(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
 ) -> Result<Json<CreationChallengeResponse>> {
   let user = db.tables().user().get_user(auth.sub).await?;
@@ -91,7 +89,7 @@ struct RegFinishReq {
 async fn finish_registration(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   updater: UpdateState,
   Json(req): Json<RegFinishReq>,
@@ -137,7 +135,7 @@ struct AuthStartRes {
 }
 
 async fn start_authentication(
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
 ) -> Result<Json<AuthStartRes>> {
   let (rcr, auth_state) = webauthn.start_discoverable_authentication()?;
@@ -153,7 +151,7 @@ async fn start_authentication(
 
 async fn start_authentication_by_email(
   Path(email): Path<String>,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   db: Connection,
 ) -> Result<Json<AuthStartRes>> {
@@ -183,7 +181,7 @@ async fn start_authentication_by_email(
 async fn finish_authentication(
   Path(id): Path<String>,
   db: Connection,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
@@ -230,7 +228,7 @@ async fn finish_authentication(
 async fn finish_authentication_by_email(
   Path(id): Path<String>,
   db: Connection,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
@@ -273,7 +271,7 @@ async fn finish_authentication_by_email(
 
 async fn start_special_access(
   auth: JwtClaims<JwtBase>,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   db: Connection,
 ) -> Result<Json<RequestChallengeResponse>> {
@@ -297,7 +295,7 @@ async fn start_special_access(
 
 async fn finish_special_access(
   auth: JwtClaims<JwtBase>,
-  webauthn: Webauthn,
+  webauthn: WebauthnState,
   state: PasskeyState,
   jwt: JwtState,
   db: Connection,
