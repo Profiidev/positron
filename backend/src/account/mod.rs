@@ -1,12 +1,10 @@
-use rocket::Route;
+use axum::Router;
 
 mod general;
 mod settings;
 
-pub fn routes() -> Vec<Route> {
-  general::routes()
-    .into_iter()
-    .chain(settings::routes())
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/account", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .nest("/general", general::router())
+    .nest("/settings", settings::router())
 }

@@ -60,7 +60,7 @@ async fn main() {
 fn routes() -> Router {
   Router::new()
     .nest("/auth", auth::router())
-    .merge(account::router())
+    .nest("/account", account::router())
     .merge(email::router())
     .merge(oauth::router())
     .merge(management::router())
@@ -79,4 +79,16 @@ async fn state<L>(config: &Config, db: &DatabaseConnection) -> ServiceBuilder<L>
     .layer(well_known::state(config))
     .layer(s3::state().await)
     .layer(ws::state().await)
+}
+
+trait Test: Layer<Route> + Clone + Send + Sync + 'static {}
+
+impl<L> Test for L
+where
+  L: Layer<Route> + Clone + Send + Sync + 'static,
+  L::Service: Service<Request> + Clone + Send + Sync + 'static,
+  <L::Service as Service<Request>>::Response: IntoResponse + 'static,
+  <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
+  <L::Service as Service<Request>>::Future: Send + 'static,
+{
 }
