@@ -28,10 +28,8 @@ async fn logout(
 ) -> Result<(CookieJar, TokenRes)> {
   let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
   reset_cookie.set_max_age(Some(Duration::seconds(0)));
-  cookies = cookies.remove(reset_cookie);
 
   let cookie = cookies.get("token").ok_or(Error::BadRequest)?;
-
   let mut count = state.count.lock().await;
   db.tables()
     .invalid_jwt()
@@ -41,6 +39,9 @@ async fn logout(
       &mut count,
     )
     .await?;
+
+  cookies = cookies.remove(reset_cookie);
+
   Ok((cookies, TokenRes::default()))
 }
 

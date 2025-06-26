@@ -16,7 +16,7 @@ export const createSchema = z.object({
       return arg;
     }, z.array(z.string().url()).default([]))
     .refine((uris) => uris.every(isUrl), {
-      message: 'Te'
+      message: 'Not all additional redirect URIs are valid URLs',
     })
 });
 

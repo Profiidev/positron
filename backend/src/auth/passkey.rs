@@ -39,13 +39,10 @@ pub fn router() -> Router {
       "/start_authentication/{email}",
       get(start_authentication_by_email),
     )
-    .route(
-      "/finish_authentication/{id}",
-      post(finish_authentication_by_email),
-    )
+    .route("/finish_authentication/{id}", post(finish_authentication))
     .route(
       "/finish_authentication_by_email/{id}",
-      post(finish_authentication),
+      post(finish_authentication_by_email),
     )
     .route("/start_special_access", get(start_special_access))
     .route("/finish_special_access", post(finish_special_access))
@@ -179,7 +176,7 @@ async fn start_authentication_by_email(
 }
 
 async fn finish_authentication(
-  Path(id): Path<String>,
+  Path(auth_id): Path<Uuid>,
   db: Connection,
   webauthn: WebauthnState,
   state: PasskeyState,
@@ -187,8 +184,6 @@ async fn finish_authentication(
   mut cookies: CookieJar,
   Json(auth): Json<PublicKeyCredential>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let auth_id = Uuid::from_str(&id)?;
-
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
 

@@ -158,6 +158,7 @@ impl JwtState {
       )))
       .same_site(SameSite::Lax)
       .secure(true)
+      .path("/")
       .build()
   }
 
