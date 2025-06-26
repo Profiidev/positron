@@ -1,6 +1,9 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
 pub use state::ConfigurationState;
 use state::{AuthorizeState, ClientState};
+use tower::ServiceBuilder;
+
+use crate::config::Config;
 
 mod auth;
 mod client_auth;
@@ -12,20 +15,18 @@ mod state;
 mod token;
 mod user;
 
-pub fn routes() -> Vec<Route> {
-  auth::routes()
-    .into_iter()
-    .chain(token::routes())
-    .chain(user::routes())
-    .chain(config::routes())
-    .chain(jwk::routes())
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/oauth", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new()
+    .merge(auth::router())
+    .merge(config::router())
+    .merge(jwk::router())
+    .merge(token::router())
+    .merge(user::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server
-    .manage(AuthorizeState::default())
-    .manage(ClientState::default())
-    .manage(ConfigurationState::default())
+pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new()
+    .layer(Extension(AuthorizeState::init(config)))
+    .layer(Extension(ClientState::init(config)))
+    .layer(Extension(ConfigurationState::init(config)))
 }

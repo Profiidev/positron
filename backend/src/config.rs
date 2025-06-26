@@ -21,6 +21,9 @@ pub struct Config {
   #[clap(long, env, default_value = "")]
   pub allowed_origins: String,
 
+  #[clap(long, env)]
+  pub frontend_url: String,
+
   // well known
   #[clap(long, env)]
   pub assetlinks: String,
@@ -68,4 +71,14 @@ pub struct Config {
 
   #[clap(long, env)]
   pub smtp_site_link: String,
+
+  //oidc
+  #[clap(long, env)]
+  pub oidc_issuer: String,
+
+  #[clap(long, env)]
+  pub oidc_backend_url: String,
+
+  #[clap(long, env)]
+  pub oidc_backend_internal: String,
 }

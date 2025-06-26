@@ -1,14 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
+use axum::{extract::Query, routing::post, Form, Json, Router};
 use chrono::{DateTime, Utc};
-use rocket::{form::Form, post, serde::json::Json, FromForm, Route, State};
-use sea_orm_rocket::Connection;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
+  utils::empty_string_as_none,
 };
 
 use super::{
@@ -18,15 +18,19 @@ use super::{
   state::{get_timestamp_10_min, AuthorizeState, ConfigurationState},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![token, revoke]
+pub fn router() -> Router {
+  Router::new()
+    .route("/token", post(token))
+    .route("/revoke", post(revoke))
 }
 
-#[derive(FromForm, Debug)]
+#[derive(Deserialize, Debug)]
 struct TokenReq {
   grant_type: String,
   code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   client_id: Option<String>,
 }
 
@@ -40,20 +44,19 @@ struct TokenRes {
   scope: Scope,
 }
 
-#[post("/token?<req_p..>", data = "<req_b>")]
-async fn token<'r>(
-  req_p: Option<TokenReq>,
-  req_b: Option<Form<TokenReq>>,
+async fn token(
+  Query(req_p): Query<Option<TokenReq>>,
   auth: Option<ClientAuth>,
-  state: &State<AuthorizeState>,
-  jwt: &State<JwtState>,
-  conn: Connection<'r, DB>,
-  config: &State<ConfigurationState>,
-) -> Result<Json<TokenRes>, Error<'r>> {
+  state: AuthorizeState,
+  jwt: JwtState,
+  db: Connection,
+  config: ConfigurationState,
+  Form(req_b): Form<Option<TokenReq>>,
+) -> Result<Json<TokenRes>, Error> {
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
-    req.into_inner()
+    req
   } else {
     return Err(Error::from_str("invalid_request"));
   };
@@ -177,23 +180,22 @@ async fn token<'r>(
   }))
 }
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 struct RevokeReq {
   token: String,
 }
 
-#[post("/revoke?<req_p..>", data = "<req_b>")]
 async fn revoke(
-  req_p: Option<RevokeReq>,
-  req_b: Option<Form<RevokeReq>>,
+  Query(req_p): Query<Option<RevokeReq>>,
   db: Connection,
-  state: &State<JwtState>,
-  invalidate: &State<JwtInvalidState>,
+  state: JwtState,
+  invalidate: JwtInvalidState,
+  Form(req_b): Form<Option<RevokeReq>>,
 ) -> crate::error::Result<()> {
   let req = if let Some(req) = req_p {
     req
   } else if let Some(req) = req_b {
-    req.into_inner()
+    req
   } else {
     return Err(crate::error::Error::BadRequest);
   };

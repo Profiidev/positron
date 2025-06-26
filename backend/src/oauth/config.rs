@@ -1,16 +1,16 @@
-use rocket::{get, serde::json::Json, Route, State};
-use sea_orm_rocket::Connection;
-use serde::Serialize;
+use axum::{extract::Query, routing::get, Json, Router};
+use serde::{Deserialize, Serialize};
 
 use crate::{
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::Result,
+  utils::empty_string_as_none,
 };
 
 use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![config]
+pub fn router() -> Router {
+  Router::new().route("/.well-known/openid-configuration", get(config))
 }
 
 #[derive(Serialize)]
@@ -31,13 +31,17 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[get("/.well-known/openid-configuration?<internal>")]
-async fn config(
-  state: &State<ConfigurationState>,
-  db: Connection,
+#[derive(Deserialize)]
+struct ConfigQuery {
+  #[serde(default, deserialize_with = "empty_string_as_none")]
   internal: Option<bool>,
-) -> Result<Json<Configuration>> {
+}
 
+async fn config(
+  state: ConfigurationState,
+  db: Connection,
+  Query(query): Query<ConfigQuery>,
+) -> Result<Json<Configuration>> {
   let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES
@@ -46,7 +50,7 @@ async fn config(
       .collect::<Vec<String>>(),
   );
 
-  let backend_url = if internal == Some(true) {
+  let backend_url = if query.internal == Some(true) {
     &state.backend_url_internal
   } else {
     &state.backend_url

@@ -1,17 +1,23 @@
 use std::str::FromStr;
 
+use axum::{
+  extract::{Path, Query},
+  response::{IntoResponse, Response},
+  routing::{get, post},
+  Form, Json, Router,
+};
 use chrono::Utc;
 use entity::o_auth_client;
-use rocket::{form::Form, get, post, response::Redirect, serde::json::Json, Route, State};
-use sea_orm_rocket::Connection;
-use serde::Serialize;
+use http::{header::LOCATION, HeaderValue, StatusCode};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{DBTrait, DB},
+  db::{Connection, DBTrait},
   error::{Error, Result},
+  utils::empty_string_as_none,
 };
 
 use super::{
@@ -19,33 +25,31 @@ use super::{
   state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq},
 };
 
-pub fn routes() -> Vec<Route> {
-  rocket::routes![authorize_get, authorize_confirm, authorize_post, logout]
+pub fn router() -> Router {
+  Router::new()
+    .route("/authorize", get(authorize_get))
+    .route("/authorize", post(authorize_post))
+    .route("/authorize_confirm", post(authorize_confirm))
+    .route("/logout/{client_id}", get(logout))
 }
 
-#[get("/authorize?<req..>")]
 async fn authorize_get(
-  req: AuthReq,
-  state: &State<AuthorizeState>,
+  Query(req): Query<AuthReq>,
+  state: AuthorizeState,
   db: Connection,
 ) -> Result<Redirect> {
-  authorize_start(req, state, conn).await
+  authorize_start(req, state, db).await
 }
 
-#[post("/authorize", data = "<req>")]
 async fn authorize_post(
-  req: Form<AuthReq>,
-  state: &State<AuthorizeState>,
+  state: AuthorizeState,
   db: Connection,
+  Form(req): Form<AuthReq>,
 ) -> Result<Redirect> {
-  authorize_start(req.into_inner(), state, conn).await
+  authorize_start(req, state, db).await
 }
 
-async fn authorize_start(
-  req: AuthReq,
-  state: &State<AuthorizeState>,
-  db: Connection,
-) -> Result<Redirect> {
+async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
   let client_id = req.client_id.parse()?;
 
@@ -72,18 +76,23 @@ struct AuthRes {
   location: String,
 }
 
-#[post("/authorize_confirm?<code>&<allow>")]
+#[derive(Deserialize)]
+struct AuthConfirmQuery {
+  code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  allow: Option<bool>,
+}
+
 async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
-  state: &State<AuthorizeState>,
+  state: AuthorizeState,
   db: Connection,
-  code: &str,
-  allow: Option<bool>,
+  Query(query): Query<AuthConfirmQuery>,
 ) -> Result<Json<AuthRes>> {
   let mut lock = state.auth_pending.lock().await;
-  let code = Uuid::from_str(code)?;
+  let code = Uuid::from_str(&query.code)?;
 
-  let allow = allow.unwrap_or(false);
+  let allow = query.allow.unwrap_or(false);
   if !allow {
     lock.remove(&code);
     return Ok(Json(AuthRes {
@@ -184,14 +193,11 @@ fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'st
   None
 }
 
-#[get("/logout/<client_id>")]
 async fn logout(
   db: Connection,
-  client_id: String,
-  state: &State<AuthorizeState>,
+  Path(client_id): Path<Uuid>,
+  state: AuthorizeState,
 ) -> Result<Redirect> {
-  let client_id = client_id.parse()?;
-
   let client = db.tables().oauth_client().get_client(client_id).await?;
 
   Ok(Redirect::found(
@@ -205,4 +211,34 @@ async fn logout(
     .unwrap()
     .to_string(),
   ))
+}
+
+#[derive(Debug, Clone)]
+pub struct Redirect {
+  status_code: StatusCode,
+  location: HeaderValue,
+}
+
+impl IntoResponse for Redirect {
+  fn into_response(self) -> Response {
+    (self.status_code, [(LOCATION, self.location)]).into_response()
+  }
+}
+
+impl Redirect {
+  pub fn found(uri: String) -> Self {
+    Self::with_status_code(StatusCode::FOUND, &uri)
+  }
+
+  fn with_status_code(status_code: StatusCode, uri: &str) -> Self {
+    assert!(
+      status_code.is_redirection(),
+      "not a redirection status code"
+    );
+
+    Self {
+      status_code,
+      location: HeaderValue::try_from(uri).expect("URI isn't a valid header value"),
+    }
+  }
 }
