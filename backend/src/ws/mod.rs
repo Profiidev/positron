@@ -1,16 +1,16 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
 use state::UpdateState;
+use tower::ServiceBuilder;
+
+use crate::config::Config;
 
 pub mod state;
 mod updater;
 
-pub fn routes() -> Vec<Route> {
-  updater::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/ws", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().merge(updater::router())
 }
 
-pub async fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(UpdateState::init().await)
+pub async fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new().layer(Extension(UpdateState::init(config).await))
 }

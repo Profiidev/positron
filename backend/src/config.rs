@@ -101,4 +101,11 @@ pub struct Config {
   //services
   #[clap(long, env)]
   pub apod_api_key: String,
+
+  //nats
+  #[clap(long, env)]
+  pub nats_url: String,
+
+  #[clap(long, env)]
+  pub nats_update_subject: String,
 }

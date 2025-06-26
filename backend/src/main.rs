@@ -75,10 +75,10 @@ async fn state<L>(config: &Config, db: &DatabaseConnection) -> ServiceBuilder<L>
     .layer(email::state(config))
     .layer(oauth::state(config))
     .layer(management::state(config))
-    .layer(services::state())
+    .layer(services::state(config))
     .layer(well_known::state(config))
-    .layer(s3::state().await)
-    .layer(ws::state().await)
+    .layer(s3::state(config).await)
+    .layer(ws::state(config).await)
 }
 
 trait Test: Layer<Route> + Clone + Send + Sync + 'static {}
