@@ -2,6 +2,8 @@ use axum::{Extension, Router};
 use state::ClientState;
 use tower::ServiceBuilder;
 
+use crate::config::Config;
+
 mod group;
 mod oauth_client;
 mod oauth_policy;
@@ -18,6 +20,6 @@ pub fn router() -> Router {
     .nest("/oauth_scope", oauth_scope::router())
 }
 
-pub fn state<L>() -> ServiceBuilder<L> {
-  ServiceBuilder::new().layer(Extension(ClientState::init()))
+pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new().layer(Extension(ClientState::init(config)))
 }

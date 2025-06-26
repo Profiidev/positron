@@ -4,7 +4,7 @@ use serde::Serialize;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::from_req_extension;
+use crate::{config::Config, from_req_extension};
 
 #[derive(Serialize)]
 pub struct ClientCreateStart {
@@ -19,12 +19,9 @@ pub struct ClientState {
 }
 from_req_extension!(ClientState);
 
-impl Default for ClientState {
-  fn default() -> Self {
-    let pepper = std::env::var("AUTH_PEPPER")
-      .expect("Failed to read Pepper")
-      .as_bytes()
-      .to_vec();
+impl ClientState {
+  pub fn init(config: &Config) -> Self {
+    let pepper = config.auth_pepper.as_bytes().to_vec();
 
     Self {
       create: Default::default(),

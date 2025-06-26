@@ -1,16 +1,16 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
 use state::ApodState;
+use tower::ServiceBuilder;
+
+use crate::config::Config;
 
 mod apod;
 mod state;
 
-pub fn routes() -> Vec<Route> {
-  apod::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/services", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().nest("/apod", apod::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(ApodState::default())
+pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new().layer(Extension(ApodState::init(config)))
 }

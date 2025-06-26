@@ -81,4 +81,24 @@ pub struct Config {
 
   #[clap(long, env)]
   pub oidc_backend_internal: String,
+
+  //s3
+  #[clap(long, env)]
+  pub s3_bucket: String,
+
+  #[clap(long, env)]
+  pub s3_region: String,
+
+  #[clap(long, env)]
+  pub s3_host: String,
+
+  #[clap(long, env)]
+  pub s3_key_id: String,
+
+  #[clap(long, env)]
+  pub s3_access_key: String,
+
+  //services
+  #[clap(long, env)]
+  pub apod_api_key: String,
 }

@@ -2,10 +2,14 @@ use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
 
+use crate::{config::Config, from_req_extension};
+
+#[derive(Clone)]
 pub struct ApodState {
   api_key: String,
   client: Client,
 }
+from_req_extension!(ApodState);
 
 #[derive(Deserialize)]
 struct ImageRes {
@@ -19,12 +23,10 @@ pub struct Image {
   pub title: String,
 }
 
-impl Default for ApodState {
-  fn default() -> Self {
-    let api_key = std::env::var("APOD_API_KEY").expect("Failed to load APOD_API_KEY");
-
+impl ApodState {
+  pub fn init(config: &Config) -> Self {
     Self {
-      api_key,
+      api_key: config.apod_api_key.clone(),
       client: Client::new(),
     }
   }

@@ -1,25 +1,37 @@
+use std::sync::Arc;
+
+use axum::Extension;
 use folders::Folders;
-use rocket::{Build, Rocket};
 use s3::{creds::Credentials, Bucket, Region};
+use tower::ServiceBuilder;
+
+use crate::{config::Config, from_req_extension};
 
 pub mod error;
 pub mod folders;
 
+#[derive(Clone)]
 pub struct S3 {
-  bucket: Box<Bucket>,
+  bucket: Arc<Box<Bucket>>,
 }
+from_req_extension!(S3);
 
 impl S3 {
-  async fn init() -> Self {
-    let bucket = std::env::var("S3_BUCKET").expect("Failed to load S3_BUCKET");
+  async fn init(config: &Config) -> Self {
+    let region = Region::Custom {
+      region: config.s3_region.clone(),
+      endpoint: config.s3_host.clone(),
+    };
+    let credentials = Credentials::new(
+      Some(&config.s3_key_id),
+      Some(&config.s3_access_key),
+      None,
+      None,
+      None,
+    )
+    .expect("Failed to create S3 Credentials");
 
-    let region =
-      Region::from_env("S3_REGION", Some("S3_HOST")).expect("Failed to load S3_REGION or S3_HOST");
-    let credentials =
-      Credentials::from_env_specific(Some("S3_KEY_ID"), Some("S3_ACCESS_KEY"), None, None)
-        .expect("Failed to load S3_KEY_ID or S3_ACCESS_KEY");
-
-    let bucket = Bucket::new(&bucket, region, credentials)
+    let bucket = Bucket::new(&config.s3_bucket, region, credentials)
       .expect("Failed to init S3 Bucket")
       .with_path_style();
 
@@ -31,7 +43,9 @@ impl S3 {
       panic!("S3 Bucket does not exist");
     }
 
-    Self { bucket }
+    Self {
+      bucket: Arc::new(bucket),
+    }
   }
 
   pub fn folders(&self) -> Folders<'_> {
@@ -39,6 +53,6 @@ impl S3 {
   }
 }
 
-pub async fn async_state(server: Rocket<Build>) -> Rocket<Build> {
-  server.manage(S3::init().await)
+pub async fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new().layer(Extension(S3::init(config).await))
 }
