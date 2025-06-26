@@ -1,19 +1,19 @@
-use rocket::{Build, Rocket, Route};
+use axum::{Extension, Router};
 use state::{EmailState, Mailer};
+use tower::ServiceBuilder;
+
+use crate::config::Config;
 
 mod manage;
 pub mod state;
 mod templates;
 
-pub fn routes() -> Vec<Route> {
-  manage::routes()
-    .into_iter()
-    .flat_map(|route| route.map_base(|base| format!("{}{}", "/email", base)))
-    .collect()
+pub fn router() -> Router {
+  Router::new().nest("/manage", manage::router())
 }
 
-pub fn state(server: Rocket<Build>) -> Rocket<Build> {
-  server
-    .manage(Mailer::default())
-    .manage(EmailState::default())
+pub fn state<L>(config: &Config) -> ServiceBuilder<L> {
+  ServiceBuilder::new()
+    .layer(Extension(Mailer::init(config)))
+    .layer(Extension(EmailState::init(config)))
 }

@@ -27,7 +27,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{db::DBTrait, from_req_extension, utils::jwt_from_request};
+use crate::{config::Config, db::DBTrait, from_req_extension, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -165,17 +165,7 @@ impl JwtState {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(db: &DatabaseConnection) -> Self {
-    let iss = std::env::var("AUTH_ISSUER").expect("Failed to load JwtIssuer");
-    let exp = std::env::var("AUTH_JWT_EXPIRATION")
-      .expect("Failed to load JwtExpiration")
-      .parse()
-      .expect("Failed to parse JwtExpiration");
-    let short_exp = std::env::var("AUTH_JWT_EXPIRATION_SHORT")
-      .expect("Failed to load JwtExpiration short")
-      .parse()
-      .expect("Failed to parse JwtExpiration short");
-
+  pub async fn init(config: &Config, db: &DatabaseConnection) -> Self {
     let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
       (key.private_key, key.id.to_string())
     } else {
@@ -218,9 +208,9 @@ impl JwtState {
       encoding_key,
       decoding_key,
       validation,
-      iss,
-      exp,
-      short_exp,
+      iss: config.auth_issuer.clone(),
+      exp: config.auth_jwt_expiration,
+      short_exp: config.auth_jwt_expiration_short,
       kid,
       public_key,
     }

@@ -9,20 +9,26 @@ use lettre::{
   Message, SmtpTransport, Transport,
 };
 use rand::{distr::Uniform, Rng};
-use rocket::tokio::sync::Mutex;
 use thiserror::Error;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::{config::Config, from_req_extension};
+
+#[derive(Clone)]
 pub struct Mailer {
   transport: SmtpTransport,
   sender: Mailbox,
   pub site_link: String,
 }
+from_req_extension!(Mailer);
 
+#[derive(Clone)]
 pub struct EmailState {
   pub change_req: Mutex<HashMap<Uuid, ChangeInfo>>,
   pub exp: i64,
 }
+from_req_extension!(EmailState);
 
 #[derive(Clone)]
 pub struct ChangeInfo {
@@ -61,16 +67,11 @@ impl ChangeInfo {
   }
 }
 
-impl Default for EmailState {
-  fn default() -> Self {
-    let exp = std::env::var("AUTH_JWT_EXPIRATION_SHORT")
-      .expect("Failed to load JwtExpiration")
-      .parse()
-      .expect("Failed to parse JwtExpiration");
-
+impl EmailState {
+  pub fn init(config: &Config) -> Self {
     Self {
       change_req: Default::default(),
-      exp,
+      exp: config.auth_jwt_expiration_short,
     }
   }
 }
@@ -99,32 +100,23 @@ fn gen_code() -> String {
     .collect()
 }
 
-impl Default for Mailer {
-  fn default() -> Self {
-    let username = std::env::var("SMTP_USERNAME").expect("Failed to load SMTP_USERNAME");
-    let password = std::env::var("SMTP_PASSWORD").expect("Failed to load SMTP_PASSWORD");
-    let domain = std::env::var("SMTP_DOMAIN").expect("Failed to load SMTP_DOMAIN");
-
-    let sender_name = std::env::var("SMTP_SENDER_NAME").expect("Failed to load SMTP_SENDER_NAME");
-    let sender_email = std::env::var("SMTP_SENDER_EMAIL")
-      .expect("Failed to load SMTP_SENDER_EMAIL")
-      .parse()
-      .expect("Failed to parse SMTP_SENDER_EMAIL");
-
-    let site_link = std::env::var("SMTP_SITE_LINK").expect("Failed to load SMTP_SITE_LINK");
-
-    let credentials = Credentials::new(username, password);
-    let transport = SmtpTransport::relay(&domain)
+impl Mailer {
+  pub fn init(config: &Config) -> Self {
+    let credentials = Credentials::new(config.smtp_username, config.smtp_password);
+    let transport = SmtpTransport::relay(&config.smtp_domain)
       .expect("Failed to initialize Smtp Transport")
       .credentials(credentials)
       .build();
 
-    let sender = Mailbox::new(Some(sender_name), sender_email);
+    let sender = Mailbox::new(
+      Some(config.smtp_sender_name.clone()),
+      config.smtp_sender_email.clone(),
+    );
 
     Self {
       transport,
       sender,
-      site_link,
+      site_link: config.smtp_site_link.clone(),
     }
   }
 }

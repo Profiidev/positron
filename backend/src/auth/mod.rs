@@ -26,7 +26,7 @@ pub async fn state(config: &Config, db: &DatabaseConnection) -> impl Test {
     .layer(Extension(PasskeyState::init()))
     .layer(Extension(PasswordState::init(config, db).await))
     .layer(Extension(TotpState::init(config)))
-    .layer(Extension(JwtState::init(db).await))
+    .layer(Extension(JwtState::init(config, db).await))
     .layer(Extension(JwtInvalidState::init()))
     .layer(Extension(webauthn(config)))
 }

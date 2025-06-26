@@ -101,7 +101,7 @@ async fn finish_registration(
   if db
     .tables()
     .passkey()
-    .passkey_name_exists(user.id, req.name)
+    .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
     return Err(Error::Conflict);

@@ -16,10 +16,16 @@ mod auth;
 mod config;
 mod cors;
 mod db;
+mod email;
 mod error;
+mod management;
+mod oauth;
 mod permission;
+mod s3;
+mod services;
 mod utils;
 mod well_known;
+mod ws;
 
 #[tokio::main]
 async fn main() {
@@ -55,18 +61,18 @@ fn routes() -> Router {
   Router::new()
     .nest("/auth", auth::router())
     .nest("/account", account::router())
-    .merge(email::router())
-    .merge(oauth::router())
-    .merge(management::router())
-    .merge(ws::router())
-    .merge(services::router())
+    .nest("/email", email::router())
+    .nest("/oauth", oauth::router())
+    .nest("/management", management::router())
+    .nest("/ws", ws::router())
+    .nest("/services", services::router())
     .merge(well_known::router())
 }
 
 async fn state<L>(config: &Config, db: &DatabaseConnection) -> ServiceBuilder<L> {
   ServiceBuilder::new()
     .layer(auth::state(config, db).await)
-    .layer(email::state())
+    .layer(email::state(config))
     .layer(oauth::state())
     .layer(management::state())
     .layer(services::state())

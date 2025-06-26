@@ -1,4 +1,5 @@
 use clap::Parser;
+use lettre::Address;
 use reqwest::Url;
 use tracing::Level;
 
@@ -42,4 +43,29 @@ pub struct Config {
 
   #[clap(long, env)]
   pub auth_pepper: String,
+
+  #[clap(long, env)]
+  pub auth_jwt_expiration: i64,
+
+  #[clap(long, env)]
+  pub auth_jwt_expiration_short: i64,
+
+  //email
+  #[clap(long, env)]
+  pub smtp_username: String,
+
+  #[clap(long, env)]
+  pub smtp_password: String,
+
+  #[clap(long, env)]
+  pub smtp_domain: String,
+
+  #[clap(long, env)]
+  pub smtp_sender_name: String,
+
+  #[clap(long, env)]
+  pub smtp_sender_email: Address,
+
+  #[clap(long, env)]
+  pub smtp_site_link: String,
 }
