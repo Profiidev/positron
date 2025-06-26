@@ -15,7 +15,7 @@ use webauthn_rs::{
   Webauthn, WebauthnBuilder,
 };
 
-use crate::{config::Config, db::DBTrait};
+use crate::{config::Config, db::DBTrait, from_req_extension};
 
 #[derive(Default, Clone)]
 pub struct PasskeyState {
@@ -24,6 +24,7 @@ pub struct PasskeyState {
   pub non_discover_auth_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
   pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
+from_req_extension!(PasskeyState);
 
 #[derive(Clone)]
 pub struct PasswordState {
@@ -31,12 +32,14 @@ pub struct PasswordState {
   pub pub_key: String,
   pub pepper: Vec<u8>,
 }
+from_req_extension!(PasswordState);
 
 #[derive(Clone)]
 pub struct TotpState {
   pub issuer: String,
   pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
+from_req_extension!(TotpState);
 
 pub fn webauthn(config: &Config) -> Webauthn {
   let additional_origins = config

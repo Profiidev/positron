@@ -96,3 +96,33 @@ pub fn hash_secret(pepper: &[u8], salt: &str, passphrase: &[u8]) -> Result<Strin
       .to_string(),
   )
 }
+
+#[macro_export]
+macro_rules! from_req_extension {
+  ($type:ty) => {
+    impl<S: Sync> axum::extract::FromRequestParts<S> for $type {
+      type Rejection = std::convert::Infallible;
+
+      async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        _state: &S,
+      ) -> Result<Self, Self::Rejection> {
+        use axum::RequestPartsExt;
+
+        Ok(
+          parts
+            .extract::<axum::Extension<Self>>()
+            .await
+            .expect(
+              format!(
+                "Should not fail. Did you add Extension({}) to your app?",
+                std::any::type_name::<Self>()
+              )
+              .as_str(),
+            )
+            .0,
+        )
+      }
+    }
+  };
+}

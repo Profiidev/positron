@@ -1,6 +1,6 @@
 use axum::{
   routing::{get, post},
-  Extension, Json, Router,
+  Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use http::StatusCode;
@@ -36,7 +36,7 @@ struct KeyRes {
   key: String,
 }
 
-async fn key(Extension(state): Extension<PasswordState>) -> Json<KeyRes> {
+async fn key(state: PasswordState) -> Json<KeyRes> {
   Json(KeyRes { key: state.pub_key })
 }
 
@@ -46,11 +46,11 @@ struct AuthRes {
 }
 
 async fn authenticate(
-  Extension(state): Extension<PasswordState>,
-  Extension(jwt): Extension<JwtState>,
+  state: PasswordState,
+  jwt: JwtState,
   db: Connection,
   mut cookies: CookieJar,
-  req: Json<LoginReq>,
+  Json(req): Json<LoginReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.tables().user().get_user_by_email(&req.email).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;
@@ -84,11 +84,11 @@ struct SpecialAccess {
 
 async fn special_access(
   auth: JwtClaims<JwtBase>,
-  Extension(state): Extension<PasswordState>,
-  Extension(jwt): Extension<JwtState>,
+  state: PasswordState,
+  jwt: JwtState,
   db: Connection,
   mut cookies: CookieJar,
-  req: Json<SpecialAccess>,
+  Json(req): Json<SpecialAccess>,
 ) -> Result<(CookieJar, TokenRes)> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;
@@ -115,9 +115,9 @@ struct PasswordChange {
 
 async fn change(
   auth: JwtClaims<JwtSpecial>,
-  Extension(state): Extension<PasswordState>,
+  state: PasswordState,
   db: Connection,
-  req: Json<PasswordChange>,
+  Json(req): Json<PasswordChange>,
 ) -> Result<StatusCode> {
   let user = db.tables().user().get_user(auth.sub).await?;
   let hash = hash_password(&state, &user.salt, &req.password)?;

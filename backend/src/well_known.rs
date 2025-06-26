@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tower::{Layer, Service};
 
-use crate::{config::Config, oauth::ConfigurationState};
+use crate::{config::Config, from_req_extension, oauth::ConfigurationState};
 
 pub fn router() -> Router {
   Router::new()
@@ -32,6 +32,7 @@ where
 struct StaticFiles {
   assetlinks: Value,
 }
+from_req_extension!(StaticFiles);
 
 impl StaticFiles {
   fn init(config: &Config) -> Self {
@@ -40,31 +41,6 @@ impl StaticFiles {
     }
   }
 }
-
-macro_rules! from_req_extension {
-  () => {
-    impl<S: Sync> axum::extract::FromRequestParts<S> for StaticFiles {
-      type Rejection = std::convert::Infallible;
-
-      async fn from_request_parts(
-        parts: &mut http::request::Parts,
-        _state: &S,
-      ) -> Result<Self, Self::Rejection> {
-        use axum::RequestPartsExt;
-
-        Ok(
-          parts
-            .extract::<axum::Extension<Self>>()
-            .await
-            .expect("Should not fail. Did you add Extension(StaticFiles) to your app?")
-            .0,
-        )
-      }
-    }
-  };
-}
-
-from_req_extension!();
 
 async fn assetlinks(state: StaticFiles) -> Json<Value> {
   Json(state.assetlinks.clone())
@@ -87,15 +63,12 @@ struct Resource {
   resource: String,
 }
 
-async fn webfinger(
-  Query(resource): Query<Resource>,
-  Extension(state): Extension<ConfigurationState>,
-) -> Json<WebFinger> {
+async fn webfinger(Query(resource): Query<Resource>, state: ConfigurationState) -> Json<WebFinger> {
   Json(WebFinger {
     subject: resource.resource,
     links: vec![Link {
       rel: "http://openid.net/specs/connect/1.0/issuer".to_string(),
-      href: state.issuer.clone(),
+      href: state.issuer,
     }],
   })
 }

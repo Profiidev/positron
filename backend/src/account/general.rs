@@ -4,7 +4,7 @@ use axum::{
   body::Bytes,
   extract::Path,
   routing::{get, post},
-  Extension, Json, Router,
+  Json, Router,
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
@@ -82,7 +82,7 @@ async fn info(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<UserInfo>
 async fn change_image(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  Extension(updater): Extension<UpdateState>,
+  updater: UpdateState,
   body: Bytes,
 ) -> Result<StatusCode> {
   let image = image::load_from_memory(&body)?;
@@ -109,12 +109,12 @@ struct UpdateReq {
 async fn update_profile(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  Extension(updater): Extension<UpdateState>,
-  req: Json<UpdateReq>,
+  updater: UpdateState,
+  Json(req): Json<UpdateReq>,
 ) -> Result<StatusCode> {
   db.tables()
     .user()
-    .update_profile(auth.sub, req.0.name)
+    .update_profile(auth.sub, req.name)
     .await?;
   updater.broadcast_message(UpdateType::User).await;
   tracing::info!("User {} edited their profile", auth.sub);

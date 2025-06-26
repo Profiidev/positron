@@ -16,16 +16,10 @@ mod auth;
 mod config;
 mod cors;
 mod db;
-mod email;
 mod error;
-mod management;
-mod oauth;
 mod permission;
-mod s3;
-mod services;
 mod utils;
 mod well_known;
-mod ws;
 
 #[tokio::main]
 async fn main() {

@@ -1,6 +1,6 @@
 use axum::{
   routing::{get, post},
-  Extension, Json, Router,
+  Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use http::StatusCode;
@@ -40,7 +40,7 @@ struct TotpSetupRes {
 async fn start_setup(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
-  Extension(state): Extension<TotpState>,
+  state: TotpState,
 ) -> Result<Json<TotpSetupRes>> {
   let user = db.tables().user().get_user(auth.sub).await?;
   if user.totp.is_some() {
@@ -71,10 +71,10 @@ async fn start_setup(
 
 async fn finish_setup(
   auth: JwtClaims<JwtSpecial>,
-  Extension(state): Extension<TotpState>,
+  state: TotpState,
   db: Connection,
-  Extension(updater): Extension<UpdateState>,
-  req: Json<TotpReq>,
+  updater: UpdateState,
+  Json(req): Json<TotpReq>,
 ) -> Result<StatusCode> {
   let mut lock = state.reg_state.lock().await;
   let totp = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
@@ -97,9 +97,9 @@ async fn finish_setup(
 async fn confirm(
   auth: JwtClaims<JwtTotpRequired>,
   db: Connection,
-  Extension(jwt): Extension<JwtState>,
+  jwt: JwtState,
   mut cookies: CookieJar,
-  req: Json<TotpReq>,
+  Json(req): Json<TotpReq>,
 ) -> Result<(CookieJar, TokenRes)> {
   let user = db.tables().user().get_user(auth.sub).await?;
 
@@ -125,7 +125,7 @@ async fn confirm(
 async fn remove(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
-  Extension(updater): Extension<UpdateState>,
+  updater: UpdateState,
 ) -> Result<StatusCode> {
   db.tables().user().totp_remove(auth.sub).await?;
   updater.send_message(auth.sub, UpdateType::User).await;

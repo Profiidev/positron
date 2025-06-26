@@ -1,6 +1,6 @@
 use axum::{
   routing::{get, post},
-  Extension, Json, Router,
+  Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use chrono::DateTime;
@@ -23,8 +23,8 @@ async fn logout(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   mut cookies: CookieJar,
-  Extension(state): Extension<JwtInvalidState>,
-  Extension(jwt): Extension<JwtState>,
+  state: JwtInvalidState,
+  jwt: JwtState,
 ) -> Result<(CookieJar, TokenRes)> {
   let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);
   reset_cookie.set_max_age(Some(Duration::seconds(0)));
@@ -47,7 +47,7 @@ async fn logout(
 async fn test_token(
   auth: Option<JwtClaims<JwtBase>>,
   mut cookies: CookieJar,
-  Extension(jwt): Extension<JwtState>,
+  jwt: JwtState,
 ) -> (CookieJar, Json<bool>) {
   if auth.is_none() {
     let mut reset_cookie = jwt.create_cookie::<JwtBase>("token", "".into(), true);

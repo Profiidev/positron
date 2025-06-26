@@ -1,6 +1,6 @@
 use axum::{
   routing::{self, post},
-  Extension, Json, Router,
+  Json, Router,
 };
 
 use crate::{
@@ -23,10 +23,10 @@ async fn get(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<SettingsIn
 async fn update(
   auth: JwtClaims<JwtBase>,
   db: Connection,
-  Extension(updater): Extension<UpdateState>,
-  req: Json<SettingsInfo>,
+  updater: UpdateState,
+  Json(req): Json<SettingsInfo>,
 ) -> Result<()> {
-  db.tables().settings().set(auth.sub, req.0).await?;
+  db.tables().settings().set(auth.sub, req).await?;
   updater.send_message(auth.sub, UpdateType::Settings).await;
   tracing::info!("User {} updated their settings", auth.sub);
   Ok(())

@@ -27,7 +27,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{db::DBTrait, utils::jwt_from_request};
+use crate::{db::DBTrait, from_req_extension, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims<T: JwtType> {
@@ -97,6 +97,7 @@ impl JwtType for JwtTotpRequired {
 pub struct JwtInvalidState {
   pub count: Arc<Mutex<i32>>,
 }
+from_req_extension!(JwtInvalidState);
 
 impl JwtInvalidState {
   pub fn init() -> Self {
@@ -116,6 +117,7 @@ pub struct JwtState {
   pub kid: String,
   pub public_key: RsaPublicKey,
 }
+from_req_extension!(JwtState);
 
 impl JwtState {
   pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
