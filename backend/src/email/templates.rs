@@ -14,18 +14,17 @@ pub fn confirm_code(code: &String, old: bool, link: &String) -> String {
       <div style="display: flex; flex-direction: column;">
         <header style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
           <h2 style="margin: 0;">Confirm Code</h2>
-          <p style="margin: 0;">Enter this code on the website to confirm that this is your {} email</p>
+          <p style="margin: 0;">Enter this code on the website to confirm that this is your {old} email</p>
         </header>
         <div style="display: flex; align-items: center; justify-content: center;">
-          <h3>{}</h3>
+          <h3>{code}</h3>
         </div>
         <footer style="display: flex; align-items: center; justify-content: center;">
-          <p>Mail send from <a href="{}">{}</a></p>
+          <p>Mail send from <a href="{link}">{link}</a></p>
         </footer>
       </div>
     </body>
   </html>
-  "#,
-    old, code, link, link
+  "#
   )
 }

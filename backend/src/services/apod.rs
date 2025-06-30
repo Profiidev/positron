@@ -51,7 +51,7 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<V
     let image = s3
       .folders()
       .apod()
-      .download(&format!("{}_preview.webp", file_name))
+      .download(&format!("{file_name}_preview.webp"))
       .await?;
 
     apod_infos.push(ListRes {
@@ -140,11 +140,11 @@ async fn get_image_info(
     let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
     s3.folders()
       .apod()
-      .upload(&format!("{}.webp", file_name), &image)
+      .upload(&format!("{file_name}.webp"), &image)
       .await?;
     s3.folders()
       .apod()
-      .upload(&format!("{}_preview.webp", file_name), &image_scaled)
+      .upload(&format!("{file_name}_preview.webp"), &image_scaled)
       .await?;
 
     db.tables()
@@ -183,7 +183,7 @@ async fn get_image(
   let image = s3
     .folders()
     .apod()
-    .download(&format!("{}.webp", file_name))
+    .download(&format!("{file_name}.webp"))
     .await?;
   Ok(Json(GetRes {
     image: BASE64_STANDARD.encode(image),
@@ -201,7 +201,7 @@ async fn random(s3: S3, db: Connection) -> Result<Vec<u8>> {
   let image = s3
     .folders()
     .apod()
-    .download(&format!("{}.webp", file_name))
+    .download(&format!("{file_name}.webp"))
     .await?;
 
   Ok(image)
