@@ -15,7 +15,7 @@ impl<'b> ApodFolder<'b> {
   pub async fn upload(&self, path: &str, image: &[u8]) -> Result<(), S3Error> {
     let ret = self
       .bucket
-      .put_object(format!("apod/{}", path), image)
+      .put_object(format!("apod/{path}"), image)
       .await?;
 
     if ret.status_code() != StatusCode::OK.as_u16() {
@@ -26,7 +26,7 @@ impl<'b> ApodFolder<'b> {
   }
 
   pub async fn download(&self, path: &str) -> Result<Vec<u8>, S3Error> {
-    let ret = self.bucket.get_object(format!("apod/{}", path)).await?;
+    let ret = self.bucket.get_object(format!("apod/{path}")).await?;
 
     if ret.status_code() != StatusCode::OK.as_u16() {
       Err(S3Error::Download)
