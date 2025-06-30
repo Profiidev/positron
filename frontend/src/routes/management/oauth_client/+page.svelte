@@ -31,6 +31,7 @@
   } from 'positron-components/components/ui';
   import {
     FormInput,
+    FormSwitch,
     type FormType
   } from 'positron-components/components/form';
   import { RequestError } from 'positron-components/backend';
@@ -40,7 +41,6 @@
   import { RotateCw } from '@lucide/svelte';
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
-  import FormSwitch from './FormSwitch.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
 
   interface Props {
