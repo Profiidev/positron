@@ -25,6 +25,6 @@ serde_json = "1"
 tauri-plugin-http = "2"
 tauri-plugin-websocket = "2"
 tauri-plugin-webauthn = "0.2.0"
-cookie_store = { version = "0.21.1", features = ["serde"] }
+cookie_store = { version = "0.22.0", features = ["serde"] }
 tokio = { version = "1.46.1", features = ["sync", "macros"] }
 bytes = "1.10.1"
