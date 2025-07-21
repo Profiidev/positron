@@ -23,7 +23,7 @@ lettre = { version = "0.11.17", default-features = false, features = [
   "builder",
 ] }
 openssl = { version = "0.10.73", features = ["vendored"] }
-rand = { version = "0.9.1", default-features = false, features = [
+rand = { version = "0.9.2", default-features = false, features = [
   "std",
   "os_rng",
 ] }
@@ -44,7 +44,7 @@ migration = { path = "migration" }
 rust-s3 = "0.35.1"
 reqwest = { version = "0.12.22", features = ["json"] }
 async-nats = "0.42.0"
-serde_json = "1.0.140"
+serde_json = "1.0.141"
 axum = { version = "0.8.4", features = ["macros", "ws", "tracing"] }
 axum-extra = { version = "0.10.1", features = ["cookie", "typed-header"] }
 tracing-subscriber = "0.3.19"
