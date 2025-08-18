@@ -1,7 +1,8 @@
 import { PUBLIC_IS_APP } from '$env/static/public';
 import type { OAuthParams } from '$lib/backend/auth/types.svelte.js';
+import type { PageServerLoad } from './$types';
 
-export const load = ({ url }) => {
+export const load: PageServerLoad = ({ url }) => {
   let code;
   let name;
   if (PUBLIC_IS_APP !== 'true') {

@@ -4,8 +4,9 @@ import { redirect } from '@sveltejs/kit';
 import { superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { loginSchema, pin } from './schema.svelte.js';
+import type { PageServerLoad } from './$types.js';
 
-export const load = async ({ cookies, url }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   if (PUBLIC_IS_APP === 'true')
     return {
       loginForm: await superValidate(zod4(loginSchema)),
