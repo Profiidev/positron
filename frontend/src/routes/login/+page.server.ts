@@ -2,14 +2,14 @@ import { PUBLIC_IS_APP } from '$env/static/public';
 import type { OAuthParams } from '$lib/backend/auth/types.svelte.js';
 import { redirect } from '@sveltejs/kit';
 import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
+import { zod4 } from 'sveltekit-superforms/adapters';
 import { loginSchema, pin } from './schema.svelte.js';
 
 export const load = async ({ cookies, url }) => {
   if (PUBLIC_IS_APP === 'true')
     return {
-      loginForm: await superValidate(zod(loginSchema)),
-      pin: await superValidate(zod(pin))
+      loginForm: await superValidate(zod4(loginSchema)),
+      pin: await superValidate(zod4(pin))
     };
 
   let cookie = cookies.get('token');
@@ -29,12 +29,12 @@ export const load = async ({ cookies, url }) => {
         code,
         name
       } as OAuthParams,
-      loginForm: await superValidate(zod(loginSchema)),
-      pin: await superValidate(zod(pin))
+      loginForm: await superValidate(zod4(loginSchema)),
+      pin: await superValidate(zod4(pin))
     };
   }
   return {
-    loginForm: await superValidate(zod(loginSchema)),
-    pin: await superValidate(zod(pin))
+    loginForm: await superValidate(zod4(loginSchema)),
+    pin: await superValidate(zod4(pin))
   };
 };
