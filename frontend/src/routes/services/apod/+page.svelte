@@ -6,14 +6,9 @@
     Button,
     ScrollArea
   } from 'positron-components/components/ui';
-  import { Datepicker } from 'positron-components/components/util';
+  import { Datepicker, DateUtils } from 'positron-components/components/util';
   import { DateTime } from 'positron-components/util';
   import type { ApodData, ApodInfo } from '$lib/backend/services/types.svelte';
-  import {
-    getLocalTimeZone,
-    now,
-    parseAbsolute
-  } from '@internationalized/date';
   import {
     apod,
     getApodImage,
@@ -58,7 +53,7 @@
   };
 
   const itemClick = (data: string) => {
-    date = parseAbsolute(data, getLocalTimeZone());
+    date = DateUtils.parseAbsolute(data, DateUtils.getLocalTimeZone());
     currentTab = 'today';
   };
 </script>
@@ -103,7 +98,7 @@
         <div class="mt-6 flex flex-row">
           <Datepicker
             bind:value={date}
-            end={now(getLocalTimeZone())}
+            end={DateUtils.now(DateUtils.getLocalTimeZone())}
             class={current_data ? 'mr-5' : ''}
           />
           {#if current_data}
