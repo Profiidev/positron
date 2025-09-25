@@ -12,15 +12,15 @@ services:
     command: npm run dev -- --host
 
   backend:
-    image: ghcr.io/profiidev/images/rust-musl-watch:main
+    image: ghcr.io/profiidev/images/rust-musl-watch@sha256:f963ec13dcd4b260b12ad4cc36d94d62676406707d7de50c7d58c8ed068f46f9
     volumes:
       - ./backend:/app
     networks:
       - nginx
       - nats
     tty: true
-    entrypoint: ['tini', '--']
-    command: ['cargo', 'watch', '-x', 'run']
+    entrypoint: ["tini", "--"]
+    command: ["cargo", "watch", "-x", "run"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,7 +30,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
     ports:
-      - '1421:1420'
+      - "1421:1420"
     networks:
       - nginx
     environment:
@@ -51,9 +51,9 @@ services:
     networks:
       - nginx
     ports:
-      - '9302:5432'
+      - "9302:5432"
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'test']
+      test: ["CMD", "pg_isready", "-U", "test"]
       interval: 60s
       timeout: 5s
       retries: 5
