@@ -35,7 +35,9 @@ impl S3 {
 
     let bucket = Bucket::new(&config.s3_bucket, region, credentials)
       .expect("Failed to init S3 Bucket")
-      .with_path_style();
+      .with_path_style()
+      .set_dangereous_config(true, false)
+      .expect("Failed to set S3 Bucket config");
 
     if !bucket
       .exists()
@@ -46,7 +48,7 @@ impl S3 {
     }
 
     Self {
-      bucket: Arc::new(*bucket),
+      bucket: Arc::new(bucket),
     }
   }
 
