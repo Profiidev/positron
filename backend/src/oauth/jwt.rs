@@ -9,7 +9,7 @@ use crate::{auth::jwt::JwtBase, utils::jwt_from_request};
 
 use super::scope::Scope;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct OAuthClaims {
   pub sub: Uuid,
   pub exp: i64,

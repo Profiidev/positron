@@ -31,7 +31,9 @@ struct Token {
   token: String,
 }
 
-pub async fn jwt_from_request<C: DeserializeOwned, T: JwtType>(req: &mut Parts) -> Result<C> {
+pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
+  req: &mut Parts,
+) -> Result<C> {
   let bearer = req
     .extract::<TypedHeader<Authorization<Bearer>>>()
     .await
