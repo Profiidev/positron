@@ -7,6 +7,7 @@ import { enhancedImages } from '@sveltejs/enhanced-img';
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
+// @ts-ignore
 export default defineConfig(() => ({
   plugins: [enhancedImages(), tailwindcss(), sveltekit()],
 
