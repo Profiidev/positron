@@ -29,7 +29,7 @@ use uuid::Uuid;
 
 use crate::{config::Config, db::DBTrait, from_req_extension, utils::jwt_from_request};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct JwtClaims<T: JwtType> {
   pub exp: i64,
   pub iss: String,
@@ -43,12 +43,12 @@ pub struct TokenRes<T: Serialize = ()> {
   pub body: T,
 }
 
-pub trait JwtType: Default {
+pub trait JwtType: Default + Clone {
   fn duration(long: i64, short: i64) -> i64;
   fn cookie_name() -> &'static str;
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Clone)]
 pub enum JwtBase {
   #[default]
   Base,
@@ -63,7 +63,7 @@ impl JwtType for JwtBase {
   }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Clone)]
 pub enum JwtSpecial {
   #[default]
   Special,
@@ -78,7 +78,7 @@ impl JwtType for JwtSpecial {
   }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Clone)]
 pub enum JwtTotpRequired {
   #[default]
   TotpRequired,
@@ -162,7 +162,7 @@ impl JwtState {
       .build()
   }
 
-  pub fn validate_token<C: DeserializeOwned>(&self, token: &str) -> Result<C, Error> {
+  pub fn validate_token<C: DeserializeOwned + Clone>(&self, token: &str) -> Result<C, Error> {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
