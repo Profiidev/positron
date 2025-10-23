@@ -1,15 +1,16 @@
+use centaurus::FromReqExtension;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
+use tracing::instrument;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct ApodState {
   api_key: String,
   client: Client,
 }
-from_req_extension!(ApodState);
 
 #[derive(Deserialize)]
 struct ImageRes {
@@ -33,6 +34,7 @@ impl ApodState {
 }
 
 impl ApodState {
+  #[instrument(skip(self))]
   pub async fn get_image(&self, date: DateTime<Utc>) -> Result<Option<Image>, reqwest::Error> {
     tracing::debug!("Loading new Apod from {}", date);
     let formatted_date = date.date_naive().format("%Y-%m-%d").to_string();

@@ -1,9 +1,9 @@
 use axum::{Extension, Router};
-use sea_orm::DatabaseConnection;
+use centaurus::router_extension;
 pub use state::ConfigurationState;
 use state::{AuthorizeState, ClientState};
 
-use crate::{config::Config, state_trait};
+use crate::config::Config;
 
 mod auth;
 mod client_auth;
@@ -24,8 +24,8 @@ pub fn router() -> Router {
     .merge(user::router())
 }
 
-state_trait!(
-  async fn oauth(self, config: &Config, _db: &DatabaseConnection) -> Self {
+router_extension!(
+  async fn oauth(self, config: &Config) -> Self {
     self
       .layer(Extension(AuthorizeState::init(config)))
       .layer(Extension(ClientState::init(config)))

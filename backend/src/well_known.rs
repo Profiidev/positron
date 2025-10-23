@@ -1,9 +1,9 @@
 use axum::{extract::Query, routing::get, Extension, Json, Router};
-use sea_orm::DatabaseConnection;
+use centaurus::{router_extension, FromReqExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{config::Config, from_req_extension, oauth::ConfigurationState, state_trait};
+use crate::{config::Config, oauth::ConfigurationState};
 
 pub fn router() -> Router {
   Router::new()
@@ -11,17 +11,16 @@ pub fn router() -> Router {
     .route("/webfinger", get(webfinger))
 }
 
-state_trait!(
-  async fn well_known(self, config: &Config, _db: &DatabaseConnection) -> Self {
+router_extension!(
+  async fn well_known(self, config: &Config) -> Self {
     self.layer(Extension(StaticFiles::init(config)))
   }
 );
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 struct StaticFiles {
   assetlinks: Value,
 }
-from_req_extension!(StaticFiles);
 
 impl StaticFiles {
   fn init(config: &Config) -> Self {

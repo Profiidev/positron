@@ -3,19 +3,14 @@ use axum::{
   Json, Router,
 };
 use axum_extra::extract::CookieJar;
+use centaurus::{auth::pw::PasswordState, bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
-use crate::{
-  db::{Connection, DBTrait},
-  error::{Error, Result},
-  utils::hash_password,
-};
+use crate::db::DBTrait;
 
-use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes},
-  state::PasswordState,
-};
+use super::jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes};
 
 pub fn router() -> Router {
   Router::new()
@@ -45,6 +40,7 @@ struct AuthRes {
   totp: bool,
 }
 
+#[instrument(skip(db, state, jwt, cookies, req))]
 async fn authenticate(
   state: PasswordState,
   jwt: JwtState,
@@ -52,17 +48,17 @@ async fn authenticate(
   mut cookies: CookieJar,
   Json(req): Json<LoginReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
-  let user = db.tables().user().get_user_by_email(&req.email).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
+  let user = db.user().get_user_by_email(&req.email).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
   let (cookie, totp) = if user.totp.is_some() {
     (jwt.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    db.tables().user().logged_in(user.id).await?;
+    db.user().logged_in(user.id).await?;
 
     (jwt.create_token::<JwtBase>(user.id)?, false)
   };
@@ -82,6 +78,7 @@ struct SpecialAccess {
   password: String,
 }
 
+#[instrument(skip(db, state, jwt, cookies, req))]
 async fn special_access(
   auth: JwtClaims<JwtBase>,
   state: PasswordState,
@@ -90,14 +87,14 @@ async fn special_access(
   mut cookies: CookieJar,
   Json(req): Json<SpecialAccess>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
+  let user = db.user().get_user(auth.sub).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
-  db.tables().user().used_special_access(auth.sub).await?;
+  db.user().used_special_access(auth.sub).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(user.id)?;
   cookies = cookies.add(cookie);
@@ -113,21 +110,22 @@ struct PasswordChange {
   password_confirm: String,
 }
 
+#[instrument(skip(db, state, req))]
 async fn change(
   auth: JwtClaims<JwtSpecial>,
   state: PasswordState,
   db: Connection,
   Json(req): Json<PasswordChange>,
 ) -> Result<StatusCode> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
-  let hash_confirm = hash_password(&state, &user.salt, &req.password_confirm)?;
+  let user = db.user().get_user(auth.sub).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
+  let hash_confirm = state.pw_hash(&user.salt, &req.password_confirm)?;
 
   if hash != hash_confirm {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passwords do not match");
   }
 
-  db.tables().user().change_password(user.id, hash).await?;
+  db.user().change_password(user.id, hash).await?;
 
   Ok(StatusCode::OK)
 }

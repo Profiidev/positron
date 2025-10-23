@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
+use centaurus::{impl_from_error, FromReqExtension};
 use chrono::{DateTime, Duration, Utc};
+use http::StatusCode;
 use lettre::{
   address::AddressError,
   error::Error,
@@ -11,24 +13,23 @@ use lettre::{
 use rand::{distr::Uniform, Rng};
 use thiserror::Error;
 use tokio::sync::Mutex;
+use tracing::instrument;
 use uuid::Uuid;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct Mailer {
   transport: SmtpTransport,
   sender: Mailbox,
   pub site_link: String,
 }
-from_req_extension!(Mailer);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct EmailState {
   pub change_req: Arc<Mutex<HashMap<Uuid, ChangeInfo>>>,
   pub exp: i64,
 }
-from_req_extension!(EmailState);
 
 #[derive(Clone)]
 pub struct ChangeInfo {
@@ -37,6 +38,8 @@ pub struct ChangeInfo {
   pub new_code: String,
   pub new_email: String,
 }
+
+impl_from_error!(MailError, StatusCode::INTERNAL_SERVER_ERROR);
 
 #[derive(Error, Debug)]
 pub enum MailError {
@@ -110,7 +113,10 @@ impl Mailer {
 
     let sender = Mailbox::new(
       Some(config.smtp_sender_name.clone()),
-      config.smtp_sender_email.clone(),
+      config
+        .smtp_sender_email
+        .parse()
+        .expect("Invalid sender email address"),
     );
 
     Self {
@@ -122,6 +128,7 @@ impl Mailer {
 }
 
 impl Mailer {
+  #[instrument(skip(self, body))]
   pub fn send_mail(
     &self,
     username: String,

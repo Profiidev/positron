@@ -4,11 +4,11 @@ use entity::{group, o_auth_scope, o_auth_scope_o_auth_policy, prelude::*};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 
-use crate::db::tables::util::update_relations;
+use crate::db::util::update_relations;
 
 use super::oauth_policy::BasicOAuthPolicyInfo;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthScopeInfo {
   pub uuid: Uuid,
   pub name: String,

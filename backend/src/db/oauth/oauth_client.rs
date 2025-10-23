@@ -5,14 +5,14 @@ use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
-  db::tables::{
+  db::{
     user::{group::BasicGroupInfo, user::BasicUserInfo},
     util::update_relations,
   },
   oauth::scope::Scope,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthClientInfo {
   pub name: String,
   pub client_id: Uuid,

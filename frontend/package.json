@@ -23,11 +23,11 @@
     "@types/luxon": "3.7.1",
     "jsencrypt": "3.5.4",
     "luxon": "3.7.2",
-    "positron-components": "^1.7.0",
+    "positron-components": "^1.7.1",
     "tauri-plugin-webauthn-api": "^0.2.0"
   },
   "devDependencies": {
-    "@lucide/svelte": "^0.544.0",
+    "@lucide/svelte": "^0.546.0",
     "@sveltejs/adapter-node": "^5.3.3",
     "@sveltejs/adapter-static": "3.0.10",
     "@sveltejs/kit": "2.44.0",

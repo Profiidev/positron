@@ -1,11 +1,9 @@
 use axum::{extract::Query, routing::get, Json, Router};
+use centaurus::{db::init::Connection, error::Result, serde::empty_string_as_none};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
-use crate::{
-  db::{Connection, DBTrait},
-  error::Result,
-  utils::empty_string_as_none,
-};
+use crate::db::DBTrait;
 
 use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 
@@ -31,18 +29,19 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ConfigQuery {
   #[serde(default, deserialize_with = "empty_string_as_none")]
   internal: Option<bool>,
 }
 
+#[instrument(skip(state, db))]
 async fn config(
   state: ConfigurationState,
   db: Connection,
   Query(query): Query<ConfigQuery>,
 ) -> Result<Json<Configuration>> {
-  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES
       .iter()

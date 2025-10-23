@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_SCOPES: [&str; 4] = ["openid", "email", "profile", "image"];
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Scope(Vec<String>);
 
 impl Scope {

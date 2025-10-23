@@ -5,17 +5,23 @@ use axum::{
   Json, Router,
 };
 use base64::prelude::*;
+use centaurus::{
+  bail,
+  db::init::Connection,
+  error::{ErrorReportStatusExt, Result},
+};
 use chrono::{DateTime, Utc};
 use entity::{apod, sea_orm_active_enums::Permission};
+use http::StatusCode;
 use image::{imageops::FilterType, ImageFormat};
 use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::user::BasicUserInfo, Connection, DBTrait},
-  error::{Error, Result},
+  db::{user::user::BasicUserInfo, DBTrait},
   permission::PermissionTrait,
   s3::S3,
   ws::state::{UpdateState, UpdateType},
@@ -40,16 +46,16 @@ struct ListRes {
   user: BasicUserInfo,
 }
 
+#[instrument(skip(db, s3))]
 async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
-  let apods = db.tables().apod().list().await?;
+  let apods = db.apod().list().await?;
   let mut apod_infos = Vec::new();
 
   for apod in apods {
     let file_name = apod.date.format("%Y-%m-%d").to_string();
     let image = s3
-      .folders()
       .apod()
       .download(&format!("{file_name}_preview.webp"))
       .await?;
@@ -68,12 +74,13 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<V
   Ok(Json(apod_infos))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct SetGoodReq {
   date: DateTime<Utc>,
   good: bool,
 }
 
+#[instrument(skip(db, updater))]
 async fn set_good(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -82,8 +89,7 @@ async fn set_good(
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::ApodSelect).await?;
 
-  db.tables()
-    .apod()
+  db.apod()
     .set_good(req.date.date_naive(), auth.sub, req.good)
     .await?;
 
@@ -93,17 +99,18 @@ async fn set_good(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GetReq {
   date: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct GetInfoRes {
   title: String,
   user: Option<BasicUserInfo>,
 }
 
+#[instrument(skip(state, db, s3))]
 async fn get_image_info(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -113,18 +120,13 @@ async fn get_image_info(
 ) -> Result<Json<GetInfoRes>> {
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
-  let res = if let Some((apod, user)) = db
-    .tables()
-    .apod()
-    .get_for_date(req.date.date_naive())
-    .await?
-  {
+  let res = if let Some((apod, user)) = db.apod().get_for_date(req.date.date_naive()).await? {
     GetInfoRes {
       title: apod.title,
       user,
     }
   } else {
-    let image_data = state.get_image(req.date).await?.ok_or(Error::Gone)?;
+    let image_data = state.get_image(req.date).await?.status(StatusCode::GONE)?;
 
     let image = image::load_from_memory(&image_data.image)?;
     let scaled = image.resize(256, 256, FilterType::Lanczos3);
@@ -138,17 +140,14 @@ async fn get_image_info(
     let image_scaled = scaled_cursor.into_inner();
 
     let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-    s3.folders()
-      .apod()
+    s3.apod()
       .upload(&format!("{file_name}.webp"), &image)
       .await?;
-    s3.folders()
-      .apod()
+    s3.apod()
       .upload(&format!("{file_name}_preview.webp"), &image_scaled)
       .await?;
 
-    db.tables()
-      .apod()
+    db.apod()
       .create(apod::Model {
         id: Uuid::new_v4(),
         title: image_data.title.clone(),
@@ -171,6 +170,7 @@ struct GetRes {
   image: String,
 }
 
+#[instrument(skip(s3, db))]
 async fn get_image(
   auth: JwtClaims<JwtBase>,
   s3: S3,
@@ -180,29 +180,22 @@ async fn get_image(
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-  let image = s3
-    .folders()
-    .apod()
-    .download(&format!("{file_name}.webp"))
-    .await?;
+  let image = s3.apod().download(&format!("{file_name}.webp")).await?;
   Ok(Json(GetRes {
     image: BASE64_STANDARD.encode(image),
   }))
 }
 
+#[instrument(skip(s3, db))]
 async fn random(s3: S3, db: Connection) -> Result<Vec<u8>> {
-  let list = db.tables().apod().list().await?;
+  let list = db.apod().list().await?;
 
   let Some(choice) = list.choose(&mut rand::rng()) else {
-    return Err(Error::Gone);
+    bail!(GONE, "No APOD images available");
   };
 
   let file_name = choice.date.format("%Y-%m-%d").to_string();
-  let image = s3
-    .folders()
-    .apod()
-    .download(&format!("{file_name}.webp"))
-    .await?;
+  let image = s3.apod().download(&format!("{file_name}.webp")).await?;
 
   Ok(image)
 }

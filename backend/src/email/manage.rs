@@ -1,11 +1,12 @@
 use axum::{routing::post, Json, Router};
+use centaurus::{bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::Deserialize;
+use tracing::instrument;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
-  db::{Connection, DBTrait},
-  error::{Error, Result},
+  db::DBTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -20,11 +21,12 @@ pub fn router() -> Router {
     .route("/finish_change", post(finish_change))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct EmailChange {
   new_email: String,
 }
 
+#[instrument(skip(db, mailer, state))]
 async fn start_change(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
@@ -32,19 +34,14 @@ async fn start_change(
   state: EmailState,
   Json(req): Json<EmailChange>,
 ) -> Result<StatusCode> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
-  if db
-    .tables()
-    .user()
-    .user_exists(req.new_email.clone())
-    .await?
-  {
-    return Err(Error::Conflict);
+  if db.user().user_exists(req.new_email.clone()).await? {
+    bail!(CONFLICT, "user with the given email already exists");
   }
 
   let Some(code) = state.gen_info(req.new_email.clone()) else {
-    return Err(Error::InternalServerError);
+    bail!(INTERNAL_SERVER_ERROR, "failed to generate change info");
   };
 
   state.change_req.lock().await.insert(auth.sub, code.clone());
@@ -66,12 +63,13 @@ async fn start_change(
   Ok(StatusCode::OK)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct EmailCode {
   old_code: String,
   new_code: String,
 }
 
+#[instrument(skip(db, state, updater))]
 async fn finish_change(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
@@ -81,15 +79,14 @@ async fn finish_change(
 ) -> Result<StatusCode> {
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {
-    return Err(Error::BadRequest);
+    bail!("no email change request found");
   };
 
   if !info.check_old(req.old_code) || !info.check_new(req.new_code) {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "invalid confirmation codes");
   }
 
-  db.tables()
-    .user()
+  db.user()
     .change_email(auth.sub, info.new_email.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::User).await;

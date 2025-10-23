@@ -5,21 +5,18 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::{auth::pw::PasswordState, bail, db::init::Connection, error::Result};
 use chrono::Utc;
 use entity::{sea_orm_active_enums::Permission, user};
 use rsa::rand_core::OsRng;
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::{
-    jwt::{JwtBase, JwtClaims},
-    state::PasswordState,
-  },
-  db::{tables::user::user::UserInfo, Connection, DBTrait},
-  error::{Error, Result},
+  auth::jwt::{JwtBase, JwtClaims},
+  db::{user::user::UserInfo, DBTrait},
   permission::PermissionTrait,
-  utils::hash_password,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -34,18 +31,19 @@ pub fn router() -> Router {
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<UserInfo>>> {
   Permission::check(&db, auth.sub, Permission::UserList).await?;
 
-  let users = db.tables().user().list().await?;
+  let users = db.user().list().await?;
 
   Ok(Json(users))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserEdit {
   user: Uuid,
   name: String,
   permissions: Vec<Permission>,
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -55,19 +53,21 @@ async fn edit(
   Permission::check(&db, auth.sub, Permission::UserEdit).await?;
   Permission::is_privileged_enough(&db, auth.sub, req.user).await?;
 
-  let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
-  let user = db.tables().user().get_user(req.user).await?;
+  let editor_permissions = db.user().list_permissions(auth.sub).await?;
+  let user = db.user().get_user(req.user).await?;
 
   let new_perm: HashSet<_> = req.permissions.clone().into_iter().collect();
   let old_perm: HashSet<_> = user.permissions.into_iter().collect();
   let diff: Vec<_> = new_perm.symmetric_difference(&old_perm).cloned().collect();
 
   if diff.iter().any(|p| !editor_permissions.contains(p)) {
-    return Err(Error::Unauthorized);
+    bail!(
+      UNAUTHORIZED,
+      "user does not have permission to assign one or more of the requested permissions"
+    );
   }
 
-  db.tables()
-    .user()
+  db.user()
     .edit_user(user.id, req.permissions, req.name.clone())
     .await?;
   updater.broadcast_message(UpdateType::User).await;
@@ -76,13 +76,14 @@ async fn edit(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserCreateReq {
   name: String,
   email: String,
   password: String,
 }
 
+#[instrument(skip(db, pw, updater))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -92,16 +93,15 @@ async fn create(
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::UserCreate).await?;
 
-  let exists = db.tables().user().user_exists(req.email.clone()).await?;
+  let exists = db.user().user_exists(req.email.clone()).await?;
   if exists {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "user with the given email already exists");
   }
 
   let salt = SaltString::generate(OsRng {}).to_string();
-  let password = hash_password(&pw, &salt, &req.password)?;
+  let password = pw.pw_hash(&salt, &req.password)?;
 
-  db.tables()
-    .user()
+  db.user()
     .create_user(user::Model {
       id: Uuid::new_v4(),
       name: req.name.clone(),
@@ -123,11 +123,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserDelete {
   uuid: Uuid,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -137,7 +138,7 @@ async fn delete(
   Permission::check(&db, auth.sub, Permission::UserDelete).await?;
   Permission::is_privileged_enough(&db, auth.sub, req.uuid).await?;
 
-  db.tables().user().delete_user(req.uuid).await?;
+  db.user().delete_user(req.uuid).await?;
   updater.broadcast_message(UpdateType::User).await;
   tracing::info!("User {} deleted user {}", auth.sub, req.uuid);
 

@@ -9,7 +9,7 @@ use crate::{auth::jwt::JwtBase, utils::jwt_from_request};
 
 use super::scope::Scope;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OAuthClaims {
   pub sub: Uuid,
   pub exp: i64,
@@ -32,7 +32,7 @@ pub struct OAuthClaims {
 }
 
 impl<S: Sync> FromRequestParts<S> for OAuthClaims {
-  type Rejection = crate::error::Error;
+  type Rejection = centaurus::error::ErrorReport;
 
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
     jwt_from_request::<OAuthClaims, JwtBase>(parts).await

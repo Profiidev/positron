@@ -1,15 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
+use centaurus::{serde::empty_string_as_none, FromReqExtension};
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{config::Config, from_req_extension, utils::empty_string_as_none};
+use crate::config::Config;
 
 use super::scope::Scope;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AuthReq {
   pub response_type: String,
   pub client_id: String,
@@ -32,21 +33,19 @@ pub struct CodeReq {
   pub nonce: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct AuthorizeState {
   pub frontend_url: String,
   pub auth_pending: Arc<Mutex<HashMap<Uuid, (i64, AuthReq)>>>,
   pub auth_codes: Arc<Mutex<HashMap<Uuid, CodeReq>>>,
 }
-from_req_extension!(AuthorizeState);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct ConfigurationState {
   pub issuer: String,
   pub backend_url: String,
   pub backend_url_internal: String,
 }
-from_req_extension!(ConfigurationState);
 
 impl ConfigurationState {
   pub fn init(config: &Config) -> Self {
@@ -75,11 +74,10 @@ pub fn get_timestamp_10_min() -> i64 {
     .timestamp()
 }
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct ClientState {
   pub pepper: Vec<u8>,
 }
-from_req_extension!(ClientState);
 
 impl ClientState {
   pub fn init(config: &Config) -> Self {

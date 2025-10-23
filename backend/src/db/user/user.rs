@@ -15,7 +15,7 @@ pub struct UserInfo {
   pub access_level: i32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BasicUserInfo {
   pub name: String,
   pub uuid: Uuid,

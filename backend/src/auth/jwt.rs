@@ -1,4 +1,4 @@
-use std::{convert::Infallible, sync::Arc};
+use std::{convert::Infallible, fmt::Debug, sync::Arc};
 
 use axum::{
   body::Body,
@@ -6,6 +6,7 @@ use axum::{
   response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
+use centaurus::{anyhow, db::init::Connection, FromReqExtension};
 use chrono::{Duration, Utc};
 use http::{
   header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
@@ -22,14 +23,13 @@ use rsa::{
   rand_core::OsRng,
   RsaPrivateKey, RsaPublicKey,
 };
-use sea_orm::DatabaseConnection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{config::Config, db::DBTrait, from_req_extension, utils::jwt_from_request};
+use crate::{config::Config, db::DBTrait, utils::jwt_from_request};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct JwtClaims<T: JwtType> {
   pub exp: i64,
   pub iss: String,
@@ -43,12 +43,12 @@ pub struct TokenRes<T: Serialize = ()> {
   pub body: T,
 }
 
-pub trait JwtType: Default + Clone {
+pub trait JwtType: Default + Clone + Debug {
   fn duration(long: i64, short: i64) -> i64;
   fn cookie_name() -> &'static str;
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtBase {
   #[default]
   Base,
@@ -63,7 +63,7 @@ impl JwtType for JwtBase {
   }
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtSpecial {
   #[default]
   Special,
@@ -78,7 +78,7 @@ impl JwtType for JwtSpecial {
   }
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtTotpRequired {
   #[default]
   TotpRequired,
@@ -93,11 +93,10 @@ impl JwtType for JwtTotpRequired {
   }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, FromReqExtension)]
 pub struct JwtInvalidState {
   pub count: Arc<Mutex<i32>>,
 }
-from_req_extension!(JwtInvalidState);
 
 impl JwtInvalidState {
   pub fn init() -> Self {
@@ -105,7 +104,7 @@ impl JwtInvalidState {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct JwtState {
   header: Header,
   encoding_key: EncodingKey,
@@ -117,7 +116,6 @@ pub struct JwtState {
   pub kid: String,
   pub public_key: RsaPublicKey,
 }
-from_req_extension!(JwtState);
 
 impl JwtState {
   pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
@@ -166,8 +164,8 @@ impl JwtState {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(config: &Config, db: &DatabaseConnection) -> Self {
-    let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
+  pub async fn init(config: &Config, db: &Connection) -> Self {
+    let (key, kid) = if let Ok(key) = db.key().get_key_by_name("jwt".into()).await {
       (key.private_key, key.id.to_string())
     } else {
       let mut rng = OsRng {};
@@ -179,8 +177,7 @@ impl JwtState {
 
       let uuid = Uuid::new_v4();
 
-      db.tables()
-        .key()
+      db.key()
         .create_key("jwt".into(), key.clone(), uuid)
         .await
         .expect("Failed to save key");
@@ -222,7 +219,7 @@ impl<S: Sync, T> FromRequestParts<S> for JwtClaims<T>
 where
   for<'de> T: JwtType + Deserialize<'de>,
 {
-  type Rejection = crate::error::Error;
+  type Rejection = centaurus::error::ErrorReport;
 
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
     jwt_from_request::<JwtClaims<T>, T>(parts).await
@@ -246,7 +243,7 @@ where
 impl<T: Serialize> IntoResponse for TokenRes<T> {
   fn into_response(self) -> Response {
     let Ok(body) = serde_json::to_string(&self.body) else {
-      return crate::error::Error::InternalServerError.into_response();
+      return anyhow!("Failed to serialize token response body").into_response();
     };
 
     Response::builder()

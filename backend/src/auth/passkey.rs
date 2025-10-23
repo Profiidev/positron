@@ -7,6 +7,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use base64::prelude::*;
+use centaurus::{bail, db::init::Connection, error::Result, eyre::ContextCompat};
 use chrono::{DateTime, Utc};
 use entity::passkey;
 use http::StatusCode;
@@ -20,8 +21,7 @@ use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
   auth::state::WebauthnState,
-  db::{Connection, DBTrait},
-  error::{Error, Result},
+  db::DBTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -57,9 +57,9 @@ async fn start_registration(
   webauthn: WebauthnState,
   state: PasskeyState,
 ) -> Result<Json<CreationChallengeResponse>> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
-  let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+  let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkeys
     .into_iter()
     .flat_map(|p| serde_json::from_str::<Passkey>(&p.data))
@@ -91,25 +91,23 @@ async fn finish_registration(
   updater: UpdateState,
   Json(req): Json<RegFinishReq>,
 ) -> Result<StatusCode> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
   if db
-    .tables()
     .passkey()
     .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passkey name already exists");
   }
 
   let mut states = state.reg_state.lock().await;
-  let reg_state = states.remove(&user.id).ok_or(Error::BadRequest)?;
+  let reg_state = states.remove(&user.id).context("state not found")?;
 
   let key = webauthn.finish_passkey_registration(&req.reg, &reg_state)?;
 
   let json_key = serde_json::to_string(&key)?;
-  db.tables()
-    .passkey()
+  db.passkey()
     .create_passkey_record(passkey::Model {
       id: Uuid::new_v4(),
       data: json_key,
@@ -152,8 +150,8 @@ async fn start_authentication_by_email(
   state: PasskeyState,
   db: Connection,
 ) -> Result<Json<AuthStartRes>> {
-  let user = db.tables().user().get_user_by_email(&email).await?;
-  let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+  let user = db.user().get_user_by_email(&email).await?;
+  let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
 
   let passkeys = passkeys
     .into_iter()
@@ -185,18 +183,17 @@ async fn finish_authentication(
   Json(auth): Json<PublicKeyCredential>,
 ) -> Result<(CookieJar, TokenRes)> {
   let mut states = state.auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
+  let auth_state = states.remove(&auth_id).context("state not found")?;
 
   let (_, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
 
   let passkey_db = db
-    .tables()
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(cred_id))
     .await?;
   let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
-  let user = db.tables().user().get_user(passkey_db.user).await?;
+  let user = db.user().get_user(passkey_db.user).await?;
 
   let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
 
@@ -207,12 +204,11 @@ async fn finish_authentication(
   let json_key = serde_json::to_string(&passkey)?;
 
   let _ = db
-    .tables()
     .passkey()
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.tables().user().logged_in(user.id).await?;
+  db.user().logged_in(user.id).await?;
 
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
   cookies = cookies.add(cookie);
@@ -232,12 +228,11 @@ async fn finish_authentication_by_email(
   let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.non_discover_auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
+  let auth_state = states.remove(&auth_id).context("state not found")?;
 
   let res = webauthn.finish_passkey_authentication(&auth, &auth_state)?;
 
   let passkey_db = db
-    .tables()
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
     .await?;
@@ -250,13 +245,12 @@ async fn finish_authentication_by_email(
   let json_key = serde_json::to_string(&passkey)?;
 
   let _ = db
-    .tables()
     .passkey()
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  let user = db.tables().user().get_user(passkey_db.user).await?;
-  db.tables().user().logged_in(user.id).await?;
+  let user = db.user().get_user(passkey_db.user).await?;
+  db.user().logged_in(user.id).await?;
 
   let cookie = jwt.create_token::<JwtBase>(user.id)?;
   cookies = cookies.add(cookie);
@@ -270,8 +264,8 @@ async fn start_special_access(
   state: PasskeyState,
   db: Connection,
 ) -> Result<Json<RequestChallengeResponse>> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let passkey_records = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+  let user = db.user().get_user(auth.sub).await?;
+  let passkey_records = db.passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkey_records
     .into_iter()
     .flat_map(|p| serde_json::from_str(&p.data))
@@ -298,13 +292,12 @@ async fn finish_special_access(
   Json(req): Json<PublicKeyCredential>,
 ) -> Result<(CookieJar, TokenRes)> {
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
-    return Err(Error::BadRequest);
+    bail!("state not found");
   };
 
   let res = webauthn.finish_passkey_authentication(&req, &auth_state)?;
 
   let passkey_db = db
-    .tables()
     .passkey()
     .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
     .await?;
@@ -316,12 +309,11 @@ async fn finish_special_access(
 
   let json_key = serde_json::to_string(&passkey)?;
   let _ = db
-    .tables()
     .passkey()
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.tables().user().used_special_access(auth.sub).await?;
+  db.user().used_special_access(auth.sub).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(auth.sub)?;
   cookies = cookies.add(cookie);
@@ -339,8 +331,8 @@ struct PasskeyInfo {
 }
 
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<PasskeyInfo>>> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let passkeys = db.tables().passkey().get_passkeys_for_user(user.id).await?;
+  let user = db.user().get_user(auth.sub).await?;
+  let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
 
   let ret = passkeys
     .into_iter()
@@ -365,10 +357,9 @@ async fn remove(
   updater: UpdateState,
   Json(req): Json<PasskeyRemove>,
 ) -> Result<()> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
-  db.tables()
-    .passkey()
+  db.passkey()
     .remove_passkey_by_name(user.id, req.name.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::Passkey).await;
@@ -388,19 +379,17 @@ async fn edit_name(
   updater: UpdateState,
   Json(req): Json<PasskeyEdit>,
 ) -> Result<()> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
   if db
-    .tables()
     .passkey()
     .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passkey name already exists");
   }
 
-  db.tables()
-    .passkey()
+  db.passkey()
     .edit_passkey_name(user.id, req.name.clone(), req.old_name.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::Passkey).await;

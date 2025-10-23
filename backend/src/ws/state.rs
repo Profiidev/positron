@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_nats::{connect, Client, Subject};
+use centaurus::FromReqExtension;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -10,19 +11,19 @@ use tokio::{
     Mutex,
   },
 };
+use tracing::instrument;
 use uuid::Uuid;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
 pub type Sessions = Arc<Mutex<HashMap<Uuid, HashMap<Uuid, Sender<UpdateType>>>>>;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct UpdateState {
   sessions: Sessions,
   sender: Client,
   subject: Subject,
 }
-from_req_extension!(UpdateState);
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum UpdateType {
@@ -43,6 +44,7 @@ struct UpdateMessage {
 }
 
 impl UpdateState {
+  #[instrument(skip(config))]
   pub async fn init(config: &Config) -> Self {
     let nats_url = config.nats_url.clone();
     let nats_update_subject = config.nats_update_subject.clone();
@@ -78,6 +80,7 @@ impl UpdateState {
     }
   }
 
+  #[instrument(skip(self))]
   pub async fn create_session(&self, user: Uuid) -> (Uuid, Receiver<UpdateType>, Sessions) {
     let (send, recv) = mpsc::channel(100);
     let uuid = Uuid::new_v4();
@@ -89,6 +92,7 @@ impl UpdateState {
     (uuid, recv, self.sessions.clone())
   }
 
+  #[instrument(skip(self))]
   pub async fn broadcast_message(&self, msg: UpdateType) {
     tracing::debug!("Nats Message Broadcast: {:?}", &msg);
     if let Ok(payload) = serde_json::to_string(&UpdateMessage {
@@ -102,6 +106,7 @@ impl UpdateState {
     }
   }
 
+  #[instrument(skip(self))]
   pub async fn send_message(&self, user: Uuid, msg: UpdateType) {
     tracing::debug!("Nats Message: {:?} to {}", &msg, user);
     if let Ok(payload) = serde_json::to_string(&UpdateMessage {
@@ -116,6 +121,7 @@ impl UpdateState {
   }
 }
 
+#[instrument(skip(sessions))]
 pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
   tracing::debug!("Websocket Message Broadcast: {:?}", &msg);
   for sessions in sessions.lock().await.values() {
@@ -125,6 +131,7 @@ pub async fn broadcast_message(sessions: &Sessions, msg: UpdateType) {
   }
 }
 
+#[instrument(skip(sessions))]
 pub async fn send_message(sessions: &Sessions, user: Uuid, msg: UpdateType) {
   tracing::debug!("Websocket Message: {:?} to {}", &msg, user);
   if let Some(sessions) = sessions.lock().await.get(&user) {

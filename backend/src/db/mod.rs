@@ -1,61 +1,70 @@
-use std::{convert::Infallible, ops::Deref, time::Duration};
+use centaurus::db::init::Connection;
+use invalid_jwt::InvalidJwtTable;
+use key::KeyTable;
+use oauth::{
+  oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
+};
+use services::apod::ApodTable;
+use user::{group::GroupTable, passkey::PasskeyTable, settings::SettingsTable, user::UserTable};
 
-use axum::{extract::FromRequestParts, Extension, RequestPartsExt};
-use http::request::Parts;
-use migration::MigratorTrait;
-use sea_orm::{ConnectOptions, DatabaseConnection};
-use tables::Tables;
-
-use crate::{config::Config, error::Result};
-
-pub mod tables;
-
-pub struct Connection(DatabaseConnection);
-
-impl Deref for Connection {
-  type Target = DatabaseConnection;
-
-  fn deref(&self) -> &Self::Target {
-    &self.0
-  }
-}
-
-impl<S: Sync> FromRequestParts<S> for Connection {
-  type Rejection = Infallible;
-  async fn from_request_parts(
-    parts: &mut Parts,
-    _state: &S,
-  ) -> std::result::Result<Self, Self::Rejection> {
-    Ok(
-      parts
-        .extract::<Extension<DatabaseConnection>>()
-        .await
-        .map(|Extension(conn)| Connection(conn))
-        .expect("DatabaseConnection should be added as a extension"),
-    )
-  }
-}
+pub mod invalid_jwt;
+pub mod key;
+pub mod oauth;
+pub mod services;
+pub mod user;
+mod util;
 
 pub trait DBTrait {
-  fn tables(&self) -> Tables<'_>;
+  fn user(&self) -> UserTable<'_>;
+  fn passkey(&self) -> PasskeyTable<'_>;
+  fn invalid_jwt(&self) -> InvalidJwtTable<'_>;
+  fn oauth_client(&self) -> OauthClientTable<'_>;
+  fn groups(&self) -> GroupTable<'_>;
+  fn key(&self) -> KeyTable<'_>;
+  fn oauth_policy(&self) -> OAuthPolicyTable<'_>;
+  fn oauth_scope(&self) -> OAuthScopeTable<'_>;
+  fn apod(&self) -> ApodTable<'_>;
+  fn settings(&self) -> SettingsTable<'_>;
 }
 
-impl DBTrait for DatabaseConnection {
-  fn tables(&self) -> Tables<'_> {
-    Tables::new(self)
+impl DBTrait for Connection {
+  fn user(&self) -> UserTable<'_> {
+    UserTable::new(&self.0)
   }
-}
 
-pub async fn init_db(config: &Config) -> Result<DatabaseConnection> {
-  let mut options = ConnectOptions::new(&config.db_url);
-  options
-    .max_connections(1024)
-    .min_connections(0)
-    .connect_timeout(Duration::from_secs(5))
-    .sqlx_logging(config.db_logging);
+  fn passkey(&self) -> PasskeyTable<'_> {
+    PasskeyTable::new(&self.0)
+  }
 
-  let conn = sea_orm::Database::connect(options).await?;
-  migration::Migrator::up(&conn, None).await?;
+  fn invalid_jwt(&self) -> InvalidJwtTable<'_> {
+    InvalidJwtTable::new(&self.0)
+  }
 
-  Ok(conn)
+  fn oauth_client(&self) -> OauthClientTable<'_> {
+    OauthClientTable::new(&self.0)
+  }
+
+  fn groups(&self) -> GroupTable<'_> {
+    GroupTable::new(&self.0)
+  }
+
+  fn key(&self) -> KeyTable<'_> {
+    KeyTable::new(&self.0)
+  }
+
+  fn oauth_policy(&self) -> OAuthPolicyTable<'_> {
+    OAuthPolicyTable::new(&self.0)
+  }
+
+  fn oauth_scope(&self) -> OAuthScopeTable<'_> {
+    OAuthScopeTable::new(&self.0)
+  }
+
+  fn apod(&self) -> ApodTable<'_> {
+    ApodTable::new(&self.0)
+  }
+
+  fn settings(&self) -> SettingsTable<'_> {
+    SettingsTable::new(&self.0)
+  }
 }

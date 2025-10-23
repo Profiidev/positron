@@ -9,6 +9,7 @@ use axum::{
 };
 use futures::StreamExt;
 use tokio::sync::mpsc::Receiver;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -22,6 +23,7 @@ pub fn router() -> Router {
   Router::new().route("/updater", any(update))
 }
 
+#[instrument(skip(ws, state))]
 async fn update(
   auth: JwtClaims<JwtBase>,
   ws: WebSocketUpgrade,
@@ -33,6 +35,7 @@ async fn update(
   ws.on_upgrade(move |socket| handle_socket(socket, uuid, recv, sessions))
 }
 
+#[instrument(skip(socket, recv, sessions))]
 async fn handle_socket(
   mut socket: WebSocket,
   uuid: Uuid,
