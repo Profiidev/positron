@@ -6,7 +6,7 @@ use axum::{
   routing::{get, post},
   Form, Json, Router,
 };
-use centaurus::{bail, error::Result, serde::empty_string_as_none};
+use centaurus::{bail, db::init::Connection, error::Result, serde::empty_string_as_none};
 use chrono::Utc;
 use entity::o_auth_client;
 use http::{header::LOCATION, HeaderValue, StatusCode};
@@ -16,7 +16,7 @@ use webauthn_rs::prelude::Url;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{Connection, DBTrait},
+  db::DBTrait,
 };
 
 use super::{
@@ -52,7 +52,7 @@ async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) ->
   let uuid = Uuid::new_v4();
   let client_id = req.client_id.parse()?;
 
-  let client = db.tables().oauth_client().get_client(client_id).await?;
+  let client = db.oauth_client().get_client(client_id).await?;
 
   state
     .auth_pending
@@ -107,11 +107,10 @@ async fn authorize_confirm(
   }
 
   let client_id = req.client_id.parse()?;
-  let client = db.tables().oauth_client().get_client(client_id).await?;
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let client = db.oauth_client().get_client(client_id).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
   if !db
-    .tables()
     .oauth_client()
     .has_user_access(user.id, client_id)
     .await?
@@ -197,7 +196,7 @@ async fn logout(
   Path(client_id): Path<Uuid>,
   state: AuthorizeState,
 ) -> Result<Redirect> {
-  let client = db.tables().oauth_client().get_client(client_id).await?;
+  let client = db.oauth_client().get_client(client_id).await?;
 
   Ok(Redirect::found(
     Url::parse_with_params(

@@ -1,10 +1,12 @@
 use axum::{Extension, Router};
-use centaurus::router_extension;
+use centaurus::{db::init::Connection, router_extension};
 use jwt::{JwtInvalidState, JwtState};
-use sea_orm::DatabaseConnection;
-use state::{PasskeyState, PasswordState, TotpState};
+use state::{PasskeyState, TotpState};
 
-use crate::{auth::state::WebauthnState, config::Config};
+use crate::{
+  auth::state::{init_pw_state, WebauthnState},
+  config::Config,
+};
 
 pub mod jwt;
 mod logout;
@@ -22,10 +24,10 @@ pub fn router() -> Router {
 }
 
 router_extension!(
-  async fn auth(self, config: &Config, db: &DatabaseConnection) -> Self {
+  async fn auth(self, config: &Config, db: &Connection) -> Self {
     self
       .layer(Extension(PasskeyState::init()))
-      .layer(Extension(PasswordState::init(config, db).await))
+      .layer(Extension(init_pw_state(config, db).await))
       .layer(Extension(TotpState::init(config)))
       .layer(Extension(JwtState::init(config, db).await))
       .layer(Extension(JwtInvalidState::init()))

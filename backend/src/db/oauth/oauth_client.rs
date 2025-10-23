@@ -5,7 +5,7 @@ use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
-  db::tables::{
+  db::{
     user::{group::BasicGroupInfo, user::BasicUserInfo},
     util::update_relations,
   },

@@ -3,13 +3,13 @@ use axum::{
   Json, Router,
 };
 use axum_extra::extract::CookieJar;
-use centaurus::{bail, error::Result, eyre::ContextCompat};
+use centaurus::{bail, db::init::Connection, error::Result, eyre::ContextCompat};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
 
 use crate::{
-  db::{Connection, DBTrait},
+  db::DBTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -42,7 +42,7 @@ async fn start_setup(
   db: Connection,
   state: TotpState,
 ) -> Result<Json<TotpSetupRes>> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
   if user.totp.is_some() {
     bail!("TOTP is already set up for this user");
   }
@@ -83,8 +83,7 @@ async fn finish_setup(
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   }
 
-  db.tables()
-    .user()
+  db.user()
     .add_totp(auth.sub, totp.get_secret_base32())
     .await?;
 
@@ -101,7 +100,7 @@ async fn confirm(
   mut cookies: CookieJar,
   Json(req): Json<TotpReq>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
     Rfc6238::with_defaults(Secret::Encoded(user.totp.unwrap()).to_bytes().unwrap()).unwrap(),
@@ -112,8 +111,8 @@ async fn confirm(
   if !totp.check_current(&req.code).unwrap() {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
-    db.tables().user().used_totp(auth.sub).await?;
-    db.tables().user().logged_in(auth.sub).await?;
+    db.user().used_totp(auth.sub).await?;
+    db.user().logged_in(auth.sub).await?;
 
     let cookie = jwt.create_token::<JwtBase>(auth.sub)?;
     cookies = cookies.add(cookie);
@@ -127,7 +126,7 @@ async fn remove(
   db: Connection,
   updater: UpdateState,
 ) -> Result<StatusCode> {
-  db.tables().user().totp_remove(auth.sub).await?;
+  db.user().totp_remove(auth.sub).await?;
   updater.send_message(auth.sub, UpdateType::User).await;
 
   Ok(StatusCode::OK)

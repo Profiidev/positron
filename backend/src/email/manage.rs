@@ -1,11 +1,11 @@
 use axum::{routing::post, Json, Router};
-use centaurus::{bail, error::Result};
+use centaurus::{bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::Deserialize;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
-  db::{Connection, DBTrait},
+  db::DBTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -32,14 +32,9 @@ async fn start_change(
   state: EmailState,
   Json(req): Json<EmailChange>,
 ) -> Result<StatusCode> {
-  let user = db.tables().user().get_user(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
 
-  if db
-    .tables()
-    .user()
-    .user_exists(req.new_email.clone())
-    .await?
-  {
+  if db.user().user_exists(req.new_email.clone()).await? {
     bail!(CONFLICT, "user with the given email already exists");
   }
 
@@ -81,15 +76,14 @@ async fn finish_change(
 ) -> Result<StatusCode> {
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {
-    return Err(Error::BadRequest);
+    bail!("no email change request found");
   };
 
   if !info.check_old(req.old_code) || !info.check_new(req.new_code) {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "invalid confirmation codes");
   }
 
-  db.tables()
-    .user()
+  db.user()
     .change_email(auth.sub, info.new_email.clone())
     .await?;
   updater.send_message(auth.sub, UpdateType::User).await;

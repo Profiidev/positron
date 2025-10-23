@@ -1,14 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
 use axum::{extract::Query, routing::post, Form, Json, Router};
-use centaurus::{bail, serde::empty_string_as_none};
+use centaurus::{bail, db::init::Connection, serde::empty_string_as_none};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
-  db::{Connection, DBTrait},
+  db::DBTrait,
 };
 
 use super::{
@@ -95,7 +95,6 @@ async fn token(
   };
 
   let client = db
-    .tables()
     .oauth_client()
     .get_client(client_id)
     .await
@@ -134,21 +133,16 @@ async fn token(
   let code_info = lock.remove(&uuid).unwrap();
   drop(lock);
 
-  let Ok(user) = db.tables().user().get_user(code_info.user).await else {
+  let Ok(user) = db.user().get_user(code_info.user).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db.tables().groups().get_groups_for_user(user.id).await else {
+  let Ok(groups) = db.groups().get_groups_for_user(user.id).await else {
     return Err(Error::from_str("unauthorized_client"));
   };
 
   let mut rest = HashMap::new();
   for scope in code_info.scope.non_default() {
-    let Ok(rest_part) = db
-      .tables()
-      .oauth_scope()
-      .get_values_for_user(scope, &groups)
-      .await
-    else {
+    let Ok(rest_part) = db.oauth_scope().get_values_for_user(scope, &groups).await else {
       return Err(Error::from_str("unauthorized_client"));
     };
 
@@ -243,8 +237,7 @@ async fn revoke(
 
   let mut lock = invalidate.count.lock().await;
 
-  db.tables()
-    .invalid_jwt()
+  db.invalid_jwt()
     .invalidate_jwt(req.token, exp, &mut lock)
     .await?;
 

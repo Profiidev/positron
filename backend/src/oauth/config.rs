@@ -1,8 +1,8 @@
 use axum::{extract::Query, routing::get, Json, Router};
-use centaurus::{error::Result, serde::empty_string_as_none};
+use centaurus::{db::init::Connection, error::Result, serde::empty_string_as_none};
 use serde::{Deserialize, Serialize};
 
-use crate::db::{Connection, DBTrait};
+use crate::db::DBTrait;
 
 use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 
@@ -39,7 +39,7 @@ async fn config(
   db: Connection,
   Query(query): Query<ConfigQuery>,
 ) -> Result<Json<Configuration>> {
-  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES
       .iter()

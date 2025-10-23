@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-centaurus = { git = "https://github.com/ProfiiDev/centaurus.git", rev = "214a35df060f733babb4ed0b46cd1eab152f1928", features = [
+centaurus = { git = "https://github.com/ProfiiDev/centaurus.git", rev = "f7294763474a95339bb47b07366244021c32ff67", features = [
   #centaurus = { version = "0.3.2", features = [
   "axum",
   "logging",

@@ -3,7 +3,7 @@ use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::db::tables::util::update_relations;
+use crate::db::util::update_relations;
 
 use super::user::BasicUserInfo;
 

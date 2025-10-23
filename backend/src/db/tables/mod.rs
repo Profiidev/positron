@@ -7,12 +7,6 @@ use sea_orm::DatabaseConnection;
 use services::apod::ApodTable;
 use user::{group::GroupTable, passkey::PasskeyTable, settings::SettingsTable, user::UserTable};
 
-pub mod invalid_jwt;
-pub mod key;
-pub mod oauth;
-pub mod services;
-pub mod user;
-mod util;
 
 pub struct Tables<'db> {
   db: &'db DatabaseConnection,
@@ -23,43 +17,4 @@ impl<'db> Tables<'db> {
     Self { db }
   }
 
-  pub fn user(self) -> UserTable<'db> {
-    UserTable::new(self.db)
-  }
-
-  pub fn passkey(self) -> PasskeyTable<'db> {
-    PasskeyTable::new(self.db)
-  }
-
-  pub fn invalid_jwt(self) -> InvalidJwtTable<'db> {
-    InvalidJwtTable::new(self.db)
-  }
-
-  pub fn oauth_client(self) -> OauthClientTable<'db> {
-    OauthClientTable::new(self.db)
-  }
-
-  pub fn groups(self) -> GroupTable<'db> {
-    GroupTable::new(self.db)
-  }
-
-  pub fn key(self) -> KeyTable<'db> {
-    KeyTable::new(self.db)
-  }
-
-  pub fn oauth_policy(self) -> OAuthPolicyTable<'db> {
-    OAuthPolicyTable::new(self.db)
-  }
-
-  pub fn oauth_scope(self) -> OAuthScopeTable<'db> {
-    OAuthScopeTable::new(self.db)
-  }
-
-  pub fn apod(self) -> ApodTable<'db> {
-    ApodTable::new(self.db)
-  }
-
-  pub fn settings(self) -> SettingsTable<'db> {
-    SettingsTable::new(self.db)
-  }
 }

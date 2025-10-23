@@ -4,14 +4,14 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
-use centaurus::{bail, error::Result};
+use centaurus::{bail, db::init::Connection, error::Result};
 use entity::{group, sea_orm_active_enums::Permission};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{tables::user::group::GroupInfo, Connection, DBTrait},
+  db::{user::group::GroupInfo, DBTrait},
   permission::PermissionTrait,
   ws::state::{UpdateState, UpdateType},
 };
@@ -26,7 +26,7 @@ pub fn router() -> Router {
 
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<GroupInfo>>> {
   Permission::check(&db, auth.sub, Permission::GroupList).await?;
-  let groups = db.tables().groups().list_groups().await?;
+  let groups = db.groups().list_groups().await?;
 
   Ok(Json(groups))
 }
@@ -38,11 +38,11 @@ async fn edit(
   Json(req): Json<GroupInfo>,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::GroupEdit).await?;
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.groups().get_group_by_uuid(req.uuid).await?;
   Permission::is_access_level_high_enough(&db, auth.sub, group.access_level).await?;
   Permission::is_access_level_high_enough(&db, auth.sub, req.access_level).await?;
 
-  let editor_permissions = db.tables().user().list_permissions(auth.sub).await?;
+  let editor_permissions = db.user().list_permissions(auth.sub).await?;
 
   let new_perm: HashSet<_> = req.permissions.clone().into_iter().collect();
   let old_perm: HashSet<_> = group.permissions.into_iter().collect();
@@ -55,21 +55,12 @@ async fn edit(
     );
   }
 
-  if db
-    .tables()
-    .groups()
-    .group_exists(req.name.clone(), req.uuid)
-    .await?
-  {
+  if db.groups().group_exists(req.name.clone(), req.uuid).await? {
     bail!(CONFLICT, "group with the given name already exists");
   }
 
-  let users = db
-    .tables()
-    .user()
-    .get_users_by_info(req.users.clone())
-    .await?;
-  db.tables().groups().edit(group.id, req, users).await?;
+  let users = db.user().get_users_by_info(req.users.clone()).await?;
+  db.groups().edit(group.id, req, users).await?;
   updater.broadcast_message(UpdateType::Group).await;
   tracing::info!("User {} updated group {}", auth.sub, group.name);
 
@@ -92,7 +83,6 @@ async fn create(
   Permission::is_access_level_high_enough(&db, auth.sub, req.access_level).await?;
 
   let exists = db
-    .tables()
     .groups()
     .group_exists(req.name.clone(), Uuid::max())
     .await?;
@@ -100,8 +90,7 @@ async fn create(
     bail!(CONFLICT, "group with the given name already exists");
   }
 
-  db.tables()
-    .groups()
+  db.groups()
     .create_group(group::Model {
       name: req.name.clone(),
       id: Uuid::new_v4(),
@@ -128,10 +117,10 @@ async fn delete(
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::GroupDelete).await?;
 
-  let group = db.tables().groups().get_group_by_uuid(req.uuid).await?;
+  let group = db.groups().get_group_by_uuid(req.uuid).await?;
   Permission::is_access_level_high_enough(&db, auth.sub, group.access_level).await?;
 
-  db.tables().groups().delete_group(req.uuid).await?;
+  db.groups().delete_group(req.uuid).await?;
   updater.broadcast_message(UpdateType::Group).await;
   tracing::info!("User {} deleted group {}", auth.sub, req.uuid);
 

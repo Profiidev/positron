@@ -1009,7 +1009,7 @@ dependencies = [
 [[package]]
 name = "centaurus"
 version = "0.3.2"
-source = "git+https://github.com/ProfiiDev/centaurus.git?rev=214a35df060f733babb4ed0b46cd1eab152f1928#214a35df060f733babb4ed0b46cd1eab152f1928"
+source = "git+https://github.com/ProfiiDev/centaurus.git?rev=f7294763474a95339bb47b07366244021c32ff67#f7294763474a95339bb47b07366244021c32ff67"
 dependencies = [
  "argon2",
  "axum",
@@ -1047,7 +1047,7 @@ dependencies = [
 [[package]]
 name = "centaurus-derive"
 version = "0.1.0"
-source = "git+https://github.com/ProfiiDev/centaurus.git?rev=214a35df060f733babb4ed0b46cd1eab152f1928#214a35df060f733babb4ed0b46cd1eab152f1928"
+source = "git+https://github.com/ProfiiDev/centaurus.git?rev=f7294763474a95339bb47b07366244021c32ff67#f7294763474a95339bb47b07366244021c32ff67"
 dependencies = [
  "quote",
  "syn 2.0.108",

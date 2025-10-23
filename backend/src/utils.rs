@@ -1,17 +1,12 @@
 use axum::RequestPartsExt;
-use centaurus::{bail, error::Result};
+use centaurus::{bail, db::init::Connection, error::Result};
 use http::request::Parts;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::de::DeserializeOwned;
 
 use crate::{
   auth::jwt::{JwtState, JwtType},
-  db::{Connection, DBTrait},
+  db::DBTrait,
 };
-
-#[derive(Deserialize)]
-struct Token {
-  token: String,
-}
 
 pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
   req: &mut Parts,
@@ -21,12 +16,7 @@ pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
   let Ok(jwt) = req.extract::<JwtState>().await;
   let Ok(db) = req.extract::<Connection>().await;
 
-  let Ok(valid) = db
-    .tables()
-    .invalid_jwt()
-    .is_token_valid(token.to_string())
-    .await
-  else {
+  let Ok(valid) = db.invalid_jwt().is_token_valid(token.to_string()).await else {
     bail!("failed to validate jwt");
   };
   if !valid {

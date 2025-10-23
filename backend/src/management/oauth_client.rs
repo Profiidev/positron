@@ -8,6 +8,7 @@ use axum::{
 use centaurus::{
   auth::pw::hash_secret,
   bail,
+  db::init::Connection,
   error::{ErrorReportStatusExt, Result},
 };
 use entity::{o_auth_client, sea_orm_active_enums::Permission};
@@ -21,11 +22,11 @@ use webauthn_rs::prelude::Url;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::{
+    DBTrait,
+    {
       oauth::oauth_client::OAuthClientInfo,
       user::{group::BasicGroupInfo, user::BasicUserInfo},
     },
-    Connection, DBTrait,
   },
   oauth::scope::{Scope, DEFAULT_SCOPES},
   permission::PermissionTrait,
@@ -50,25 +51,25 @@ pub fn router() -> Router {
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<OAuthClientInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
-  Ok(Json(db.tables().oauth_client().list_client().await?))
+  Ok(Json(db.oauth_client().list_client().await?))
 }
 
 async fn group_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<BasicGroupInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
-  let group = db.tables().groups().basic_group_list().await?;
+  let group = db.groups().basic_group_list().await?;
 
   Ok(Json(group))
 }
 
 async fn user_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<BasicUserInfo>>> {
   let res = Permission::check(&db, auth.sub, Permission::OAuthClientList).await;
-  if let Err(Error::Unauthorized) = res {
+  if res.is_err() {
     Permission::check(&db, auth.sub, Permission::GroupList).await?;
   } else {
     res?;
   }
 
-  let user = db.tables().user().basic_user_list().await?;
+  let user = db.user().basic_user_list().await?;
 
   Ok(Json(user))
 }
@@ -82,7 +83,6 @@ async fn edit(
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
-    .tables()
     .oauth_client()
     .client_exists(req.name.clone(), req.client_id)
     .await?
@@ -90,21 +90,15 @@ async fn edit(
     bail!(CONFLICT, "client with the given name already exists");
   }
 
-  let client = db.tables().oauth_client().get_client(req.client_id).await?;
+  let client = db.oauth_client().get_client(req.client_id).await?;
 
-  let users = db
-    .tables()
-    .user()
-    .get_users_by_info(req.user_access.clone())
-    .await?;
+  let users = db.user().get_users_by_info(req.user_access.clone()).await?;
   let groups = db
-    .tables()
     .groups()
     .get_groups_by_info(req.group_access.clone())
     .await?;
 
-  db.tables()
-    .oauth_client()
+  db.oauth_client()
     .edit_client(req, client.id, users, groups)
     .await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;
@@ -156,7 +150,6 @@ async fn create(
   Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
   if db
-    .tables()
     .oauth_client()
     .client_exists(req.name.clone(), Uuid::max())
     .await?
@@ -171,8 +164,7 @@ async fn create(
   let salt = SaltString::generate(OsRng {}).to_string();
   let client_secret = hash_secret(&state.pepper, &salt, secret.as_bytes())?;
 
-  db.tables()
-    .oauth_client()
+  db.oauth_client()
     .create_client(o_auth_client::Model {
       name: req.name.clone(),
       id: *client_id,
@@ -210,7 +202,7 @@ async fn delete(
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
   let uuid = Uuid::from_str(&req.uuid)?;
-  db.tables().oauth_client().remove_client(uuid).await?;
+  db.oauth_client().remove_client(uuid).await?;
   updater.broadcast_message(UpdateType::OAuthClient).await;
   tracing::info!("User {} deleted oauth_client {}", auth.sub, req.uuid);
 
@@ -234,15 +226,14 @@ async fn reset(
   Json(req): Json<ResetReq>,
 ) -> Result<Json<ResetRes>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
-  let client = db.tables().oauth_client().get_client(req.client_id).await?;
+  let client = db.oauth_client().get_client(req.client_id).await?;
 
   let secret: String = (0..32)
     .map(|_| rand::rng().sample(Alphanumeric) as char)
     .collect();
   let client_secret = hash_secret(&state.pepper, &client.salt, secret.as_bytes())?;
 
-  db.tables()
-    .oauth_client()
+  db.oauth_client()
     .set_secret_hash(client.id, client_secret)
     .await?;
   tracing::info!(
@@ -257,7 +248,7 @@ async fn reset(
 async fn list_scopes(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<String>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
-  let mut scopes_supported = db.tables().oauth_scope().get_scope_names().await?;
+  let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES
       .iter()

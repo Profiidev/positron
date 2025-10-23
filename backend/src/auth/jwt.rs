@@ -6,7 +6,7 @@ use axum::{
   response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use centaurus::{anyhow, FromReqExtension};
+use centaurus::{anyhow, db::init::Connection, FromReqExtension};
 use chrono::{Duration, Utc};
 use http::{
   header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
@@ -23,7 +23,6 @@ use rsa::{
   rand_core::OsRng,
   RsaPrivateKey, RsaPublicKey,
 };
-use sea_orm::DatabaseConnection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -165,8 +164,8 @@ impl JwtState {
     Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(config: &Config, db: &DatabaseConnection) -> Self {
-    let (key, kid) = if let Ok(key) = db.tables().key().get_key_by_name("jwt".into()).await {
+  pub async fn init(config: &Config, db: &Connection) -> Self {
+    let (key, kid) = if let Ok(key) = db.key().get_key_by_name("jwt".into()).await {
       (key.private_key, key.id.to_string())
     } else {
       let mut rng = OsRng {};
@@ -178,8 +177,7 @@ impl JwtState {
 
       let uuid = Uuid::new_v4();
 
-      db.tables()
-        .key()
+      db.key()
         .create_key("jwt".into(), key.clone(), uuid)
         .await
         .expect("Failed to save key");

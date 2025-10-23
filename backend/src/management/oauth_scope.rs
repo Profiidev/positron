@@ -2,7 +2,7 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
-use centaurus::{bail, error::Result};
+use centaurus::{bail, db::init::Connection, error::Result};
 use entity::{o_auth_scope, sea_orm_active_enums::Permission};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -10,8 +10,8 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{
-    tables::oauth::{oauth_policy::BasicOAuthPolicyInfo, oauth_scope::OAuthScopeInfo},
-    Connection, DBTrait,
+    oauth::{oauth_policy::BasicOAuthPolicyInfo, oauth_scope::OAuthScopeInfo},
+    DBTrait,
   },
   permission::PermissionTrait,
   ws::state::{UpdateState, UpdateType},
@@ -29,7 +29,7 @@ pub fn router() -> Router {
 async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuthScopeInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
-  Ok(Json(db.tables().oauth_scope().list().await?))
+  Ok(Json(db.oauth_scope().list().await?))
 }
 
 #[derive(Deserialize)]
@@ -48,7 +48,6 @@ async fn create(
   Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
   if db
-    .tables()
     .oauth_scope()
     .scope_exists(req.name.clone(), Uuid::max())
     .await?
@@ -57,7 +56,6 @@ async fn create(
   }
 
   let policy = db
-    .tables()
     .oauth_policy()
     .get_policy_by_info(req.policy.clone())
     .await?;
@@ -68,10 +66,7 @@ async fn create(
     scope: req.scope,
   };
 
-  db.tables()
-    .oauth_scope()
-    .create_scope(model, policy)
-    .await?;
+  db.oauth_scope().create_scope(model, policy).await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
   tracing::info!("User {} created oauth_scope {}", auth.sub, req.name);
 
@@ -91,7 +86,7 @@ async fn delete(
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
-  db.tables().oauth_scope().delete_scope(req.uuid).await?;
+  db.oauth_scope().delete_scope(req.uuid).await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
   tracing::info!("User {} deleted oauth_scope {}", auth.sub, req.uuid);
 
@@ -107,7 +102,6 @@ async fn edit(
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 
   if db
-    .tables()
     .oauth_scope()
     .scope_exists(req.name.clone(), req.uuid)
     .await?
@@ -116,13 +110,12 @@ async fn edit(
   }
 
   let policy = db
-    .tables()
     .oauth_policy()
     .get_policy_by_info(req.policy.clone())
     .await?;
 
   let name = req.name.clone();
-  db.tables().oauth_scope().edit_scope(req, policy).await?;
+  db.oauth_scope().edit_scope(req, policy).await?;
   updater.broadcast_message(UpdateType::OAuthScope).await;
   tracing::info!("User {} edited oauth_scope {}", auth.sub, name);
 
@@ -134,7 +127,7 @@ async fn policy_list(
   db: Connection,
 ) -> Result<Json<Vec<BasicOAuthPolicyInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
-  let user = db.tables().oauth_policy().basic_policy_list().await?;
+  let user = db.oauth_policy().basic_policy_list().await?;
 
   Ok(Json(user))
 }

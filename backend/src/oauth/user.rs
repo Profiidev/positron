@@ -4,10 +4,11 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::db::init::Connection;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::db::{Connection, DBTrait};
+use crate::db::DBTrait;
 
 use super::{jwt::OAuthClaims, scope::Scope};
 
@@ -29,7 +30,7 @@ async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   let mut claims: UserInfo = claims.into();
 
   if claims.scope.contains("image") {
-    if let Ok(user) = db.tables().user().get_user(claims.sub).await {
+    if let Ok(user) = db.user().get_user(claims.sub).await {
       claims.image = Some(user.image);
     }
   }

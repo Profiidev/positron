@@ -3,16 +3,13 @@ use axum::{
   Json, Router,
 };
 use axum_extra::extract::CookieJar;
-use centaurus::{bail, error::Result};
+use centaurus::{auth::pw::PasswordState, bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::db::{Connection, DBTrait};
+use crate::db::DBTrait;
 
-use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes},
-  state::PasswordState,
-};
+use super::jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes};
 
 pub fn router() -> Router {
   Router::new()
@@ -49,8 +46,8 @@ async fn authenticate(
   mut cookies: CookieJar,
   Json(req): Json<LoginReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
-  let user = db.tables().user().get_user_by_email(&req.email).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
+  let user = db.user().get_user_by_email(&req.email).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
     bail!(UNAUTHORIZED, "Invalid email or password");
@@ -59,7 +56,7 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (jwt.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    db.tables().user().logged_in(user.id).await?;
+    db.user().logged_in(user.id).await?;
 
     (jwt.create_token::<JwtBase>(user.id)?, false)
   };
@@ -87,14 +84,14 @@ async fn special_access(
   mut cookies: CookieJar,
   Json(req): Json<SpecialAccess>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
+  let user = db.user().get_user(auth.sub).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
     bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
-  db.tables().user().used_special_access(auth.sub).await?;
+  db.user().used_special_access(auth.sub).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(user.id)?;
   cookies = cookies.add(cookie);
@@ -116,15 +113,15 @@ async fn change(
   db: Connection,
   Json(req): Json<PasswordChange>,
 ) -> Result<StatusCode> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let hash = hash_password(&state, &user.salt, &req.password)?;
-  let hash_confirm = hash_password(&state, &user.salt, &req.password_confirm)?;
+  let user = db.user().get_user(auth.sub).await?;
+  let hash = state.pw_hash(&user.salt, &req.password)?;
+  let hash_confirm = state.pw_hash(&user.salt, &req.password_confirm)?;
 
   if hash != hash_confirm {
     bail!(CONFLICT, "Passwords do not match");
   }
 
-  db.tables().user().change_password(user.id, hash).await?;
+  db.user().change_password(user.id, hash).await?;
 
   Ok(StatusCode::OK)
 }

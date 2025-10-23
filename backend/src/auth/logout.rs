@@ -3,11 +3,11 @@ use axum::{
   Json, Router,
 };
 use axum_extra::extract::CookieJar;
-use centaurus::{error::Result, eyre::ContextCompat};
+use centaurus::{db::init::Connection, error::Result, eyre::ContextCompat};
 use chrono::DateTime;
 use time::Duration;
 
-use crate::db::{Connection, DBTrait};
+use crate::db::DBTrait;
 
 use super::jwt::{JwtBase, JwtClaims, JwtInvalidState, JwtState, TokenRes};
 
@@ -29,8 +29,7 @@ async fn logout(
 
   let cookie = cookies.get("token").context("token not found")?;
   let mut count = state.count.lock().await;
-  db.tables()
-    .invalid_jwt()
+  db.invalid_jwt()
     .invalidate_jwt(
       cookie.value().to_string(),
       DateTime::from_timestamp(auth.exp, 0).unwrap(),

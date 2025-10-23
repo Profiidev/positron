@@ -2,7 +2,7 @@ use entity::{apod, prelude::*};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::Serialize;
 
-use crate::db::tables::user::user::BasicUserInfo;
+use crate::db::user::user::BasicUserInfo;
 
 #[derive(Serialize)]
 pub struct ApodInfo {

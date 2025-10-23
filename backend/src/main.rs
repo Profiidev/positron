@@ -85,10 +85,10 @@ router_extension!(
     use well_known::well_known;
     use ws::ws;
 
-    let db = init_db(&config.db, &config.db_url).await;
+    let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
 
     self
-      .auth(&config)
+      .auth(&config, &db)
       .await
       .email(&config)
       .await

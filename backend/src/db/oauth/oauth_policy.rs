@@ -2,7 +2,7 @@ use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 
-use crate::db::tables::user::group::BasicGroupInfo;
+use crate::db::user::group::BasicGroupInfo;
 
 #[derive(Serialize, Deserialize)]
 pub struct OAuthPolicyInfo {

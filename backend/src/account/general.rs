@@ -7,7 +7,7 @@ use axum::{
   Json, Router,
 };
 use base64::prelude::*;
-use centaurus::error::Result;
+use centaurus::{db::init::Connection, error::Result};
 use chrono::{DateTime, Utc};
 use entity::sea_orm_active_enums::Permission;
 use http::StatusCode;
@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
-  db::{Connection, DBTrait},
+  db::DBTrait,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -41,7 +41,7 @@ async fn profile_info(
   Path(uuid): Path<Uuid>,
   db: Connection,
 ) -> Result<Json<ProfileInfo>> {
-  let user = db.tables().user().get_user(uuid).await?;
+  let user = db.user().get_user(uuid).await?;
 
   Ok(Json(ProfileInfo {
     name: user.name,
@@ -63,9 +63,9 @@ struct UserInfo {
 }
 
 async fn info(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<UserInfo>> {
-  let user = db.tables().user().get_user(auth.sub).await?;
-  let permissions = db.tables().user().list_permissions(auth.sub).await?;
-  let access_level = db.tables().user().access_level(auth.sub).await?;
+  let user = db.user().get_user(auth.sub).await?;
+  let permissions = db.user().list_permissions(auth.sub).await?;
+  let access_level = db.user().access_level(auth.sub).await?;
 
   Ok(Json(UserInfo {
     last_login: user.last_login.and_utc(),
@@ -94,7 +94,7 @@ async fn change_image(
 
   let cropped = BASE64_STANDARD.encode(cursor.into_inner());
 
-  db.tables().user().change_image(auth.sub, cropped).await?;
+  db.user().change_image(auth.sub, cropped).await?;
   updater.broadcast_message(UpdateType::User).await;
   tracing::info!("User {} changed their image", auth.sub);
 
@@ -112,10 +112,7 @@ async fn update_profile(
   updater: UpdateState,
   Json(req): Json<UpdateReq>,
 ) -> Result<StatusCode> {
-  db.tables()
-    .user()
-    .update_profile(auth.sub, req.name)
-    .await?;
+  db.user().update_profile(auth.sub, req.name).await?;
   updater.broadcast_message(UpdateType::User).await;
   tracing::info!("User {} edited their profile", auth.sub);
 
