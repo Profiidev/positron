@@ -10,6 +10,7 @@ services:
     networks:
       - nginx
     command: npm run dev -- --host
+    #command: npm i
 
   backend:
     image: ghcr.io/profiidev/images/rust-musl-watch@sha256:f963ec13dcd4b260b12ad4cc36d94d62676406707d7de50c7d58c8ed068f46f9
