@@ -7,7 +7,7 @@ use crate::db::util::update_relations;
 
 use super::user::BasicUserInfo;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GroupInfo {
   pub name: String,
   pub uuid: Uuid,
@@ -16,7 +16,7 @@ pub struct GroupInfo {
   pub users: Vec<BasicUserInfo>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BasicGroupInfo {
   pub name: String,
   pub uuid: Uuid,

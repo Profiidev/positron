@@ -10,7 +10,7 @@ use crate::config::Config;
 
 use super::scope::Scope;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AuthReq {
   pub response_type: String,
   pub client_id: String,

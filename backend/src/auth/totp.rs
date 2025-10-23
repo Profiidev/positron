@@ -7,6 +7,7 @@ use centaurus::{bail, db::init::Connection, error::Result, eyre::ContextCompat};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
+use tracing::instrument;
 
 use crate::{
   db::DBTrait,
@@ -26,17 +27,18 @@ pub fn router() -> Router {
     .route("/remove", post(remove))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TotpReq {
   code: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct TotpSetupRes {
   qr: String,
   code: String,
 }
 
+#[instrument(skip(db, state))]
 async fn start_setup(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
@@ -69,6 +71,7 @@ async fn start_setup(
   Ok(Json(TotpSetupRes { qr, code }))
 }
 
+#[instrument(skip(db, state, updater))]
 async fn finish_setup(
   auth: JwtClaims<JwtSpecial>,
   state: TotpState,
@@ -93,6 +96,7 @@ async fn finish_setup(
   Ok(StatusCode::OK)
 }
 
+#[instrument(skip(db, jwt, cookies))]
 async fn confirm(
   auth: JwtClaims<JwtTotpRequired>,
   db: Connection,
@@ -121,6 +125,7 @@ async fn confirm(
   }
 }
 
+#[instrument(skip(db, updater))]
 async fn remove(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,

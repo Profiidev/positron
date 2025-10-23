@@ -10,6 +10,7 @@ use chrono::Utc;
 use entity::{sea_orm_active_enums::Permission, user};
 use rsa::rand_core::OsRng;
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -35,13 +36,14 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<UserI
   Ok(Json(users))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserEdit {
   user: Uuid,
   name: String,
   permissions: Vec<Permission>,
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -74,13 +76,14 @@ async fn edit(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserCreateReq {
   name: String,
   email: String,
   password: String,
 }
 
+#[instrument(skip(db, pw, updater))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -120,11 +123,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct UserDelete {
   uuid: Uuid,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,

@@ -10,12 +10,14 @@ use axum_extra::{
 use centaurus::{auth::pw::hash_secret, db::init::Connection};
 use http::{request::Parts, StatusCode};
 use serde::Serialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::db::DBTrait;
 
 use super::state::ClientState;
 
+#[derive(Debug)]
 pub struct ClientAuth {
   pub client_id: Uuid,
 }
@@ -45,6 +47,7 @@ impl Error {
 impl<S: Sync> FromRequestParts<S> for ClientAuth {
   type Rejection = (StatusCode, Json<Error>);
 
+  #[instrument(skip(parts, _state))]
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
     let Some(TypedHeader(Authorization(auth))) = parts
       .extract::<TypedHeader<Authorization<Basic>>>()
@@ -84,6 +87,7 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
 impl<S: Sync> OptionalFromRequestParts<S> for ClientAuth {
   type Rejection = (StatusCode, Json<Error>);
 
+  #[instrument(skip(parts, state))]
   async fn from_request_parts(
     parts: &mut Parts,
     state: &S,
@@ -97,6 +101,7 @@ impl<S: Sync> OptionalFromRequestParts<S> for ClientAuth {
 }
 
 impl IntoResponse for Error {
+  #[instrument]
   fn into_response(self) -> Response {
     let (mut parts, body) = Json(self).into_response().into_parts();
     parts.status = StatusCode::BAD_REQUEST;

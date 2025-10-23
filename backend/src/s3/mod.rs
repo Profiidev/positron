@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::Extension;
 use centaurus::{router_extension, FromReqExtension};
 use s3_crate::{creds::Credentials, Bucket, Region};
+use tracing::instrument;
 
 use crate::{config::Config, s3::apod::ApodFolder};
 
@@ -17,6 +18,7 @@ pub struct S3 {
 }
 
 impl S3 {
+  #[instrument(skip(config))]
   async fn init(config: &Config) -> Self {
     let region = Region::Custom {
       region: config.s3_region.clone(),

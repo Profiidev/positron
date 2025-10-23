@@ -1,5 +1,6 @@
 use centaurus::{bail, db::init::Connection, error::Result};
 use entity::sea_orm_active_enums::Permission;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::db::DBTrait;
@@ -15,6 +16,7 @@ pub trait PermissionTrait {
 }
 
 impl PermissionTrait for Permission {
+  #[instrument(skip(db))]
   async fn check(db: &Connection, user: Uuid, permission: Permission) -> Result<()> {
     let valid = db.user().has_permission(user, permission).await?;
     if !valid {
@@ -24,6 +26,7 @@ impl PermissionTrait for Permission {
     }
   }
 
+  #[instrument(skip(db))]
   async fn is_privileged_enough(db: &Connection, user: Uuid, target: Uuid) -> Result<()> {
     let access_level_edit = db.user().access_level(target).await?;
     Self::is_access_level_high_enough(db, user, access_level_edit).await?;
@@ -31,6 +34,7 @@ impl PermissionTrait for Permission {
     Ok(())
   }
 
+  #[instrument(skip(db))]
   async fn is_access_level_high_enough(
     db: &Connection,
     user: Uuid,

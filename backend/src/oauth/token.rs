@@ -4,6 +4,7 @@ use axum::{extract::Query, routing::post, Form, Json, Router};
 use centaurus::{bail, db::init::Connection, serde::empty_string_as_none};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -24,7 +25,7 @@ pub fn router() -> Router {
     .route("/revoke", post(revoke))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TokenReqOption {
   #[serde(default, deserialize_with = "empty_string_as_none")]
   grant_type: Option<String>,
@@ -69,6 +70,7 @@ struct TokenRes {
   scope: Scope,
 }
 
+#[instrument(skip(state, jwt, db, config))]
 async fn token(
   Query(req_p): Query<TokenReqOption>,
   auth: Option<ClientAuth>,
@@ -199,7 +201,7 @@ async fn token(
   }))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct RevokeReqOption {
   #[serde(default, deserialize_with = "empty_string_as_none")]
   token: Option<String>,
@@ -217,6 +219,7 @@ struct RevokeReq {
   token: String,
 }
 
+#[instrument(skip(state, db, invalidate))]
 async fn revoke(
   Query(req_p): Query<RevokeReqOption>,
   db: Connection,

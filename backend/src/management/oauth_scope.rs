@@ -5,6 +5,7 @@ use axum::{
 use centaurus::{bail, db::init::Connection, error::Result};
 use entity::{o_auth_scope, sea_orm_active_enums::Permission};
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -32,13 +33,14 @@ async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuth
   Ok(Json(db.oauth_scope().list().await?))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct CreateReq {
   pub name: String,
   pub scope: String,
   pub policy: Vec<BasicOAuthPolicyInfo>,
 }
 
+#[instrument(skip(db, updater))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -73,11 +75,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct DeleteReq {
   uuid: Uuid,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -93,6 +96,7 @@ async fn delete(
   Ok(())
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -122,6 +126,7 @@ async fn edit(
   Ok(())
 }
 
+#[instrument(skip(db))]
 async fn policy_list(
   auth: JwtClaims<JwtBase>,
   db: Connection,

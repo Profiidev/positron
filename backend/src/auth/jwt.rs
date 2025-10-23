@@ -1,4 +1,4 @@
-use std::{convert::Infallible, sync::Arc};
+use std::{convert::Infallible, fmt::Debug, sync::Arc};
 
 use axum::{
   body::Body,
@@ -29,7 +29,7 @@ use uuid::Uuid;
 
 use crate::{config::Config, db::DBTrait, utils::jwt_from_request};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct JwtClaims<T: JwtType> {
   pub exp: i64,
   pub iss: String,
@@ -43,12 +43,12 @@ pub struct TokenRes<T: Serialize = ()> {
   pub body: T,
 }
 
-pub trait JwtType: Default + Clone {
+pub trait JwtType: Default + Clone + Debug {
   fn duration(long: i64, short: i64) -> i64;
   fn cookie_name() -> &'static str;
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtBase {
   #[default]
   Base,
@@ -63,7 +63,7 @@ impl JwtType for JwtBase {
   }
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtSpecial {
   #[default]
   Special,
@@ -78,7 +78,7 @@ impl JwtType for JwtSpecial {
   }
 }
 
-#[derive(Default, Deserialize, Serialize, Clone)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 pub enum JwtTotpRequired {
   #[default]
   TotpRequired,

@@ -13,6 +13,7 @@ use lettre::{
 use rand::{distr::Uniform, Rng};
 use thiserror::Error;
 use tokio::sync::Mutex;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -127,6 +128,7 @@ impl Mailer {
 }
 
 impl Mailer {
+  #[instrument(skip(self, body))]
   pub fn send_mail(
     &self,
     username: String,

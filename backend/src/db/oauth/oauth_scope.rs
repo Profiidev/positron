@@ -8,7 +8,7 @@ use crate::db::util::update_relations;
 
 use super::oauth_policy::BasicOAuthPolicyInfo;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthScopeInfo {
   pub uuid: Uuid,
   pub name: String,

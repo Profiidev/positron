@@ -6,6 +6,7 @@ use axum_extra::extract::CookieJar;
 use centaurus::{auth::pw::PasswordState, bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::db::DBTrait;
 
@@ -39,6 +40,7 @@ struct AuthRes {
   totp: bool,
 }
 
+#[instrument(skip(db, state, jwt, cookies, req))]
 async fn authenticate(
   state: PasswordState,
   jwt: JwtState,
@@ -76,6 +78,7 @@ struct SpecialAccess {
   password: String,
 }
 
+#[instrument(skip(db, state, jwt, cookies, req))]
 async fn special_access(
   auth: JwtClaims<JwtBase>,
   state: PasswordState,
@@ -107,6 +110,7 @@ struct PasswordChange {
   password_confirm: String,
 }
 
+#[instrument(skip(db, state, req))]
 async fn change(
   auth: JwtClaims<JwtSpecial>,
   state: PasswordState,

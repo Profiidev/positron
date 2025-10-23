@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::user::group::BasicGroupInfo;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthPolicyInfo {
   pub uuid: Uuid,
   pub name: String,
@@ -13,7 +13,7 @@ pub struct OAuthPolicyInfo {
   pub group: Vec<(BasicGroupInfo, String)>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BasicOAuthPolicyInfo {
   pub uuid: Uuid,
   pub name: String,

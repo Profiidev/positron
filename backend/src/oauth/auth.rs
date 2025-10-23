@@ -2,15 +2,16 @@ use std::str::FromStr;
 
 use axum::{
   extract::{Path, Query},
-  response::{IntoResponse, Response},
   routing::{get, post},
   Form, Json, Router,
 };
-use centaurus::{bail, db::init::Connection, error::Result, serde::empty_string_as_none};
+use centaurus::{
+  bail, db::init::Connection, error::Result, req::redirect::Redirect, serde::empty_string_as_none,
+};
 use chrono::Utc;
 use entity::o_auth_client;
-use http::{header::LOCATION, HeaderValue, StatusCode};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
@@ -48,6 +49,7 @@ async fn authorize_post(
   authorize_start(req, state, db).await
 }
 
+#[instrument(skip(state, db))]
 async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
   let client_id = req.client_id.parse()?;
@@ -75,13 +77,14 @@ struct AuthRes {
   location: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct AuthConfirmQuery {
   code: String,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   allow: Option<bool>,
 }
 
+#[instrument(skip(state, db))]
 async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
   state: AuthorizeState,
@@ -154,6 +157,7 @@ async fn authorize_confirm(
   }))
 }
 
+#[instrument]
 fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'static str> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
@@ -191,6 +195,7 @@ fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'st
   None
 }
 
+#[instrument(skip(state, db))]
 async fn logout(
   db: Connection,
   Path(client_id): Path<Uuid>,
@@ -209,34 +214,4 @@ async fn logout(
     .unwrap()
     .to_string(),
   ))
-}
-
-#[derive(Debug, Clone)]
-pub struct Redirect {
-  status_code: StatusCode,
-  location: HeaderValue,
-}
-
-impl IntoResponse for Redirect {
-  fn into_response(self) -> Response {
-    (self.status_code, [(LOCATION, self.location)]).into_response()
-  }
-}
-
-impl Redirect {
-  pub fn found(uri: String) -> Self {
-    Self::with_status_code(StatusCode::FOUND, &uri)
-  }
-
-  fn with_status_code(status_code: StatusCode, uri: &str) -> Self {
-    assert!(
-      status_code.is_redirection(),
-      "not a redirection status code"
-    );
-
-    Self {
-      status_code,
-      location: HeaderValue::try_from(uri).expect("URI isn't a valid header value"),
-    }
-  }
 }

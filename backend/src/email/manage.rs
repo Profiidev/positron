@@ -2,6 +2,7 @@ use axum::{routing::post, Json, Router};
 use centaurus::{bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::Deserialize;
+use tracing::instrument;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
@@ -20,11 +21,12 @@ pub fn router() -> Router {
     .route("/finish_change", post(finish_change))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct EmailChange {
   new_email: String,
 }
 
+#[instrument(skip(db, mailer, state))]
 async fn start_change(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
@@ -61,12 +63,13 @@ async fn start_change(
   Ok(StatusCode::OK)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct EmailCode {
   old_code: String,
   new_code: String,
 }
 
+#[instrument(skip(db, state, updater))]
 async fn finish_change(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,

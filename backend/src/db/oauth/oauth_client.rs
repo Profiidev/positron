@@ -12,7 +12,7 @@ use crate::{
   oauth::scope::Scope,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthClientInfo {
   pub name: String,
   pub client_id: Uuid,

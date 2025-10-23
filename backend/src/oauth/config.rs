@@ -1,6 +1,7 @@
 use axum::{extract::Query, routing::get, Json, Router};
 use centaurus::{db::init::Connection, error::Result, serde::empty_string_as_none};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::db::DBTrait;
 
@@ -28,12 +29,13 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ConfigQuery {
   #[serde(default, deserialize_with = "empty_string_as_none")]
   internal: Option<bool>,
 }
 
+#[instrument(skip(state, db))]
 async fn config(
   state: ConfigurationState,
   db: Connection,

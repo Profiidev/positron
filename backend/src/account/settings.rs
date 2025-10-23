@@ -3,6 +3,7 @@ use axum::{
   Json, Router,
 };
 use centaurus::{db::init::Connection, error::Result};
+use tracing::instrument;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
@@ -20,6 +21,7 @@ async fn get(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<SettingsIn
   Ok(Json(db.settings().get(auth.sub).await?))
 }
 
+#[instrument(skip(db, updater, req))]
 async fn update(
   auth: JwtClaims<JwtBase>,
   db: Connection,

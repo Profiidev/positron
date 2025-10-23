@@ -1,4 +1,4 @@
-use axum::Router;
+use axum::{Extension, Router};
 use centaurus::{
   db::init::init_db,
   init::{
@@ -104,5 +104,7 @@ router_extension!(
       .await
       .ws(&config)
       .await
+      .layer(Extension(db))
+      .layer(Extension(config))
   }
 );

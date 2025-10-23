@@ -6,6 +6,7 @@ use axum::{
 };
 use centaurus::db::init::Connection;
 use serde::Serialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::db::DBTrait;
@@ -26,6 +27,7 @@ async fn user_post(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   user_internal(claims, db).await
 }
 
+#[instrument(skip(db))]
 async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   let mut claims: UserInfo = claims.into();
 

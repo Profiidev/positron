@@ -16,6 +16,7 @@ use http::StatusCode;
 use rand::{distr::Alphanumeric, Rng};
 use rsa::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
@@ -48,12 +49,14 @@ pub fn router() -> Router {
     .route("/list_scopes", get(list_scopes))
 }
 
+#[instrument(skip(db))]
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<OAuthClientInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
   Ok(Json(db.oauth_client().list_client().await?))
 }
 
+#[instrument(skip(db))]
 async fn group_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<BasicGroupInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
   let group = db.groups().basic_group_list().await?;
@@ -61,6 +64,7 @@ async fn group_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec
   Ok(Json(group))
 }
 
+#[instrument(skip(db))]
 async fn user_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<BasicUserInfo>>> {
   let res = Permission::check(&db, auth.sub, Permission::OAuthClientList).await;
   if res.is_err() {
@@ -74,6 +78,7 @@ async fn user_list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<
   Ok(Json(user))
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -107,6 +112,7 @@ async fn edit(
   Ok(())
 }
 
+#[instrument(skip(db, state))]
 async fn start_create(
   auth: JwtClaims<JwtBase>,
   state: ClientState,
@@ -131,7 +137,7 @@ async fn start_create(
   Ok(Json(ClientCreateStart { secret, client_id }))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ClientCreate {
   name: String,
   redirect_uri: Url,
@@ -140,6 +146,7 @@ struct ClientCreate {
   confidential: bool,
 }
 
+#[instrument(skip(db, updater, state))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -188,11 +195,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ClientDelete {
   uuid: String,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -209,7 +217,7 @@ async fn delete(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ResetReq {
   client_id: Uuid,
 }
@@ -219,6 +227,7 @@ struct ResetRes {
   secret: String,
 }
 
+#[instrument(skip(db, state))]
 async fn reset(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -245,6 +254,7 @@ async fn reset(
   Ok(Json(ResetRes { secret }))
 }
 
+#[instrument(skip(db))]
 async fn list_scopes(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<String>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 

@@ -7,6 +7,7 @@ use axum::{
 use centaurus::{bail, db::init::Connection, error::Result};
 use entity::{group, sea_orm_active_enums::Permission};
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -24,6 +25,7 @@ pub fn router() -> Router {
     .route("/delete", post(delete))
 }
 
+#[instrument(skip(db))]
 async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<GroupInfo>>> {
   Permission::check(&db, auth.sub, Permission::GroupList).await?;
   let groups = db.groups().list_groups().await?;
@@ -31,6 +33,7 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<Group
   Ok(Json(groups))
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -67,12 +70,13 @@ async fn edit(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GroupCreateReq {
   name: String,
   access_level: i32,
 }
 
+#[instrument(skip(db, updater))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -104,11 +108,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GroupDelete {
   uuid: Uuid,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,

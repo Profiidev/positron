@@ -1,5 +1,6 @@
 use async_nats::StatusCode;
 use s3::Bucket;
+use tracing::instrument;
 
 use crate::s3::error::S3Error;
 
@@ -12,6 +13,7 @@ impl<'b> ApodFolder<'b> {
     Self { bucket }
   }
 
+  #[instrument(skip(self, image))]
   pub async fn upload(&self, path: &str, image: &[u8]) -> Result<(), S3Error> {
     let ret = self
       .bucket
@@ -25,6 +27,7 @@ impl<'b> ApodFolder<'b> {
     }
   }
 
+  #[instrument(skip(self))]
   pub async fn download(&self, path: &str) -> Result<Vec<u8>, S3Error> {
     let ret = self.bucket.get_object(format!("apod/{path}")).await?;
 

@@ -5,6 +5,7 @@ use axum::{
 use centaurus::{bail, db::init::Connection, error::Result};
 use entity::{o_auth_policy, sea_orm_active_enums::Permission};
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -25,13 +26,14 @@ pub fn router() -> Router {
     .route("/edit", post(edit))
 }
 
+#[instrument(skip(db))]
 async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuthPolicyInfo>>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
 
   Ok(Json(db.oauth_policy().list().await?))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct CreateReq {
   pub name: String,
   pub claim: String,
@@ -39,6 +41,7 @@ struct CreateReq {
   pub group: Vec<(BasicGroupInfo, String)>,
 }
 
+#[instrument(skip(db, updater))]
 async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -75,11 +78,12 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct DeleteReq {
   uuid: Uuid,
 }
 
+#[instrument(skip(db, updater))]
 async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -95,6 +99,7 @@ async fn delete(
   Ok(())
 }
 
+#[instrument(skip(db, updater))]
 async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,

@@ -16,6 +16,7 @@ use http::StatusCode;
 use image::{imageops::FilterType, ImageFormat};
 use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -45,6 +46,7 @@ struct ListRes {
   user: BasicUserInfo,
 }
 
+#[instrument(skip(db, s3))]
 async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
@@ -72,12 +74,13 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<V
   Ok(Json(apod_infos))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct SetGoodReq {
   date: DateTime<Utc>,
   good: bool,
 }
 
+#[instrument(skip(db, updater))]
 async fn set_good(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -96,17 +99,18 @@ async fn set_good(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GetReq {
   date: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct GetInfoRes {
   title: String,
   user: Option<BasicUserInfo>,
 }
 
+#[instrument(skip(state, db, s3))]
 async fn get_image_info(
   auth: JwtClaims<JwtBase>,
   db: Connection,
@@ -166,6 +170,7 @@ struct GetRes {
   image: String,
 }
 
+#[instrument(skip(s3, db))]
 async fn get_image(
   auth: JwtClaims<JwtBase>,
   s3: S3,
@@ -181,6 +186,7 @@ async fn get_image(
   }))
 }
 
+#[instrument(skip(s3, db))]
 async fn random(s3: S3, db: Connection) -> Result<Vec<u8>> {
   let list = db.apod().list().await?;
 
