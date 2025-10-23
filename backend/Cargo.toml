@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-centaurus = { git = "https://github.com/ProfiiDev/centaurus.git", rev = "667a99b1b4ec8bc83289043675226e39de66db05", features = [
-  #centaurus = { version = "0.3.2", features = [
+centaurus = { version = "0.4.0", features = [
   "axum",
   "logging",
   "argon2",
@@ -21,7 +20,6 @@ centaurus = { git = "https://github.com/ProfiiDev/centaurus.git", rev = "667a99b
   "webauthn",
   "image",
   "auth",
-  "sea-orm",
 ] }
 openssl = { version = "0.10.73", features = ["vendored"] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
