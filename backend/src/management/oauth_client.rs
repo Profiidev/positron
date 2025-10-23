@@ -5,7 +5,13 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::{
+  auth::pw::hash_secret,
+  bail,
+  error::{ErrorReportStatusExt, Result},
+};
 use entity::{o_auth_client, sea_orm_active_enums::Permission};
+use http::StatusCode;
 use rand::{distr::Alphanumeric, Rng};
 use rsa::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
@@ -21,10 +27,8 @@ use crate::{
     },
     Connection, DBTrait,
   },
-  error::{Error, Result},
   oauth::scope::{Scope, DEFAULT_SCOPES},
   permission::PermissionTrait,
-  utils::hash_secret,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -83,7 +87,7 @@ async fn edit(
     .client_exists(req.name.clone(), req.client_id)
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "client with the given name already exists");
   }
 
   let client = db.tables().oauth_client().get_client(req.client_id).await?;
@@ -157,11 +161,12 @@ async fn create(
     .client_exists(req.name.clone(), Uuid::max())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "client with the given name already exists");
   }
 
   let mut lock = state.create.lock().await;
-  let ClientCreateStart { secret, client_id } = lock.get(&auth.sub).ok_or(Error::BadRequest)?;
+  let ClientCreateStart { secret, client_id } =
+    lock.get(&auth.sub).status(StatusCode::BAD_REQUEST)?;
 
   let salt = SaltString::generate(OsRng {}).to_string();
   let client_secret = hash_secret(&state.pepper, &salt, secret.as_bytes())?;

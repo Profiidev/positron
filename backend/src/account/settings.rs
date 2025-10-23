@@ -2,11 +2,11 @@ use axum::{
   routing::{self, post},
   Json, Router,
 };
+use centaurus::error::Result;
 
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{tables::user::settings::SettingsInfo, Connection, DBTrait},
-  error::Result,
   ws::state::{UpdateState, UpdateType},
 };
 

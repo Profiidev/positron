@@ -5,6 +5,7 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::{bail, error::Result};
 use chrono::Utc;
 use entity::{sea_orm_active_enums::Permission, user};
 use rsa::rand_core::OsRng;
@@ -17,9 +18,7 @@ use crate::{
     state::PasswordState,
   },
   db::{tables::user::user::UserInfo, Connection, DBTrait},
-  error::{Error, Result},
   permission::PermissionTrait,
-  utils::hash_password,
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -63,7 +62,10 @@ async fn edit(
   let diff: Vec<_> = new_perm.symmetric_difference(&old_perm).cloned().collect();
 
   if diff.iter().any(|p| !editor_permissions.contains(p)) {
-    return Err(Error::Unauthorized);
+    bail!(
+      UNAUTHORIZED,
+      "user does not have permission to assign one or more of the requested permissions"
+    );
   }
 
   db.tables()
@@ -94,7 +96,7 @@ async fn create(
 
   let exists = db.tables().user().user_exists(req.email.clone()).await?;
   if exists {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "user with the given email already exists");
   }
 
   let salt = SaltString::generate(OsRng {}).to_string();

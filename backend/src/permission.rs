@@ -1,11 +1,9 @@
+use centaurus::{bail, error::Result};
 use entity::sea_orm_active_enums::Permission;
 use sea_orm::DatabaseConnection;
 use uuid::Uuid;
 
-use crate::{
-  db::DBTrait,
-  error::{Error, Result},
-};
+use crate::db::DBTrait;
 
 pub trait PermissionTrait {
   async fn check(db: &DatabaseConnection, user: Uuid, permissions: Permission) -> Result<()>;
@@ -21,7 +19,7 @@ impl PermissionTrait for Permission {
   async fn check(db: &DatabaseConnection, user: Uuid, permission: Permission) -> Result<()> {
     let valid = db.tables().user().has_permission(user, permission).await?;
     if !valid {
-      Err(Error::Unauthorized)
+      bail!(UNAUTHORIZED, "insufficient permissions");
     } else {
       Ok(())
     }
@@ -44,7 +42,7 @@ impl PermissionTrait for Permission {
     if access_level < access_level_user {
       Ok(())
     } else {
-      Err(Error::Unauthorized)
+      bail!(UNAUTHORIZED, "insufficient access level");
     }
   }
 }

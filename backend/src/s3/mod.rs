@@ -3,20 +3,18 @@ extern crate s3 as s3_crate;
 use std::sync::Arc;
 
 use axum::Extension;
-use folders::Folders;
+use centaurus::{router_extension, FromReqExtension};
 use s3_crate::{creds::Credentials, Bucket, Region};
-use sea_orm::DatabaseConnection;
 
-use crate::{config::Config, from_req_extension, state_trait};
+use crate::{config::Config, s3::apod::ApodFolder};
 
+pub mod apod;
 pub mod error;
-pub mod folders;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct S3 {
   bucket: Arc<Bucket>,
 }
-from_req_extension!(S3);
 
 impl S3 {
   async fn init(config: &Config) -> Self {
@@ -52,13 +50,13 @@ impl S3 {
     }
   }
 
-  pub fn folders(&self) -> Folders<'_> {
-    Folders::new(&self.bucket)
+  pub fn apod(&self) -> ApodFolder<'_> {
+    ApodFolder::new(&self.bucket)
   }
 }
 
-state_trait!(
-  async fn s3(self, config: &Config, _db: &DatabaseConnection) -> Self {
+router_extension!(
+  async fn s3(self, config: &Config) -> Self {
     self.layer(Extension(S3::init(config).await))
   }
 );

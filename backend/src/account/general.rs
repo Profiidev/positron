@@ -7,6 +7,7 @@ use axum::{
   Json, Router,
 };
 use base64::prelude::*;
+use centaurus::error::Result;
 use chrono::{DateTime, Utc};
 use entity::sea_orm_active_enums::Permission;
 use http::StatusCode;
@@ -17,7 +18,6 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{Connection, DBTrait},
-  error::Result,
   ws::state::{UpdateState, UpdateType},
 };
 

@@ -2,6 +2,7 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::{bail, error::Result};
 use entity::{o_auth_policy, sea_orm_active_enums::Permission};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -12,7 +13,6 @@ use crate::{
     tables::{oauth::oauth_policy::OAuthPolicyInfo, user::group::BasicGroupInfo},
     Connection, DBTrait,
   },
-  error::{Error, Result},
   permission::PermissionTrait,
   ws::state::{UpdateState, UpdateType},
 };
@@ -53,7 +53,7 @@ async fn create(
     .policy_exists(req.name.clone(), Uuid::max())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "policy with the given name already exists");
   }
 
   let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();
@@ -111,7 +111,7 @@ async fn edit(
     .policy_exists(req.name.clone(), req.uuid)
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "policy with the given name already exists");
   }
 
   let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();

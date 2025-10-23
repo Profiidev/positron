@@ -6,6 +6,7 @@ use axum::{
   routing::{get, post},
   Form, Json, Router,
 };
+use centaurus::{bail, error::Result, serde::empty_string_as_none};
 use chrono::Utc;
 use entity::o_auth_client;
 use http::{header::LOCATION, HeaderValue, StatusCode};
@@ -16,8 +17,6 @@ use webauthn_rs::prelude::Url;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{Connection, DBTrait},
-  error::{Error, Result},
-  utils::empty_string_as_none,
 };
 
 use super::{
@@ -101,10 +100,10 @@ async fn authorize_confirm(
   }
 
   let Some((exp, req)) = lock.get(&code) else {
-    return Err(Error::BadRequest);
+    bail!("authorization request not found")
   };
   if *exp < Utc::now().timestamp() {
-    return Err(Error::BadRequest);
+    bail!("authorization request expired")
   }
 
   let client_id = req.client_id.parse()?;
@@ -117,7 +116,7 @@ async fn authorize_confirm(
     .has_user_access(user.id, client_id)
     .await?
   {
-    return Err(Error::Unauthorized);
+    bail!("user does not have access to the client");
   }
 
   let (_, mut req) = lock.remove(&code).unwrap();

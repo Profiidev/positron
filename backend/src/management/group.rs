@@ -4,6 +4,7 @@ use axum::{
   routing::{get, post},
   Json, Router,
 };
+use centaurus::{bail, error::Result};
 use entity::{group, sea_orm_active_enums::Permission};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -11,7 +12,6 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtBase, JwtClaims},
   db::{tables::user::group::GroupInfo, Connection, DBTrait},
-  error::{Error, Result},
   permission::PermissionTrait,
   ws::state::{UpdateState, UpdateType},
 };
@@ -49,7 +49,10 @@ async fn edit(
   let diff: Vec<_> = new_perm.symmetric_difference(&old_perm).cloned().collect();
 
   if diff.iter().any(|p| !editor_permissions.contains(p)) {
-    return Err(Error::Unauthorized);
+    bail!(
+      UNAUTHORIZED,
+      "insufficient permissions to assign some of the requested permissions"
+    );
   }
 
   if db
@@ -58,7 +61,7 @@ async fn edit(
     .group_exists(req.name.clone(), req.uuid)
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "group with the given name already exists");
   }
 
   let users = db
@@ -94,7 +97,7 @@ async fn create(
     .group_exists(req.name.clone(), Uuid::max())
     .await?;
   if exists {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "group with the given name already exists");
   }
 
   db.tables()

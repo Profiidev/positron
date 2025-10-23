@@ -1,8 +1,8 @@
 use axum::{Extension, Router};
-use sea_orm::DatabaseConnection;
+use centaurus::router_extension;
 use state::{EmailState, Mailer};
 
-use crate::{config::Config, state_trait};
+use crate::config::Config;
 
 mod manage;
 pub mod state;
@@ -12,8 +12,8 @@ pub fn router() -> Router {
   Router::new().nest("/manage", manage::router())
 }
 
-state_trait!(
-  async fn email(self, config: &Config, _db: &DatabaseConnection) -> Self {
+router_extension!(
+  async fn email(self, config: &Config) -> Self {
     self
       .layer(Extension(Mailer::init(config)))
       .layer(Extension(EmailState::init(config)))

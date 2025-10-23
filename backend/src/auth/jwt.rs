@@ -6,6 +6,7 @@ use axum::{
   response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
+use centaurus::{anyhow, FromReqExtension};
 use chrono::{Duration, Utc};
 use http::{
   header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
@@ -27,7 +28,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{config::Config, db::DBTrait, from_req_extension, utils::jwt_from_request};
+use crate::{config::Config, db::DBTrait, utils::jwt_from_request};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct JwtClaims<T: JwtType> {
@@ -93,11 +94,10 @@ impl JwtType for JwtTotpRequired {
   }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, FromReqExtension)]
 pub struct JwtInvalidState {
   pub count: Arc<Mutex<i32>>,
 }
-from_req_extension!(JwtInvalidState);
 
 impl JwtInvalidState {
   pub fn init() -> Self {
@@ -105,7 +105,7 @@ impl JwtInvalidState {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct JwtState {
   header: Header,
   encoding_key: EncodingKey,
@@ -117,7 +117,6 @@ pub struct JwtState {
   pub kid: String,
   pub public_key: RsaPublicKey,
 }
-from_req_extension!(JwtState);
 
 impl JwtState {
   pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
@@ -222,7 +221,7 @@ impl<S: Sync, T> FromRequestParts<S> for JwtClaims<T>
 where
   for<'de> T: JwtType + Deserialize<'de>,
 {
-  type Rejection = crate::error::Error;
+  type Rejection = centaurus::error::ErrorReport;
 
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
     jwt_from_request::<JwtClaims<T>, T>(parts).await
@@ -246,7 +245,7 @@ where
 impl<T: Serialize> IntoResponse for TokenRes<T> {
   fn into_response(self) -> Response {
     let Ok(body) = serde_json::to_string(&self.body) else {
-      return crate::error::Error::InternalServerError.into_response();
+      return anyhow!("Failed to serialize token response body").into_response();
     };
 
     Response::builder()

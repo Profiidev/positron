@@ -1,11 +1,11 @@
 use axum::{routing::post, Json, Router};
+use centaurus::{bail, error::Result};
 use http::StatusCode;
 use serde::Deserialize;
 
 use crate::{
   auth::jwt::{JwtClaims, JwtSpecial},
   db::{Connection, DBTrait},
-  error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -40,11 +40,11 @@ async fn start_change(
     .user_exists(req.new_email.clone())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "user with the given email already exists");
   }
 
   let Some(code) = state.gen_info(req.new_email.clone()) else {
-    return Err(Error::InternalServerError);
+    bail!(INTERNAL_SERVER_ERROR, "failed to generate change info");
   };
 
   state.change_req.lock().await.insert(auth.sub, code.clone());

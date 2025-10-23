@@ -3,14 +3,11 @@ use axum::{
   Json, Router,
 };
 use axum_extra::extract::CookieJar;
+use centaurus::{bail, error::Result};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-  db::{Connection, DBTrait},
-  error::{Error, Result},
-  utils::hash_password,
-};
+use crate::db::{Connection, DBTrait};
 
 use super::{
   jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes},
@@ -56,7 +53,7 @@ async fn authenticate(
   let hash = hash_password(&state, &user.salt, &req.password)?;
 
   if hash != user.password {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
   let (cookie, totp) = if user.totp.is_some() {
@@ -94,7 +91,7 @@ async fn special_access(
   let hash = hash_password(&state, &user.salt, &req.password)?;
 
   if hash != user.password {
-    return Err(Error::Unauthorized);
+    bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
   db.tables().user().used_special_access(auth.sub).await?;
@@ -124,7 +121,7 @@ async fn change(
   let hash_confirm = hash_password(&state, &user.salt, &req.password_confirm)?;
 
   if hash != hash_confirm {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passwords do not match");
   }
 
   db.tables().user().change_password(user.id, hash).await?;

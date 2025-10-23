@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use centaurus::FromReqExtension;
 use chrono::{DateTime, Duration, Utc};
 use lettre::{
   address::AddressError,
@@ -13,22 +14,20 @@ use thiserror::Error;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct Mailer {
   transport: SmtpTransport,
   sender: Mailbox,
   pub site_link: String,
 }
-from_req_extension!(Mailer);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct EmailState {
   pub change_req: Arc<Mutex<HashMap<Uuid, ChangeInfo>>>,
   pub exp: i64,
 }
-from_req_extension!(EmailState);
 
 #[derive(Clone)]
 pub struct ChangeInfo {
@@ -110,7 +109,10 @@ impl Mailer {
 
     let sender = Mailbox::new(
       Some(config.smtp_sender_name.clone()),
-      config.smtp_sender_email.clone(),
+      config
+        .smtp_sender_email
+        .parse()
+        .expect("Invalid sender email address"),
     );
 
     Self {

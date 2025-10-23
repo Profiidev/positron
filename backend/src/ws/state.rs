@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_nats::{connect, Client, Subject};
+use centaurus::FromReqExtension;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -12,17 +13,16 @@ use tokio::{
 };
 use uuid::Uuid;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
 pub type Sessions = Arc<Mutex<HashMap<Uuid, HashMap<Uuid, Sender<UpdateType>>>>>;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct UpdateState {
   sessions: Sessions,
   sender: Client,
   subject: Subject,
 }
-from_req_extension!(UpdateState);
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum UpdateType {

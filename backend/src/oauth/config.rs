@@ -1,11 +1,8 @@
 use axum::{extract::Query, routing::get, Json, Router};
+use centaurus::{error::Result, serde::empty_string_as_none};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-  db::{Connection, DBTrait},
-  error::Result,
-  utils::empty_string_as_none,
-};
+use crate::db::{Connection, DBTrait};
 
 use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
 

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
+use centaurus::FromReqExtension;
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
   pkcs8::LineEnding,
@@ -15,35 +16,31 @@ use webauthn_rs::{
   Webauthn, WebauthnBuilder,
 };
 
-use crate::{config::Config, db::DBTrait, from_req_extension};
+use crate::{config::Config, db::DBTrait};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, FromReqExtension)]
 pub struct PasskeyState {
   pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
   pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
   pub non_discover_auth_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
   pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
-from_req_extension!(PasskeyState);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct PasswordState {
   key: RsaPrivateKey,
   pub pub_key: String,
   pub pepper: Vec<u8>,
 }
-from_req_extension!(PasswordState);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct TotpState {
   pub issuer: String,
   pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
-from_req_extension!(TotpState);
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct WebauthnState(Webauthn);
-from_req_extension!(WebauthnState);
 
 impl Deref for WebauthnState {
   type Target = Webauthn;

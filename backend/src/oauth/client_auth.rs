@@ -7,14 +7,12 @@ use axum_extra::{
   headers::{authorization::Basic, Authorization},
   TypedHeader,
 };
+use centaurus::auth::pw::hash_secret;
 use http::{request::Parts, StatusCode};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{
-  db::{Connection, DBTrait},
-  utils::hash_secret,
-};
+use crate::db::{Connection, DBTrait};
 
 use super::state::ClientState;
 

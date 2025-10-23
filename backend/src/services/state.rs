@@ -1,15 +1,15 @@
+use centaurus::FromReqExtension;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::{config::Config, from_req_extension};
+use crate::config::Config;
 
-#[derive(Clone)]
+#[derive(Clone, FromReqExtension)]
 pub struct ApodState {
   api_key: String,
   client: Client,
 }
-from_req_extension!(ApodState);
 
 #[derive(Deserialize)]
 struct ImageRes {

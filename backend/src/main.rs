@@ -1,24 +1,25 @@
-use std::net::SocketAddr;
-
-use axum::{serve, Extension, Router};
-use clap::Parser;
-use cors::cors;
+use axum::Router;
+use centaurus::{
+  db::init::init_db,
+  init::{
+    axum::{add_base_layers, listener_setup, run_app},
+    logging::init_logging,
+    metrics::{init_metrics, metrics_route},
+  },
+  req::health,
+  router_extension,
+};
 #[cfg(debug_assertions)]
 use dotenv::dotenv;
-use tokio::signal;
-use tower::ServiceBuilder;
+use tracing::info;
 
-use crate::{config::Config, db::init_db};
+use crate::config::Config;
 
 mod account;
 mod auth;
 mod config;
-mod cors;
 mod db;
 mod email;
-mod error;
-mod logging;
-mod macros;
 mod management;
 mod oauth;
 mod permission;
@@ -34,36 +35,33 @@ async fn main() {
   dotenv().ok();
 
   let config = Config::parse();
+  init_logging(&config.base);
+  let handle = init_metrics(config.metrics_name.clone());
 
-  tracing_subscriber::fmt()
-    .with_max_level(config.log_level)
-    .init();
+  let metrics_name = config.metrics_name.clone();
+  let metrics_labels = config.metrics_labels.clone();
 
-  let db = init_db(&config)
-    .await
-    .expect("Failed to initialize database");
+  let listener = listener_setup(config.base.port).await;
 
-  let app = Router::new()
-    .merge(routes())
-    .state(&config, &db)
-    .await
-    .layer(
-      ServiceBuilder::new()
-        .layer(cors(&config).expect("Failed to create CORS layer"))
-        .layer(Extension(db)),
-    );
+  use centaurus::init::metrics::metrics;
+  let mut app_labels = vec![("api".into(), "management".into())];
+  app_labels.extend(metrics_labels.clone());
 
-  let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-  let listener = tokio::net::TcpListener::bind(addr)
+  let app = router()
+    .metrics_route()
     .await
-    .expect("Failed to bind TCP listener");
-  serve(listener, app)
-    .with_graceful_shutdown(shutdown_signal())
+    .add_base_layers(&config.base)
     .await
-    .expect("Failed to start server");
+    .state(config)
+    .await
+    .metrics(metrics_name, handle, app_labels)
+    .await;
+
+  info!("Starting application...");
+  run_app(listener, app).await;
 }
 
-fn routes() -> Router {
+fn router() -> Router {
   Router::new()
     .nest("/auth", auth::router())
     .nest("/account", account::router())
@@ -73,26 +71,38 @@ fn routes() -> Router {
     .nest("/ws", ws::router())
     .nest("/services", services::router())
     .merge(well_known::router())
+    .merge(health::router())
 }
 
-collect_state!(auth, email, oauth, management, services, s3, ws, well_known, logging);
+router_extension!(
+  async fn state(self, config: Config) -> Self {
+    use auth::auth;
+    use email::email;
+    use management::management;
+    use oauth::oauth;
+    use s3::s3;
+    use services::services;
+    use well_known::well_known;
+    use ws::ws;
 
-async fn shutdown_signal() {
-  let ctrl_c = async {
-    signal::ctrl_c()
+    let db = init_db(&config.db, &config.db_url).await;
+
+    self
+      .auth(&config)
       .await
-      .expect("failed to install Ctrl+C handler");
-  };
-
-  let terminate = async {
-    signal::unix::signal(signal::unix::SignalKind::terminate())
-      .expect("failed to install signal handler")
-      .recv()
-      .await;
-  };
-
-  tokio::select! {
-      _ = ctrl_c => {},
-      _ = terminate => {},
+      .email(&config)
+      .await
+      .management(&config)
+      .await
+      .oauth(&config)
+      .await
+      .s3(&config)
+      .await
+      .services(&config)
+      .await
+      .well_known(&config)
+      .await
+      .ws(&config)
+      .await
   }
-}
+);

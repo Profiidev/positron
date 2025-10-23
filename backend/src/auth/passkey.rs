@@ -7,6 +7,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use base64::prelude::*;
+use centaurus::{bail, error::Result, eyre::ContextCompat};
 use chrono::{DateTime, Utc};
 use entity::passkey;
 use http::StatusCode;
@@ -21,7 +22,6 @@ use webauthn_rs_proto::ResidentKeyRequirement;
 use crate::{
   auth::state::WebauthnState,
   db::{Connection, DBTrait},
-  error::{Error, Result},
   ws::state::{UpdateState, UpdateType},
 };
 
@@ -99,11 +99,11 @@ async fn finish_registration(
     .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passkey name already exists");
   }
 
   let mut states = state.reg_state.lock().await;
-  let reg_state = states.remove(&user.id).ok_or(Error::BadRequest)?;
+  let reg_state = states.remove(&user.id).context("state not found")?;
 
   let key = webauthn.finish_passkey_registration(&req.reg, &reg_state)?;
 
@@ -185,7 +185,7 @@ async fn finish_authentication(
   Json(auth): Json<PublicKeyCredential>,
 ) -> Result<(CookieJar, TokenRes)> {
   let mut states = state.auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
+  let auth_state = states.remove(&auth_id).context("state not found")?;
 
   let (_, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
 
@@ -232,7 +232,7 @@ async fn finish_authentication_by_email(
   let auth_id = Uuid::from_str(&id)?;
 
   let mut states = state.non_discover_auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).ok_or(Error::BadRequest)?;
+  let auth_state = states.remove(&auth_id).context("state not found")?;
 
   let res = webauthn.finish_passkey_authentication(&auth, &auth_state)?;
 
@@ -298,7 +298,7 @@ async fn finish_special_access(
   Json(req): Json<PublicKeyCredential>,
 ) -> Result<(CookieJar, TokenRes)> {
   let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
-    return Err(Error::BadRequest);
+    bail!("state not found");
   };
 
   let res = webauthn.finish_passkey_authentication(&req, &auth_state)?;
@@ -396,7 +396,7 @@ async fn edit_name(
     .passkey_name_exists(user.id, req.name.clone())
     .await?
   {
-    return Err(Error::Conflict);
+    bail!(CONFLICT, "Passkey name already exists");
   }
 
   db.tables()

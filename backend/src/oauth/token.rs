@@ -1,6 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use axum::{extract::Query, routing::post, Form, Json, Router};
+use centaurus::{bail, serde::empty_string_as_none};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,7 +9,6 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
   db::{Connection, DBTrait},
-  utils::empty_string_as_none,
 };
 
 use super::{
@@ -229,13 +229,13 @@ async fn revoke(
   state: JwtState,
   invalidate: JwtInvalidState,
   Form(req_b): Form<RevokeReqOption>,
-) -> crate::error::Result<()> {
+) -> centaurus::error::Result<()> {
   let req = if let Some(req) = req_p.try_into() {
     req
   } else if let Some(req) = req_b.try_into() {
     req
   } else {
-    return Err(crate::error::Error::BadRequest);
+    bail!("invalid_request");
   };
 
   let claims = state.validate_token::<OAuthClaims>(&req.token)?;
