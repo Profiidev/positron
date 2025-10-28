@@ -6,7 +6,11 @@ use axum::{
   Form, Json, Router,
 };
 use centaurus::{
-  bail, db::init::Connection, error::Result, req::redirect::Redirect, serde::empty_string_as_none,
+  anyhow, bail,
+  db::init::Connection,
+  error::{ErrorReport, Result},
+  req::redirect::Redirect,
+  serde::empty_string_as_none,
 };
 use chrono::Utc;
 use entity::o_auth_client;
@@ -126,9 +130,10 @@ async fn authorize_confirm(
   drop(lock);
 
   let initial_redirect_uri = req.redirect_uri.clone();
-  if let Some(error) = validate_req(&mut req, &client) {
+  if let Err((error_response, error)) = validate_req(&mut req, &client) {
+    tracing::warn!("Authorization request validation failed: {:?}", error);
     return Ok(Json(AuthRes {
-      location: format!("{}?error={}", client.redirect_uri, error),
+      location: format!("{}?error={}", client.redirect_uri, error_response),
     }));
   }
 
@@ -159,24 +164,30 @@ async fn authorize_confirm(
 }
 
 #[instrument]
-fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'static str> {
+fn validate_req(
+  req: &mut AuthReq,
+  client: &o_auth_client::Model,
+) -> std::result::Result<(), (&'static str, ErrorReport)> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
-      return Some("invalid_request");
+      return Err(("invalid_request", anyhow!("invalid redirect_uri format")));
     };
 
     let mut possibilities =
       std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
 
     if !possibilities.any(|reg_url| reg_url.parse::<Url>().unwrap() == url) {
-      return Some("invalid_request");
+      return Err(("invalid_request", anyhow!("redirect_uri is not allowed")));
     }
   } else {
     req.redirect_uri = Some(client.redirect_uri.to_string());
   }
 
   if &req.response_type != "code" {
-    return Some("unsupported_response_type");
+    return Err((
+      "unsupported_response_type",
+      anyhow!("response_type must be 'code'"),
+    ));
   }
 
   if let Some(scope) = &mut req.scope {
@@ -187,13 +198,13 @@ fn validate_req(req: &mut AuthReq, client: &o_auth_client::Model) -> Option<&'st
       .intersect(&scope.parse().unwrap())
       .to_string();
     if scope.is_empty() {
-      return Some("invalid_scope");
+      return Err(("invalid_scope", anyhow!("invalid scope")));
     }
   } else {
     req.scope = Some(client.default_scope.clone().to_string());
   }
 
-  None
+  Ok(())
 }
 
 #[instrument(skip(state, db))]
