@@ -123,7 +123,7 @@ async fn authorize_confirm(
     .has_user_access(user.id, client_id)
     .await?
   {
-    bail!("user does not have access to the client");
+    bail!(UNAUTHORIZED, "user does not have access to the client");
   }
 
   let (_, mut req) = lock.remove(&code).unwrap();
@@ -177,7 +177,10 @@ fn validate_req(
       std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
 
     if !possibilities.any(|reg_url| reg_url.parse::<Url>().unwrap() == url) {
-      return Err(("invalid_request", anyhow!("redirect_uri is not allowed")));
+      return Err((
+        "invalid_request",
+        anyhow!("redirect_uri {} is not allowed", url),
+      ));
     }
   } else {
     req.redirect_uri = Some(client.redirect_uri.to_string());
