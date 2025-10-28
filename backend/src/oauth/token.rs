@@ -85,6 +85,7 @@ async fn token(
   } else if let Some(req) = req_b.try_into() {
     req
   } else {
+    tracing::warn!("missing required token request parameters");
     return Err(Error::from_str("invalid_request"));
   };
 
@@ -93,15 +94,16 @@ async fn token(
   } else if let Some(auth) = &auth {
     auth.client_id
   } else {
+    tracing::warn!("missing client identification");
     return Err(Error::from_str("invalid_request"));
   };
 
-  let client = db
-    .oauth_client()
-    .get_client(client_id)
-    .await
-    .map_err(|_| Error::from_str("invalid_client"))?;
+  let client = db.oauth_client().get_client(client_id).await.map_err(|_| {
+    tracing::warn!("client not found: {}", client_id);
+    Error::from_str("invalid_client")
+  })?;
   if client.confidential && auth.is_none() {
+    tracing::warn!("confidential client without authentication: {}", client_id);
     return Err(Error::from_str("unauthorized_client"));
   }
 
@@ -109,25 +111,45 @@ async fn token(
 
   let mut lock = state.auth_codes.lock().await;
   let Some(code_info) = lock.get(&uuid) else {
+    tracing::warn!("authorization code not found: {}", uuid);
     return Err(Error::from_str("invalid_grant"));
   };
 
   if code_info.exp < Utc::now().timestamp() {
+    tracing::warn!("authorization code expired: {}", uuid);
     return Err(Error::from_str("invalid_grant"));
   }
   if &req.grant_type != "authorization_code" {
+    tracing::warn!("unsupported grant type: {}", req.grant_type);
     return Err(Error::from_str("unsupported_grant_type"));
   }
   if code_info.client_id != client_id {
+    tracing::warn!(
+      "client id mismatch for authorization code: {}, expected {}, got {}",
+      uuid,
+      code_info.client_id,
+      client_id
+    );
     return Err(Error::from_str("invalid_client"));
   }
 
   if let Some(uri) = &code_info.redirect_uri {
     if let Some(req_uri) = req.redirect_uri {
       if *uri != req_uri {
+        tracing::warn!(
+          "redirect uri mismatch for authorization code: {}, expected {}, got {}",
+          uuid,
+          uri,
+          req_uri
+        );
         return Err(Error::from_str("invalid_request"));
       }
     } else {
+      tracing::warn!(
+        "missing redirect uri for authorization code: {}, expected {}",
+        uuid,
+        uri
+      );
       return Err(Error::from_str("invalid_request"));
     }
   }
@@ -136,15 +158,18 @@ async fn token(
   drop(lock);
 
   let Ok(user) = db.user().get_user(code_info.user).await else {
+    tracing::warn!("user not found: {}", code_info.user);
     return Err(Error::from_str("unauthorized_client"));
   };
   let Ok(groups) = db.groups().get_groups_for_user(user.id).await else {
+    tracing::warn!("failed to get groups for user: {}", user.id);
     return Err(Error::from_str("unauthorized_client"));
   };
 
   let mut rest = HashMap::new();
   for scope in code_info.scope.non_default() {
     let Ok(rest_part) = db.oauth_scope().get_values_for_user(scope, &groups).await else {
+      tracing::warn!("failed to get scope values for user: {}", user.id);
       return Err(Error::from_str("unauthorized_client"));
     };
 
@@ -182,6 +207,7 @@ async fn token(
   };
 
   let Ok(token) = jwt.create_generic_token(&claims) else {
+    tracing::warn!("failed to create token for client: {}", client_id);
     return Err(Error::from_str("unauthorized_client"));
   };
 

@@ -1,6 +1,16 @@
-ARG TARGET=x86_64-unknown-linux-musl
+ARG TARGET=x86_64-unknown-linux-gnu
+ARG RUSTFLAGS="-C target-feature=+crt-static"
 
-FROM ghcr.io/profiidev/images/rust-musl-builder@sha256:250f3e12cbacbd71a5eaa1ebce624c2d931d9bc7488b3d8d51ce0867b1803f35 AS planner
+# only tmp when webauthn-rs removes openssl dependency
+FROM ghcr.io/profiidev/images/rust-gnu-builder:main AS chef
+
+RUN apt update
+RUN apt install build-essential pkg-config libssl-dev -y
+
+FROM chef AS planner
+
+ARG TARGET
+ARG RUSTFLAGS
 
 COPY backend/entity/Cargo.toml ./entity/Cargo.toml
 COPY backend/migration/Cargo.toml ./migration/Cargo.toml
@@ -9,12 +19,12 @@ COPY backend/Cargo.toml ./Cargo.lock ./
 RUN echo "[workspace]" >> Cargo.toml && \
     echo "members = [\"entity\", \"migration\"]" >> Cargo.toml
 
-RUN cargo chef prepare --recipe-path recipe.json --bin positron-backend
+RUN cargo chef prepare --recipe-path recipe.json --bin backend
 
-FROM ghcr.io/profiidev/images/rust-musl-builder@sha256:250f3e12cbacbd71a5eaa1ebce624c2d931d9bc7488b3d8d51ce0867b1803f35 AS builder
+FROM chef AS builder
 
 ARG TARGET
-ENV TARGET=$TARGET
+ARG RUSTFLAGS
 
 COPY --from=planner /app/recipe.json .
 
@@ -25,8 +35,8 @@ COPY backend/entity ./entity
 COPY backend/migration ./migration
 COPY backend/Cargo.toml ./Cargo.lock ./
 
-RUN cargo build --release --target $TARGET --bin positron-backend
-RUN mv ./target/$TARGET/release/positron-backend ./app
+RUN cargo build --release --target $TARGET --bin backend
+RUN mv ./target/$TARGET/release/backend ./app
 
 FROM alpine
 

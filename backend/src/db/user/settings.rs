@@ -1,9 +1,11 @@
+use axum::{extract::FromRequest, Json};
 use entity::{prelude::*, settings};
 use sea_orm::{prelude::*, ActiveValue::Set, DatabaseConnection, DbErr};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, FromRequest)]
+#[from_request(via(Json))]
 pub struct SettingsInfo {
   o_auth_instant_confirm: bool,
 }

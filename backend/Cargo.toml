@@ -89,5 +89,5 @@ figment = { version = "0.10.19", features = ["env"] }
 url = { version = "2.5.7", features = ["serde"] }
 
 [[bin]]
-name = "positron-backend"
+name = "backend"
 path = "src/main.rs"

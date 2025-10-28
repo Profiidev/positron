@@ -4,7 +4,7 @@ export const loginSchema = z
   .object({
     passkey_email_input: z.boolean().default(false),
     code_input: z.boolean().default(false),
-    passkey_email: z.email().default(''),
+    passkey_email: z.email().default('test@example.com'),
     email: z.email().default(''),
     password: z.string().default(''),
     totp: z.string().default('')

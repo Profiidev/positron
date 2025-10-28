@@ -1,10 +1,12 @@
+use axum::{extract::FromRequest, Json};
 use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 
 use crate::db::user::group::BasicGroupInfo;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 pub struct OAuthPolicyInfo {
   pub uuid: Uuid,
   pub name: String,

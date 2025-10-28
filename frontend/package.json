@@ -23,7 +23,7 @@
     "@types/luxon": "3.7.1",
     "jsencrypt": "3.5.4",
     "luxon": "3.7.2",
-    "positron-components": "^1.7.1",
+    "positron-components": "^1.7.2",
     "tauri-plugin-webauthn-api": "^0.2.0"
   },
   "devDependencies": {

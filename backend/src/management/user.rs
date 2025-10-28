@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use argon2::password_hash::SaltString;
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -36,7 +37,8 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<UserI
   Ok(Json(users))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct UserEdit {
   user: Uuid,
   name: String,
@@ -48,7 +50,7 @@ async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<UserEdit>,
+  req: UserEdit,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::UserEdit).await?;
   Permission::is_privileged_enough(&db, auth.sub, req.user).await?;
@@ -76,7 +78,8 @@ async fn edit(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct UserCreateReq {
   name: String,
   email: String,
@@ -89,7 +92,7 @@ async fn create(
   db: Connection,
   pw: PasswordState,
   updater: UpdateState,
-  Json(req): Json<UserCreateReq>,
+  req: UserCreateReq,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::UserCreate).await?;
 
@@ -123,7 +126,8 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct UserDelete {
   uuid: Uuid,
 }
@@ -133,7 +137,7 @@ async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<UserDelete>,
+  req: UserDelete,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::UserDelete).await?;
   Permission::is_privileged_enough(&db, auth.sub, req.uuid).await?;

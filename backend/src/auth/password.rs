@@ -1,4 +1,5 @@
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -20,7 +21,8 @@ pub fn router() -> Router {
     .route("/change", post(change))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct LoginReq {
   email: String,
   password: String,
@@ -46,7 +48,7 @@ async fn authenticate(
   jwt: JwtState,
   db: Connection,
   mut cookies: CookieJar,
-  Json(req): Json<LoginReq>,
+  req: LoginReq,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.user().get_user_by_email(&req.email).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;
@@ -73,7 +75,8 @@ async fn authenticate(
   ))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct SpecialAccess {
   password: String,
 }
@@ -85,7 +88,7 @@ async fn special_access(
   jwt: JwtState,
   db: Connection,
   mut cookies: CookieJar,
-  Json(req): Json<SpecialAccess>,
+  req: SpecialAccess,
 ) -> Result<(CookieJar, TokenRes)> {
   let user = db.user().get_user(auth.sub).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;
@@ -104,7 +107,8 @@ async fn special_access(
   Ok((cookies, TokenRes::default()))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct PasswordChange {
   password: String,
   password_confirm: String,
@@ -115,7 +119,7 @@ async fn change(
   auth: JwtClaims<JwtSpecial>,
   state: PasswordState,
   db: Connection,
-  Json(req): Json<PasswordChange>,
+  req: PasswordChange,
 ) -> Result<StatusCode> {
   let user = db.user().get_user(auth.sub).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;

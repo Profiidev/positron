@@ -54,17 +54,20 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       .await
       .ok()
     else {
+      tracing::warn!("missing authorization header");
       return Error::error_from_str("invalid_request");
     };
 
     let Ok(client_id) = auth.username().parse() else {
+      tracing::warn!("invalid client id format");
       return Error::error_from_str("invalid_client");
     };
 
     let Ok(db) = parts.extract::<Connection>().await;
-    let Ok(client_state) = parts.extract::<ClientState>().await;
+    let client_state = parts.extract::<ClientState>().await.unwrap();
 
     let Ok(client) = db.oauth_client().get_client(client_id).await else {
+      tracing::warn!("client not found: {}", client_id);
       return Error::error_from_str("invalid_client");
     };
 
@@ -73,10 +76,12 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       &client.salt,
       auth.password().as_bytes(),
     ) else {
+      tracing::warn!("failed to hash client secret");
       return Error::error_from_str("invalid_client");
     };
 
     if hash != client.client_secret {
+      tracing::warn!("invalid client secret for client: {}", client_id);
       return Error::error_from_str("unauthorized_client");
     }
 

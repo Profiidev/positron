@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use axum::{
   body::Bytes,
-  extract::Path,
+  extract::{FromRequest, Path},
   routing::{get, post},
   Json, Router,
 };
@@ -101,7 +101,8 @@ async fn change_image(
   Ok(StatusCode::OK)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct UpdateReq {
   name: String,
 }
@@ -110,7 +111,7 @@ async fn update_profile(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<UpdateReq>,
+  req: UpdateReq,
 ) -> Result<StatusCode> {
   db.user().update_profile(auth.sub, req.name).await?;
   updater.broadcast_message(UpdateType::User).await;

@@ -1,3 +1,4 @@
+use axum::{extract::FromRequest, Json};
 use entity::{group_user, o_auth_client, o_auth_client_group, o_auth_client_user, prelude::*};
 use sea_orm::{prelude::*, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,8 @@ use crate::{
   oauth::scope::Scope,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 pub struct OAuthClientInfo {
   pub name: String,
   pub client_id: Uuid,

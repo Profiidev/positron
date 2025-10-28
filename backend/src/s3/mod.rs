@@ -2,8 +2,8 @@ extern crate s3 as s3_crate;
 
 use std::sync::Arc;
 
-use axum::Extension;
-use centaurus::{router_extension, FromReqExtension};
+use axum::{extract::FromRequestParts, Extension};
+use centaurus::router_extension;
 use s3_crate::{creds::Credentials, Bucket, Region};
 use tracing::instrument;
 
@@ -12,7 +12,8 @@ use crate::{config::Config, s3::apod::ApodFolder};
 pub mod apod;
 pub mod error;
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct S3 {
   bucket: Arc<Bucket>,
 }

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use centaurus::{auth::pw::PasswordState, db::init::Connection, FromReqExtension};
+use axum::{extract::FromRequestParts, Extension};
+use centaurus::{auth::pw::PasswordState, db::init::Connection};
 use rsa::{
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
   pkcs8::LineEnding,
@@ -17,7 +18,8 @@ use webauthn_rs::{
 
 use crate::{config::Config, db::DBTrait};
 
-#[derive(Default, Clone, FromReqExtension)]
+#[derive(Default, Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct PasskeyState {
   pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
   pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
@@ -25,13 +27,15 @@ pub struct PasskeyState {
   pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct TotpState {
   pub issuer: String,
   pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct WebauthnState(Webauthn);
 
 impl Deref for WebauthnState {

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -38,7 +39,7 @@ async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<GroupInfo>,
+  req: GroupInfo,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::GroupEdit).await?;
   let group = db.groups().get_group_by_uuid(req.uuid).await?;
@@ -70,7 +71,8 @@ async fn edit(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct GroupCreateReq {
   name: String,
   access_level: i32,
@@ -81,7 +83,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<GroupCreateReq>,
+  req: GroupCreateReq,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::GroupCreate).await?;
   Permission::is_access_level_high_enough(&db, auth.sub, req.access_level).await?;
@@ -108,7 +110,8 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct GroupDelete {
   uuid: Uuid,
 }
@@ -118,7 +121,7 @@ async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<GroupDelete>,
+  req: GroupDelete,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::GroupDelete).await?;
 

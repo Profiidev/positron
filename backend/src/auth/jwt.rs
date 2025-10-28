@@ -4,9 +4,10 @@ use axum::{
   body::Body,
   extract::{FromRequestParts, OptionalFromRequestParts},
   response::{IntoResponse, Response},
+  Extension,
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use centaurus::{anyhow, db::init::Connection, FromReqExtension};
+use centaurus::{anyhow, db::init::Connection};
 use chrono::{Duration, Utc};
 use http::{
   header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
@@ -93,7 +94,8 @@ impl JwtType for JwtTotpRequired {
   }
 }
 
-#[derive(Default, Clone, FromReqExtension)]
+#[derive(Default, Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct JwtInvalidState {
   pub count: Arc<Mutex<i32>>,
 }
@@ -104,7 +106,8 @@ impl JwtInvalidState {
   }
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct JwtState {
   header: Header,
   encoding_key: EncodingKey,

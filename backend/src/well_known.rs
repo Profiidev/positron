@@ -1,5 +1,9 @@
-use axum::{extract::Query, routing::get, Extension, Json, Router};
-use centaurus::{router_extension, FromReqExtension};
+use axum::{
+  extract::{FromRequestParts, Query},
+  routing::get,
+  Extension, Json, Router,
+};
+use centaurus::router_extension;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -17,7 +21,8 @@ router_extension!(
   }
 );
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 struct StaticFiles {
   assetlinks: Value,
 }
@@ -46,12 +51,13 @@ struct Link {
   href: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequestParts)]
+#[from_request(via(Query))]
 struct Resource {
   resource: String,
 }
 
-async fn webfinger(Query(resource): Query<Resource>, state: ConfigurationState) -> Json<WebFinger> {
+async fn webfinger(resource: Resource, state: ConfigurationState) -> Json<WebFinger> {
   Json(WebFinger {
     subject: resource.resource,
     links: vec![Link {

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use centaurus::{impl_from_error, FromReqExtension};
+use axum::{extract::FromRequestParts, Extension};
+use centaurus::impl_from_error;
 use chrono::{DateTime, Duration, Utc};
 use http::StatusCode;
 use lettre::{
@@ -18,14 +19,16 @@ use uuid::Uuid;
 
 use crate::config::Config;
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct Mailer {
   transport: SmtpTransport,
   sender: Mailbox,
   pub site_link: String,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct EmailState {
   pub change_req: Arc<Mutex<HashMap<Uuid, ChangeInfo>>>,
   pub exp: i64,

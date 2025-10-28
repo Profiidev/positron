@@ -1,4 +1,5 @@
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -33,7 +34,8 @@ async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuth
   Ok(Json(db.oauth_policy().list().await?))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct CreateReq {
   pub name: String,
   pub claim: String,
@@ -46,7 +48,7 @@ async fn create(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<CreateReq>,
+  req: CreateReq,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -78,7 +80,8 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct DeleteReq {
   uuid: Uuid,
 }
@@ -88,7 +91,7 @@ async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<DeleteReq>,
+  req: DeleteReq,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
@@ -104,7 +107,7 @@ async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<OAuthPolicyInfo>,
+  req: OAuthPolicyInfo,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 

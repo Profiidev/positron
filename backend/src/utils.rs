@@ -13,7 +13,7 @@ pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
 ) -> Result<C> {
   let token = centaurus::auth::jwt::jwt_from_request(req, T::cookie_name()).await?;
 
-  let Ok(jwt) = req.extract::<JwtState>().await;
+  let jwt = req.extract::<JwtState>().await.unwrap();
   let Ok(db) = req.extract::<Connection>().await;
 
   let Ok(valid) = db.invalid_jwt().is_token_valid(token.to_string()).await else {

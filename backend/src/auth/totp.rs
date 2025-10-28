@@ -1,4 +1,5 @@
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -27,7 +28,8 @@ pub fn router() -> Router {
     .route("/remove", post(remove))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct TotpReq {
   code: String,
 }
@@ -77,7 +79,7 @@ async fn finish_setup(
   state: TotpState,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<TotpReq>,
+  req: TotpReq,
 ) -> Result<StatusCode> {
   let mut lock = state.reg_state.lock().await;
   let totp = lock.get(&auth.sub).context("Failed to lock")?;
@@ -102,7 +104,7 @@ async fn confirm(
   db: Connection,
   jwt: JwtState,
   mut cookies: CookieJar,
-  Json(req): Json<TotpReq>,
+  req: TotpReq,
 ) -> Result<(CookieJar, TokenRes)> {
   let user = db.user().get_user(auth.sub).await?;
 

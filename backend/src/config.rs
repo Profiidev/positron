@@ -111,6 +111,10 @@ impl Config {
 
     let config: Self = config.extract().expect("Failed to parse configuration");
 
+    if config.db_url.is_empty() {
+      panic!("Database URL (DB_URL) must be set");
+    }
+
     let _: Address = config
       .smtp_sender_email
       .parse()
