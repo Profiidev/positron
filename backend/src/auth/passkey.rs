@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use axum::{
-  extract::Path,
+  extract::{FromRequest, Path},
   routing::{get, post},
   Json, Router,
 };
@@ -77,7 +77,8 @@ async fn start_registration(
   Ok(Json(ccr))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct RegFinishReq {
   reg: RegisterPublicKeyCredential,
   name: String,
@@ -89,7 +90,7 @@ async fn finish_registration(
   webauthn: WebauthnState,
   state: PasskeyState,
   updater: UpdateState,
-  Json(req): Json<RegFinishReq>,
+  req: RegFinishReq,
 ) -> Result<StatusCode> {
   let user = db.user().get_user(auth.sub).await?;
 
@@ -346,7 +347,8 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<Passk
   Ok(Json(ret))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct PasskeyRemove {
   name: String,
 }
@@ -355,7 +357,7 @@ async fn remove(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<PasskeyRemove>,
+  req: PasskeyRemove,
 ) -> Result<()> {
   let user = db.user().get_user(auth.sub).await?;
 
@@ -367,7 +369,8 @@ async fn remove(
   Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, FromRequest)]
+#[from_request(via(Json))]
 struct PasskeyEdit {
   name: String,
   old_name: String,
@@ -377,7 +380,7 @@ async fn edit_name(
   auth: JwtClaims<JwtSpecial>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<PasskeyEdit>,
+  req: PasskeyEdit,
 ) -> Result<()> {
   let user = db.user().get_user(auth.sub).await?;
 

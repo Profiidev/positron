@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use argon2::password_hash::SaltString;
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -83,7 +84,7 @@ async fn edit(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<OAuthClientInfo>,
+  req: OAuthClientInfo,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
 
@@ -137,7 +138,8 @@ async fn start_create(
   Ok(Json(ClientCreateStart { secret, client_id }))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct ClientCreate {
   name: String,
   redirect_uri: Url,
@@ -152,7 +154,7 @@ async fn create(
   db: Connection,
   state: ClientState,
   updater: UpdateState,
-  Json(req): Json<ClientCreate>,
+  req: ClientCreate,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
 
@@ -195,7 +197,8 @@ async fn create(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct ClientDelete {
   uuid: String,
 }
@@ -205,7 +208,7 @@ async fn delete(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<ClientDelete>,
+  req: ClientDelete,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
 
@@ -217,7 +220,8 @@ async fn delete(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct ResetReq {
   client_id: Uuid,
 }
@@ -232,7 +236,7 @@ async fn reset(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   state: ClientState,
-  Json(req): Json<ResetReq>,
+  req: ResetReq,
 ) -> Result<Json<ResetRes>> {
   Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
   let client = db.oauth_client().get_client(req.client_id).await?;

@@ -26,7 +26,7 @@ async fn update(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<SettingsInfo>,
+  req: SettingsInfo,
 ) -> Result<()> {
   db.settings().set(auth.sub, req).await?;
   updater.send_message(auth.sub, UpdateType::Settings).await;

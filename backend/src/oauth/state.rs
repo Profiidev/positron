@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use centaurus::{serde::empty_string_as_none, FromReqExtension};
+use axum::{extract::FromRequestParts, Extension};
+use centaurus::serde::empty_string_as_none;
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use tokio::sync::Mutex;
@@ -33,14 +34,16 @@ pub struct CodeReq {
   pub nonce: Option<String>,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct AuthorizeState {
   pub frontend_url: String,
   pub auth_pending: Arc<Mutex<HashMap<Uuid, (i64, AuthReq)>>>,
   pub auth_codes: Arc<Mutex<HashMap<Uuid, CodeReq>>>,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct ConfigurationState {
   pub issuer: String,
   pub backend_url: String,
@@ -74,7 +77,8 @@ pub fn get_timestamp_10_min() -> i64 {
     .timestamp()
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct ClientState {
   pub pepper: Vec<u8>,
 }

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use axum::{
-  extract::{Path, Query},
+  extract::{FromRequestParts, Path, Query},
   routing::{get, post},
   Form, Json, Router,
 };
@@ -77,7 +77,8 @@ struct AuthRes {
   location: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequestParts)]
+#[from_request(via(Query))]
 struct AuthConfirmQuery {
   code: String,
   #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -89,7 +90,7 @@ async fn authorize_confirm(
   auth: JwtClaims<JwtBase>,
   state: AuthorizeState,
   db: Connection,
-  Query(query): Query<AuthConfirmQuery>,
+  query: AuthConfirmQuery,
 ) -> Result<Json<AuthRes>> {
   let mut lock = state.auth_pending.lock().await;
   let code = Uuid::from_str(&query.code)?;

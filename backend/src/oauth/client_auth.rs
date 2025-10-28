@@ -62,7 +62,7 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
     };
 
     let Ok(db) = parts.extract::<Connection>().await;
-    let Ok(client_state) = parts.extract::<ClientState>().await;
+    let client_state = parts.extract::<ClientState>().await.unwrap();
 
     let Ok(client) = db.oauth_client().get_client(client_id).await else {
       return Error::error_from_str("invalid_client");

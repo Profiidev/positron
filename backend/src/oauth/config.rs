@@ -1,4 +1,8 @@
-use axum::{extract::Query, routing::get, Json, Router};
+use axum::{
+  extract::{FromRequestParts, Query},
+  routing::get,
+  Json, Router,
+};
 use centaurus::{db::init::Connection, error::Result, serde::empty_string_as_none};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -29,7 +33,8 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequestParts)]
+#[from_request(via(Query))]
 struct ConfigQuery {
   #[serde(default, deserialize_with = "empty_string_as_none")]
   internal: Option<bool>,
@@ -39,7 +44,7 @@ struct ConfigQuery {
 async fn config(
   state: ConfigurationState,
   db: Connection,
-  Query(query): Query<ConfigQuery>,
+  query: ConfigQuery,
 ) -> Result<Json<Configuration>> {
   let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_nats::{connect, Client, Subject};
-use centaurus::FromReqExtension;
+use axum::{extract::FromRequestParts, Extension};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -18,7 +18,8 @@ use crate::config::Config;
 
 pub type Sessions = Arc<Mutex<HashMap<Uuid, HashMap<Uuid, Sender<UpdateType>>>>>;
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct UpdateState {
   sessions: Sessions,
   sender: Client,

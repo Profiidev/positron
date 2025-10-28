@@ -1,4 +1,4 @@
-use axum::{routing::post, Json, Router};
+use axum::{extract::FromRequest, routing::post, Json, Router};
 use centaurus::{bail, db::init::Connection, error::Result};
 use http::StatusCode;
 use serde::Deserialize;
@@ -21,7 +21,8 @@ pub fn router() -> Router {
     .route("/finish_change", post(finish_change))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct EmailChange {
   new_email: String,
 }
@@ -32,7 +33,7 @@ async fn start_change(
   db: Connection,
   mailer: Mailer,
   state: EmailState,
-  Json(req): Json<EmailChange>,
+  req: EmailChange,
 ) -> Result<StatusCode> {
   let user = db.user().get_user(auth.sub).await?;
 
@@ -63,7 +64,8 @@ async fn start_change(
   Ok(StatusCode::OK)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct EmailCode {
   old_code: String,
   new_code: String,
@@ -75,7 +77,7 @@ async fn finish_change(
   db: Connection,
   state: EmailState,
   updater: UpdateState,
-  Json(req): Json<EmailCode>,
+  req: EmailCode,
 ) -> Result<StatusCode> {
   let mut state_lock = state.change_req.lock().await;
   let Some(info) = state_lock.get(&auth.sub) else {

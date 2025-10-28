@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use axum::{
+  extract::FromRequest,
   routing::{get, post},
   Json, Router,
 };
@@ -74,7 +75,8 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<V
   Ok(Json(apod_infos))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct SetGoodReq {
   date: DateTime<Utc>,
   good: bool,
@@ -85,7 +87,7 @@ async fn set_good(
   auth: JwtClaims<JwtBase>,
   db: Connection,
   updater: UpdateState,
-  Json(req): Json<SetGoodReq>,
+  req: SetGoodReq,
 ) -> Result<()> {
   Permission::check(&db, auth.sub, Permission::ApodSelect).await?;
 
@@ -99,7 +101,8 @@ async fn set_good(
   Ok(())
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, FromRequest)]
+#[from_request(via(Json))]
 struct GetReq {
   date: DateTime<Utc>,
 }
@@ -116,7 +119,7 @@ async fn get_image_info(
   db: Connection,
   state: ApodState,
   s3: S3,
-  Json(req): Json<GetReq>,
+  req: GetReq,
 ) -> Result<Json<GetInfoRes>> {
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 
@@ -165,7 +168,8 @@ async fn get_image_info(
   Ok(Json(res))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, FromRequest)]
+#[from_request(via(Json))]
 struct GetRes {
   image: String,
 }
@@ -175,7 +179,7 @@ async fn get_image(
   auth: JwtClaims<JwtBase>,
   s3: S3,
   db: Connection,
-  Json(req): Json<GetReq>,
+  req: GetReq,
 ) -> Result<Json<GetRes>> {
   Permission::check(&db, auth.sub, Permission::ApodList).await?;
 

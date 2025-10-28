@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use centaurus::FromReqExtension;
+use axum::{extract::FromRequestParts, Extension};
 use serde::Serialize;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -13,7 +13,8 @@ pub struct ClientCreateStart {
   pub client_id: Uuid,
 }
 
-#[derive(Clone, FromReqExtension)]
+#[derive(Clone, FromRequestParts)]
+#[from_request(via(Extension))]
 pub struct ClientState {
   pub create: Arc<Mutex<HashMap<Uuid, ClientCreateStart>>>,
   pub pepper: Vec<u8>,
