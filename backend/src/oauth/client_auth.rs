@@ -7,7 +7,7 @@ use axum_extra::{
   headers::{authorization::Basic, Authorization},
   TypedHeader,
 };
-use centaurus::{auth::pw::hash_secret, db::init::Connection};
+use centaurus::{auth::pw::hash_secret, db::init::Connection, state::extract::StateExtractExt};
 use http::{request::Parts, StatusCode};
 use serde::Serialize;
 use tracing::instrument;
@@ -63,8 +63,8 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       return Error::error_from_str("invalid_client");
     };
 
-    let Ok(db) = parts.extract::<Connection>().await;
-    let client_state = parts.extract::<ClientState>().await.unwrap();
+    let db = parts.extract_state::<Connection>().await;
+    let client_state = parts.extract_state::<ClientState>().await;
 
     let Ok(client) = db.oauth_client().get_client(client_id).await else {
       tracing::warn!("client not found: {}", client_id);

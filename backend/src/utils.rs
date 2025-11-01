@@ -1,5 +1,4 @@
-use axum::RequestPartsExt;
-use centaurus::{bail, db::init::Connection, error::Result};
+use centaurus::{bail, db::init::Connection, error::Result, state::extract::StateExtractExt};
 use http::request::Parts;
 use serde::de::DeserializeOwned;
 
@@ -13,8 +12,8 @@ pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
 ) -> Result<C> {
   let token = centaurus::auth::jwt::jwt_from_request(req, T::cookie_name()).await?;
 
-  let jwt = req.extract::<JwtState>().await.unwrap();
-  let Ok(db) = req.extract::<Connection>().await;
+  let jwt = req.extract_state::<JwtState>().await;
+  let db = req.extract_state::<Connection>().await;
 
   let Ok(valid) = db.invalid_jwt().is_token_valid(token.to_string()).await else {
     bail!("failed to validate jwt");
