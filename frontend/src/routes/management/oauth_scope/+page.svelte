@@ -43,21 +43,6 @@
     scope.policy = policy;
     return await create_scope(scope);
   };
-
-  const createForm = {
-    schema: createSchema,
-    form: data.createForm
-  };
-
-  const editForm = {
-    schema: editSchema,
-    form: data.editForm
-  };
-
-  const deleteForm = {
-    schema: deleteSchema,
-    form: data.deleteForm
-  };
 </script>
 
 <SimpleTable
@@ -72,9 +57,12 @@
   display={(item) => item?.name}
   title="Scopes"
   description="Modify, create, delete scopes and manage their settings here"
-  {createForm}
-  {editForm}
-  {deleteForm}
+  createForm={data.createForm}
+  {createSchema}
+  editForm={data.editForm}
+  {editSchema}
+  deleteForm={data.deleteForm}
+  {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {
       field: 'name',

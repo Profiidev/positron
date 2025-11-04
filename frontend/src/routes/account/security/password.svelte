@@ -2,7 +2,6 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
   import {
@@ -19,10 +18,11 @@
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    formData: FormSchema<any>;
+    form: FormType<any>;
+    schema: any;
   }
 
-  let { valid, requestAccess, formData }: Props = $props();
+  let { valid, requestAccess, form, schema }: Props = $props();
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
@@ -92,7 +92,8 @@
     }}
     onopen={startChange}
     onsubmit={changeConfirm}
-    form={formData}
+    {form}
+    {schema}
   >
     {#snippet children({ props })}
       <FormInput

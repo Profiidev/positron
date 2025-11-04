@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { TotpCode } from './types.svelte';
 import { get, post } from '../util.svelte';
 
@@ -11,32 +11,21 @@ export const totp_get_setup_code = async () => {
 };
 
 export const totp_confirm_setup = async (code: string) => {
-  return await post<undefined>(
-    '/auth/totp/finish_setup',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      code
-    })
-  );
+  return await post<undefined>('/auth/totp/finish_setup', ResponseType.None, {
+    code
+  });
 };
 
 export const totp_confirm = async (code: string) => {
-  return await post<undefined>(
-    '/auth/totp/confirm',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      code
-    })
-  );
+  return await post<undefined>('/auth/totp/confirm', ResponseType.None, {
+    code
+  });
 };
 
 export const totp_remove = async () => {
   return await post<undefined>(
     '/auth/totp/remove',
     ResponseType.None,
-    ContentType.Json,
     undefined
   );
 };

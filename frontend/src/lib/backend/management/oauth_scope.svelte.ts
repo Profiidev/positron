@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type {
   OAuthPolicyInfo,
   OAuthScope,
@@ -21,10 +21,9 @@ export const delete_scope = async (uuid: string) => {
   return await post<undefined>(
     '/management/oauth_scope/delete',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
+    {
       uuid
-    })
+    }
   );
 };
 
@@ -32,8 +31,7 @@ export const create_scope = async (scope: OAuthScopeCreate) => {
   return await post<undefined>(
     '/management/oauth_scope/create',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify(scope)
+    scope
   );
 };
 
@@ -41,8 +39,7 @@ export const edit_scope = async (scope: OAuthScope) => {
   return await post<undefined>(
     '/management/oauth_scope/edit',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify(scope)
+    scope
   );
 };
 

@@ -3,7 +3,6 @@
     LoginOtherOptions,
     BaseForm,
     FormInput,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
   import { interval } from 'positron-components/util';
@@ -15,10 +14,11 @@
 
   interface Props {
     specialAccessValid: boolean;
-    formData: FormSchema<any>;
+    form: FormType<any>;
+    schema: any;
   }
 
-  let { specialAccessValid = $bindable(false), formData }: Props = $props();
+  let { specialAccessValid = $bindable(false), form, schema }: Props = $props();
 
   let specialAccessWatcher = interval(() => {
     if (!browser) {
@@ -97,12 +97,7 @@
       <Dialog.Title>Confirm Access</Dialog.Title>
       <Dialog.Description>Confirm access to your account</Dialog.Description>
     </Dialog.Header>
-    <BaseForm
-      onsubmit={confirm}
-      confirm="Confirm Access"
-      bind:isLoading
-      form={formData}
-    >
+    <BaseForm onsubmit={confirm} bind:isLoading {form} {schema}>
       {#snippet children({ props })}
         <FormInput
           {...props}
@@ -115,8 +110,8 @@
           type="password"
         />
       {/snippet}
-      {#snippet footer({ children })}
-        {@render children()}
+      {#snippet footer({ defaultBtn })}
+        {@render defaultBtn({ content: 'Confirm Access' })}
       {/snippet}
     </BaseForm>
     <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />

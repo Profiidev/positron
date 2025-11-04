@@ -8,7 +8,6 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
   import { KeyRound, Pencil, Trash } from '@lucide/svelte';
@@ -25,13 +24,24 @@
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    createSchema: FormSchema<any>;
-    editSchema: FormSchema<any>;
-    deleteSchema: FormSchema<any>;
+    createForm: FormType<any>;
+    createSchema: any;
+    editForm: FormType<any>;
+    editSchema: any;
+    deleteForm: FormType<any>;
+    deleteSchema: any;
   }
 
-  let { valid, requestAccess, createSchema, editSchema, deleteSchema }: Props =
-    $props();
+  let {
+    valid,
+    requestAccess,
+    createSchema,
+    editSchema,
+    deleteSchema,
+    createForm,
+    deleteForm,
+    editForm
+  }: Props = $props();
 
   let passkeys = $derived(passkey_list.value);
   let editing = $state('');
@@ -133,7 +143,8 @@
       }}
       onopen={startCreatePasskey}
       onsubmit={createPasskey}
-      form={createSchema}
+      form={createForm}
+      schema={createSchema}
     >
       {#snippet children({ props })}
         <FormInput
@@ -151,7 +162,8 @@
       trigger={undefined}
       onsubmit={editPasskey}
       bind:this={editDialog}
-      form={editSchema}
+      form={editForm}
+      schema={editSchema}
     >
       {#snippet children({ props })}
         <FormInput
@@ -170,7 +182,8 @@
       trigger={undefined}
       onsubmit={deletePasskey}
       bind:this={deleteDialog}
-      form={deleteSchema}
+      form={deleteForm}
+      schema={deleteSchema}
     ></FormDialog>
   </div>
   <Separator />

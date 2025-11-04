@@ -1,5 +1,5 @@
 import { base64ToArrayBuffer } from 'positron-components/util';
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { ProfileInfo, UserInfo } from './types.svelte';
 import { get, post } from '../util.svelte';
 
@@ -18,7 +18,6 @@ export const profile_change_image = async (image: string) => {
   return await post<undefined>(
     '/account/general/change_image',
     ResponseType.None,
-    ContentType.Bytes,
     base64ToArrayBuffer(image)
   );
 };
@@ -27,9 +26,6 @@ export const profile_update = async (name: string) => {
   return await post<undefined>(
     '/account/general/update_profile',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      name
-    })
+    { name }
   );
 };

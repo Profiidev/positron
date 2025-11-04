@@ -3,15 +3,15 @@
   import {
     FormDialog,
     FormInput,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
 
   interface Props {
-    form: FormSchema<any>;
+    form: FormType<any>;
+    schema: any;
   }
 
-  let { form }: Props = $props();
+  let { form, schema }: Props = $props();
 
   let pinDialog: boolean = $state(false);
 
@@ -41,6 +41,7 @@
   onsubmit={pinSend}
   bind:open={pinDialog}
   {form}
+  {schema}
 >
   {#snippet children({ props })}
     <FormInput
