@@ -24,16 +24,6 @@
       }
     });
   });
-
-  const loginForm = {
-    form: data.loginForm,
-    schema: loginSchema
-  };
-
-  const pinForm = {
-    form: data.pin,
-    schema: pin
-  };
 </script>
 
 <div
@@ -55,12 +45,12 @@
           Enter your login details below
         </p>
       </div>
-      <Login {oauth_params} {loginForm} />
+      <Login {oauth_params} loginForm={data.loginForm} {loginSchema} />
     </div>
   </div>
 </div>
 {#if PUBLIC_IS_APP === 'true'}
-  <PasskeyOptions form={pinForm} />
+  <PasskeyOptions form={data.pin} schema={pin} />
 {/if}
 
 <style>

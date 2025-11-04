@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { Settings } from './types.svelte';
 import { create_updater } from '../ws/updater.svelte';
 import { UpdateType } from '../ws/types.svelte';
@@ -19,7 +19,6 @@ export const user_settings_update = async (settings: Settings) => {
   return await post<undefined>(
     '/account/settings/update',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify(settings)
+    settings
   );
 };

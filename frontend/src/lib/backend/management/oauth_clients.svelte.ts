@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type {
   GroupInfo,
   OAuthClientCreate,
@@ -48,8 +48,7 @@ export const edit_client = async (client: OAuthClientInfo) => {
   return await post<undefined>(
     '/management/oauth_client/edit',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify(client)
+    client
   );
 };
 
@@ -57,7 +56,6 @@ export const start_create_client = async () => {
   let ret = await post<OAuthClientCreate>(
     '/management/oauth_client/start_create',
     ResponseType.Json,
-    ContentType.Json,
     undefined
   );
 
@@ -76,14 +74,13 @@ export const create_client = async (
   return await post<undefined>(
     '/management/oauth_client/create',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
+    {
       name,
       redirect_uri,
       additional_redirect_uris,
       scope,
       confidential
-    })
+    }
   );
 };
 
@@ -91,10 +88,9 @@ export const delete_client = async (client_id: string) => {
   return await post<undefined>(
     '/management/oauth_client/delete',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
+    {
       uuid: client_id
-    })
+    }
   );
 };
 
@@ -102,10 +98,9 @@ export const reset_client_secret = async (client_id: string) => {
   let ret = await post<{ secret: string }>(
     '/management/oauth_client/reset',
     ResponseType.Json,
-    ContentType.Json,
-    JSON.stringify({
+    {
       client_id
-    })
+    }
   );
 
   if (typeof ret === 'object') {

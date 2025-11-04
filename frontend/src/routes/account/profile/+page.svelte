@@ -81,11 +81,6 @@
 
     return undefined;
   };
-
-  const profileForm = {
-    form: data.profile,
-    schema: profileSchema
-  };
 </script>
 
 <div class="space-y-6">
@@ -123,9 +118,9 @@
     <BaseForm
       class="mt-5 flex flex-col space-y-2 sm:mt-0 sm:pl-10"
       onsubmit={updateProfile}
-      form={profileForm}
+      form={data.profile}
+      schema={profileSchema}
       bind:isLoading
-      confirm="Update Profile"
       bind:this={formComp}
     >
       {#snippet children({ props })}
@@ -144,8 +139,11 @@
           {/if}
         </div>
       {/snippet}
-      {#snippet footer({ children })}
-        {@render children({ className: 'mt-8! ml-auto' })}
+      {#snippet footer({ defaultBtn })}
+        {@render defaultBtn({
+          className: 'mt-8! ml-auto',
+          content: 'Update Profile'
+        })}
       {/snippet}
     </BaseForm>
   </div>

@@ -1,4 +1,4 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { Group } from './types.svelte';
 import { get, post } from '../util.svelte';
 
@@ -13,30 +13,19 @@ export const edit_group = async (group: Group) => {
   return await post<undefined>(
     '/management/group/edit',
     ResponseType.None,
-    ContentType.Json,
-    JSON.stringify(group)
+    group
   );
 };
 
 export const create_group = async (name: string, access_level: number) => {
-  return await post<undefined>(
-    '/management/group/create',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      name,
-      access_level
-    })
-  );
+  return await post<undefined>('/management/group/create', ResponseType.None, {
+    name,
+    access_level
+  });
 };
 
 export const delete_group = async (group: string) => {
-  return await post<undefined>(
-    '/management/group/delete',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      uuid: group
-    })
-  );
+  return await post<undefined>('/management/group/delete', ResponseType.None, {
+    uuid: group
+  });
 };

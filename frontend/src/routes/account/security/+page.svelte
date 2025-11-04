@@ -30,46 +30,6 @@
   let requestAccess: () => Promise<boolean> = $derived(
     accessConfirm?.requestAccess || (() => false)
   );
-
-  const passkeyCreate = {
-    form: data.passkeyCreateForm,
-    schema: passkeyCreateSchema
-  };
-
-  const passkeyEdit = {
-    form: data.passkeyEditForm,
-    schema: passkeyEditSchema
-  };
-
-  const passkeyDelete = {
-    form: data.passkeyDeleteForm,
-    schema: passkeyDeleteSchema
-  };
-
-  const confirm = {
-    form: data.confirmForm,
-    schema: confirmSchema
-  };
-
-  const passwordChangeForm = {
-    form: data.passwordChange,
-    schema: passwordChange
-  };
-
-  const totpAddForm = {
-    form: data.totpAdd,
-    schema: totpAdd
-  };
-
-  const totpRemoveForm = {
-    form: data.totpRemove,
-    schema: totpRemove
-  };
-
-  const pinForm = {
-    form: data.pin,
-    schema: pin
-  };
 </script>
 
 <div class="space-y-6">
@@ -85,7 +45,8 @@
     <Password
       valid={specialAccessValid}
       {requestAccess}
-      formData={passwordChangeForm}
+      form={data.passwordChange}
+      schema={passwordChange}
     />
   </div>
   <div class="space-y-3">
@@ -93,9 +54,12 @@
     <PasskeyList
       valid={specialAccessValid}
       {requestAccess}
-      createSchema={passkeyCreate}
-      editSchema={passkeyEdit}
-      deleteSchema={passkeyDelete}
+      createForm={data.passkeyCreateForm}
+      createSchema={passkeyCreateSchema}
+      editForm={data.passkeyEditForm}
+      editSchema={passkeyEditSchema}
+      deleteForm={data.passkeyDeleteForm}
+      deleteSchema={passkeyDeleteSchema}
     />
   </div>
   <div class="space-y-3">
@@ -104,8 +68,10 @@
       <Totp_2fa
         valid={specialAccessValid}
         {requestAccess}
-        addForm={totpAddForm}
-        removeForm={totpRemoveForm}
+        addForm={data.totpAdd}
+        addSchema={totpAdd}
+        removeForm={data.totpRemove}
+        removeSchema={totpRemove}
       />
     </div>
   </div>
@@ -113,8 +79,9 @@
 <AccessConfirm
   bind:specialAccessValid
   bind:this={accessConfirm}
-  formData={confirm}
+  form={data.confirmForm}
+  schema={confirmSchema}
 />
 {#if PUBLIC_IS_APP === 'true'}
-  <PasskeyOptions form={pinForm} />
+  <PasskeyOptions form={data.pin} schema={pin} />
 {/if}

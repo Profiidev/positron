@@ -1,8 +1,4 @@
-import {
-  ContentType,
-  ResponseType,
-  RequestError
-} from 'positron-components/backend';
+import { ResponseType, RequestError } from 'positron-components/backend';
 import type { Apod, ApodData, ApodInfo } from './types.svelte';
 import { get, post } from '../util.svelte';
 
@@ -17,10 +13,9 @@ export const get_image_info = async (date: string) => {
   let ret = await post<ApodData>(
     '/services/apod/get_image_info',
     ResponseType.Json,
-    ContentType.Json,
-    JSON.stringify({
+    {
       date
-    })
+    }
   );
 
   if (typeof ret === 'object') {
@@ -34,10 +29,10 @@ export const get_image = async (date: string, signal?: AbortSignal) => {
   let ret = await post<Apod>(
     '/services/apod/get_image',
     ResponseType.Json,
-    ContentType.Json,
-    JSON.stringify({
+    {
       date
-    }),
+    },
+    undefined,
     signal
   );
 
@@ -47,13 +42,8 @@ export const get_image = async (date: string, signal?: AbortSignal) => {
 };
 
 export const set_good = async (good: boolean, date: string) => {
-  return await post<undefined>(
-    '/services/apod/set_good',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      good,
-      date
-    })
-  );
+  return await post<undefined>('/services/apod/set_good', ResponseType.None, {
+    good,
+    date
+  });
 };

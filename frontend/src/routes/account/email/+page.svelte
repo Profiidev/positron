@@ -29,16 +29,6 @@
 
   let { data }: Props = $props();
 
-  let confirmForm = {
-    form: data.confirm,
-    schema: confirmSchema
-  };
-
-  let changeEmailForm = {
-    form: data.emailChange,
-    schema: emailChange
-  };
-
   let infoData = $derived(userData.value?.[1]);
 
   let specialAccessValid: boolean = $state(false);
@@ -134,7 +124,8 @@
       }}
       onopen={startChangeEmail}
       onsubmit={changeEmail}
-      form={changeEmailForm}
+      form={data.emailChange}
+      schema={emailChange}
     >
       {#snippet children({ props })}
         {#if !enteringCodes}
@@ -174,5 +165,6 @@
 <AccessConfirm
   bind:this={accessConfirm}
   bind:specialAccessValid
-  formData={confirmForm}
+  form={data.confirm}
+  schema={confirmSchema}
 />

@@ -1,22 +1,17 @@
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { OAuthParams } from './types.svelte';
 import { get, post } from '../util.svelte';
 
 export const logout = async () => {
-  return await post<undefined>(
-    '/auth/logout',
-    ResponseType.None,
-    ContentType.Json,
-    undefined
-  );
+  return await post<undefined>('/auth/logout', ResponseType.None, undefined);
 };
 
 export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
   let res = await post<{ location: string }>(
     `/oauth/authorize_confirm?code=${params.code}&allow=${allow}`,
     ResponseType.Json,
-    ContentType.UrlFrom,
-    undefined
+    undefined,
+    'x-www-form-urlencoded'
   );
 
   if (typeof res === 'object') {

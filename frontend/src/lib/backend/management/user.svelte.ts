@@ -1,5 +1,5 @@
 import { getEncrypt } from '../auth/password.svelte';
-import { ContentType, ResponseType } from 'positron-components/backend';
+import { ResponseType } from 'positron-components/backend';
 import type { Permission, User } from './types.svelte';
 import { get, post } from '../util.svelte';
 
@@ -15,16 +15,11 @@ export const user_edit = async (
   name: string,
   permissions: Permission[]
 ) => {
-  return await post<undefined>(
-    '/management/user/edit',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      user,
-      name,
-      permissions
-    })
-  );
+  return await post<undefined>('/management/user/edit', ResponseType.None, {
+    user,
+    name,
+    permissions
+  });
 };
 
 export const create_user = async (
@@ -38,25 +33,15 @@ export const create_user = async (
   }
 
   let encrypted_password = encrypt.encrypt(password);
-  return await post<undefined>(
-    '/management/user/create',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      name,
-      email,
-      password: encrypted_password
-    })
-  );
+  return await post<undefined>('/management/user/create', ResponseType.None, {
+    name,
+    email,
+    password: encrypted_password
+  });
 };
 
 export const remove_user = async (uuid: string) => {
-  return await post<undefined>(
-    '/management/user/delete',
-    ResponseType.None,
-    ContentType.Json,
-    JSON.stringify({
-      uuid
-    })
-  );
+  return await post<undefined>('/management/user/delete', ResponseType.None, {
+    uuid
+  });
 };

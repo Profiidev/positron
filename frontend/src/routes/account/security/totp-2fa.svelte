@@ -8,7 +8,6 @@
   import {
     Totp_6,
     FormDialog,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
   import { DateTime } from 'positron-components/util';
@@ -26,11 +25,20 @@
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    removeForm: FormSchema<any>;
-    addForm: FormSchema<any>;
+    removeForm: FormType<any>;
+    removeSchema: any;
+    addForm: FormType<any>;
+    addSchema: any;
   }
 
-  let { valid, requestAccess, addForm, removeForm }: Props = $props();
+  let {
+    valid,
+    requestAccess,
+    addForm,
+    removeForm,
+    addSchema,
+    removeSchema
+  }: Props = $props();
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
@@ -154,6 +162,7 @@
         onopen={startRemoveTotp}
         onsubmit={removeTotp}
         form={removeForm}
+        schema={removeSchema}
       ></FormDialog>
     {:else}
       <FormDialog
@@ -164,6 +173,7 @@
         onopen={startAddTotp}
         onsubmit={addTotp}
         form={addForm}
+        schema={addSchema}
       >
         {#snippet children({ props })}
           <div class="flex flex-col items-center space-y-2">

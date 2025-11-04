@@ -4,7 +4,6 @@
     Totp_6,
     BaseForm,
     FormInput,
-    type FormSchema,
     type FormType
   } from 'positron-components/components/form';
   import { cn } from 'positron-components/utils';
@@ -23,13 +22,15 @@
   interface Props {
     class?: string | undefined | null;
     oauth_params: OAuthParams | undefined;
-    loginForm: FormSchema<any>;
+    loginForm: FormType<any>;
+    loginSchema: any;
   }
 
   let {
     class: className = undefined,
     oauth_params,
-    loginForm
+    loginForm,
+    loginSchema
   }: Props = $props();
 
   let passkeySecondTry = $state(false);
@@ -135,13 +136,9 @@
   <BaseForm
     bind:this={formComp}
     onsubmit={onSubmit}
-    confirm={passkeySecondTry
-      ? 'Sign In with Passkey'
-      : enterEmail
-        ? 'Sign In'
-        : 'Confirm'}
     bind:isLoading
     form={loginForm}
+    schema={loginSchema}
     class="gap-0"
   >
     {#snippet children({ props })}
@@ -184,8 +181,15 @@
         />
       {/if}
     {/snippet}
-    {#snippet footer({ children })}
-      {@render children({ className: 'mt-2' })}
+    {#snippet footer({ defaultBtn })}
+      {@render defaultBtn({
+        className: 'mt-2',
+        content: passkeySecondTry
+          ? 'Sign In with Passkey'
+          : enterEmail
+            ? 'Sign In'
+            : 'Confirm'
+      })}
     {/snippet}
   </BaseForm>
   {#if !passkeySecondTry}
