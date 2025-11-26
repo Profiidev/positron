@@ -146,21 +146,32 @@ export const passkey_special_access = async () => {
 };
 
 export const passkey_list = async () => {
-  let ret = await get<Passkey[]>('/backend/auth/passkey/list', ResponseType.Json);
+  let ret = await get<Passkey[]>(
+    '/backend/auth/passkey/list',
+    ResponseType.Json
+  );
   if (Array.isArray(ret)) {
     return ret;
   }
 };
 
 export const passkey_remove = async (name: string) => {
-  return await post<undefined>('/backend/auth/passkey/remove', ResponseType.None, {
-    name
-  });
+  return await post<undefined>(
+    '/backend/auth/passkey/remove',
+    ResponseType.None,
+    {
+      name
+    }
+  );
 };
 
 export const passkey_edit_name = async (name: string, old_name: string) => {
-  return await post<undefined>('/backend/auth/passkey/edit_name', ResponseType.None, {
-    name,
-    old_name
-  });
+  return await post<undefined>(
+    '/backend/auth/passkey/edit_name',
+    ResponseType.None,
+    {
+      name,
+      old_name
+    }
+  );
 };

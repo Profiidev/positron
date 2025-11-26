@@ -10,7 +10,10 @@ export const profile_info = async (uuid: string) => {
 };
 
 export const user_info = async () => {
-  return await get<UserInfo>('/backend/account/general/info', ResponseType.Json);
+  return await get<UserInfo>(
+    '/backend/account/general/info',
+    ResponseType.Json
+  );
 };
 
 export const profile_change_image = async (image: string) => {

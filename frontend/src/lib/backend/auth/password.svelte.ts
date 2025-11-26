@@ -18,7 +18,10 @@ export const fetch_key = async () => {
     return RequestError.Other;
   }
 
-  let key = await get<{ key: string }>('/backend/auth/password/key', ResponseType.Json);
+  let key = await get<{ key: string }>(
+    '/backend/auth/password/key',
+    ResponseType.Json
+  );
 
   if (typeof key !== 'object') {
     return key;
@@ -86,10 +89,14 @@ export const password_change = async (
 
   let encrypted_password = encrypt.encrypt(password);
   let encrypted_password_confirm = encrypt.encrypt(password_confirm);
-  let res = await post<undefined>('/backend/auth/password/change', ResponseType.None, {
-    password: encrypted_password,
-    password_confirm: encrypted_password_confirm
-  });
+  let res = await post<undefined>(
+    '/backend/auth/password/change',
+    ResponseType.None,
+    {
+      password: encrypted_password,
+      password_confirm: encrypted_password_confirm
+    }
+  );
 
   if (res && res === RequestError.Unauthorized) {
     fetch_key();

@@ -7,7 +7,10 @@ import {
 import type { Apod, ApodData, ApodInfo } from './types.svelte';
 
 export const list_apods = async () => {
-  let ret = await get<ApodInfo[]>('/backend/services/apod/list', ResponseType.Json);
+  let ret = await get<ApodInfo[]>(
+    '/backend/services/apod/list',
+    ResponseType.Json
+  );
   if (Array.isArray(ret)) {
     return ret;
   }
@@ -46,8 +49,12 @@ export const get_image = async (date: string, signal?: AbortSignal) => {
 };
 
 export const set_good = async (good: boolean, date: string) => {
-  return await post<undefined>('/backend/services/apod/set_good', ResponseType.None, {
-    good,
-    date
-  });
+  return await post<undefined>(
+    '/backend/services/apod/set_good',
+    ResponseType.None,
+    {
+      good,
+      date
+    }
+  );
 };
