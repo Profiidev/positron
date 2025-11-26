@@ -20,6 +20,7 @@ mod auth;
 mod config;
 mod db;
 mod email;
+mod frontend;
 mod management;
 mod oauth;
 mod permission;
@@ -47,10 +48,7 @@ async fn main() {
   let mut app_labels = vec![("api".into(), "management".into())];
   app_labels.extend(metrics_labels.clone());
 
-  let app = router()
-    .metrics_route()
-    .await
-    .add_base_layers(&config.base)
+  let app = router(&config)
     .await
     .state(config)
     .await
@@ -61,7 +59,14 @@ async fn main() {
   run_app(listener, app).await;
 }
 
-fn router() -> Router {
+async fn router(config: &Config) -> Router {
+  frontend::router()
+    .nest("/backend", api_router().await)
+    .add_base_layers_filtered(&config.base, |path| path.starts_with("/backend"))
+    .await
+}
+
+async fn api_router() -> Router {
   Router::new()
     .nest("/auth", auth::router())
     .nest("/account", account::router())
@@ -72,12 +77,15 @@ fn router() -> Router {
     .nest("/services", services::router())
     .merge(well_known::router())
     .merge(health::router())
+    .metrics_route()
+    .await
 }
 
 router_extension!(
   async fn state(self, config: Config) -> Self {
     use auth::auth;
     use email::email;
+    use frontend::frontend;
     use management::management;
     use oauth::oauth;
     use s3::s3;
@@ -103,6 +111,8 @@ router_extension!(
       .well_known(&config)
       .await
       .ws(&config)
+      .await
+      .frontend()
       .await
       .layer(Extension(db))
       .layer(Extension(config))

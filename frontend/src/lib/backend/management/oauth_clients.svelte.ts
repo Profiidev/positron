@@ -1,19 +1,29 @@
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type {
   GroupInfo,
   OAuthClientCreate,
   OAuthClientInfo,
   UserInfo
 } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 const isCreate = (object: any): object is OAuthClientCreate => {
   return typeof object === 'object' && object !== null && 'secret' in object;
 };
 
+export const get_frontend_url = async () => {
+  let ret = await get<string>(
+    '/backend/management/oauth_client/frontend_url',
+    ResponseType.Text
+  );
+
+  if (typeof ret === 'string') {
+    return ret;
+  }
+};
+
 export const list_clients = async () => {
   let ret = await get<OAuthClientInfo[]>(
-    '/management/oauth_client/list',
+    '/backend/management/oauth_client/list',
     ResponseType.Json
   );
 
@@ -24,7 +34,7 @@ export const list_clients = async () => {
 
 export const list_clients_group = async () => {
   let ret = await get<GroupInfo[]>(
-    '/management/oauth_client/group_list',
+    '/backend/management/oauth_client/group_list',
     ResponseType.Json
   );
 
@@ -35,7 +45,7 @@ export const list_clients_group = async () => {
 
 export const list_clients_user = async () => {
   let ret = await get<UserInfo[]>(
-    '/management/oauth_client/user_list',
+    '/backend/management/oauth_client/user_list',
     ResponseType.Json
   );
 
@@ -46,7 +56,7 @@ export const list_clients_user = async () => {
 
 export const edit_client = async (client: OAuthClientInfo) => {
   return await post<undefined>(
-    '/management/oauth_client/edit',
+    '/backend/management/oauth_client/edit',
     ResponseType.None,
     client
   );
@@ -54,7 +64,7 @@ export const edit_client = async (client: OAuthClientInfo) => {
 
 export const start_create_client = async () => {
   let ret = await post<OAuthClientCreate>(
-    '/management/oauth_client/start_create',
+    '/backend/management/oauth_client/start_create',
     ResponseType.Json,
     undefined
   );
@@ -69,10 +79,10 @@ export const create_client = async (
   redirect_uri: string,
   additional_redirect_uris: string[],
   scope: string,
-  confidential: string
+  confidential: boolean
 ) => {
   return await post<undefined>(
-    '/management/oauth_client/create',
+    '/backend/management/oauth_client/create',
     ResponseType.None,
     {
       name,
@@ -86,7 +96,7 @@ export const create_client = async (
 
 export const delete_client = async (client_id: string) => {
   return await post<undefined>(
-    '/management/oauth_client/delete',
+    '/backend/management/oauth_client/delete',
     ResponseType.None,
     {
       uuid: client_id
@@ -96,7 +106,7 @@ export const delete_client = async (client_id: string) => {
 
 export const reset_client_secret = async (client_id: string) => {
   let ret = await post<{ secret: string }>(
-    '/management/oauth_client/reset',
+    '/backend/management/oauth_client/reset',
     ResponseType.Json,
     {
       client_id
@@ -110,7 +120,7 @@ export const reset_client_secret = async (client_id: string) => {
 
 export const list_scope_names = async () => {
   let ret = await get<string[]>(
-    '/management/oauth_client/list_scopes',
+    '/backend/management/oauth_client/list_scopes',
     ResponseType.Json
   );
 

@@ -1,7 +1,11 @@
 import type JSEncrypt from 'jsencrypt';
-import { ResponseType, RequestError } from 'positron-components/backend';
+import {
+  ResponseType,
+  RequestError,
+  get,
+  post
+} from 'positron-components/backend';
 import { browser } from '$app/environment';
-import { get, post } from '../util.svelte';
 
 let encrypt: false | undefined | JSEncrypt = $state(browser && undefined);
 
@@ -14,7 +18,10 @@ export const fetch_key = async () => {
     return RequestError.Other;
   }
 
-  let key = await get<{ key: string }>('/auth/password/key', ResponseType.Json);
+  let key = await get<{ key: string }>(
+    '/backend/auth/password/key',
+    ResponseType.Json
+  );
 
   if (typeof key !== 'object') {
     return key;
@@ -34,7 +41,7 @@ export const password_login = async (email: string, password: string) => {
 
   let encrypted_password = encrypt.encrypt(password);
   let res = await post<{ totp: boolean }>(
-    '/auth/password/authenticate',
+    '/backend/auth/password/authenticate',
     ResponseType.Json,
     {
       email,
@@ -59,7 +66,7 @@ export const password_special_access = async (password: string) => {
 
   let encrypted_password = encrypt.encrypt(password);
   let res = await post<undefined>(
-    '/auth/password/special_access',
+    '/backend/auth/password/special_access',
     ResponseType.None,
     {
       password: encrypted_password
@@ -82,10 +89,14 @@ export const password_change = async (
 
   let encrypted_password = encrypt.encrypt(password);
   let encrypted_password_confirm = encrypt.encrypt(password_confirm);
-  let res = await post<undefined>('/auth/password/change', ResponseType.None, {
-    password: encrypted_password,
-    password_confirm: encrypted_password_confirm
-  });
+  let res = await post<undefined>(
+    '/backend/auth/password/change',
+    ResponseType.None,
+    {
+      password: encrypted_password,
+      password_confirm: encrypted_password_confirm
+    }
+  );
 
   if (res && res === RequestError.Unauthorized) {
     fetch_key();

@@ -40,6 +40,7 @@ export interface OAuthClientInfo {
 export interface OAuthClientCreate {
   secret: string;
   client_id: string;
+  frontend_url: string;
 }
 
 export interface OAuthPolicy {

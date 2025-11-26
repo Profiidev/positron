@@ -4,11 +4,8 @@
   import Login from './login-form.svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { loginSchema, pin } from './schema.svelte';
   import { test_token } from '$lib/backend/auth/other.svelte';
   import { onMount } from 'svelte';
-  import { PUBLIC_IS_APP } from '$env/static/public';
-  import PasskeyOptions from '../account/security/passkey-options.svelte';
 
   interface Props {
     data: PageServerData;
@@ -45,13 +42,10 @@
           Enter your login details below
         </p>
       </div>
-      <Login {oauth_params} loginForm={data.loginForm} {loginSchema} />
+      <Login {oauth_params} />
     </div>
   </div>
 </div>
-{#if PUBLIC_IS_APP === 'true'}
-  <PasskeyOptions form={data.pin} schema={pin} />
-{/if}
 
 <style>
   .background-img {

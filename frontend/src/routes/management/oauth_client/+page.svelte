@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { PUBLIC_BACKEND_URL } from '$env/static/public';
   import {
     create_client,
     delete_client,
     edit_client,
+    get_frontend_url,
     reset_client_secret,
     start_create_client
   } from '$lib/backend/management/oauth_clients.svelte';
@@ -18,86 +18,79 @@
     type OAuthClientCreate,
     type OAuthClientInfo
   } from '$lib/backend/management/types.svelte';
-  import {
-    Multiselect,
-    SimpleTable
-  } from 'positron-components/components/table';
-  import {
-    Label,
-    Input,
-    Separator,
-    Button,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    FormSwitch,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import Multiselect from 'positron-components/components/table/multiselect.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import { Input } from 'positron-components/components/ui/input';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Button } from 'positron-components/components/ui/button';
+  import { toast } from 'positron-components/components/util/general';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import FormSwitch from 'positron-components/components/form/form-switch.svelte';
   import { RequestError } from 'positron-components/backend';
-  import { deepCopy } from 'positron-components/util';
+  import { deepCopy } from 'positron-components/util/other.svelte';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { RotateCw } from '@lucide/svelte';
-  import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import { onMount } from 'svelte';
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let clients = $derived(oauth_client_list.value);
   let groups = $derived(group_info_list.value);
   let users = $derived(user_info_list.value);
   let scope_names = $derived(oauth_scope_names.value);
   let userInfo = $derived(userData.value?.[0]);
+  let frontend_url = $state('');
 
   let isLoading = $state(false);
   let scope: string[] = $state([]);
   let startCreate: OAuthClientCreate | undefined = $state();
   let newSecret = $state('');
 
-  let backendURLs = (client_id: string) => [
+  onMount(async () => {
+    frontend_url = (await get_frontend_url()) || '';
+  });
+
+  let backendURLs = (client_id: string, frontend_url: string) => [
     {
       name: 'Authorization URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/authorize`
+      value: `${frontend_url}/backend/oauth/authorize`
     },
     {
       name: 'Token URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/token`
+      value: `${frontend_url}/backend/oauth/token`
     },
     {
       name: 'Userinfo URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/user`
+      value: `${frontend_url}/backend/oauth/user`
     },
     {
       name: 'Logout URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/logout/${client_id}`
+      value: `${frontend_url}/backend/oauth/logout/${client_id}`
     },
     {
       name: 'Revoke URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/revoke`
+      value: `${frontend_url}/backend/oauth/revoke`
     },
     {
       name: 'JWKs URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/jwks`
+      value: `${frontend_url}/backend/oauth/jwks`
     },
     {
       name: 'OIDC Configuration URL',
-      value: `${PUBLIC_BACKEND_URL}/oauth/.well-known/openid-configuration`
+      value: `${frontend_url}/backend/oauth/.well-known/openid-configuration`
     }
   ];
 
-  const createItemFn = async (form: FormType<any>) => {
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
     return await create_client(
-      form.data.name,
-      form.data.redirect_uri,
-      form.data.additional_redirect_uris,
+      form.name,
+      form.redirect_uri,
+      form.additional_redirect_uris,
       scope.join(' '),
-      form.data.confidential
+      form.confidential
     );
   };
 
@@ -145,11 +138,8 @@
   display={(item) => item?.name}
   title="Clients"
   description="Modify, create, delete clients and manage their settings here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {
@@ -172,7 +162,7 @@
   {#snippet editDialog({ props, item })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
       <div class="grid gap-1 space-y-1">
-        {#each backendURLs(item.client_id) as info}
+        {#each backendURLs(item.client_id, frontend_url) as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}
@@ -254,7 +244,7 @@
   {#snippet createDialog({ props })}
     <div class="grid h-full w-full md:grid-cols-[1fr_60px_1fr]">
       <div class="grid gap-1 space-y-1">
-        {#each backendURLs(startCreate?.client_id || '') as info}
+        {#each backendURLs(startCreate?.client_id || '', startCreate?.frontend_url || '') as info}
           <Label for={info.name}>{info.name}</Label>
           <Input id={info.name} value={info.value} readonly />
         {/each}

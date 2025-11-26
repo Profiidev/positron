@@ -10,37 +10,29 @@
   } from '$lib/backend/management/stores.svelte';
   import {
     Permission,
-    type OAuthPolicyInfo
+    type OAuthPolicyInfo,
+    type OAuthScopeCreate
   } from '$lib/backend/management/types.svelte';
-  import {
-    SimpleTable,
-    Multiselect
-  } from 'positron-components/components/table';
-  import { Label } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import Multiselect from 'positron-components/components/table/multiselect.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { RequestError } from 'positron-components/backend';
-  import type { PageServerData } from './$types';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let scopes = $derived(oauth_scope_list.value);
   let policies = $derived(oauth_policy_info_list.value);
   let policy: OAuthPolicyInfo[] = $state([]);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: FormType<any>) => {
-    let scope = form.data;
-    scope.policy = policy;
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
+    let scope: OAuthScopeCreate = {
+      policy: policy,
+      ...form
+    };
     return await create_scope(scope);
   };
 </script>
@@ -57,11 +49,8 @@
   display={(item) => item?.name}
   title="Scopes"
   description="Modify, create, delete scopes and manage their settings here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {

@@ -1,16 +1,11 @@
 <script lang="ts">
-  import {
-    Separator,
-    Skeleton,
-    Badge,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    Totp_6,
-    FormDialog,
-    type FormType
-  } from 'positron-components/components/form';
-  import { DateTime } from 'positron-components/util';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import { Badge } from 'positron-components/components/ui/badge';
+  import { toast } from 'positron-components/components/util/general';
+  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
+  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
+  import { DateTime } from 'positron-components/util/time.svelte';
   import { RequestError } from 'positron-components/backend';
   import { Clock9 } from '@lucide/svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
@@ -21,24 +16,15 @@
     totp_remove
   } from '$lib/backend/auth/totp.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
+  import { totpAdd, totpRemove } from './schema.svelte';
+  import type { FormValue } from 'positron-components/components/form/types';
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    removeForm: FormType<any>;
-    removeSchema: any;
-    addForm: FormType<any>;
-    addSchema: any;
   }
 
-  let {
-    valid,
-    requestAccess,
-    addForm,
-    removeForm,
-    addSchema,
-    removeSchema
-  }: Props = $props();
+  let { valid, requestAccess }: Props = $props();
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
@@ -88,8 +74,8 @@
     return true;
   };
 
-  const addTotp = async (form: FormType<any>) => {
-    let res = await totp_confirm_setup(form.data.code);
+  const addTotp = async (form: FormValue<typeof totpAdd>) => {
+    let res = await totp_confirm_setup(form.code);
 
     if (res) {
       if (res === RequestError.Unauthorized) {
@@ -161,8 +147,7 @@
         }}
         onopen={startRemoveTotp}
         onsubmit={removeTotp}
-        form={removeForm}
-        schema={removeSchema}
+        schema={totpRemove}
       ></FormDialog>
     {:else}
       <FormDialog
@@ -172,8 +157,7 @@
         trigger={{ text: 'Add', class: 'm-2 ml-auto', loadIcon: true }}
         onopen={startAddTotp}
         onsubmit={addTotp}
-        form={addForm}
-        schema={addSchema}
+        schema={totpAdd}
       >
         {#snippet children({ props })}
           <div class="flex flex-col items-center space-y-2">

@@ -12,33 +12,22 @@
     getPermissionGroups,
     Permission
   } from '$lib/backend/management/types.svelte';
-  import {
-    Multiselect,
-    SimpleTable
-  } from 'positron-components/components/table';
-  import { Label } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import Multiselect from 'positron-components/components/table/multiselect.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { RequestError } from 'positron-components/backend';
   import { columns } from './table.svelte';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
-  import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let groups = $derived(group_list.value);
   let users = $derived(user_info_list.value);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: FormType<any>) => {
-    return await create_group(form.data.name, Number(form.data.access_level));
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
+    return await create_group(form.name, Number(form.access_level));
   };
 </script>
 
@@ -54,11 +43,8 @@
   display={(item) => item?.name}
   title="Groups"
   description="Modify, create, delete groups and manage their permissions and members here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {

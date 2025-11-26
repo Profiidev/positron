@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Sidebar, ScrollArea } from 'positron-components/components/ui';
+  import * as Sidebar from 'positron-components/components/ui/sidebar';
+  import { ScrollArea } from 'positron-components/components/ui/scroll-area';
   import { Atom, PanelLeftClose, PanelLeftOpen } from '@lucide/svelte';
   import User from './user.svelte';
   import Main from './main.svelte';
@@ -49,9 +50,9 @@
   </Sidebar.Header>
   <Sidebar.Separator />
   <Sidebar.Content>
-    <ScrollArea.ScrollArea orientation={'vertical'}>
+    <ScrollArea orientation={'vertical'}>
       <Main />
-    </ScrollArea.ScrollArea>
+    </ScrollArea>
   </Sidebar.Content>
   <Sidebar.Separator />
   <Sidebar.Footer>

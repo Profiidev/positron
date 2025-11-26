@@ -1,11 +1,8 @@
 <script lang="ts">
-  import {
-    LoginOtherOptions,
-    Totp_6,
-    BaseForm,
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import LoginOtherOptions from 'positron-components/components/form/login-other-options.svelte';
+  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
+  import BaseForm from 'positron-components/components/form/base-form.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { cn } from 'positron-components/utils';
   import { goto } from '$app/navigation';
   import type { OAuthParams } from '$lib/backend/auth/types.svelte';
@@ -18,20 +15,18 @@
   } from '$lib/backend/auth/passkey.svelte';
   import { connect_updater } from '$lib/backend/ws/updater.svelte';
   import type { SvelteComponent } from 'svelte';
+  import type {
+    FormValue,
+    ZodValidationSchema
+  } from 'positron-components/components/form/types';
+  import { loginSchema } from './schema.svelte';
 
   interface Props {
     class?: string | undefined | null;
     oauth_params: OAuthParams | undefined;
-    loginForm: FormType<any>;
-    loginSchema: any;
   }
 
-  let {
-    class: className = undefined,
-    oauth_params,
-    loginForm,
-    loginSchema
-  }: Props = $props();
+  let { class: className = undefined, oauth_params }: Props = $props();
 
   let passkeySecondTry = $state(false);
   let enterEmail = $state(true);
@@ -39,11 +34,11 @@
   let passkeyError = $state('');
   let formComp: SvelteComponent | undefined = $state();
 
-  const onSubmit = async (form: FormType<any>) => {
+  const onSubmit = async (form: FormValue<typeof loginSchema>) => {
     if (passkeySecondTry) {
       passkeyError = '';
 
-      let ret = await passkey_authenticate_by_email(form.data.passkey_email);
+      let ret = await passkey_authenticate_by_email(form.passkey_email);
 
       if (ret) {
         if (ret === RequestError.Unauthorized) {
@@ -59,7 +54,7 @@
     if (!enterEmail) {
       passkeyError = '';
 
-      let ret = await totp_confirm(form.data.totp);
+      let ret = await totp_confirm(form.totp);
 
       if (ret) {
         if (ret === RequestError.Unauthorized) {
@@ -75,7 +70,7 @@
 
     passkeyError = '';
 
-    let ret = await password_login(form.data.email, form.data.password);
+    let ret = await password_login(form.email, form.password);
 
     if (typeof ret === 'boolean') {
       if (ret) {
@@ -137,7 +132,6 @@
     bind:this={formComp}
     onsubmit={onSubmit}
     bind:isLoading
-    form={loginForm}
     schema={loginSchema}
     class="gap-0"
   >

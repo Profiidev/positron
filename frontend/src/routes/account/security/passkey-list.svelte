@@ -1,18 +1,13 @@
 <script lang="ts">
-  import {
-    Button,
-    Skeleton,
-    Separator,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    FormDialog,
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import { Button } from 'positron-components/components/ui/button';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { toast } from 'positron-components/components/util/general';
+  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { KeyRound, Pencil, Trash } from '@lucide/svelte';
   import { type SvelteComponent } from 'svelte';
-  import { DateTime } from 'positron-components/util';
+  import { DateTime } from 'positron-components/util/time.svelte';
   import { RequestError } from 'positron-components/backend';
   import {
     passkey_edit_name,
@@ -20,28 +15,19 @@
     passkey_remove
   } from '$lib/backend/auth/passkey.svelte';
   import { passkey_list } from '$lib/backend/auth/stores.svelte';
+  import type { FormValue } from 'positron-components/components/form/types';
+  import {
+    passkeyCreateSchema,
+    passkeyDeleteSchema,
+    passkeyEditSchema
+  } from './schema.svelte';
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    createForm: FormType<any>;
-    createSchema: any;
-    editForm: FormType<any>;
-    editSchema: any;
-    deleteForm: FormType<any>;
-    deleteSchema: any;
   }
 
-  let {
-    valid,
-    requestAccess,
-    createSchema,
-    editSchema,
-    deleteSchema,
-    createForm,
-    deleteForm,
-    editForm
-  }: Props = $props();
+  let { valid, requestAccess }: Props = $props();
 
   let passkeys = $derived(passkey_list.value);
   let editing = $state('');
@@ -58,8 +44,8 @@
     return true;
   };
 
-  const createPasskey = async (form: FormType<any>) => {
-    let ret = await passkey_register(form.data.name);
+  const createPasskey = async (form: FormValue<typeof passkeyCreateSchema>) => {
+    let ret = await passkey_register(form.name);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
@@ -111,8 +97,8 @@
     editDialog?.setValue({ name });
   };
 
-  const editPasskey = async (form: FormType<any>) => {
-    let ret = await passkey_edit_name(form.data.name, editing);
+  const editPasskey = async (form: FormValue<typeof passkeyEditSchema>) => {
+    let ret = await passkey_edit_name(form.name, editing);
 
     if (ret) {
       if (ret === RequestError.Conflict) {
@@ -122,7 +108,7 @@
       }
     } else {
       toast.success('Edit successful', {
-        description: `Passkey name was changed successfully from ${editing} to ${form.data.name}`
+        description: `Passkey name was changed successfully from ${editing} to ${form.name}`
       });
     }
   };
@@ -143,8 +129,7 @@
       }}
       onopen={startCreatePasskey}
       onsubmit={createPasskey}
-      form={createForm}
-      schema={createSchema}
+      schema={passkeyCreateSchema}
     >
       {#snippet children({ props })}
         <FormInput
@@ -162,8 +147,7 @@
       trigger={undefined}
       onsubmit={editPasskey}
       bind:this={editDialog}
-      form={editForm}
-      schema={editSchema}
+      schema={passkeyEditSchema}
     >
       {#snippet children({ props })}
         <FormInput
@@ -182,8 +166,7 @@
       trigger={undefined}
       onsubmit={deletePasskey}
       bind:this={deleteDialog}
-      form={deleteForm}
-      schema={deleteSchema}
+      schema={passkeyDeleteSchema}
     ></FormDialog>
   </div>
   <Separator />

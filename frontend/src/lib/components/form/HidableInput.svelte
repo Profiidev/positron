@@ -3,8 +3,9 @@
     FormRecord,
     SuperForm,
     FormPath
-  } from 'positron-components/components/form';
-  import { Input, Label } from 'positron-components/components/ui';
+  } from 'positron-components/components/form/types';
+  import { Input } from 'positron-components/components/ui/input';
+  import { Label } from 'positron-components/components/ui/label';
   import type { Snippet } from 'svelte';
 
   interface Props {

@@ -1,4 +1,8 @@
-import { DateUtils } from 'positron-components/components/util';
+import {
+  getLocalTimeZone,
+  now,
+  ZonedDateTime
+} from 'positron-components/util/time.svelte';
 import { UpdateType } from '../ws/types.svelte';
 import { create_updater } from '../ws/updater.svelte';
 import { get_image, get_image_info, list_apods } from './apod.svelte';
@@ -9,9 +13,9 @@ export const apod_info_list = create_updater<ApodInfo[]>(
   list_apods
 );
 
-let apod_date = $state(DateUtils.now(DateUtils.getLocalTimeZone()));
+let apod_date = $state(now(getLocalTimeZone()));
 
-export const setApodDate = (date: DateUtils.ZonedDateTime) => {
+export const setApodDate = (date: ZonedDateTime) => {
   apod_date = date;
 };
 
