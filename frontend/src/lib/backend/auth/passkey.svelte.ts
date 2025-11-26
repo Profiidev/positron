@@ -1,6 +1,4 @@
 import {
-  startAuthentication,
-  startRegistration,
   type PublicKeyCredentialCreationOptionsJSON,
   type PublicKeyCredentialRequestOptionsJSON
 } from '@simplewebauthn/browser';
@@ -48,6 +46,8 @@ export const passkey_register = async (name: string) => {
   let optionsJSON = ret.publicKey;
   let reg;
   try {
+    let startRegistration = (await import('@simplewebauthn/browser'))
+      .startRegistration;
     reg = await startRegistration({ optionsJSON });
   } catch (_) {
     return RequestError.Unauthorized;
@@ -78,6 +78,8 @@ export const passkey_authenticate = async () => {
   let optionsJSON = res.res.publicKey;
   let ret;
   try {
+    let startAuthentication = (await import('@simplewebauthn/browser'))
+      .startAuthentication;
     ret = await startAuthentication({ optionsJSON });
   } catch (_) {
     return RequestError.Unauthorized;
@@ -105,6 +107,8 @@ export const passkey_authenticate_by_email = async (email: string) => {
   let optionsJSON = res.res.publicKey;
   let ret;
   try {
+    let startAuthentication = (await import('@simplewebauthn/browser'))
+      .startAuthentication;
     ret = await startAuthentication({ optionsJSON });
   } catch (_) {
     return RequestError.Unauthorized;
@@ -131,6 +135,8 @@ export const passkey_special_access = async () => {
   let optionsJSON = res.publicKey;
   let ret;
   try {
+    let startAuthentication = (await import('@simplewebauthn/browser'))
+      .startAuthentication;
     ret = await startAuthentication({ optionsJSON });
   } catch (_) {
     return RequestError.Unauthorized;
