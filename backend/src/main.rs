@@ -62,6 +62,7 @@ async fn main() {
 async fn router(config: &Config) -> Router {
   frontend::router()
     .nest("/backend", api_router().await)
+    .nest("/.well-known", well_known::router())
     .add_base_layers_filtered(&config.base, |path| path.starts_with("/backend"))
     .await
 }
@@ -75,7 +76,6 @@ async fn api_router() -> Router {
     .nest("/management", management::router())
     .nest("/ws", ws::router())
     .nest("/services", services::router())
-    .merge(well_known::router())
     .merge(health::router())
     .metrics_route()
     .await
