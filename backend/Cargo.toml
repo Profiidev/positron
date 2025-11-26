@@ -87,6 +87,7 @@ time = "0.3.44"
 futures = "0.3.31"
 figment = { version = "0.10.19", features = ["env"] }
 url = { version = "2.5.7", features = ["serde"] }
+hyper-util = { version = "0.1.18", features = ["client-legacy"] }
 
 [[bin]]
 name = "backend"
