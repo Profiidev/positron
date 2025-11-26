@@ -1,5 +1,4 @@
-import { ResponseType } from 'positron-components/backend';
-import { post } from './util.svelte';
+import { ResponseType, post } from 'positron-components/backend';
 
 export const email_start_change = async (new_email: string) => {
   return await post<undefined>(

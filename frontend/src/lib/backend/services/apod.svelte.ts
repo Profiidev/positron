@@ -1,6 +1,10 @@
-import { ResponseType, RequestError } from 'positron-components/backend';
+import {
+  ResponseType,
+  RequestError,
+  get,
+  post
+} from 'positron-components/backend';
 import type { Apod, ApodData, ApodInfo } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const list_apods = async () => {
   let ret = await get<ApodInfo[]>('/services/apod/list', ResponseType.Json);

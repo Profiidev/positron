@@ -1,7 +1,6 @@
 import { getEncrypt } from '../auth/password.svelte';
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type { Permission, User } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const list_users = async () => {
   let ret = await get<User[]>('/management/user/list', ResponseType.Json);

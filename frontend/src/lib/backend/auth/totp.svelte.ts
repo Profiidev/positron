@@ -1,6 +1,5 @@
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type { TotpCode } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const is_code = (object: any): object is TotpCode => {
   return typeof object === 'object' && object !== null && 'qr' in object;

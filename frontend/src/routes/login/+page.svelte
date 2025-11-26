@@ -7,8 +7,6 @@
   import { loginSchema, pin } from './schema.svelte';
   import { test_token } from '$lib/backend/auth/other.svelte';
   import { onMount } from 'svelte';
-  import { PUBLIC_IS_APP } from '$env/static/public';
-  import PasskeyOptions from '../account/security/passkey-options.svelte';
 
   interface Props {
     data: PageServerData;
@@ -49,9 +47,6 @@
     </div>
   </div>
 </div>
-{#if PUBLIC_IS_APP === 'true'}
-  <PasskeyOptions form={data.pin} schema={pin} />
-{/if}
 
 <style>
   .background-img {

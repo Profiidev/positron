@@ -1,6 +1,5 @@
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type { OAuthPolicy, OAuthPolicyCreate } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const list_policies = async () => {
   let ret = await get<OAuthPolicy[]>(

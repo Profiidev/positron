@@ -2,7 +2,6 @@ FROM node:22-alpine AS build
 
 ARG URL
 ENV PUBLIC_BACKEND_URL=${URL}
-ENV PUBLIC_IS_APP=false
 
 WORKDIR /app/frontend
 
@@ -13,9 +12,6 @@ RUN npm ci
 
 COPY frontend/src ./src
 COPY frontend/static ./static
-
-RUN rm src/routes/+layout.ts
-RUN sed -i 's/static/node/g' svelte.config.js
 
 RUN npm run build
 

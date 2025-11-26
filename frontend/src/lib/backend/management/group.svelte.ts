@@ -1,6 +1,5 @@
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type { Group } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const list_groups = async () => {
   let ret = await get<Group[]>('/management/group/list', ResponseType.Json);

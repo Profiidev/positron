@@ -1,10 +1,9 @@
-import { ResponseType } from 'positron-components/backend';
+import { ResponseType, get, post } from 'positron-components/backend';
 import type {
   OAuthPolicyInfo,
   OAuthScope,
   OAuthScopeCreate
 } from './types.svelte';
-import { get, post } from '../util.svelte';
 
 export const list_scopes = async () => {
   let ret = await get<OAuthScope[]>(
