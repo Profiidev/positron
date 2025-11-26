@@ -1,34 +1,23 @@
 <script lang="ts">
-  import {
-    Button,
-    Input,
-    Label,
-    Separator,
-    Skeleton,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    BaseForm,
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
-  import { arrayBufferToBase64 } from 'positron-components/util';
+  import { Button } from 'positron-components/components/ui/button';
+  import { Input } from 'positron-components/components/ui/input';
+  import { Label } from 'positron-components/components/ui/label';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import { toast } from 'positron-components/components/util/general';
+  import BaseForm from 'positron-components/components/form/base-form.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import { arrayBufferToBase64 } from 'positron-components/util/convert.svelte';
   import { Upload } from '@lucide/svelte';
-  import { SimpleAvatar } from 'positron-components/components/util';
+  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
   import {
     profile_change_image,
     profile_update
   } from '$lib/backend/account/general.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { PageServerData } from './$types';
   import { profileSchema } from './schema.svelte';
   import type { SvelteComponent } from 'svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let infoData = $derived(userData.value?.[1]);
   $effect(() => {
@@ -62,10 +51,10 @@
     imageInput?.click();
   };
 
-  const updateProfile = async (form: FormType<any>) => {
+  const updateProfile = async (form: FormValue<typeof profileSchema>) => {
     isLoading = true;
 
-    let ret = await profile_update(form.data.name);
+    let ret = await profile_update(form.name);
 
     isLoading = false;
 
@@ -118,7 +107,6 @@
     <BaseForm
       class="mt-5 flex flex-col space-y-2 sm:mt-0 sm:pl-10"
       onsubmit={updateProfile}
-      form={data.profile}
       schema={profileSchema}
       bind:isLoading
       bind:this={formComp}

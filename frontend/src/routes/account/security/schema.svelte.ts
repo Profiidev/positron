@@ -35,3 +35,4 @@ export const pin = z.object({
 export type PasskeyCreateSchemaType = typeof passkeyCreateSchema;
 export type PasskeyEditSchemaType = typeof passkeyEditSchema;
 export type PasskeyDeleteSchemaType = typeof passkeyDeleteSchema;
+export type ConfirmSchemaType = typeof confirmSchema;

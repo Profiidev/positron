@@ -3,8 +3,9 @@ import {
   type Group,
   type UserInfo
 } from '$lib/backend/management/types.svelte';
-import { Actions, createColumn } from 'positron-components/components/table';
-import { DataTable } from 'positron-components/components/ui';
+import Actions from 'positron-components/components/table/actions.svelte';
+import { createColumn } from 'positron-components/components/table/helpers.svelte';
+import * as DataTable from 'positron-components/components/ui/data-table';
 import type { ColumnDef } from '@tanstack/table-core';
 
 export const columns = (

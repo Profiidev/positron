@@ -1,4 +1,4 @@
-import { base64ToArrayBuffer } from 'positron-components/util';
+import { base64ToArrayBuffer } from 'positron-components/util/convert.svelte';
 import { ResponseType, get, post } from 'positron-components/backend';
 import type { ProfileInfo, UserInfo } from './types.svelte';
 

@@ -1,24 +1,22 @@
 <script lang="ts">
-  import {
-    LoginOtherOptions,
-    BaseForm,
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
-  import { interval } from 'positron-components/util';
+  import LoginOtherOptions from 'positron-components/components/form/login-other-options.svelte';
+  import BaseForm from 'positron-components/components/form/base-form.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import { interval } from 'positron-components/util/interval.svelte';
   import { RequestError } from 'positron-components/backend';
-  import { Dialog } from 'positron-components/components/ui';
+  import * as Dialog from 'positron-components/components/ui/dialog';
   import { password_special_access } from '$lib/backend/auth/password.svelte';
   import { passkey_special_access } from '$lib/backend/auth/passkey.svelte';
   import { browser } from '$app/environment';
+  import type { FormValue } from 'positron-components/components/form/types';
+  import type { ConfirmSchemaType } from './security/schema.svelte';
 
   interface Props {
     specialAccessValid: boolean;
-    form: FormType<any>;
-    schema: any;
+    schema: ConfirmSchemaType;
   }
 
-  let { specialAccessValid = $bindable(false), form, schema }: Props = $props();
+  let { specialAccessValid = $bindable(false), schema }: Props = $props();
 
   let specialAccessWatcher = interval(() => {
     if (!browser) {
@@ -47,10 +45,10 @@
     });
   };
 
-  const confirm = async (form: FormType<any>) => {
+  const confirm = async (form: FormValue<typeof schema>) => {
     passkeyError = '';
 
-    let ret = await password_special_access(form.data.password);
+    let ret = await password_special_access(form.password);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
@@ -97,7 +95,7 @@
       <Dialog.Title>Confirm Access</Dialog.Title>
       <Dialog.Description>Confirm access to your account</Dialog.Description>
     </Dialog.Header>
-    <BaseForm onsubmit={confirm} bind:isLoading {form} {schema}>
+    <BaseForm onsubmit={confirm} bind:isLoading {schema}>
       {#snippet children({ props })}
         <FormInput
           {...props}

@@ -1,8 +1,5 @@
 import type { OAuthParams } from '$lib/backend/auth/types.svelte.js';
 import { redirect } from '@sveltejs/kit';
-import { superValidate } from 'sveltekit-superforms';
-import { zod4 } from 'sveltekit-superforms/adapters';
-import { loginSchema, pin } from './schema.svelte.js';
 import type { PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async ({ cookies, url }) => {
@@ -22,13 +19,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
       oauth_params: {
         code,
         name
-      } as OAuthParams,
-      loginForm: await superValidate(zod4(loginSchema)),
-      pin: await superValidate(zod4(pin))
+      } as OAuthParams
     };
   }
-  return {
-    loginForm: await superValidate(zod4(loginSchema)),
-    pin: await superValidate(zod4(pin))
-  };
 };

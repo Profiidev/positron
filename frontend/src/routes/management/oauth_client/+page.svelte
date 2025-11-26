@@ -18,37 +18,24 @@
     type OAuthClientCreate,
     type OAuthClientInfo
   } from '$lib/backend/management/types.svelte';
-  import {
-    Multiselect,
-    SimpleTable
-  } from 'positron-components/components/table';
-  import {
-    Label,
-    Input,
-    Separator,
-    Button,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    FormSwitch,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import Multiselect from 'positron-components/components/table/multiselect.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import { Input } from 'positron-components/components/ui/input';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Button } from 'positron-components/components/ui/button';
+  import { toast } from 'positron-components/components/util/general';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import FormSwitch from 'positron-components/components/form/form-switch.svelte';
   import { RequestError } from 'positron-components/backend';
-  import { deepCopy } from 'positron-components/util';
+  import { deepCopy } from 'positron-components/util/other.svelte';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { RotateCw } from '@lucide/svelte';
-  import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
   import { onMount } from 'svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let clients = $derived(oauth_client_list.value);
   let groups = $derived(group_info_list.value);
@@ -97,13 +84,13 @@
     }
   ];
 
-  const createItemFn = async (form: FormType<any>) => {
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
     return await create_client(
-      form.data.name,
-      form.data.redirect_uri,
-      form.data.additional_redirect_uris,
+      form.name,
+      form.redirect_uri,
+      form.additional_redirect_uris,
       scope.join(' '),
-      form.data.confidential
+      form.confidential
     );
   };
 
@@ -151,11 +138,8 @@
   display={(item) => item?.name}
   title="Clients"
   description="Modify, create, delete clients and manage their settings here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {

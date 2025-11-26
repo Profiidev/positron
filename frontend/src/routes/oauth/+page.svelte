@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { Button, Card, Skeleton } from 'positron-components/components/ui';
-  import { SimpleAvatar } from 'positron-components/components/util';
+  import { Button } from 'positron-components/components/ui/button';
+  import * as Card from 'positron-components/components/ui/card';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
   import { RequestError } from 'positron-components/backend';
   import { goto } from '$app/navigation';
   import { logout, oauth_auth } from '$lib/backend/auth/other.svelte';

@@ -10,41 +10,33 @@
   } from '$lib/backend/management/stores.svelte';
   import {
     Permission,
-    type GroupInfo
+    type GroupInfo,
+    type OAuthPolicyCreate
   } from '$lib/backend/management/types.svelte';
-  import { SimpleTable } from 'positron-components/components/table';
-  import {
-    Label,
-    Input,
-    Select,
-    Button
-  } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import { Input } from 'positron-components/components/ui/input';
+  import * as Select from 'positron-components/components/ui/select';
+  import { Button } from 'positron-components/components/ui/button';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { RequestError } from 'positron-components/backend';
-  import { deepCopy } from 'positron-components/util';
+  import { deepCopy } from 'positron-components/util/other.svelte';
   import { Plus, Trash } from '@lucide/svelte';
-  import type { PageServerData } from './$types';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let policies = $derived(oauth_policy_list.value);
   let groups = $derived(group_info_list.value);
   let group: [GroupInfo, string][] = $state([]);
   let userInfo = $derived(userData.value?.[0]);
 
-  const createItemFn = async (form: FormType<any>) => {
-    let policy = form.data;
-    policy.group = group;
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
+    let policy: OAuthPolicyCreate = {
+      group: group,
+      ...form
+    };
     return await create_policy(policy);
   };
 </script>
@@ -61,11 +53,8 @@
   display={(item) => item?.name}
   title="Policies"
   description="Modify, create, delete policies and manage their settings here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {

@@ -1,28 +1,23 @@
 <script lang="ts">
-  import {
-    FormDialog,
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
-  import {
-    Separator,
-    Skeleton,
-    toast
-  } from 'positron-components/components/ui';
-  import { DateTime } from 'positron-components/util';
+  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import { toast } from 'positron-components/components/util/general';
+  import { DateTime } from 'positron-components/util/time.svelte';
   import { RequestError } from 'positron-components/backend';
   import { userData } from '$lib/backend/account/info.svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import { password_change } from '$lib/backend/auth/password.svelte';
+  import { passwordChange } from './schema.svelte';
+  import type { FormValue } from 'positron-components/components/form/types';
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
-    form: FormType<any>;
-    schema: any;
   }
 
-  let { valid, requestAccess, form, schema }: Props = $props();
+  let { valid, requestAccess }: Props = $props();
 
   let userInfo: UserInfo | undefined = $derived(userData.value?.[0]);
 
@@ -36,15 +31,12 @@
     return true;
   };
 
-  const changeConfirm = async (form: FormType<any>) => {
-    if (form.data.password !== form.data.password_confirm) {
+  const changeConfirm = async (form: FormValue<typeof passwordChange>) => {
+    if (form.password !== form.password_confirm) {
       return { error: 'Passwords are not equal', field: 'password_confirm' };
     }
 
-    let ret = await password_change(
-      form.data.password,
-      form.data.password_confirm
-    );
+    let ret = await password_change(form.password, form.password_confirm);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
@@ -92,8 +84,7 @@
     }}
     onopen={startChange}
     onsubmit={changeConfirm}
-    {form}
-    {schema}
+    schema={passwordChange}
   >
     {#snippet children({ props })}
       <FormInput

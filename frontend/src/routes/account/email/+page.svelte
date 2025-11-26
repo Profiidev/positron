@@ -1,16 +1,11 @@
 <script lang="ts">
-  import {
-    Separator,
-    Label,
-    Skeleton,
-    toast
-  } from 'positron-components/components/ui';
-  import {
-    FormDialog,
-    FormInput,
-    Totp_6,
-    type FormType
-  } from 'positron-components/components/form';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import { Label } from 'positron-components/components/ui/label';
+  import { Skeleton } from 'positron-components/components/ui/skeleton';
+  import { toast } from 'positron-components/components/util/general';
+  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
   import { RequestError } from 'positron-components/backend';
   import type { SvelteComponent } from 'svelte';
   import AccessConfirm from '../access-confirm.svelte';
@@ -19,15 +14,9 @@
     email_start_change
   } from '$lib/backend/email.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { PageServerData } from './$types';
   import { confirmSchema, emailChange } from './schema.svelte';
   import { get } from 'svelte/store';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let infoData = $derived(userData.value?.[1]);
 
@@ -50,7 +39,7 @@
     return true;
   };
 
-  const changeEmail = async (form: FormType<any>) => {
+  const changeEmail = async (form: FormValue<typeof emailChange>) => {
     if (enteringCodes) {
       return enterCodes(form);
     } else {
@@ -58,8 +47,8 @@
     }
   };
 
-  const enterEmail = async (form: FormType<any>) => {
-    let ret = await email_start_change(form.data.email);
+  const enterEmail = async (form: FormValue<typeof emailChange>) => {
+    let ret = await email_start_change(form.email);
 
     if (ret) {
       if (ret === RequestError.Conflict) {
@@ -76,8 +65,8 @@
     }
   };
 
-  const enterCodes = async (form: FormType<any>) => {
-    let ret = await email_finish_change(form.data.old_code, form.data.new_code);
+  const enterCodes = async (form: FormValue<typeof emailChange>) => {
+    let ret = await email_finish_change(form.old_code, form.new_code);
 
     if (ret) {
       if (ret === RequestError.Unauthorized) {
@@ -124,7 +113,6 @@
       }}
       onopen={startChangeEmail}
       onsubmit={changeEmail}
-      form={data.emailChange}
       schema={emailChange}
     >
       {#snippet children({ props })}
@@ -165,6 +153,5 @@
 <AccessConfirm
   bind:this={accessConfirm}
   bind:specialAccessValid
-  form={data.confirm}
   schema={confirmSchema}
 />

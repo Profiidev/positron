@@ -1,26 +1,11 @@
 <script lang="ts">
-  import { Separator } from 'positron-components/components/ui';
+  import { Separator } from 'positron-components/components/ui/separator';
   import PasskeyList from './passkey-list.svelte';
   import Totp_2fa from './totp-2fa.svelte';
   import AccessConfirm from '../access-confirm.svelte';
   import Password from './password.svelte';
   import type { SvelteComponent } from 'svelte';
-  import type { PageServerData } from './$types';
-  import {
-    confirmSchema,
-    passkeyCreateSchema,
-    passkeyDeleteSchema,
-    passkeyEditSchema,
-    passwordChange,
-    totpAdd,
-    totpRemove
-  } from './schema.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import { confirmSchema } from './schema.svelte';
 
   let specialAccessValid: boolean = $state(false);
   let accessConfirm: SvelteComponent | undefined = $state();
@@ -39,43 +24,21 @@
   <Separator />
   <div class="space-y-3">
     <h3 class="text-lg">Password</h3>
-    <Password
-      valid={specialAccessValid}
-      {requestAccess}
-      form={data.passwordChange}
-      schema={passwordChange}
-    />
+    <Password valid={specialAccessValid} {requestAccess} />
   </div>
   <div class="space-y-3">
     <h3 class="text-lg">Passkey</h3>
-    <PasskeyList
-      valid={specialAccessValid}
-      {requestAccess}
-      createForm={data.passkeyCreateForm}
-      createSchema={passkeyCreateSchema}
-      editForm={data.passkeyEditForm}
-      editSchema={passkeyEditSchema}
-      deleteForm={data.passkeyDeleteForm}
-      deleteSchema={passkeyDeleteSchema}
-    />
+    <PasskeyList valid={specialAccessValid} {requestAccess} />
   </div>
   <div class="space-y-3">
     <h3 class="text-lg">Other 2FA Methods</h3>
     <div class="rounded-xl border p-2">
-      <Totp_2fa
-        valid={specialAccessValid}
-        {requestAccess}
-        addForm={data.totpAdd}
-        addSchema={totpAdd}
-        removeForm={data.totpRemove}
-        removeSchema={totpRemove}
-      />
+      <Totp_2fa valid={specialAccessValid} {requestAccess} />
     </div>
   </div>
 </div>
 <AccessConfirm
   bind:specialAccessValid
   bind:this={accessConfirm}
-  form={data.confirmForm}
   schema={confirmSchema}
 />

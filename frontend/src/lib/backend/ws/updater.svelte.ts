@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
-import { sleep } from 'positron-components/util';
+import { sleep } from 'positron-components/util/interval.svelte';
 
 let updater: WebSocket | undefined | false = $state(browser && undefined);
 let updater_cbs = new Map<UpdateType, Map<string, () => void>>();

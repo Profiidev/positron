@@ -10,26 +10,15 @@
     remove_user,
     user_edit
   } from '$lib/backend/management/user.svelte';
-  import {
-    SimpleTable,
-    Multiselect
-  } from 'positron-components/components/table';
-  import { Label } from 'positron-components/components/ui';
-  import {
-    FormInput,
-    type FormType
-  } from 'positron-components/components/form';
+  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
+  import Multiselect from 'positron-components/components/table/multiselect.svelte';
+  import { Label } from 'positron-components/components/ui/label';
+  import FormInput from 'positron-components/components/form/form-input.svelte';
   import { RequestError } from 'positron-components/backend';
-  import type { PageServerData } from './$types';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
+  import type { FormValue } from 'positron-components/components/form/types';
 
   let userInfo = $derived(userData.value?.[0]);
   let users = $derived(user_list.value);
@@ -38,12 +27,8 @@
     return await user_edit(item.uuid, item.name, item.permissions);
   };
 
-  const createItemFn = async (form: FormType<any>) => {
-    return await create_user(
-      form.data.name,
-      form.data.email,
-      form.data.password
-    );
+  const createItemFn = async (form: FormValue<typeof createSchema>) => {
+    return await create_user(form.name, form.email, form.password);
   };
 </script>
 
@@ -59,11 +44,8 @@
   display={(item) => item?.name}
   title="Users"
   description="Modify, create, delete users and manage their permissions here"
-  createForm={data.createForm}
   {createSchema}
-  editForm={data.editForm}
   {editSchema}
-  deleteForm={data.deleteForm}
   {deleteSchema}
   errorMappings={{
     [RequestError.Conflict]: {

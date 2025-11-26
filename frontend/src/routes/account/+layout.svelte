@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Separator } from 'positron-components/components/ui';
-  import { SimpleSidebar } from 'positron-components/components/nav';
+  import { Separator } from 'positron-components/components/ui/separator';
+  import SimpleSidebar from 'positron-components/components/nav/simple-sidebar.svelte';
 
   const { children } = $props();
 
