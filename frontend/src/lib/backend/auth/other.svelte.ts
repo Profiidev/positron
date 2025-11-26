@@ -7,7 +7,7 @@ export const logout = async () => {
 
 export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
   let res = await post<{ location: string }>(
-    `/oauth/authorize_confirm?code=${params.code}&allow=${allow}`,
+    `/backend/oauth/authorize_confirm?code=${params.code}&allow=${allow}`,
     ResponseType.Json,
     undefined,
     'x-www-form-urlencoded'
@@ -24,6 +24,6 @@ export const oauth_auth = async (params: OAuthParams, allow: boolean) => {
 };
 
 export const test_token = async () => {
-  let res = await get<boolean>('/auth/test_token', ResponseType.Json);
+  let res = await get<boolean>('/backend/auth/test_token', ResponseType.Json);
   return typeof res === 'boolean' && res;
 };

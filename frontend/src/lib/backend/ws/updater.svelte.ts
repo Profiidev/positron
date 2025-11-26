@@ -1,5 +1,4 @@
 import { browser } from '$app/environment';
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import { tick } from 'svelte';
 import { UpdateType } from './types.svelte';
 import { sleep } from 'positron-components/util';
@@ -21,7 +20,7 @@ export const connect_updater = () => {
 };
 
 const create_websocket = () => {
-  updater = new WebSocket(`${PUBLIC_BACKEND_URL}/ws/updater`);
+  updater = new WebSocket(`/backend/ws/updater`);
 
   updater.addEventListener('message', (event) => {
     let msg: UpdateType = JSON.parse(event.data);

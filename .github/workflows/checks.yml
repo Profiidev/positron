@@ -25,9 +25,6 @@ jobs:
           shared-key: "linter_cache"
       - uses: bahmutov/npm-install@v1
 
-      - name: Set frontend env
-        run: |
-          printf "PUBLIC_BACKEND_URL=http://localhost" > frontend/.env
       - name: Generate svelte data
         run: |
           cd frontend && npm run sync

@@ -3,7 +3,7 @@ import type { OAuthPolicy, OAuthPolicyCreate } from './types.svelte';
 
 export const list_policies = async () => {
   let ret = await get<OAuthPolicy[]>(
-    '/management/oauth_policy/list',
+    '/backend/management/oauth_policy/list',
     ResponseType.Json
   );
 
@@ -14,7 +14,7 @@ export const list_policies = async () => {
 
 export const delete_policy = async (uuid: string) => {
   return await post<undefined>(
-    '/management/oauth_policy/delete',
+    '/backend/management/oauth_policy/delete',
     ResponseType.None,
     {
       uuid
@@ -24,7 +24,7 @@ export const delete_policy = async (uuid: string) => {
 
 export const create_policy = async (policy: OAuthPolicyCreate) => {
   return await post<undefined>(
-    '/management/oauth_policy/create',
+    '/backend/management/oauth_policy/create',
     ResponseType.None,
     policy
   );
@@ -32,7 +32,7 @@ export const create_policy = async (policy: OAuthPolicyCreate) => {
 
 export const edit_policy = async (policy: OAuthPolicy) => {
   return await post<undefined>(
-    '/management/oauth_policy/edit',
+    '/backend/management/oauth_policy/edit',
     ResponseType.None,
     policy
   );

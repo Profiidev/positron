@@ -39,6 +39,7 @@ use super::state::{ClientCreateStart, ClientState};
 
 pub fn router() -> Router {
   Router::new()
+    .route("/frontend_url", get(frontend_url))
     .route("/list", get(list))
     .route("/group_list", get(group_list))
     .route("/user_list", get(user_list))
@@ -48,6 +49,11 @@ pub fn router() -> Router {
     .route("/delete", post(delete))
     .route("/reset", post(reset))
     .route("/list_scopes", get(list_scopes))
+}
+
+#[instrument(skip(state))]
+async fn frontend_url(auth: JwtClaims<JwtBase>, state: ClientState) -> String {
+  state.frontend_url.clone()
 }
 
 #[instrument(skip(db))]
@@ -132,10 +138,15 @@ async fn start_create(
     ClientCreateStart {
       secret: secret.clone(),
       client_id,
+      frontend_url: state.frontend_url.clone(),
     },
   );
 
-  Ok(Json(ClientCreateStart { secret, client_id }))
+  Ok(Json(ClientCreateStart {
+    secret,
+    client_id,
+    frontend_url: state.frontend_url.clone(),
+  }))
 }
 
 #[derive(Deserialize, Debug, FromRequest)]
@@ -167,8 +178,9 @@ async fn create(
   }
 
   let mut lock = state.create.lock().await;
-  let ClientCreateStart { secret, client_id } =
-    lock.get(&auth.sub).status(StatusCode::BAD_REQUEST)?;
+  let ClientCreateStart {
+    secret, client_id, ..
+  } = lock.get(&auth.sub).status(StatusCode::BAD_REQUEST)?;
 
   let salt = SaltString::generate(OsRng {}).to_string();
   let client_secret = hash_secret(&state.pepper, &salt, secret.as_bytes())?;

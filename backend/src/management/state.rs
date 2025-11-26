@@ -11,6 +11,7 @@ use crate::config::Config;
 pub struct ClientCreateStart {
   pub secret: String,
   pub client_id: Uuid,
+  pub frontend_url: String,
 }
 
 #[derive(Clone, FromRequestParts)]
@@ -18,6 +19,7 @@ pub struct ClientCreateStart {
 pub struct ClientState {
   pub create: Arc<Mutex<HashMap<Uuid, ClientCreateStart>>>,
   pub pepper: Vec<u8>,
+  pub frontend_url: String,
 }
 
 impl ClientState {
@@ -27,6 +29,7 @@ impl ClientState {
     Self {
       create: Default::default(),
       pepper,
+      frontend_url: config.frontend_url.clone(),
     }
   }
 }

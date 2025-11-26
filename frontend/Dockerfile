@@ -1,8 +1,5 @@
 FROM node:22-alpine AS build
 
-ARG URL
-ENV PUBLIC_BACKEND_URL=${URL}
-
 WORKDIR /app/frontend
 
 COPY frontend/package.json frontend/svelte.config.js frontend/tsconfig.json frontend/vite.config.js ./

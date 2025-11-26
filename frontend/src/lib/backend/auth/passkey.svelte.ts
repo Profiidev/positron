@@ -37,7 +37,7 @@ const isKeyCredRequestSpecial = (
 
 export const passkey_register = async (name: string) => {
   let ret = await get<PublicKeyCredentialCreationOptionsJSON>(
-    '/auth/passkey/start_registration',
+    '/backend/auth/passkey/start_registration',
     ResponseType.Json
   );
 
@@ -54,7 +54,7 @@ export const passkey_register = async (name: string) => {
   }
 
   let done = await post<undefined>(
-    '/auth/passkey/finish_registration',
+    '/backend/auth/passkey/finish_registration',
     ResponseType.None,
     {
       reg,
@@ -69,7 +69,7 @@ export const passkey_authenticate = async () => {
   let res = await get<{
     res: { publicKey: PublicKeyCredentialRequestOptionsJSON };
     id: string;
-  }>('/auth/passkey/start_authentication', ResponseType.Json);
+  }>('/backend/auth/passkey/start_authentication', ResponseType.Json);
 
   if (!isKeyCredRequest(res)) {
     return res;
@@ -84,7 +84,7 @@ export const passkey_authenticate = async () => {
   }
 
   let done = await post<undefined>(
-    `/auth/passkey/finish_authentication/${res.id}`,
+    `/backend/auth/passkey/finish_authentication/${res.id}`,
     ResponseType.None,
     ret
   );
@@ -96,7 +96,7 @@ export const passkey_authenticate_by_email = async (email: string) => {
   let res = await get<{
     res: { publicKey: PublicKeyCredentialRequestOptionsJSON };
     id: string;
-  }>(`/auth/passkey/start_authentication/${email}`, ResponseType.Json);
+  }>(`/backend/auth/passkey/start_authentication/${email}`, ResponseType.Json);
 
   if (!isKeyCredRequest(res)) {
     return res;
@@ -111,7 +111,7 @@ export const passkey_authenticate_by_email = async (email: string) => {
   }
 
   let done = await post<undefined>(
-    `/auth/passkey/finish_authentication_by_email/${res.id}`,
+    `/backend/auth/passkey/finish_authentication_by_email/${res.id}`,
     ResponseType.None,
     ret
   );
@@ -122,7 +122,7 @@ export const passkey_authenticate_by_email = async (email: string) => {
 export const passkey_special_access = async () => {
   let res = await get<{
     publicKey: PublicKeyCredentialRequestOptionsJSON;
-  }>('/auth/passkey/start_special_access', ResponseType.Json);
+  }>('/backend/auth/passkey/start_special_access', ResponseType.Json);
 
   if (!isKeyCredRequestSpecial(res)) {
     return res;
@@ -137,7 +137,7 @@ export const passkey_special_access = async () => {
   }
 
   let done = await post<undefined>(
-    '/auth/passkey/finish_special_access',
+    '/backend/auth/passkey/finish_special_access',
     ResponseType.None,
     ret
   );
@@ -146,20 +146,20 @@ export const passkey_special_access = async () => {
 };
 
 export const passkey_list = async () => {
-  let ret = await get<Passkey[]>('/auth/passkey/list', ResponseType.Json);
+  let ret = await get<Passkey[]>('/backend/auth/passkey/list', ResponseType.Json);
   if (Array.isArray(ret)) {
     return ret;
   }
 };
 
 export const passkey_remove = async (name: string) => {
-  return await post<undefined>('/auth/passkey/remove', ResponseType.None, {
+  return await post<undefined>('/backend/auth/passkey/remove', ResponseType.None, {
     name
   });
 };
 
 export const passkey_edit_name = async (name: string, old_name: string) => {
-  return await post<undefined>('/auth/passkey/edit_name', ResponseType.None, {
+  return await post<undefined>('/backend/auth/passkey/edit_name', ResponseType.None, {
     name,
     old_name
   });
