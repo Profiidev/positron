@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-centaurus = { version = "0.4.2", features = [
+centaurus = { version = "0.4.6", features = [
   "axum",
   "logging",
   "argon2",

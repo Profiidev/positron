@@ -1,36 +1,39 @@
+import 'package:app/api/auth/passkey.dart';
+import 'package:app/api/auth/password.dart';
 import 'package:flutter/material.dart';
+import 'package:passkeys/authenticator.dart';
+import 'package:passkeys/types.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const Positron());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Positron extends StatelessWidget {
+  const Positron({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ShadApp.router(
       title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      theme: ShadThemeData(
+        brightness: Brightness.light,
+        colorScheme: const ShadBlueColorScheme.light(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      darkTheme: ShadThemeData(
+        brightness: Brightness.dark,
+        colorScheme: const ShadBlueColorScheme.dark(),
+      ),
+      routerConfig: GoRouter(
+        routes: [
+          GoRoute(
+            path: "/",
+            builder: (context, state) =>
+                const MyHomePage(title: 'Flutter Demo Home Page'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -55,8 +58,11 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  bool obscure = true;
+  final formKey = GlobalKey<ShadFormState>();
+  final Future<PasswordAuth> auth = PasswordAuth.fromKey();
 
-  void _incrementCounter() {
+  void _incrementCounter() async {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
@@ -65,6 +71,18 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       _counter++;
     });
+
+    final passkeyAuth = PasskeyAuthenticator();
+
+    final request = await startPasskeyAuth();
+    var platformRes;
+    try {
+      platformRes = await passkeyAuth.authenticate(request);
+    } on NoCredentialsAvailableException {
+      print("No credentials available for this user.");
+      return;
+    }
+    await finishPasskeyAuth(platformRes);
   }
 
   @override
@@ -76,40 +94,104 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      bottomNavigationBar: NavigationBar(
+        destinations: [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.business), label: 'Business'),
+          NavigationDestination(icon: Icon(Icons.school), label: 'School'),
+        ],
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: ShadForm(
+          key: formKey,
+          // Center is a layout widget. It takes a single child and positions it
+          // in the middle of the parent.
+          child: Column(
+            // Column is also a layout widget. It takes a list of children and
+            // arranges them vertically. By default, it sizes itself to fit its
+            // children horizontally, and tries to be as tall as its parent.
+            //
+            // Column has various properties to control how it sizes itself and
+            // how it positions its children. Here we use mainAxisAlignment to
+            // center the children vertically; the main axis here is the vertical
+            // axis because Columns are vertical (the cross axis would be
+            // horizontal).
+            //
+            // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+            // action in the IDE, or press "p" in the console), to see the
+            // wireframe for each widget.
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text('You have pushed the button this many times:'),
+              Text(
+                '$_counter',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              ShadInputFormField(
+                id: 'username',
+                label: const Text('Username'),
+                placeholder: const Text('Enter your username'),
+                leading: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(LucideIcons.user),
+                ),
+                validator: (v) {
+                  if (v.isEmpty) {
+                    return 'Please enter your username';
+                  }
+                  return null;
+                },
+              ),
+              ShadInputFormField(
+                id: 'password',
+                label: const Text('Password'),
+                placeholder: const Text('Enter your password'),
+                obscureText: obscure,
+                leading: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(LucideIcons.lock),
+                ),
+                trailing: ShadButton(
+                  width: 24,
+                  height: 24,
+                  padding: EdgeInsets.zero,
+                  child: Icon(obscure ? LucideIcons.eyeOff : LucideIcons.eye),
+                  onPressed: () {
+                    setState(() {
+                      obscure = !obscure;
+                    });
+                  },
+                ),
+                validator: (v) {
+                  if (v.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              ),
+              ShadButton(
+                child: const Text('Shadcn Button'),
+                onPressed: () async {
+                  if (formKey.currentState!.saveAndValidate()) {
+                    print("Form is valid");
+
+                    var formData = formKey.currentState!.value;
+                    var username = formData['username'] as String;
+                    var password = formData['password'] as String;
+
+                    var passwordAuth = await auth;
+                    var res = await passwordAuth.authenticate(
+                      username,
+                      password,
+                    );
+                    print("TOTP required: ${res}");
+                  } else {
+                    print("Form is invalid");
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
