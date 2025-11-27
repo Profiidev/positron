@@ -21,7 +21,8 @@
   import FormInput from 'positron-components/components/form/form-input.svelte';
   import { RequestError } from 'positron-components/backend';
   import { deepCopy } from 'positron-components/util/other.svelte';
-  import { Plus, Trash } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash from '@lucide/svelte/icons/trash';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';

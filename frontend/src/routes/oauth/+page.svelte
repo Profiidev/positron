@@ -10,7 +10,7 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import { onMount } from 'svelte';
   import { user_settings_get } from '$lib/backend/account/settings.svelte';
-  import { LoaderCircle } from '@lucide/svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   interface Props {
     data: PageServerData;

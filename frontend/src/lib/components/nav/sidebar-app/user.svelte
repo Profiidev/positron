@@ -4,7 +4,9 @@
   import * as DropdownMenu from 'positron-components/components/ui/dropdown-menu';
   import { Skeleton } from 'positron-components/components/ui/skeleton';
   import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
-  import { ChevronsUpDown, LogOut, Settings } from '@lucide/svelte';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+  import LogOut from '@lucide/svelte/icons/log-out';
+  import Settings from '@lucide/svelte/icons/settings';
   import { goto } from '$app/navigation';
   import { logout } from '$lib/backend/auth/other.svelte';
   import { userData } from '$lib/backend/account/info.svelte';

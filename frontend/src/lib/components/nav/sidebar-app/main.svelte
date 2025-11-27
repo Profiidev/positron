@@ -1,7 +1,10 @@
 <script lang="ts">
   import * as Sidebar from 'positron-components/components/ui/sidebar';
   import * as Collapsible from 'positron-components/components/ui/collapsible';
-  import { ChevronRight, Image, KeyRound, Users } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Image from '@lucide/svelte/icons/image';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Users from '@lucide/svelte/icons/users';
   import { page } from '$app/state';
   import { Permission } from '$lib/backend/management/types.svelte';
   import { userData } from '$lib/backend/account/info.svelte';

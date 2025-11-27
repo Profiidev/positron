@@ -31,7 +31,7 @@
   import { deepCopy } from 'positron-components/util/other.svelte';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
-  import { RotateCw } from '@lucide/svelte';
+  import RotateCw from '@lucide/svelte/icons/rotate-cw';
   import { userData } from '$lib/backend/account/info.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
   import { onMount } from 'svelte';

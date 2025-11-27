@@ -15,10 +15,7 @@
   } from '$lib/backend/auth/passkey.svelte';
   import { connect_updater } from '$lib/backend/ws/updater.svelte';
   import type { SvelteComponent } from 'svelte';
-  import type {
-    FormValue,
-    ZodValidationSchema
-  } from 'positron-components/components/form/types';
+  import type { FormValue } from 'positron-components/components/form/types';
   import { loginSchema } from './schema.svelte';
 
   interface Props {

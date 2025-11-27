@@ -8,7 +8,7 @@
   import BaseForm from 'positron-components/components/form/base-form.svelte';
   import FormInput from 'positron-components/components/form/form-input.svelte';
   import { arrayBufferToBase64 } from 'positron-components/util/convert.svelte';
-  import { Upload } from '@lucide/svelte';
+  import Upload from '@lucide/svelte/icons/upload';
   import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
   import {
     profile_change_image,

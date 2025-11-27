@@ -20,7 +20,7 @@
     setApodDate
   } from '$lib/backend/services/stores.svelte';
   import { set_good } from '$lib/backend/services/apod.svelte';
-  import { LoaderCircle } from '@lucide/svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   let current_data: ApodData | undefined | null = $derived(apod.value);
   let current_image: string | undefined = $derived(getApodImage());

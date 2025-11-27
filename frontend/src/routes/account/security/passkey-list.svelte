@@ -5,7 +5,9 @@
   import { toast } from 'positron-components/components/util/general';
   import FormDialog from 'positron-components/components/form/form-dialog.svelte';
   import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { KeyRound, Pencil, Trash } from '@lucide/svelte';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Trash from '@lucide/svelte/icons/trash';
   import { type SvelteComponent } from 'svelte';
   import { DateTime } from 'positron-components/util/time.svelte';
   import { RequestError } from 'positron-components/backend';

@@ -7,7 +7,7 @@
   import FormDialog from 'positron-components/components/form/form-dialog.svelte';
   import { DateTime } from 'positron-components/util/time.svelte';
   import { RequestError } from 'positron-components/backend';
-  import { Clock9 } from '@lucide/svelte';
+  import Clock9 from '@lucide/svelte/icons/clock-9';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import {
     is_code,
