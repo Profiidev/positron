@@ -1,16 +1,19 @@
 use std::str::FromStr;
 
 use axum::{
-  extract::{FromRequestParts, OptionalFromRequestParts, Query},
+  extract::{FromRequest, OptionalFromRequest, Request},
   response::{IntoResponse, Response},
-  Json, RequestPartsExt,
+  Form, Json, RequestPartsExt,
 };
 use axum_extra::{
   headers::{authorization::Basic, Authorization},
   TypedHeader,
 };
-use centaurus::{auth::pw::hash_secret, db::init::Connection, state::extract::StateExtractExt};
-use http::{request::Parts, StatusCode};
+use centaurus::{
+  auth::pw::hash_secret, db::init::Connection, serde::empty_string_as_none,
+  state::extract::StateExtractExt,
+};
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
@@ -22,6 +25,7 @@ use super::state::ClientState;
 #[derive(Debug)]
 pub struct ClientAuth {
   pub client_id: Uuid,
+  pub body: TokenReq,
 }
 
 #[derive(Debug, Serialize)]
@@ -29,10 +33,16 @@ pub struct Error {
   error: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct ClientQueryAuth {
-  client_id: String,
-  client_secret: String,
+#[derive(Deserialize, Debug)]
+pub struct TokenReq {
+  pub grant_type: String,
+  pub code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub client_id: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub client_secret: Option<String>,
 }
 
 impl Error {
@@ -52,13 +62,20 @@ impl Error {
   }
 }
 
-impl<S: Sync> FromRequestParts<S> for ClientAuth {
+impl<S: Sync> FromRequest<S> for ClientAuth {
   type Rejection = (StatusCode, Json<Error>);
 
-  #[instrument(skip(parts, _state))]
-  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-    let query_params = parts.uri.query().unwrap_or("");
-    tracing::debug!("query params: {}", query_params);
+  #[instrument(skip(req, _state))]
+  async fn from_request(req: Request, _state: &S) -> Result<Self, Self::Rejection> {
+    let (parts_, body) = req.into_parts();
+    let mut parts = parts_.clone();
+
+    let req = Request::from_parts(parts_, body);
+
+    let Ok(form) = Form::<TokenReq>::from_request(req, &_state).await else {
+      tracing::warn!("failed to extract form data for client auth");
+      return Error::error_from_str("invalid_request");
+    };
 
     let (client_id, client_secret) = if let Ok(TypedHeader(Authorization(auth))) =
       parts.extract::<TypedHeader<Authorization<Basic>>>().await
@@ -70,21 +87,17 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
 
       tracing::debug!("client auth from basic auth header");
       (client_id, auth.password().to_string())
-    } else if let Ok(Query(ClientQueryAuth {
-      client_id,
-      client_secret,
-    })) = parts.extract::<Query<ClientQueryAuth>>().await
-    {
+    } else if let Some(client_id) = form.client_id.clone() {
       let Ok(client_id) = Uuid::from_str(&client_id) else {
         tracing::warn!("invalid client id format");
         return Error::error_from_str("invalid_client");
       };
 
       tracing::debug!("client auth from query params");
-      (client_id, client_secret)
+      (client_id, form.client_secret.clone().unwrap_or_default())
     } else {
       tracing::warn!("missing client authentication");
-      return Error::error_from_str("invalid_request");
+      return Error::error_from_str("invalid_client");
     };
 
     let db = parts.extract_state::<Connection>().await;
@@ -94,6 +107,14 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       tracing::warn!("client not found: {}", client_id);
       return Error::error_from_str("invalid_client");
     };
+
+    if !client.confidential {
+      tracing::debug!("public client authenticated: {}", client_id);
+      return Ok(ClientAuth {
+        client_id,
+        body: form.0,
+      });
+    }
 
     let Ok(hash) = hash_secret(&client_state.pepper, &client.salt, client_secret.as_bytes()) else {
       tracing::warn!("failed to hash client secret");
@@ -105,20 +126,20 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       return Error::error_from_str("unauthorized_client");
     }
 
-    Ok(ClientAuth { client_id })
+    Ok(ClientAuth {
+      client_id,
+      body: form.0,
+    })
   }
 }
 
-impl<S: Sync> OptionalFromRequestParts<S> for ClientAuth {
+impl<S: Sync> OptionalFromRequest<S> for ClientAuth {
   type Rejection = (StatusCode, Json<Error>);
 
-  #[instrument(skip(parts, state))]
-  async fn from_request_parts(
-    parts: &mut Parts,
-    state: &S,
-  ) -> Result<Option<Self>, Self::Rejection> {
+  #[instrument(skip(req, state))]
+  async fn from_request(req: Request, state: &S) -> Result<Option<Self>, Self::Rejection> {
     Ok(
-      <ClientAuth as FromRequestParts<S>>::from_request_parts(parts, state)
+      <ClientAuth as FromRequest<S>>::from_request(req, state)
         .await
         .ok(),
     )
