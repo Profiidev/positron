@@ -25,41 +25,6 @@ pub fn router() -> Router {
     .route("/revoke", post(revoke))
 }
 
-#[derive(Deserialize, Debug)]
-struct TokenReqOption {
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  grant_type: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  code: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  redirect_uri: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  client_id: Option<String>,
-}
-
-impl TokenReqOption {
-  fn try_into(self) -> Option<TokenReq> {
-    let grant_type = self.grant_type?;
-    let code = self.code?;
-    Some(TokenReq {
-      grant_type,
-      code,
-      redirect_uri: self.redirect_uri,
-      client_id: self.client_id,
-    })
-  }
-}
-
-#[derive(Deserialize, Debug)]
-struct TokenReq {
-  grant_type: String,
-  code: String,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  redirect_uri: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  client_id: Option<String>,
-}
-
 #[derive(Serialize)]
 struct TokenRes {
   access_token: String,
@@ -72,42 +37,13 @@ struct TokenRes {
 
 #[instrument(skip(state, jwt, db, config))]
 async fn token(
-  Query(req_p): Query<TokenReqOption>,
-  auth: Option<ClientAuth>,
   state: AuthorizeState,
   jwt: JwtState,
   db: Connection,
   config: ConfigurationState,
-  Form(req_b): Form<TokenReqOption>,
+  auth: ClientAuth,
 ) -> Result<Json<TokenRes>, Error> {
-  let req = if let Some(req) = req_p.try_into() {
-    req
-  } else if let Some(req) = req_b.try_into() {
-    req
-  } else {
-    tracing::warn!("missing required token request parameters");
-    return Err(Error::from_str("invalid_request"));
-  };
-
-  let client_id = if let Some(client_id) = &req.client_id {
-    Uuid::from_str(client_id).unwrap_or_default()
-  } else if let Some(auth) = &auth {
-    auth.client_id
-  } else {
-    tracing::warn!("missing client identification");
-    return Err(Error::from_str("invalid_request"));
-  };
-
-  let client = db.oauth_client().get_client(client_id).await.map_err(|_| {
-    tracing::warn!("client not found: {}", client_id);
-    Error::from_str("invalid_client")
-  })?;
-  if client.confidential && auth.is_none() {
-    tracing::warn!("confidential client without authentication: {}", client_id);
-    return Err(Error::from_str("unauthorized_client"));
-  }
-
-  let uuid = Uuid::from_str(&req.code).unwrap_or_default();
+  let uuid = Uuid::from_str(&auth.body.code).unwrap_or_default();
 
   let mut lock = state.auth_codes.lock().await;
   let Some(code_info) = lock.get(&uuid) else {
@@ -119,22 +55,22 @@ async fn token(
     tracing::warn!("authorization code expired: {}", uuid);
     return Err(Error::from_str("invalid_grant"));
   }
-  if &req.grant_type != "authorization_code" {
-    tracing::warn!("unsupported grant type: {}", req.grant_type);
+  if &auth.body.grant_type != "authorization_code" {
+    tracing::warn!("unsupported grant type: {}", auth.body.grant_type);
     return Err(Error::from_str("unsupported_grant_type"));
   }
-  if code_info.client_id != client_id {
+  if code_info.client_id != auth.client_id {
     tracing::warn!(
       "client id mismatch for authorization code: {}, expected {}, got {}",
       uuid,
       code_info.client_id,
-      client_id
+      auth.client_id
     );
     return Err(Error::from_str("invalid_client"));
   }
 
   if let Some(uri) = &code_info.redirect_uri {
-    if let Some(req_uri) = req.redirect_uri {
+    if let Some(req_uri) = auth.body.redirect_uri {
       if *uri != req_uri {
         tracing::warn!(
           "redirect uri mismatch for authorization code: {}, expected {}, got {}",
@@ -207,7 +143,7 @@ async fn token(
   };
 
   let Ok(token) = jwt.create_generic_token(&claims) else {
-    tracing::warn!("failed to create token for client: {}", client_id);
+    tracing::warn!("failed to create token for client: {}", auth.client_id);
     return Err(Error::from_str("unauthorized_client"));
   };
 
@@ -217,7 +153,7 @@ async fn token(
     None
   };
 
-  tracing::info!("Client {} got token for {}", client_id, user.name);
+  tracing::info!("Client {} got token for {}", auth.client_id, user.name);
   Ok(Json(TokenRes {
     access_token: token,
     id_token,
