@@ -1,5 +1,5 @@
 use axum::{
-  extract::{FromRequestParts, OptionalFromRequestParts},
+  extract::{FromRequestParts, OptionalFromRequestParts, Query},
   response::{IntoResponse, Response},
   Json, RequestPartsExt,
 };
@@ -9,7 +9,7 @@ use axum_extra::{
 };
 use centaurus::{auth::pw::hash_secret, db::init::Connection, state::extract::StateExtractExt};
 use http::{request::Parts, StatusCode};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -25,6 +25,12 @@ pub struct ClientAuth {
 #[derive(Debug, Serialize)]
 pub struct Error {
   error: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClientQueryAuth {
+  client_id: Uuid,
+  client_secret: String,
 }
 
 impl Error {
@@ -49,18 +55,24 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
 
   #[instrument(skip(parts, _state))]
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-    let Some(TypedHeader(Authorization(auth))) = parts
-      .extract::<TypedHeader<Authorization<Basic>>>()
-      .await
-      .ok()
-    else {
-      tracing::warn!("missing authorization header");
-      return Error::error_from_str("invalid_request");
-    };
+    let (client_id, client_secret) = if let Ok(TypedHeader(Authorization(auth))) =
+      parts.extract::<TypedHeader<Authorization<Basic>>>().await
+    {
+      let Ok(client_id) = auth.username().parse() else {
+        tracing::warn!("invalid client id format");
+        return Error::error_from_str("invalid_client");
+      };
 
-    let Ok(client_id) = auth.username().parse() else {
-      tracing::warn!("invalid client id format");
-      return Error::error_from_str("invalid_client");
+      (client_id, auth.password().to_string())
+    } else if let Ok(Query(ClientQueryAuth {
+      client_id,
+      client_secret,
+    })) = parts.extract::<Query<ClientQueryAuth>>().await
+    {
+      (client_id, client_secret)
+    } else {
+      tracing::warn!("missing client authentication");
+      return Error::error_from_str("invalid_request");
     };
 
     let db = parts.extract_state::<Connection>().await;
@@ -71,11 +83,7 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
       return Error::error_from_str("invalid_client");
     };
 
-    let Ok(hash) = hash_secret(
-      &client_state.pepper,
-      &client.salt,
-      auth.password().as_bytes(),
-    ) else {
+    let Ok(hash) = hash_secret(&client_state.pepper, &client.salt, client_secret.as_bytes()) else {
       tracing::warn!("failed to hash client secret");
       return Error::error_from_str("invalid_client");
     };
