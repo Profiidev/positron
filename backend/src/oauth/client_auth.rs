@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use axum::{
   extract::{FromRequestParts, OptionalFromRequestParts, Query},
   response::{IntoResponse, Response},
@@ -29,7 +31,7 @@ pub struct Error {
 
 #[derive(Debug, Deserialize)]
 struct ClientQueryAuth {
-  client_id: Uuid,
+  client_id: String,
   client_secret: String,
 }
 
@@ -55,6 +57,9 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
 
   #[instrument(skip(parts, _state))]
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    let query_params = parts.uri.query().unwrap_or("");
+    tracing::debug!("query params: {}", query_params);
+
     let (client_id, client_secret) = if let Ok(TypedHeader(Authorization(auth))) =
       parts.extract::<TypedHeader<Authorization<Basic>>>().await
     {
@@ -63,12 +68,19 @@ impl<S: Sync> FromRequestParts<S> for ClientAuth {
         return Error::error_from_str("invalid_client");
       };
 
+      tracing::debug!("client auth from basic auth header");
       (client_id, auth.password().to_string())
     } else if let Ok(Query(ClientQueryAuth {
       client_id,
       client_secret,
     })) = parts.extract::<Query<ClientQueryAuth>>().await
     {
+      let Ok(client_id) = Uuid::from_str(&client_id) else {
+        tracing::warn!("invalid client id format");
+        return Error::error_from_str("invalid_client");
+      };
+
+      tracing::debug!("client auth from query params");
       (client_id, client_secret)
     } else {
       tracing::warn!("missing client authentication");
