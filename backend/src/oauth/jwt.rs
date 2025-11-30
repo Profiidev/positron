@@ -38,3 +38,13 @@ impl<S: Sync> FromRequestParts<S> for OAuthClaims {
     jwt_from_request::<OAuthClaims, JwtBase>(parts).await
   }
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RefreshTokenClaims {
+  pub exp: i64,
+  pub sub: Uuid,
+  pub iss: String,
+  pub aud: Uuid,
+  pub scope: Scope,
+  pub nonce: Option<String>,
+}
