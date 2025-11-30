@@ -33,16 +33,58 @@ pub struct Error {
   error: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct TokenReq {
   pub grant_type: String,
-  pub code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub code: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub client_id: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub client_secret: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub refresh_token: Option<String>,
+}
+
+impl TokenReq {
+  pub fn try_into_issue(self) -> Option<TokenIssueReq> {
+    if self.grant_type != "authorization_code" {
+      return None;
+    }
+
+    let code = self.code?;
+
+    Some(TokenIssueReq {
+      grant_type: self.grant_type,
+      code,
+      redirect_uri: self.redirect_uri,
+    })
+  }
+
+  pub fn try_into_refresh(self) -> Option<TokenRefreshReq> {
+    if self.grant_type != "refresh_token" {
+      return None;
+    }
+
+    let refresh_token = self.refresh_token?;
+
+    Some(TokenRefreshReq { refresh_token })
+  }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TokenIssueReq {
+  pub grant_type: String,
+  pub code: String,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub redirect_uri: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TokenRefreshReq {
+  pub refresh_token: String,
 }
 
 impl Error {

@@ -43,6 +43,7 @@ pub struct Config {
   pub oidc_issuer: String,
   pub oidc_backend_url: String,
   pub oidc_backend_internal: String,
+  pub oidc_refresh_exp: i64,
 
   //s3
   pub s3_bucket: String,
@@ -88,6 +89,7 @@ impl Default for Config {
       oidc_issuer: "http://localhost:1421".to_string(),
       oidc_backend_url: "http://localhost:1421".to_string(),
       oidc_backend_internal: "http://backend:1422".to_string(),
+      oidc_refresh_exp: 604800,
       s3_bucket: "positron-bucket".to_string(),
       s3_region: "us-east-1".to_string(),
       s3_host: "http://localhost:9000".to_string(),
