@@ -48,6 +48,7 @@ pub struct ConfigurationState {
   pub issuer: String,
   pub backend_url: String,
   pub backend_url_internal: String,
+  pub refresh_exp: i64,
 }
 
 impl ConfigurationState {
@@ -56,6 +57,7 @@ impl ConfigurationState {
       issuer: config.oidc_issuer.clone(),
       backend_url: config.oidc_backend_url.clone(),
       backend_url_internal: config.oidc_backend_internal.clone(),
+      refresh_exp: config.oidc_refresh_exp,
     }
   }
 }

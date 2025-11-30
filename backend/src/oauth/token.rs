@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use axum::{extract::Query, routing::post, Form, Json, Router};
 use centaurus::{bail, db::init::Connection, serde::empty_string_as_none};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
@@ -10,6 +10,10 @@ use uuid::Uuid;
 use crate::{
   auth::jwt::{JwtInvalidState, JwtState},
   db::DBTrait,
+  oauth::{
+    client_auth::{TokenIssueReq, TokenRefreshReq},
+    jwt::RefreshTokenClaims,
+  },
 };
 
 use super::{
@@ -25,41 +29,6 @@ pub fn router() -> Router {
     .route("/revoke", post(revoke))
 }
 
-#[derive(Deserialize, Debug)]
-struct TokenReqOption {
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  grant_type: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  code: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  redirect_uri: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  client_id: Option<String>,
-}
-
-impl TokenReqOption {
-  fn try_into(self) -> Option<TokenReq> {
-    let grant_type = self.grant_type?;
-    let code = self.code?;
-    Some(TokenReq {
-      grant_type,
-      code,
-      redirect_uri: self.redirect_uri,
-      client_id: self.client_id,
-    })
-  }
-}
-
-#[derive(Deserialize, Debug)]
-struct TokenReq {
-  grant_type: String,
-  code: String,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  redirect_uri: Option<String>,
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  client_id: Option<String>,
-}
-
 #[derive(Serialize)]
 struct TokenRes {
   access_token: String,
@@ -68,46 +37,37 @@ struct TokenRes {
   token_type: String,
   expires_in: u64,
   scope: Scope,
+  refresh_token: String,
 }
 
 #[instrument(skip(state, jwt, db, config))]
 async fn token(
-  Query(req_p): Query<TokenReqOption>,
-  auth: Option<ClientAuth>,
   state: AuthorizeState,
   jwt: JwtState,
   db: Connection,
   config: ConfigurationState,
-  Form(req_b): Form<TokenReqOption>,
+  auth: ClientAuth,
 ) -> Result<Json<TokenRes>, Error> {
-  let req = if let Some(req) = req_p.try_into() {
-    req
-  } else if let Some(req) = req_b.try_into() {
-    req
+  if let Some(body) = auth.body.clone().try_into_issue() {
+    issue_token(state, jwt, db, config, body, auth.client_id).await
+  } else if let Some(body) = auth.body.clone().try_into_refresh() {
+    refresh_token(jwt, db, config, body, auth.client_id).await
   } else {
-    tracing::warn!("missing required token request parameters");
-    return Err(Error::from_str("invalid_request"));
-  };
-
-  let client_id = if let Some(client_id) = &req.client_id {
-    Uuid::from_str(client_id).unwrap_or_default()
-  } else if let Some(auth) = &auth {
-    auth.client_id
-  } else {
-    tracing::warn!("missing client identification");
-    return Err(Error::from_str("invalid_request"));
-  };
-
-  let client = db.oauth_client().get_client(client_id).await.map_err(|_| {
-    tracing::warn!("client not found: {}", client_id);
-    Error::from_str("invalid_client")
-  })?;
-  if client.confidential && auth.is_none() {
-    tracing::warn!("confidential client without authentication: {}", client_id);
-    return Err(Error::from_str("unauthorized_client"));
+    tracing::warn!("unsupported grant type: {}", auth.body.grant_type);
+    Err(Error::from_str("unsupported_grant_type"))
   }
+}
 
-  let uuid = Uuid::from_str(&req.code).unwrap_or_default();
+#[instrument(skip(state, jwt, db, config))]
+async fn issue_token(
+  state: AuthorizeState,
+  jwt: JwtState,
+  db: Connection,
+  config: ConfigurationState,
+  body: TokenIssueReq,
+  client_id: Uuid,
+) -> Result<Json<TokenRes>, Error> {
+  let uuid = Uuid::from_str(&body.code).unwrap_or_default();
 
   let mut lock = state.auth_codes.lock().await;
   let Some(code_info) = lock.get(&uuid) else {
@@ -119,8 +79,8 @@ async fn token(
     tracing::warn!("authorization code expired: {}", uuid);
     return Err(Error::from_str("invalid_grant"));
   }
-  if &req.grant_type != "authorization_code" {
-    tracing::warn!("unsupported grant type: {}", req.grant_type);
+  if &body.grant_type != "authorization_code" {
+    tracing::warn!("unsupported grant type: {}", body.grant_type);
     return Err(Error::from_str("unsupported_grant_type"));
   }
   if code_info.client_id != client_id {
@@ -134,7 +94,7 @@ async fn token(
   }
 
   if let Some(uri) = &code_info.redirect_uri {
-    if let Some(req_uri) = req.redirect_uri {
+    if let Some(req_uri) = body.redirect_uri.clone() {
       if *uri != req_uri {
         tracing::warn!(
           "redirect uri mismatch for authorization code: {}, expected {}, got {}",
@@ -157,8 +117,107 @@ async fn token(
   let code_info = lock.remove(&uuid).unwrap();
   drop(lock);
 
-  let Ok(user) = db.user().get_user(code_info.user).await else {
-    tracing::warn!("user not found: {}", code_info.user);
+  let exp = Utc::now()
+    .checked_add_signed(Duration::seconds(config.refresh_exp))
+    .ok_or(Error::from_str("invalid_request"))?
+    .timestamp();
+
+  let code_info = RefreshTokenClaims {
+    sub: code_info.user,
+    aud: code_info.client_id,
+    scope: code_info.scope,
+    nonce: code_info.nonce,
+    exp,
+    iss: config.issuer.clone(),
+  };
+
+  let token = create_access_token(&db, &jwt, &code_info, &config, client_id).await?;
+
+  let Ok(refresh_token) = jwt.create_generic_token(&code_info) else {
+    tracing::warn!("failed to create refresh token for client: {}", client_id);
+    return Err(Error::from_str("unauthorized_client"));
+  };
+
+  let id_token = if code_info.scope.contains("openid") {
+    Some(token.clone())
+  } else {
+    None
+  };
+
+  Ok(Json(TokenRes {
+    access_token: token,
+    id_token,
+    token_type: "Bearer".into(),
+    scope: code_info.scope,
+    expires_in: 600,
+    refresh_token,
+  }))
+}
+
+#[instrument(skip(jwt, db, config))]
+async fn refresh_token(
+  jwt: JwtState,
+  db: Connection,
+  config: ConfigurationState,
+  body: TokenRefreshReq,
+  client_id: Uuid,
+) -> Result<Json<TokenRes>, Error> {
+  let mut claims = jwt
+    .validate_token::<RefreshTokenClaims>(&body.refresh_token)
+    .map_err(|_| {
+      tracing::warn!("invalid refresh token for client: {}", client_id);
+      Error::from_str("invalid_grant")
+    })?;
+
+  if claims.aud != client_id {
+    tracing::warn!(
+      "client id mismatch for refresh token: {}, expected {}, got {}",
+      body.refresh_token,
+      claims.aud,
+      client_id
+    );
+    return Err(Error::from_str("invalid_client"));
+  }
+
+  let token = create_access_token(&db, &jwt, &claims, &config, client_id).await?;
+
+  let exp = Utc::now()
+    .checked_add_signed(Duration::seconds(config.refresh_exp))
+    .ok_or(Error::from_str("invalid_request"))?
+    .timestamp();
+
+  claims.exp = exp;
+
+  let Ok(refresh_token) = jwt.create_generic_token(&claims) else {
+    tracing::warn!("failed to create refresh token for client: {}", client_id);
+    return Err(Error::from_str("unauthorized_client"));
+  };
+
+  let id_token = if claims.scope.contains("openid") {
+    Some(token.clone())
+  } else {
+    None
+  };
+
+  Ok(Json(TokenRes {
+    access_token: token,
+    id_token,
+    token_type: "Bearer".into(),
+    scope: claims.scope,
+    expires_in: 600,
+    refresh_token,
+  }))
+}
+
+async fn create_access_token(
+  db: &Connection,
+  jwt: &JwtState,
+  code_info: &RefreshTokenClaims,
+  config: &ConfigurationState,
+  client_id: Uuid,
+) -> Result<String, Error> {
+  let Ok(user) = db.user().get_user(code_info.sub).await else {
+    tracing::warn!("user not found: {}", code_info.sub);
     return Err(Error::from_str("unauthorized_client"));
   };
   let Ok(groups) = db.groups().get_groups_for_user(user.id).await else {
@@ -191,13 +250,13 @@ async fn token(
 
   let time = Utc::now().timestamp();
   let claims = OAuthClaims {
-    sub: code_info.user,
+    sub: code_info.sub,
     exp: get_timestamp_10_min(),
     iss: config.issuer.clone(),
-    aud: code_info.client_id,
+    aud: code_info.aud,
     iat: time,
     auth_time: time,
-    nonce: code_info.nonce,
+    nonce: code_info.nonce.clone(),
     scope: code_info.scope.clone(),
     email,
     preferred_username: name.clone(),
@@ -211,20 +270,8 @@ async fn token(
     return Err(Error::from_str("unauthorized_client"));
   };
 
-  let id_token = if code_info.scope.contains("openid") {
-    Some(token.clone())
-  } else {
-    None
-  };
-
   tracing::info!("Client {} got token for {}", client_id, user.name);
-  Ok(Json(TokenRes {
-    access_token: token,
-    id_token,
-    token_type: "Bearer".into(),
-    scope: code_info.scope,
-    expires_in: 600,
-  }))
+  Ok(token)
 }
 
 #[derive(Deserialize, Debug)]
