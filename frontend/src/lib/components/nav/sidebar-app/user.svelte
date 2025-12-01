@@ -26,6 +26,7 @@
   <Sidebar.MenuItem>
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
+        <!-- prettier-ignore -->
         {#snippet child({ props }: { props: Record<string, any> })}
           <Sidebar.MenuButton
             size="lg"
