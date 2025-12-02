@@ -1,10 +1,4 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:app/api/request.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:pointycastle/export.dart';
-import 'package:basic_utils/basic_utils.dart';
 
 part 'password.g.dart';
 
@@ -44,40 +38,14 @@ class PasswordAuthResponse extends JsonSerializable {
   Map<String, dynamic> toJson() => _$PasswordAuthResponseToJson(this);
 }
 
-class PasswordAuth extends RequestBase {
-  final encryptor;
+@JsonSerializable()
+class TotpConfirmRequest extends JsonSerializable {
+  final String code;
 
-  PasswordAuth(this.encryptor);
+  TotpConfirmRequest({required this.code});
 
-  static Future<PasswordAuth> fromKey() async {
-    var key = await _getKey();
-    var publicKey = CryptoUtils.rsaPublicKeyFromPemPkcs1(key);
-
-    var encryptor = PKCS1Encoding(RSAEngine())
-      ..init(true, PublicKeyParameter<RSAPublicKey>(publicKey));
-
-    return PasswordAuth(encryptor);
-  }
-
-  static Future<String> _getKey() async {
-    var res = await RequestBase().getReqRes('/backend/auth/password/key');
-    var keyRes = KeyResponse.fromJson(res);
-
-    return keyRes.key;
-  }
-
-  Future<bool> authenticate(String email, String password) async {
-    var encrypted = encryptor.process(
-      Uint8List.fromList(utf8.encode(password)),
-    );
-
-    var body = PasswordAuthRequest(
-      email: email,
-      password: base64.encode(encrypted),
-    );
-    var res = await postReqBodyRes('/backend/auth/password/authenticate', body);
-    var authResponse = PasswordAuthResponse.fromJson(res);
-
-    return authResponse.totp;
-  }
+  factory TotpConfirmRequest.fromJson(Map<String, dynamic> json) =>
+      _$TotpConfirmRequestFromJson(json);
+  @override
+  Map<String, dynamic> toJson() => _$TotpConfirmRequestToJson(this);
 }

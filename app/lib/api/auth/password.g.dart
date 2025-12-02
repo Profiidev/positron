@@ -29,3 +29,9 @@ PasswordAuthResponse _$PasswordAuthResponseFromJson(
 Map<String, dynamic> _$PasswordAuthResponseToJson(
   PasswordAuthResponse instance,
 ) => <String, dynamic>{'totp': instance.totp};
+
+TotpConfirmRequest _$TotpConfirmRequestFromJson(Map<String, dynamic> json) =>
+    TotpConfirmRequest(code: json['code'] as String);
+
+Map<String, dynamic> _$TotpConfirmRequestToJson(TotpConfirmRequest instance) =>
+    <String, dynamic>{'code': instance.code};
