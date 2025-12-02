@@ -27,6 +27,25 @@ abstract class RestClient {
   @GET("/auth/passkey/start_authentication")
   Future<PublicKeyCredentialRequest> startPasskeyAuth();
 
-  @POST("/auth/passkey/finish_authentication")
-  Future<void> finishPasskeyAuth(@Body() AuthenticateResponseType res);
+  @POST("/auth/passkey/finish_authentication/{id}")
+  Future<void> finishPasskeyAuth(
+    @Body() AuthenticateResponseType res,
+    @Path("id") String id,
+  );
+
+  // Passkey Registration
+  @GET("/auth/passkey/start_registration")
+  Future<PublicKeyCredentialCreationOptions> startPasskeyRegistration();
+
+  @POST("/auth/passkey/finish_registration")
+  Future<void> finishPasskeyRegistration(
+    @Body() PublicKeyCredentialCreationResponse response,
+  );
+
+  // Passkey Special Access
+  @GET("/auth/passkey/start_special_access")
+  Future<PublicKeyCredentialRequestOptions> startPasskeySpecialAccess();
+
+  @POST("/auth/passkey/finish_special_access")
+  Future<void> finishPasskeySpecialAccess(@Body() AuthenticateResponseType res);
 }

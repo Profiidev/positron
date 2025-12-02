@@ -2,7 +2,7 @@ import { ResponseType, get, post } from 'positron-components/backend';
 import type { OAuthParams } from './types.svelte';
 
 export const logout = async () => {
-  return await post<undefined>('/auth/logout', ResponseType.None, undefined);
+  return await post<undefined>('/backend/auth/logout', ResponseType.None, undefined);
 };
 
 export const oauth_auth = async (params: OAuthParams, allow: boolean) => {

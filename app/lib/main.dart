@@ -10,6 +10,58 @@ void main() {
   runApp(const Positron());
 }
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorHomeKey = GlobalKey<NavigatorState>();
+final _shellNavigatorProfileKey = GlobalKey<NavigatorState>();
+final _shellNavigatorLoginKey = GlobalKey<NavigatorState>();
+
+final GoRouter _router = GoRouter(
+  initialLocation: "/",
+  navigatorKey: _rootNavigatorKey,
+  debugLogDiagnostics: true,
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return ScaffoldWithNestedNavigation(navigationShell: navigationShell);
+      },
+      branches: [
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorHomeKey,
+          routes: [
+            GoRoute(
+              path: "/",
+              name: "home",
+              builder: (context, state) {
+                return const Text("Home Page");
+              },
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorLoginKey,
+          routes: [
+            GoRoute(
+              path: "/login",
+              name: "login",
+              builder: (context, state) => const LoginPage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorProfileKey,
+          routes: [
+            GoRoute(
+              path: "/profile",
+              name: "profile",
+              builder: (context, state) => const Text("Profile Page"),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ],
+);
+
 class Positron extends StatelessWidget {
   const Positron({super.key});
 
@@ -25,39 +77,16 @@ class Positron extends StatelessWidget {
         brightness: Brightness.dark,
         colorScheme: const ShadBlueColorScheme.dark(),
       ),
-      routerConfig: GoRouter(
-        routes: [
-          GoRoute(
-            path: "/",
-            builder: (context, state) =>
-                const MyHomePage(title: 'Flutter Demo Home Page'),
-          ),
-        ],
-      ),
+      routerConfig: _router,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class ScaffoldWithNestedNavigation extends StatelessWidget {
   final formKey = GlobalKey<ShadFormState>();
+  final StatefulNavigationShell navigationShell;
+
+  ScaffoldWithNestedNavigation({super.key, required this.navigationShell});
 
   void _incrementCounter() async {
     final passkeyAuth = PasskeyAuthenticator();
@@ -71,26 +100,24 @@ class _MyHomePageState extends State<MyHomePage> {
       print("No credentials available for this user.");
       return;
     }
-    await api.finishPasskeyAuth(platformRes);
+    await api.finishPasskeyAuth(platformRes, request.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       bottomNavigationBar: NavigationBar(
+        onDestinationSelected: (idx) {
+          navigationShell.goBranch(idx);
+        },
+        selectedIndex: navigationShell.currentIndex,
         destinations: [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.business), label: 'Business'),
-          NavigationDestination(icon: Icon(Icons.school), label: 'School'),
+          NavigationDestination(icon: Icon(Icons.login), label: 'Login'),
+          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
-      body: LoginPage(),
+      body: navigationShell,
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
         tooltip: 'Increment',
