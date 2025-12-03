@@ -6,7 +6,10 @@ import 'package:retrofit/retrofit.dart';
 
 part 'rest_api.g.dart';
 
-@RestApi(baseUrl: "http://192.168.178.22:5175/backend")
+const baseUrl = "http://192.168.178.22:5175/";
+const basePath = "backend";
+
+@RestApi(baseUrl: "$baseUrl$basePath")
 abstract class RestClient {
   factory RestClient(Dio dio, {String? baseUrl}) = _RestClient;
 
