@@ -34,6 +34,18 @@ class AuthRestClient {
     return (await api.authenticateWithPassword(body)).totp;
   }
 
+  Future<void> requestSpecialAccess(String password) async {
+    final encrypted = encrypt.process(
+      Uint8List.fromList(utf8.encode(password)),
+    );
+    final body = PasswordAuthRequest(
+      email: "",
+      password: base64.encode(encrypted),
+    );
+
+    await api.requestSpecialAccess(body);
+  }
+
   Future<void> confirmTotp(String code) async {
     final body = TotpConfirmRequest(code: code);
     await api.confirmTotp(body);

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-Future<bool> _checkLoggedIn() async {
+Future<bool> _checkCookie(String name) async {
   const secureStorage = FlutterSecureStorage();
   const cookieStorage = SecureCookieStorage(secureStorage);
   final cookieJar = PersistCookieJar(
@@ -17,13 +17,21 @@ Future<bool> _checkLoggedIn() async {
   bool loggedIn = false;
 
   for (var cookie in await cookies) {
-    if (cookie.name == "token" && cookie.value.isNotEmpty) {
+    if (cookie.name == name && cookie.value.isNotEmpty) {
       loggedIn = true;
       break;
     }
   }
 
   return loggedIn;
+}
+
+Future<bool> checkToken() async {
+  return await _checkCookie("token");
+}
+
+Future<bool> checkSpecialAccess() async {
+  return await _checkCookie("special_access");
 }
 
 abstract class LoggedInEvent {}
@@ -33,7 +41,7 @@ class LoggedInChecked extends LoggedInEvent {}
 class LoggedInCubit extends Cubit<bool> {
   LoggedInCubit() : super(true);
 
-  void checkLoggedIn() async => emit(await _checkLoggedIn());
+  void checkLoggedIn() async => emit(await checkToken());
 }
 
 class LoggedInStateWidget extends StatelessWidget {

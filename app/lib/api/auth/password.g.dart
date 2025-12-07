@@ -35,3 +35,15 @@ TotpConfirmRequest _$TotpConfirmRequestFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$TotpConfirmRequestToJson(TotpConfirmRequest instance) =>
     <String, dynamic>{'code': instance.code};
+
+Passkey _$PasskeyFromJson(Map<String, dynamic> json) => Passkey(
+  name: json['name'] as String,
+  created: json['created'] as String,
+  used: json['used'] as String,
+);
+
+Map<String, dynamic> _$PasskeyToJson(Passkey instance) => <String, dynamic>{
+  'name': instance.name,
+  'created': instance.created,
+  'used': instance.used,
+};

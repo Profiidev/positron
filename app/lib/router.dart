@@ -1,4 +1,5 @@
 import 'package:app/pages/login.dart';
+import 'package:app/pages/settings.dart';
 import 'package:app/state/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -31,22 +32,22 @@ final GoRouter router = GoRouter(
           ],
         ),
         StatefulShellBranch(
-          navigatorKey: _shellNavigatorLoginKey,
-          routes: [
-            GoRoute(
-              path: "/login",
-              name: "login",
-              builder: (context, state) => const LoginPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
           navigatorKey: _shellNavigatorProfileKey,
           routes: [
             GoRoute(
               path: "/profile",
               name: "profile",
               builder: (context, state) => const Text("Profile Page"),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorLoginKey,
+          routes: [
+            GoRoute(
+              path: "/settings",
+              name: "settings",
+              builder: (context, state) => SettingsPage(),
             ),
           ],
         ),
@@ -80,12 +81,12 @@ class ScaffoldWithNestedNavigation extends StatelessWidget {
                       label: 'Home',
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.login),
-                      label: 'Login',
-                    ),
-                    NavigationDestination(
                       icon: Icon(Icons.person),
                       label: 'Profile',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.settings),
+                      label: 'Settings',
                     ),
                   ],
                 )

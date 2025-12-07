@@ -49,3 +49,16 @@ class TotpConfirmRequest extends JsonSerializable {
   @override
   Map<String, dynamic> toJson() => _$TotpConfirmRequestToJson(this);
 }
+
+@JsonSerializable()
+class Passkey {
+  final String name;
+  final String created;
+  final String used;
+
+  Passkey({required this.name, required this.created, required this.used});
+
+  factory Passkey.fromJson(Map<String, dynamic> json) =>
+      _$PasskeyFromJson(json);
+  Map<String, dynamic> toJson() => _$PasskeyToJson(this);
+}

@@ -22,6 +22,9 @@ abstract class RestClient {
     @Body() PasswordAuthRequest request,
   );
 
+  @POST("/auth/password/special_access")
+  Future<void> requestSpecialAccess(@Body() PasswordAuthRequest request);
+
   // TOTP
   @POST("/auth/totp/confirm")
   Future<void> confirmTotp(@Body() TotpConfirmRequest request);
@@ -51,4 +54,7 @@ abstract class RestClient {
 
   @POST("/auth/passkey/finish_special_access")
   Future<void> finishPasskeySpecialAccess(@Body() AuthenticateResponseType res);
+
+  @GET("/auth/passkey/list")
+  Future<List<Passkey>> listPasskeys();
 }
