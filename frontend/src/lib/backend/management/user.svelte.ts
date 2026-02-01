@@ -3,10 +3,9 @@ import { ResponseType, get, post } from 'positron-components/backend';
 import type { Permission, User } from './types.svelte';
 
 export const list_users = async () => {
-  let ret = await get<User[]>(
-    '/backend/management/user/list',
-    ResponseType.Json
-  );
+  let ret = await get<User[]>('/backend/management/user/list', {
+    res_type: ResponseType.Json
+  });
   if (Array.isArray(ret)) {
     return ret;
   }
@@ -17,15 +16,13 @@ export const user_edit = async (
   name: string,
   permissions: Permission[]
 ) => {
-  return await post<undefined>(
-    '/backend/management/user/edit',
-    ResponseType.None,
-    {
+  return await post('/backend/management/user/edit', {
+    body: {
       user,
       name,
       permissions
     }
-  );
+  });
 };
 
 export const create_user = async (
@@ -39,23 +36,19 @@ export const create_user = async (
   }
 
   let encrypted_password = encrypt.encrypt(password);
-  return await post<undefined>(
-    '/backend/management/user/create',
-    ResponseType.None,
-    {
+  return await post('/backend/management/user/create', {
+    body: {
       name,
       email,
       password: encrypted_password
     }
-  );
+  });
 };
 
 export const remove_user = async (uuid: string) => {
-  return await post<undefined>(
-    '/backend/management/user/delete',
-    ResponseType.None,
-    {
+  return await post('/backend/management/user/delete', {
+    body: {
       uuid
     }
-  );
+  });
 };

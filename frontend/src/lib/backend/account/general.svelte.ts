@@ -5,29 +5,26 @@ import type { ProfileInfo, UserInfo } from './types.svelte';
 export const profile_info = async (uuid: string) => {
   return await get<ProfileInfo>(
     `/backend/account/general/profile_info/${uuid}`,
-    ResponseType.Json
+    {
+      res_type: ResponseType.Json
+    }
   );
 };
 
 export const user_info = async () => {
-  return await get<UserInfo>(
-    '/backend/account/general/info',
-    ResponseType.Json
-  );
+  return await get<UserInfo>('/backend/account/general/info', {
+    res_type: ResponseType.Json
+  });
 };
 
 export const profile_change_image = async (image: string) => {
-  return await post<undefined>(
-    '/backend/account/general/change_image',
-    ResponseType.None,
-    base64ToArrayBuffer(image)
-  );
+  return await post('/backend/account/general/change_image', {
+    body: base64ToArrayBuffer(image)
+  });
 };
 
 export const profile_update = async (name: string) => {
-  return await post<undefined>(
-    '/backend/account/general/update_profile',
-    ResponseType.None,
-    { name }
-  );
+  return await post('/backend/account/general/update_profile', {
+    body: { name }
+  });
 };
