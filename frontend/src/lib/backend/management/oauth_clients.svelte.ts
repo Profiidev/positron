@@ -11,10 +11,9 @@ const isCreate = (object: any): object is OAuthClientCreate => {
 };
 
 export const get_frontend_url = async () => {
-  let ret = await get<string>(
-    '/backend/management/oauth_client/frontend_url',
-    ResponseType.Text
-  );
+  let ret = await get<string>('/backend/management/oauth_client/frontend_url', {
+    res_type: ResponseType.Text
+  });
 
   if (typeof ret === 'string') {
     return ret;
@@ -24,7 +23,9 @@ export const get_frontend_url = async () => {
 export const list_clients = async () => {
   let ret = await get<OAuthClientInfo[]>(
     '/backend/management/oauth_client/list',
-    ResponseType.Json
+    {
+      res_type: ResponseType.Json
+    }
   );
 
   if (Array.isArray(ret)) {
@@ -35,7 +36,9 @@ export const list_clients = async () => {
 export const list_clients_group = async () => {
   let ret = await get<GroupInfo[]>(
     '/backend/management/oauth_client/group_list',
-    ResponseType.Json
+    {
+      res_type: ResponseType.Json
+    }
   );
 
   if (Array.isArray(ret)) {
@@ -46,7 +49,9 @@ export const list_clients_group = async () => {
 export const list_clients_user = async () => {
   let ret = await get<UserInfo[]>(
     '/backend/management/oauth_client/user_list',
-    ResponseType.Json
+    {
+      res_type: ResponseType.Json
+    }
   );
 
   if (Array.isArray(ret)) {
@@ -55,18 +60,17 @@ export const list_clients_user = async () => {
 };
 
 export const edit_client = async (client: OAuthClientInfo) => {
-  return await post<undefined>(
-    '/backend/management/oauth_client/edit',
-    ResponseType.None,
-    client
-  );
+  return await post('/backend/management/oauth_client/edit', {
+    body: client
+  });
 };
 
 export const start_create_client = async () => {
   let ret = await post<OAuthClientCreate>(
     '/backend/management/oauth_client/start_create',
-    ResponseType.Json,
-    undefined
+    {
+      res_type: ResponseType.Json
+    }
   );
 
   if (isCreate(ret)) {
@@ -81,35 +85,31 @@ export const create_client = async (
   scope: string,
   confidential: boolean
 ) => {
-  return await post<undefined>(
-    '/backend/management/oauth_client/create',
-    ResponseType.None,
-    {
+  return await post('/backend/management/oauth_client/create', {
+    body: {
       name,
       redirect_uri,
       additional_redirect_uris,
       scope,
       confidential
     }
-  );
+  });
 };
 
 export const delete_client = async (client_id: string) => {
-  return await post<undefined>(
-    '/backend/management/oauth_client/delete',
-    ResponseType.None,
-    {
+  return await post('/backend/management/oauth_client/delete', {
+    body: {
       uuid: client_id
     }
-  );
+  });
 };
 
 export const reset_client_secret = async (client_id: string) => {
   let ret = await post<{ secret: string }>(
     '/backend/management/oauth_client/reset',
-    ResponseType.Json,
     {
-      client_id
+      res_type: ResponseType.Json,
+      body: { client_id }
     }
   );
 
@@ -121,7 +121,9 @@ export const reset_client_secret = async (client_id: string) => {
 export const list_scope_names = async () => {
   let ret = await get<string[]>(
     '/backend/management/oauth_client/list_scopes',
-    ResponseType.Json
+    {
+      res_type: ResponseType.Json
+    }
   );
 
   if (Array.isArray(ret)) {
