@@ -77,7 +77,7 @@ tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["cors", "trace"] }
 tokio = { version = "1.49.0", features = ["signal"] }
 http = "1.4.0"
-time = "0.3.46"
+time = "0.3.47"
 futures = "0.3.31"
 figment = { version = "0.10.19", features = ["env"] }
 url = { version = "2.5.8", features = ["serde"] }
