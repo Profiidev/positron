@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{extract::FromRequestParts, Extension};
-use centaurus::impl_from_error;
 use chrono::{DateTime, Duration, Utc};
 use http::StatusCode;
 use lettre::{
@@ -42,7 +41,15 @@ pub struct ChangeInfo {
   pub new_email: String,
 }
 
-impl_from_error!(MailError, StatusCode::INTERNAL_SERVER_ERROR);
+impl From<MailError> for centaurus::error::ErrorReport {
+  #[track_caller]
+  fn from(value: MailError) -> Self {
+    Self {
+      error: centaurus::eyre::Report::new(value),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    }
+  }
+}
 
 #[derive(Error, Debug)]
 pub enum MailError {

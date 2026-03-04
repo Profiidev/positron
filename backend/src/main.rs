@@ -36,7 +36,7 @@ async fn main() {
   dotenv().ok();
 
   let config = Config::parse();
-  init_logging(&config.base);
+  init_logging(config.base.log_level);
   let handle = init_metrics(config.metrics_name.clone());
 
   let metrics_name = config.metrics_name.clone();
