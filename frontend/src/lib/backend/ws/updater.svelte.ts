@@ -44,7 +44,7 @@ const create_websocket = () => {
     }
 
     updater.send('heartbeat');
-  }, 10000);
+  }, 10000) as unknown as number;
 
   Array.from(updater_cbs.values()).forEach((types) =>
     Array.from(types.values()).forEach((cb) => cb())
