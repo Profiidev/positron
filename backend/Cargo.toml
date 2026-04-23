@@ -21,7 +21,7 @@ centaurus = { version = "0.4.13", features = [
   "image",
   "auth",
 ] }
-openssl = { version = "0.10.76", features = ["vendored"] }
+openssl = { version = "0.10.78", features = ["vendored"] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
 base64 = "0.22.1"
 chrono = { version = "0.4.44", default-features = false, features = [
