@@ -72,7 +72,10 @@ async fn config(
     grant_type_supported: vec!["authorization_code".into()],
     id_token_signing_alg_values_supported: vec!["RS256".into()],
     subject_types_supported: vec!["public".into()],
-    token_endpoint_auth_methods_supported: vec!["client_secret_basic".into()],
+    token_endpoint_auth_methods_supported: vec![
+      "client_secret_basic".into(),
+      "client_secret_post".into(),
+    ],
     scopes_supported,
     claims_supported: vec![
       "sub",
