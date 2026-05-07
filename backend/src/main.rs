@@ -1,16 +1,13 @@
-use axum::{Extension, Router};
+use aide::axum::ApiRouter;
 use centaurus::{
-  db::init::init_db,
-  init::{
-    axum::{add_base_layers, listener_setup, run_app},
-    logging::init_logging,
-    metrics::{init_metrics, metrics_route},
-  },
-  req::health,
-  router_extension,
+  backend::{
+    init::{listener_setup, run_app_connect_info},
+    middleware::rate_limiter::RateLimiter,
+    router::build_router,
+  }, db::init::init_db, logging::init_logging
 };
 #[cfg(debug_assertions)]
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use tracing::info;
 
 use crate::config::Config;
@@ -37,38 +34,16 @@ async fn main() {
 
   let config = Config::parse();
   init_logging(config.base.log_level);
-  let handle = init_metrics(config.metrics_name.clone());
-
-  let metrics_name = config.metrics_name.clone();
-  let metrics_labels = config.metrics_labels.clone();
 
   let listener = listener_setup(config.base.port).await;
-
-  use centaurus::init::metrics::metrics;
-  let mut app_labels = vec![("api".into(), "management".into())];
-  app_labels.extend(metrics_labels.clone());
-
-  let app = router(&config)
-    .await
-    .state(config)
-    .await
-    .metrics(metrics_name, handle, app_labels)
-    .await;
+  let app = build_router(api_router, state, config).await;
 
   info!("Starting application...");
-  run_app(listener, app).await;
+  run_app_connect_info(listener, app).await;
 }
 
-async fn router(config: &Config) -> Router {
-  frontend::router()
-    .nest("/backend", api_router().await)
-    .nest("/.well-known", well_known::router())
-    .add_base_layers_filtered(&config.base, |path| path.starts_with("/backend"))
-    .await
-}
-
-async fn api_router() -> Router {
-  Router::new()
+async fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
+  ApiRouter::new()
     .nest("/auth", auth::router())
     .nest("/account", account::router())
     .nest("/email", email::router())
@@ -76,45 +51,40 @@ async fn api_router() -> Router {
     .nest("/management", management::router())
     .nest("/ws", ws::router())
     .nest("/services", services::router())
-    .merge(health::router())
-    .metrics_route()
-    .await
 }
 
-router_extension!(
-  async fn state(self, config: Config) -> Self {
-    use auth::auth;
-    use email::email;
-    use frontend::frontend;
-    use management::management;
-    use oauth::oauth;
-    use s3::s3;
-    use services::services;
-    use well_known::well_known;
-    use ws::ws;
+async fn state(router: ApiRouter, config: Config) -> ApiRouter {
+  use auth::auth;
+  use email::email;
+  use frontend::frontend;
+  use management::management;
+  use oauth::oauth;
+  use s3::s3;
+  use services::services;
+  use well_known::well_known;
+  use ws::ws;
 
-    let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
+  let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
 
-    self
-      .auth(&config, &db)
-      .await
-      .email(&config)
-      .await
-      .management(&config)
-      .await
-      .oauth(&config)
-      .await
-      .s3(&config)
-      .await
-      .services(&config)
-      .await
-      .well_known(&config)
-      .await
-      .ws(&config)
-      .await
-      .frontend()
-      .await
-      .layer(Extension(db))
-      .layer(Extension(config))
-  }
-);
+  self
+    .auth(&config, &db)
+    .await
+    .email(&config)
+    .await
+    .management(&config)
+    .await
+    .oauth(&config)
+    .await
+    .s3(&config)
+    .await
+    .services(&config)
+    .await
+    .well_known(&config)
+    .await
+    .ws(&config)
+    .await
+    .frontend()
+    .await
+    .layer(Extension(db))
+    .layer(Extension(config))
+}

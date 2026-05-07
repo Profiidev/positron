@@ -1,6 +1,5 @@
+use centaurus::db::migrations::m3_user::User;
 use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20241204_191705_create_user_table::User;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -11,14 +10,14 @@ impl MigrationTrait for Migration {
     manager
       .create_table(
         Table::create()
-          .table(Settings::Table)
+          .table(UserSettings::Table)
           .if_not_exists()
-          .col(pk_uuid(Settings::Id))
-          .col(uuid_uniq(Settings::User))
-          .col(boolean(Settings::OAuthInstantConfirm))
+          .col(pk_uuid(UserSettings::Id))
+          .col(uuid_uniq(UserSettings::User))
+          .col(boolean(UserSettings::OAuthInstantConfirm))
           .foreign_key(
             ForeignKey::create()
-              .from(Settings::Table, Settings::User)
+              .from(UserSettings::Table, UserSettings::User)
               .to(User::Table, User::Id)
               .on_delete(ForeignKeyAction::Cascade)
               .on_update(ForeignKeyAction::Cascade),
@@ -30,13 +29,13 @@ impl MigrationTrait for Migration {
 
   async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
     manager
-      .drop_table(Table::drop().table(Settings::Table).to_owned())
+      .drop_table(Table::drop().table(UserSettings::Table).to_owned())
       .await
   }
 }
 
 #[derive(DeriveIden)]
-enum Settings {
+enum UserSettings {
   Table,
   Id,
   User,

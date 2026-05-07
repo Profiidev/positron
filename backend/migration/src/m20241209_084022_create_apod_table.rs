@@ -1,9 +1,5 @@
-use extension::postgres::Type;
+use centaurus::db::migrations::m3_user::User;
 use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::{
-  m20220101_000001_create_permission_type::Permission, m20241204_191705_create_user_table::User,
-};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -11,24 +7,6 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
   async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-    manager
-      .alter_type(
-        Type::alter()
-          .name(Permission::Enum)
-          .add_value(ApodPermission::ApodSelect)
-          .to_owned(),
-      )
-      .await?;
-
-    manager
-      .alter_type(
-        Type::alter()
-          .name(Permission::Enum)
-          .add_value(ApodPermission::ApodList)
-          .to_owned(),
-      )
-      .await?;
-
     manager
       .create_table(
         Table::create()
@@ -64,10 +42,4 @@ enum Apod {
   Date,
   Title,
   Selector,
-}
-
-#[derive(DeriveIden)]
-enum ApodPermission {
-  ApodList,
-  ApodSelect,
 }

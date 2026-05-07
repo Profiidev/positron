@@ -1,5 +1,5 @@
 [package]
-name = "positron-backend"
+name = "backend"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,6 +8,17 @@ name = "backend"
 path = "src/main.rs"
 
 [dependencies]
+aide = { version = "0.16.0-alpha.4", features = [
+  "axum",
+  "axum-extra",
+  "axum-extra-cookie",
+  "axum-extra-headers",
+  "axum-json",
+  "axum-query",
+  "axum-tokio",
+  "axum-ws",
+  "macros",
+] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
 async-nats = "0.48.0"
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }

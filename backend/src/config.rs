@@ -1,19 +1,30 @@
-use centaurus::{config::BaseConfig, db::config::DBConfig};
+use centaurus::{
+  Config,
+  backend::config::{BaseConfig, MetricsConfig, SiteConfig},
+  db::config::DBConfig,
+};
 use figment::{
-  providers::{Env, Serialized},
   Figment,
+  providers::{Env, Serialized},
 };
 use lettre::Address;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use url::Url;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Config)]
 pub struct Config {
+  #[base]
   #[serde(flatten)]
   pub base: BaseConfig,
   #[serde(flatten)]
   pub db: DBConfig,
+  #[metrics]
+  #[serde(flatten)]
+  pub metrics: MetricsConfig,
+  #[site]
+  #[serde(flatten)]
+  pub site: SiteConfig,
 
   pub db_url: String,
   pub frontend_url: String,
@@ -58,10 +69,6 @@ pub struct Config {
   //nats
   pub nats_url: String,
   pub nats_update_subject: String,
-
-  //metrics
-  pub metrics_name: String,
-  pub metrics_labels: Vec<(String, String)>,
 }
 
 impl Default for Config {
@@ -98,8 +105,8 @@ impl Default for Config {
       apod_api_key: "".to_string(),
       nats_url: "nats://localhost:4222".to_string(),
       nats_update_subject: "positron.updates".to_string(),
-      metrics_name: "sagittarius".to_string(),
-      metrics_labels: vec![],
+      metrics: MetricsConfig::default(),
+      site: SiteConfig::default(),
     }
   }
 }

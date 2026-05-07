@@ -1,6 +1,5 @@
+use centaurus::db::migrations::m4_groups::Group;
 use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20241204_191716_create_group_table::Group;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;

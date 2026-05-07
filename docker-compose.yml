@@ -18,7 +18,9 @@ services:
     #command: npm i
 
   backend:
-    image: ghcr.io/profiidev/images/rust-musl-watch:main@sha256:e65645871b5e1c970f7417189d9b0747dc8d0ad7bf7844ce8f394e2be64e1598
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
     restart: unless-stopped
     user: '${HOST_UID:-0}:${HOST_GID:-0}'
     volumes:
@@ -36,10 +38,10 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:17
+    image: postgres:18@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
     restart: unless-stopped
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - ./postgres:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=test
       - POSTGRES_USER=test
