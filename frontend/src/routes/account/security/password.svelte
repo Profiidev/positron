@@ -1,16 +1,16 @@
 <script lang="ts">
-  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import { toast } from 'positron-components/components/util/general';
-  import { DateTime } from 'positron-components/util/time.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import { DateTime } from '@profidev/pleiades/util/time.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import { userData } from '$lib/backend/account/info.svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import { password_change } from '$lib/backend/auth/password.svelte';
   import { passwordChange } from './schema.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   interface Props {
     valid: boolean;

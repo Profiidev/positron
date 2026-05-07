@@ -13,19 +13,19 @@
     type GroupInfo,
     type OAuthPolicyCreate
   } from '$lib/backend/management/types.svelte';
-  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
-  import { Label } from 'positron-components/components/ui/label';
-  import { Input } from 'positron-components/components/ui/input';
-  import * as Select from 'positron-components/components/ui/select';
-  import { Button } from 'positron-components/components/ui/button';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { RequestError } from 'positron-components/backend';
-  import { deepCopy } from 'positron-components/util/other.svelte';
+  import SimpleTable from '@profidev/pleiades/components/table/simple-table.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Input } from '@profidev/pleiades/components/ui/input';
+  import * as Select from '@profidev/pleiades/components/ui/select';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
+  import { deepCopy } from '@profidev/pleiades/util/other.svelte';
   import { Plus, Trash } from '@lucide/svelte';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let policies = $derived(oauth_policy_list.value);
   let groups = $derived(group_info_list.value);

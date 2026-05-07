@@ -2,7 +2,7 @@ import {
   getLocalTimeZone,
   now,
   ZonedDateTime
-} from 'positron-components/util/time.svelte';
+} from '@profidev/pleiades/util/time.svelte';
 import { UpdateType } from '../ws/types.svelte';
 import { create_updater } from '../ws/updater.svelte';
 import { get_image, get_image_info, list_apods } from './apod.svelte';

@@ -1,4 +1,4 @@
-import { ResponseType, get, post } from 'positron-components/backend';
+import { ResponseType, get, post } from '@profidev/pleiades/backend';
 import type { Settings } from './types.svelte';
 import { create_updater } from '../ws/updater.svelte';
 import { UpdateType } from '../ws/types.svelte';

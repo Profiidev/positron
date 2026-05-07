@@ -1,5 +1,5 @@
 import { getEncrypt } from '../auth/password.svelte';
-import { ResponseType, get, post } from 'positron-components/backend';
+import { ResponseType, get, post } from '@profidev/pleiades/backend';
 import type { Permission, User } from './types.svelte';
 
 export const list_users = async () => {

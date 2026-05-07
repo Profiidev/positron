@@ -1,88 +1,69 @@
 [package]
 name = "positron-backend"
 version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-centaurus = { version = "0.4.13", features = [
-  "axum",
-  "logging",
-  "argon2",
-  "base64",
-  "chrono",
-  "hmac",
-  "jsonwebtoken",
-  "rsa",
-  "sea-orm",
-  "uuid",
-  "reqwest",
-  "lettre",
-  "webauthn",
-  "image",
-  "auth",
-] }
-openssl = { version = "0.10.79", features = ["vendored"] }
-argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
-base64 = "0.22.1"
-chrono = { version = "0.4.44", default-features = false, features = [
-  "serde",
-  "std",
-] }
-dotenv = "0.15.0"
-image = { version = "0.25.10", default-features = false, features = [
-  "webp",
-  "png",
-  "jpeg",
-] }
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
-lettre = { version = "0.11.20", default-features = false, features = [
-  "smtp-transport",
-  "rustls",
-  "builder",
-  "rustls-native-certs",
-  "ring",
-] }
-rand = { version = "0.9.4", default-features = false, features = [
-  "std",
-  "os_rng",
-] }
-rsa = "0.9.10"
-sea-orm = { version = "1.1.20", features = [
-  "sqlx-postgres",
-  "runtime-tokio-rustls",
-] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_urlencoded = "0.7.1"
-thiserror = "2.0.18"
-totp-rs = { version = "5.7.1", features = ["qr", "gen_secret", "otpauth"] }
-uuid = "1.23.0"
-webauthn-rs = { version = "0.5.4", features = ["conditional-ui"] }
-webauthn-rs-proto = "0.5.0"
-entity = { path = "entity" }
-migration = { path = "migration" }
-rust-s3 = { version = "0.37.1", default-features = false, features = [
-  "fail-on-err",
-  "tags",
-  "tokio-rustls-tls",
-] }
-reqwest = { version = "0.13.2", features = ["json", "form"] }
-async-nats = "0.47.0"
-serde_json = "1.0.149"
-axum = { version = "0.8.8", features = ["macros", "ws", "tracing"] }
-axum-extra = { version = "0.12.5", features = ["cookie", "typed-header"] }
-tracing-subscriber = "0.3.19"
-clap = "4.6.0"
-tracing = "0.1.44"
-tower = "0.5.3"
-tower-http = { version = "0.6.8", features = ["cors", "trace"] }
-tokio = { version = "1.50.0", features = ["signal"] }
-http = "1.4.0"
-time = "0.3.47"
-futures = "0.3.32"
-figment = { version = "0.10.19", features = ["env"] }
-url = { version = "2.5.8", features = ["serde"] }
-hyper-util = { version = "0.1.20", features = ["client-legacy"] }
+edition = "2024"
 
 [[bin]]
 name = "backend"
 path = "src/main.rs"
+
+[dependencies]
+argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
+async-nats = "0.48.0"
+axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
+axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
+base64 = "0.22.1"
+centaurus = { version = "0.11.2", features = ["fix-migrations", "uuid"] }
+chrono = { version = "0.4.44", default-features = false, features = [
+  "serde",
+  "std",
+] }
+dotenvy = "0.15.7"
+entity = { path = "entity" }
+figment = { version = "0.10.19", features = ["env"] }
+futures = "0.3.32"
+http = "1.4.0"
+image = { version = "0.25.10", default-features = false, features = [
+  "jpeg",
+  "png",
+  "webp",
+] }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+lettre = { version = "0.11.21", default-features = false, features = [
+  "builder",
+  "ring",
+  "rustls",
+  "rustls-native-certs",
+  "smtp-transport",
+] }
+migration = { path = "migration" }
+openssl = { version = "0.10.79", features = ["vendored"] }
+rand = { version = "0.10.1", default-features = false, features = [
+  "std",
+] }
+reqwest = { version = "0.13.3", features = ["form", "json"] }
+rsa = "0.9.10"
+rust-s3 = { version = "0.37.2", default-features = false, features = [
+  "fail-on-err",
+  "tags",
+  "tokio-rustls-tls",
+] }
+sea-orm = { version = "1.1.20", features = [
+  "runtime-tokio-rustls",
+  "sqlx-postgres",
+  "sqlx-sqlite",
+] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+serde_urlencoded = "0.7.1"
+thiserror = "2.0.18"
+time = "0.3.47"
+tokio = { version = "1.52.2", features = ["signal"] }
+totp-rs = { version = "5.7.1", features = ["gen_secret", "otpauth", "qr"] }
+tower = "0.5.3"
+tower-http = { version = "0.6.10", features = ["cors", "trace"] }
+tracing = "0.1.44"
+url = { version = "2.5.8", features = ["serde"] }
+uuid = "1.23.1"
+webauthn-rs = { version = "0.5.5", features = ["conditional-ui"] }
+webauthn-rs-proto = "0.5.5"

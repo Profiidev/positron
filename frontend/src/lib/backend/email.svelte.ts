@@ -1,4 +1,4 @@
-import { ResponseType, post } from 'positron-components/backend';
+import { ResponseType, post } from '@profidev/pleiades/backend';
 
 export const email_start_change = async (new_email: string) => {
   return await post('/backend/email/manage/start_change', {

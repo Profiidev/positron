@@ -1,16 +1,16 @@
 <script lang="ts">
-  import * as Tabs from 'positron-components/components/ui/tabs';
-  import * as Card from 'positron-components/components/ui/card';
-  import * as ScrollArea from 'positron-components/components/ui/scroll-area';
-  import { Button } from 'positron-components/components/ui/button';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import Datepicker from 'positron-components/components/util/datepicker.svelte';
+  import * as Tabs from '@profidev/pleiades/components/ui/tabs';
+  import * as Card from '@profidev/pleiades/components/ui/card';
+  import * as ScrollArea from '@profidev/pleiades/components/ui/scroll-area';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import Datepicker from '@profidev/pleiades/components/util/datepicker.svelte';
   import {
     DateTime,
     getLocalTimeZone,
     now,
     parseAbsolute
-  } from 'positron-components/util/time.svelte';
+  } from '@profidev/pleiades/util/time.svelte';
   import type { ApodData, ApodInfo } from '$lib/backend/services/types.svelte';
   import {
     apod,

@@ -4,10 +4,10 @@
     user_settings_update
   } from '$lib/backend/account/settings.svelte';
   import type { Settings } from '$lib/backend/account/types.svelte';
-  import { Label } from 'positron-components/components/ui/label';
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Switch } from 'positron-components/components/ui/switch';
-  import * as Tooltip from 'positron-components/components/ui/tooltip';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Switch } from '@profidev/pleiades/components/ui/switch';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
 
   let settings: Settings | undefined = $derived(user_settings.value);
 

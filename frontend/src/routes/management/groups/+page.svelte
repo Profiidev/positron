@@ -12,15 +12,15 @@
     getPermissionGroups,
     Permission
   } from '$lib/backend/management/types.svelte';
-  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
-  import Multiselect from 'positron-components/components/table/multiselect.svelte';
-  import { Label } from 'positron-components/components/ui/label';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import SimpleTable from '@profidev/pleiades/components/table/simple-table.svelte';
+  import Multiselect from '@profidev/pleiades/components/table/multiselect.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import { columns } from './table.svelte';
   import { createSchema, deleteSchema, editSchema } from './schema.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let groups = $derived(group_list.value);
   let users = $derived(user_info_list.value);

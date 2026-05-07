@@ -13,15 +13,15 @@
     type OAuthPolicyInfo,
     type OAuthScopeCreate
   } from '$lib/backend/management/types.svelte';
-  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
-  import Multiselect from 'positron-components/components/table/multiselect.svelte';
-  import { Label } from 'positron-components/components/ui/label';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import SimpleTable from '@profidev/pleiades/components/table/simple-table.svelte';
+  import Multiselect from '@profidev/pleiades/components/table/multiselect.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { columns } from './table.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let scopes = $derived(oauth_scope_list.value);
   let policies = $derived(oauth_policy_info_list.value);

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import * as Sidebar from 'positron-components/components/ui/sidebar';
+  import * as Sidebar from '@profidev/pleiades/components/ui/sidebar';
   // @ts-ignore
-  import * as DropdownMenu from 'positron-components/components/ui/dropdown-menu';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
+  import * as DropdownMenu from '@profidev/pleiades/components/ui/dropdown-menu';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
   import { ChevronsUpDown, LogOut, Settings } from '@lucide/svelte';
   import { goto } from '$app/navigation';
   import { logout } from '$lib/backend/auth/other.svelte';

@@ -1,5 +1,5 @@
-import { base64ToArrayBuffer } from 'positron-components/util/convert.svelte';
-import { ResponseType, get, post } from 'positron-components/backend';
+import { base64ToArrayBuffer } from '@profidev/pleiades/util/convert.svelte';
+import { ResponseType, get, post } from '@profidev/pleiades/backend';
 import type { ProfileInfo, UserInfo } from './types.svelte';
 
 export const profile_info = async (uuid: string) => {

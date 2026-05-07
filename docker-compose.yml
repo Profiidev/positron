@@ -1,6 +1,8 @@
 services:
   frontend:
-    image: ghcr.io/profiidev/images/node-alpine-dev:main
+    image: ghcr.io/profiidev/images/node-alpine-dev:main@sha256:a9021d8b424f81e5c3d4a5eef98041b011fd2054c303e7e687acc60167f18f2a
+    restart: unless-stopped
+    user: '${HOST_UID:-0}:${HOST_GID:-0}'
     volumes:
       - ./frontend:/app/frontend
       - ./node_modules:/app/node_modules
@@ -16,12 +18,14 @@ services:
     #command: npm i
 
   backend:
-    image: ghcr.io/profiidev/images/rust-musl-watch@sha256:f963ec13dcd4b260b12ad4cc36d94d62676406707d7de50c7d58c8ed068f46f9
+    image: ghcr.io/profiidev/images/rust-musl-watch:main@sha256:e65645871b5e1c970f7417189d9b0747dc8d0ad7bf7844ce8f394e2be64e1598
+    restart: unless-stopped
+    user: '${HOST_UID:-0}:${HOST_GID:-0}'
     volumes:
+      - ./.cargo:/app/.cargo
       - ./backend:/app
     networks:
       - nginx
-      - nats
     tty: true
     ports:
       - '5175:8000'
@@ -56,20 +60,9 @@ services:
     image: nats:latest
     tty: true
     networks:
-      - nats
+      - nginx
     ports:
       - 4222:4222
 
-  nats-ui:
-    image: ghcr.io/nats-nui/nui
-    ports:
-      - 31311:31311
-    volumes:
-      - ./nats/db:/db
-      - ./nats/nats:/nats-creds:ro
-    networks:
-      - nats
-
 networks:
   nginx:
-  nats:

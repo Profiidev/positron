@@ -1,6 +1,6 @@
 <script lang="ts">
-  import * as Sidebar from 'positron-components/components/ui/sidebar';
-  import { ScrollArea } from 'positron-components/components/ui/scroll-area';
+  import * as Sidebar from '@profidev/pleiades/components/ui/sidebar';
+  import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { Atom, PanelLeftClose, PanelLeftOpen } from '@lucide/svelte';
   import User from './user.svelte';
   import Main from './main.svelte';

@@ -1,4 +1,4 @@
-import { ResponseType, get, post } from 'positron-components/backend';
+import { ResponseType, get, post } from '@profidev/pleiades/backend';
 import type { TotpCode } from './types.svelte';
 
 export const is_code = (object: any): object is TotpCode => {

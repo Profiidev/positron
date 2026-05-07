@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Button } from 'positron-components/components/ui/button';
-  import * as Card from 'positron-components/components/ui/card';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import * as Card from '@profidev/pleiades/components/ui/card';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
   import { goto } from '$app/navigation';
   import type { PageServerData } from './$types';
   import { userData } from '$lib/backend/account/info.svelte';

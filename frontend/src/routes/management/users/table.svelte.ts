@@ -1,10 +1,10 @@
 import { Permission, type User } from '$lib/backend/management/types.svelte';
 import type { ColumnDef } from '@tanstack/table-core';
-import Actions from 'positron-components/components/table/actions.svelte';
-import { createColumn } from 'positron-components/components/table/helpers.svelte';
-import * as DataTable from 'positron-components/components/ui/data-table';
-import { DateTime } from 'positron-components/util/time.svelte';
-import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
+import Actions from '@profidev/pleiades/components/table/actions.svelte';
+import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import * as DataTable from '@profidev/pleiades/components/ui/data-table';
+import { DateTime } from '@profidev/pleiades/util/time.svelte';
+import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
 
 export const columns = (
   edit: (user: string) => void,

@@ -1,4 +1,4 @@
-import { ResponseType, get, post } from 'positron-components/backend';
+import { ResponseType, get, post } from '@profidev/pleiades/backend';
 import type { Group } from './types.svelte';
 
 export const list_groups = async () => {

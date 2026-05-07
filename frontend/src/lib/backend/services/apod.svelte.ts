@@ -3,7 +3,7 @@ import {
   RequestError,
   get,
   post
-} from 'positron-components/backend';
+} from '@profidev/pleiades/backend';
 import type { Apod, ApodData, ApodInfo } from './types.svelte';
 
 export const list_apods = async () => {

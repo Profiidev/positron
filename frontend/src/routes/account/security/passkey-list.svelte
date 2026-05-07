@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { Button } from 'positron-components/components/ui/button';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { toast } from 'positron-components/components/util/general';
-  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import { KeyRound, Pencil, Trash } from '@lucide/svelte';
   import { type SvelteComponent } from 'svelte';
-  import { DateTime } from 'positron-components/util/time.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import { DateTime } from '@profidev/pleiades/util/time.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import {
     passkey_edit_name,
     passkey_register,
     passkey_remove
   } from '$lib/backend/auth/passkey.svelte';
   import { passkey_list } from '$lib/backend/auth/stores.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
   import {
     passkeyCreateSchema,
     passkeyDeleteSchema,

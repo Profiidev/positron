@@ -1,6 +1,6 @@
 <script lang="ts">
-  import * as Sidebar from 'positron-components/components/ui/sidebar';
-  import * as Collapsible from 'positron-components/components/ui/collapsible';
+  import * as Sidebar from '@profidev/pleiades/components/ui/sidebar';
+  import * as Collapsible from '@profidev/pleiades/components/ui/collapsible';
   import { ChevronRight, Image, KeyRound, Users } from '@lucide/svelte';
   import { page } from '$app/state';
   import { Permission } from '$lib/backend/management/types.svelte';

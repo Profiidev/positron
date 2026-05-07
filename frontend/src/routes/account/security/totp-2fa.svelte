@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import { Badge } from 'positron-components/components/ui/badge';
-  import { toast } from 'positron-components/components/util/general';
-  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
-  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
-  import { DateTime } from 'positron-components/util/time.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { Badge } from '@profidev/pleiades/components/ui/badge';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import Totp_6 from '@profidev/pleiades/components/form/totp-6.svelte';
+  import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
+  import { DateTime } from '@profidev/pleiades/util/time.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import { Clock9 } from '@lucide/svelte';
   import type { UserInfo } from '$lib/backend/account/types.svelte';
   import {
@@ -17,7 +17,7 @@
   } from '$lib/backend/auth/totp.svelte';
   import { userData } from '$lib/backend/account/info.svelte';
   import { totpAdd, totpRemove } from './schema.svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   interface Props {
     valid: boolean;

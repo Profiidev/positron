@@ -1,13 +1,13 @@
 <script lang="ts">
-  import LoginOtherOptions from 'positron-components/components/form/login-other-options.svelte';
-  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
-  import BaseForm from 'positron-components/components/form/base-form.svelte';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { cn } from 'positron-components/utils';
+  import LoginOtherOptions from '@profidev/pleiades/components/form/login-other-options.svelte';
+  import Totp_6 from '@profidev/pleiades/components/form/totp-6.svelte';
+  import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { cn } from '@profidev/pleiades/utils';
   import { goto } from '$app/navigation';
   import type { OAuthParams } from '$lib/backend/auth/types.svelte';
   import { totp_confirm } from '$lib/backend/auth/totp.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import { RequestError } from '@profidev/pleiades/backend';
   import { password_login } from '$lib/backend/auth/password.svelte';
   import {
     passkey_authenticate,
@@ -18,7 +18,7 @@
   import type {
     FormValue,
     ZodValidationSchema
-  } from 'positron-components/components/form/types';
+  } from '@profidev/pleiades/components/form/types';
   import { loginSchema } from './schema.svelte';
 
   interface Props {

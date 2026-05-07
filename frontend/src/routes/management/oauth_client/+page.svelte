@@ -18,24 +18,24 @@
     type OAuthClientCreate,
     type OAuthClientInfo
   } from '$lib/backend/management/types.svelte';
-  import SimpleTable from 'positron-components/components/table/simple-table.svelte';
-  import Multiselect from 'positron-components/components/table/multiselect.svelte';
-  import { Label } from 'positron-components/components/ui/label';
-  import { Input } from 'positron-components/components/ui/input';
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Button } from 'positron-components/components/ui/button';
-  import { toast } from 'positron-components/components/util/general';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import FormSwitch from 'positron-components/components/form/form-switch.svelte';
-  import { RequestError } from 'positron-components/backend';
-  import { deepCopy } from 'positron-components/util/other.svelte';
+  import SimpleTable from '@profidev/pleiades/components/table/simple-table.svelte';
+  import Multiselect from '@profidev/pleiades/components/table/multiselect.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Input } from '@profidev/pleiades/components/ui/input';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import FormSwitch from '@profidev/pleiades/components/form/form-switch.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
+  import { deepCopy } from '@profidev/pleiades/util/other.svelte';
   import { columns } from './table.svelte';
   import { createSchema, editSchema, deleteSchema } from './schema.svelte';
   import { RotateCw } from '@lucide/svelte';
   import { userData } from '$lib/backend/account/info.svelte';
   import HidableInput from '$lib/components/form/HidableInput.svelte';
   import { onMount } from 'svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let clients = $derived(oauth_client_list.value);
   let groups = $derived(group_info_list.value);

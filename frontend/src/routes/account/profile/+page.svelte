@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { Button } from 'positron-components/components/ui/button';
-  import { Input } from 'positron-components/components/ui/input';
-  import { Label } from 'positron-components/components/ui/label';
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import { toast } from 'positron-components/components/util/general';
-  import BaseForm from 'positron-components/components/form/base-form.svelte';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import { arrayBufferToBase64 } from 'positron-components/util/convert.svelte';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import { Input } from '@profidev/pleiades/components/ui/input';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import { arrayBufferToBase64 } from '@profidev/pleiades/util/convert.svelte';
   import { Upload } from '@lucide/svelte';
-  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
+  import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
   import {
     profile_change_image,
     profile_update
@@ -17,7 +17,7 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import { profileSchema } from './schema.svelte';
   import type { SvelteComponent } from 'svelte';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let infoData = $derived(userData.value?.[1]);
   $effect(() => {

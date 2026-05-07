@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Separator } from 'positron-components/components/ui/separator';
-  import { Label } from 'positron-components/components/ui/label';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import { toast } from 'positron-components/components/util/general';
-  import FormDialog from 'positron-components/components/form/form-dialog.svelte';
-  import FormInput from 'positron-components/components/form/form-input.svelte';
-  import Totp_6 from 'positron-components/components/form/totp-6.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import Totp_6 from '@profidev/pleiades/components/form/totp-6.svelte';
+  import { RequestError } from '@profidev/pleiades/backend';
   import type { SvelteComponent } from 'svelte';
   import AccessConfirm from '../access-confirm.svelte';
   import {
@@ -16,7 +16,7 @@
   import { userData } from '$lib/backend/account/info.svelte';
   import { confirmSchema, emailChange } from './schema.svelte';
   import { get } from 'svelte/store';
-  import type { FormValue } from 'positron-components/components/form/types';
+  import type { FormValue } from '@profidev/pleiades/components/form/types';
 
   let infoData = $derived(userData.value?.[1]);
 

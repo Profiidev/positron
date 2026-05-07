@@ -7,7 +7,7 @@ import {
   RequestError,
   get,
   post
-} from 'positron-components/backend';
+} from '@profidev/pleiades/backend';
 import type { Passkey } from './types.svelte';
 
 const isKeyCredCreate = (
