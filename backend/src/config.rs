@@ -81,10 +81,6 @@ impl Default for Config {
       webauthn_origin: Url::parse("http://localhost:1421").unwrap(),
       webauthn_name: "Positron".to_string(),
       webauthn_additional_origins: "".to_string(),
-      auth_issuer: "Positron".to_string(),
-      auth_pepper: "some_random_pepper".to_string(),
-      auth_jwt_expiration: 3600,
-      auth_jwt_expiration_short: 300,
       smtp_username: "".to_string(),
       smtp_password: "".to_string(),
       smtp_domain: "".to_string(),
@@ -105,6 +101,7 @@ impl Default for Config {
       nats_update_subject: "positron.updates".to_string(),
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
+      auth: AuthConfig::default(),
     }
   }
 }

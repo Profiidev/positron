@@ -8,6 +8,7 @@ pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
   pub name: String,
+  pub access_level: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

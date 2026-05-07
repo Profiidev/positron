@@ -33,7 +33,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/totp", totp::router(rate_limiter))
 }
 
-async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
+pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
   router
     .layer(Extension(init_pw_state(&config.auth, db).await))
     .layer(Extension(JwtState::init(&config.auth, db).await))

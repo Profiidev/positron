@@ -1,12 +1,10 @@
-use axum::{extract::FromRequest, Json};
-use entity::{group, group_user, prelude::*, sea_orm_active_enums::Permission};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use axum::{Json, extract::FromRequest};
+use entity::{group, group_user, prelude::*};
+use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::db::util::update_relations;
-
-use super::user::BasicUserInfo;
+use crate::db::{user::user_ext::BasicUserInfo, util::update_relations};
 
 #[derive(Serialize, Deserialize, Debug, FromRequest)]
 #[from_request(via(Json))]
@@ -14,7 +12,7 @@ pub struct GroupInfo {
   pub name: String,
   pub uuid: Uuid,
   pub access_level: i32,
-  pub permissions: Vec<Permission>,
+  pub permissions: Vec<String>,
   pub users: Vec<BasicUserInfo>,
 }
 

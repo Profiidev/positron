@@ -1,6 +1,8 @@
 use aide::axum::ApiRouter;
+use axum::Extension;
 use centaurus::{
   backend::{
+    endpoints::websocket,
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -12,11 +14,8 @@ use centaurus::{
 use dotenvy::dotenv;
 use tracing::info;
 
-use crate::config::Config;
+use crate::{config::Config, utils::UpdateMessage};
 
-mod user;
-
-// TODO
 mod account;
 mod auth;
 mod config;
@@ -28,9 +27,9 @@ mod oauth;
 mod permission;
 mod s3;
 mod services;
+mod user;
 mod utils;
 mod well_known;
-mod ws;
 
 #[tokio::main]
 async fn main() {
@@ -49,31 +48,22 @@ async fn main() {
 
 fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
+    .nest("/auth", auth::router(rate_limiter))
     .nest("/account", account::router())
-    .nest("/auth", auth::router())
     .nest("/email", email::router())
     .nest("/management", management::router())
     .nest("/oauth", oauth::router())
     .nest("/services", services::router())
-    .nest("/ws", ws::router())
+    .nest("/ws", websocket::router::<UpdateMessage>())
 }
 
-async fn state(router: ApiRouter, config: Config) -> ApiRouter {
-  use auth::auth;
-  use email::email;
-  use frontend::frontend;
-  use management::management;
-  use oauth::oauth;
-  use s3::s3;
-  use services::services;
-  use well_known::well_known;
-  use ws::ws;
-
+async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
 
+  router = websocket::state(router).await;
+  router = auth::state(router, &config, &db).await;
+
   self
-    .auth(&config, &db)
-    .await
     .email(&config)
     .await
     .management(&config)
@@ -85,11 +75,7 @@ async fn state(router: ApiRouter, config: Config) -> ApiRouter {
     .services(&config)
     .await
     .well_known(&config)
-    .await
-    .ws(&config)
-    .await
-    .frontend()
-    .await
-    .layer(Extension(db))
-    .layer(Extension(config))
+    .await;
+
+  router.layer(Extension(db))
 }

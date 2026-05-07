@@ -1,13 +1,13 @@
-use axum::{extract::FromRequest, Json};
+use axum::{Json, extract::FromRequest};
 use entity::{group_user, o_auth_client, o_auth_client_group, o_auth_client_user, prelude::*};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
   db::{
-    user::{group::BasicGroupInfo, user::BasicUserInfo},
+    user::{group::BasicGroupInfo, user_ext::BasicUserInfo},
     util::update_relations,
   },
   oauth::scope::Scope,
@@ -61,7 +61,7 @@ impl<'db> OauthClientTable<'db> {
       .await?;
 
     let user_groups = GroupUser::find()
-      .filter(group_user::Column::User.eq(user))
+      .filter(group_user::Column::UserId.eq(user))
       .all(self.db)
       .await?;
 
@@ -71,7 +71,7 @@ impl<'db> OauthClientTable<'db> {
       Ok(
         groups
           .iter()
-          .any(|g| user_groups.iter().any(|ug| ug.group == g.group)),
+          .any(|g| user_groups.iter().any(|ug| ug.group_id == g.group)),
       )
     }
   }
