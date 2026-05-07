@@ -1,30 +1,23 @@
-use centaurus::{bail, db::init::Connection, error::Result, state::extract::StateExtractExt};
-use http::request::Parts;
-use serde::de::DeserializeOwned;
+use centaurus::{UpdateMessage, backend::endpoints::websocket};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::{
-  auth::jwt::{JwtState, JwtType},
-  db::DBTrait,
-};
+pub type Updater = websocket::state::Updater<UpdateMessage>;
 
-pub async fn jwt_from_request<C: DeserializeOwned + Clone, T: JwtType>(
-  req: &mut Parts,
-) -> Result<C> {
-  let token = centaurus::auth::jwt::jwt_from_request(req, T::cookie_name()).await?;
-
-  let jwt = req.extract_state::<JwtState>().await;
-  let db = req.extract_state::<Connection>().await;
-
-  let Ok(valid) = db.invalid_jwt().is_token_valid(token.to_string()).await else {
-    bail!("failed to validate jwt");
-  };
-  if !valid {
-    bail!(UNAUTHORIZED, "token is invalidated");
-  }
-
-  let Ok(claims) = jwt.validate_token(&token) else {
-    bail!(UNAUTHORIZED, "invalid token");
-  };
-
-  Ok(claims)
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, UpdateMessage)]
+#[serde(tag = "type")]
+pub enum UpdateMessage {
+  #[update_message(settings)]
+  Settings,
+  #[update_message(user)]
+  User {
+    uuid: Uuid,
+  },
+  #[update_message(user_permissions)]
+  UserPermissions,
+  #[update_message(group)]
+  Group {
+    uuid: Uuid,
+  },
+  Passkey,
 }

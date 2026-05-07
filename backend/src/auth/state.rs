@@ -1,24 +1,25 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use axum::{extract::FromRequestParts, Extension};
+use aide::OperationIo;
+use axum::{Extension, extract::FromRequestParts};
 use centaurus::{auth::pw::PasswordState, db::init::Connection};
 use rsa::{
+  RsaPrivateKey,
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
   pkcs8::LineEnding,
   rand_core::OsRng,
-  RsaPrivateKey,
 };
 use tokio::sync::Mutex;
 use totp_rs::TOTP;
 use uuid::Uuid;
 use webauthn_rs::{
-  prelude::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url},
   Webauthn, WebauthnBuilder,
+  prelude::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration, Url},
 };
 
-use crate::{config::Config, db::DBTrait};
+use crate::config::Config;
 
-#[derive(Default, Clone, FromRequestParts)]
+#[derive(Default, Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct PasskeyState {
   pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
@@ -27,14 +28,14 @@ pub struct PasskeyState {
   pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
 }
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct TotpState {
   pub issuer: String,
   pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
 }
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct WebauthnState(Webauthn);
 

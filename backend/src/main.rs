@@ -4,7 +4,9 @@ use centaurus::{
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
-  }, db::init::init_db, logging::init_logging
+  },
+  db::init::init_db,
+  logging::init_logging,
 };
 #[cfg(debug_assertions)]
 use dotenvy::dotenv;
@@ -12,6 +14,9 @@ use tracing::info;
 
 use crate::config::Config;
 
+mod user;
+
+// TODO
 mod account;
 mod auth;
 mod config;
@@ -42,15 +47,15 @@ async fn main() {
   run_app_connect_info(listener, app).await;
 }
 
-async fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
+fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
-    .nest("/auth", auth::router())
     .nest("/account", account::router())
+    .nest("/auth", auth::router())
     .nest("/email", email::router())
-    .nest("/oauth", oauth::router())
     .nest("/management", management::router())
-    .nest("/ws", ws::router())
+    .nest("/oauth", oauth::router())
     .nest("/services", services::router())
+    .nest("/ws", ws::router())
 }
 
 async fn state(router: ApiRouter, config: Config) -> ApiRouter {

@@ -1,98 +1,132 @@
-use std::str::FromStr;
-
-use axum::{
-  extract::{FromRequest, Path},
-  routing::{get, post},
-  Json, Router,
+use aide::axum::{
+  ApiRouter,
+  routing::{get_with, post_with},
 };
+use axum::{Json, extract::Path};
 use axum_extra::extract::CookieJar;
 use base64::prelude::*;
-use centaurus::{bail, db::init::Connection, error::Result, eyre::ContextCompat};
+use centaurus::{
+  backend::{
+    auth::{jwt_auth::JwtAuth, jwt_state::JwtState},
+    middleware::rate_limiter::RateLimiter,
+    request::response::TokenRes,
+  },
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
+  error::Result,
+  eyre::ContextCompat,
+};
 use chrono::{DateTime, Utc};
 use entity::passkey;
 use http::StatusCode;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tower_governor::GovernorLayer;
 use uuid::Uuid;
-use webauthn_rs::prelude::{
-  CreationChallengeResponse, Passkey, PublicKeyCredential, RegisterPublicKeyCredential,
-  RequestChallengeResponse,
-};
+use webauthn_rs::prelude::{Passkey, PublicKeyCredential, RegisterPublicKeyCredential};
 use webauthn_rs_proto::ResidentKeyRequirement;
 
 use crate::{
-  auth::state::WebauthnState,
+  auth::{
+    jwt::{JwtAuthOther, JwtStateOther},
+    state::WebauthnState,
+  },
   db::DBTrait,
-  ws::state::{UpdateState, UpdateType},
+  utils::{UpdateMessage, Updater},
 };
 
-use super::{
-  jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, TokenRes},
-  state::PasskeyState,
-};
+use super::{jwt::JwtSpecial, state::PasskeyState};
 
-pub fn router() -> Router {
-  Router::new()
-    .route("/start_registration", get(start_registration))
-    .route("/finish_registration", post(finish_registration))
-    .route("/start_authentication", get(start_authentication))
-    .route(
-      "/start_authentication/{email}",
-      get(start_authentication_by_email),
+pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
+  ApiRouter::new()
+    .api_route(
+      "/finish_registration",
+      post_with(finish_registration, |op| op.id("finishRegistration")),
     )
-    .route("/finish_authentication/{id}", post(finish_authentication))
-    .route(
+    .api_route(
+      "/finish_authentication/{id}",
+      post_with(finish_authentication, |op| op.id("finishAuthentication")),
+    )
+    .api_route(
       "/finish_authentication_by_email/{id}",
-      post(finish_authentication_by_email),
+      post_with(finish_authentication_by_email, |op| {
+        op.id("finishAuthenticationByEmail")
+      }),
     )
-    .route("/start_special_access", get(start_special_access))
-    .route("/finish_special_access", post(finish_special_access))
-    .route("/list", get(list))
-    .route("/remove", post(remove))
-    .route("/edit_name", post(edit_name))
+    .api_route(
+      "/finish_special_access",
+      post_with(finish_special_access, |op| op.id("finishSpecialAccess")),
+    )
+    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .api_route(
+      "/start_registration",
+      get_with(start_registration, |op| op.id("startRegistration")),
+    )
+    .api_route(
+      "/start_authentication",
+      get_with(start_authentication, |op| op.id("startAuthentication")),
+    )
+    .api_route(
+      "/start_authentication/{email}",
+      get_with(start_authentication_by_email, |op| {
+        op.id("startAuthenticationByEmail")
+      }),
+    )
+    .api_route(
+      "/start_special_access",
+      get_with(start_special_access, |op| op.id("startSpecialAccess")),
+    )
+    .api_route("/list", get_with(list, |op| op.id("listPasskeys")))
+    .api_route("/remove", post_with(remove, |op| op.id("removePasskey")))
+    .api_route(
+      "/edit_name",
+      post_with(edit_name, |op| op.id("editPasskeyName")),
+    )
 }
 
 async fn start_registration(
-  auth: JwtClaims<JwtSpecial>,
+  auth: JwtAuthOther<JwtSpecial>,
   db: Connection,
   webauthn: WebauthnState,
   state: PasskeyState,
-) -> Result<Json<CreationChallengeResponse>> {
-  let user = db.user().get_user(auth.sub).await?;
-
-  let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
+) -> Result<Json<serde_json::Value>> {
+  let passkeys = db.passkey().get_passkeys_for_user(auth.user_id).await?;
   let passkeys = passkeys
     .into_iter()
     .flat_map(|p| serde_json::from_str::<Passkey>(&p.data))
     .map(|p| p.cred_id().clone())
     .collect();
 
+  let user = db.user().get_user_by_id(auth.user_id).await?;
   let (mut ccr, reg_state) =
-    webauthn.start_passkey_registration(auth.sub, &user.email, &user.name, Some(passkeys))?;
+    webauthn.start_passkey_registration(auth.user_id, &user.email, &user.name, Some(passkeys))?;
 
   if let Some(test) = &mut ccr.public_key.authenticator_selection {
     test.resident_key = Some(ResidentKeyRequirement::Required);
   }
 
-  state.reg_state.lock().await.insert(auth.sub, reg_state);
-  Ok(Json(ccr))
+  state.reg_state.lock().await.insert(auth.user_id, reg_state);
+  Ok(Json(serde_json::to_value(ccr)?))
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct RegFinishReq {
-  reg: RegisterPublicKeyCredential,
+  reg: serde_json::Value,
   name: String,
 }
 
 async fn finish_registration(
-  auth: JwtClaims<JwtSpecial>,
+  auth: JwtAuthOther<JwtSpecial>,
   db: Connection,
   webauthn: WebauthnState,
   state: PasskeyState,
-  updater: UpdateState,
-  req: RegFinishReq,
+  updater: Updater,
+  Json(req): Json<RegFinishReq>,
 ) -> Result<StatusCode> {
-  let user = db.user().get_user(auth.sub).await?;
+  let Ok(reg) = serde_json::from_value::<RegisterPublicKeyCredential>(req.reg) else {
+    bail!(BAD_REQUEST, "Invalid registration data");
+  };
+  let user = db.user().get_user_by_id(auth.user_id).await?;
 
   if db
     .passkey()
@@ -105,7 +139,7 @@ async fn finish_registration(
   let mut states = state.reg_state.lock().await;
   let reg_state = states.remove(&user.id).context("state not found")?;
 
-  let key = webauthn.finish_passkey_registration(&req.reg, &reg_state)?;
+  let key = webauthn.finish_passkey_registration(&reg, &reg_state)?;
 
   let json_key = serde_json::to_string(&key)?;
   db.passkey()
@@ -119,14 +153,14 @@ async fn finish_registration(
       used: Utc::now().naive_utc(),
     })
     .await?;
-  updater.send_message(auth.sub, UpdateType::Passkey).await;
+  updater.send_to(auth.user_id, UpdateMessage::Passkey).await;
 
   Ok(StatusCode::OK)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 struct AuthStartRes {
-  res: RequestChallengeResponse,
+  res: serde_json::Value,
   id: Uuid,
 }
 
@@ -140,7 +174,7 @@ async fn start_authentication(
   state.auth_state.lock().await.insert(auth_id, auth_state);
 
   Ok(Json(AuthStartRes {
-    res: rcr,
+    res: serde_json::to_value(rcr)?,
     id: auth_id,
   }))
 }
@@ -169,7 +203,7 @@ async fn start_authentication_by_email(
     .insert(auth_id, auth_state);
 
   Ok(Json(AuthStartRes {
-    res: rcr,
+    res: serde_json::to_value(rcr)?,
     id: auth_id,
   }))
 }
@@ -181,8 +215,11 @@ async fn finish_authentication(
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
-  Json(auth): Json<PublicKeyCredential>,
+  Json(auth): Json<serde_json::Value>,
 ) -> Result<(CookieJar, TokenRes)> {
+  let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
+    bail!(BAD_REQUEST, "Invalid authentication data");
+  };
   let mut states = state.auth_state.lock().await;
   let auth_state = states.remove(&auth_id).context("state not found")?;
 
@@ -194,7 +231,7 @@ async fn finish_authentication(
     .await?;
   let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
-  let user = db.user().get_user(passkey_db.user).await?;
+  let user = db.user().get_user_by_id(passkey_db.user).await?;
 
   let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
 
@@ -209,25 +246,26 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.user().logged_in(user.id).await?;
+  db.user_ext().logged_in(user.id).await?;
 
-  let cookie = jwt.create_token::<JwtBase>(user.id)?;
+  let cookie = jwt.create_token(user.id)?;
   cookies = cookies.add(cookie);
 
-  Ok((cookies, TokenRes::default()))
+  Ok((cookies, TokenRes(())))
 }
 
 async fn finish_authentication_by_email(
-  Path(id): Path<String>,
+  Path(auth_id): Path<Uuid>,
   db: Connection,
   webauthn: WebauthnState,
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
-  Json(auth): Json<PublicKeyCredential>,
+  Json(auth): Json<serde_json::Value>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let auth_id = Uuid::from_str(&id)?;
-
+  let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
+    bail!(BAD_REQUEST, "Invalid authentication data");
+  };
   let mut states = state.non_discover_auth_state.lock().await;
   let auth_state = states.remove(&auth_id).context("state not found")?;
 
@@ -250,22 +288,22 @@ async fn finish_authentication_by_email(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  let user = db.user().get_user(passkey_db.user).await?;
-  db.user().logged_in(user.id).await?;
+  let user = db.user().get_user_by_id(passkey_db.user).await?;
+  db.user_ext().logged_in(user.id).await?;
 
-  let cookie = jwt.create_token::<JwtBase>(user.id)?;
+  let cookie = jwt.create_token(user.id)?;
   cookies = cookies.add(cookie);
 
-  Ok((cookies, TokenRes::default()))
+  Ok((cookies, TokenRes(())))
 }
 
 async fn start_special_access(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth,
   webauthn: WebauthnState,
   state: PasskeyState,
   db: Connection,
-) -> Result<Json<RequestChallengeResponse>> {
-  let user = db.user().get_user(auth.sub).await?;
+) -> Result<Json<serde_json::Value>> {
+  let user = db.user().get_user_by_id(auth.user_id).await?;
   let passkey_records = db.passkey().get_passkeys_for_user(user.id).await?;
   let passkeys = passkey_records
     .into_iter()
@@ -278,22 +316,30 @@ async fn start_special_access(
     .special_access_state
     .lock()
     .await
-    .insert(auth.sub, auth_state);
+    .insert(auth.user_id, auth_state);
 
-  Ok(Json(rcr))
+  Ok(Json(serde_json::to_value(rcr)?))
 }
 
 async fn finish_special_access(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth,
   webauthn: WebauthnState,
   state: PasskeyState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   mut cookies: CookieJar,
-  Json(req): Json<PublicKeyCredential>,
+  Json(req): Json<serde_json::Value>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let Some(auth_state) = state.special_access_state.lock().await.remove(&auth.sub) else {
+  let Some(auth_state) = state
+    .special_access_state
+    .lock()
+    .await
+    .remove(&auth.user_id)
+  else {
     bail!("state not found");
+  };
+  let Ok(req) = serde_json::from_value::<PublicKeyCredential>(req) else {
+    bail!(BAD_REQUEST, "Invalid authentication data");
   };
 
   let res = webauthn.finish_passkey_authentication(&req, &auth_state)?;
@@ -314,25 +360,24 @@ async fn finish_special_access(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.user().used_special_access(auth.sub).await?;
+  db.user_ext().used_special_access(auth.user_id).await?;
 
-  let cookie = jwt.create_token::<JwtSpecial>(auth.sub)?;
+  let cookie = jwt.create_token::<JwtSpecial>(auth.user_id)?;
   cookies = cookies.add(cookie);
-  cookies =
-    cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
+  cookies = cookies.add(jwt.create_cookie("special_valid", "true".to_string(), false));
 
-  Ok((cookies, TokenRes::default()))
+  Ok((cookies, TokenRes(())))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 struct PasskeyInfo {
   name: String,
   created: DateTime<Utc>,
   used: DateTime<Utc>,
 }
 
-async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<PasskeyInfo>>> {
-  let user = db.user().get_user(auth.sub).await?;
+async fn list(auth: JwtAuth, db: Connection) -> Result<Json<Vec<PasskeyInfo>>> {
+  let user = db.user().get_user_by_id(auth.user_id).await?;
   let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
 
   let ret = passkeys
@@ -347,42 +392,40 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<Vec<Passk
   Ok(Json(ret))
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct PasskeyRemove {
   name: String,
 }
 
 async fn remove(
-  auth: JwtClaims<JwtSpecial>,
+  auth: JwtAuthOther<JwtSpecial>,
   db: Connection,
-  updater: UpdateState,
-  req: PasskeyRemove,
+  updater: Updater,
+  Json(req): Json<PasskeyRemove>,
 ) -> Result<()> {
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
 
   db.passkey()
     .remove_passkey_by_name(user.id, req.name.clone())
     .await?;
-  updater.send_message(auth.sub, UpdateType::Passkey).await;
+  updater.send_to(auth.user_id, UpdateMessage::Passkey).await;
 
   Ok(())
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct PasskeyEdit {
   name: String,
   old_name: String,
 }
 
 async fn edit_name(
-  auth: JwtClaims<JwtSpecial>,
+  auth: JwtAuthOther<JwtSpecial>,
   db: Connection,
-  updater: UpdateState,
-  req: PasskeyEdit,
+  updater: Updater,
+  Json(req): Json<PasskeyEdit>,
 ) -> Result<()> {
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
 
   if db
     .passkey()
@@ -395,7 +438,7 @@ async fn edit_name(
   db.passkey()
     .edit_passkey_name(user.id, req.name.clone(), req.old_name.clone())
     .await?;
-  updater.send_message(auth.sub, UpdateType::Passkey).await;
+  updater.send_to(auth.user_id, UpdateMessage::Passkey).await;
 
   Ok(())
 }

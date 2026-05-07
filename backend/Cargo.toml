@@ -24,7 +24,11 @@ async-nats = "0.48.0"
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.22.1"
-centaurus = { version = "0.11.2", features = ["fix-migrations", "uuid"] }
+centaurus = { version = "0.11.2", features = [
+  "fix-migrations",
+  "uuid",
+  "webauthn"
+] }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std",
@@ -59,6 +63,7 @@ rust-s3 = { version = "0.37.2", default-features = false, features = [
   "tags",
   "tokio-rustls-tls",
 ] }
+schemars = { version = "1.2.1", features = ["uuid1", "chrono04"] }
 sea-orm = { version = "1.1.20", features = [
   "runtime-tokio-rustls",
   "sqlx-postgres",
@@ -73,6 +78,7 @@ tokio = { version = "1.52.2", features = ["signal"] }
 totp-rs = { version = "5.7.1", features = ["gen_secret", "otpauth", "qr"] }
 tower = "0.5.3"
 tower-http = { version = "0.6.10", features = ["cors", "trace"] }
+tower_governor = { version = "0.8.0", features = ["axum"] }
 tracing = "0.1.44"
 url = { version = "2.5.8", features = ["serde"] }
 uuid = "1.23.1"

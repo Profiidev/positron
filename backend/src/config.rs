@@ -1,6 +1,6 @@
 use centaurus::{
   Config,
-  backend::config::{BaseConfig, MetricsConfig, SiteConfig},
+  backend::{auth::settings::AuthConfig, config::{BaseConfig, MetricsConfig, SiteConfig}},
   db::config::DBConfig,
 };
 use figment::{
@@ -25,6 +25,8 @@ pub struct Config {
   #[site]
   #[serde(flatten)]
   pub site: SiteConfig,
+  #[serde(flatten)]
+  pub auth: AuthConfig,
 
   pub db_url: String,
   pub frontend_url: String,
@@ -37,10 +39,6 @@ pub struct Config {
   pub webauthn_origin: Url,
   pub webauthn_name: String,
   pub webauthn_additional_origins: String,
-  pub auth_issuer: String,
-  pub auth_pepper: String,
-  pub auth_jwt_expiration: i64,
-  pub auth_jwt_expiration_short: i64,
 
   //email
   pub smtp_username: String,
