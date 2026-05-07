@@ -33,6 +33,7 @@ chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std",
 ] }
+dashmap = "6.1.0"
 dotenvy = "0.15.7"
 entity = { path = "entity" }
 figment = { version = "0.10.19", features = ["env"] }

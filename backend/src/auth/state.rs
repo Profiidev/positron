@@ -1,15 +1,9 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc, time::Instant};
 
 use aide::OperationIo;
 use axum::{Extension, extract::FromRequestParts};
-use centaurus::{auth::pw::PasswordState, db::init::Connection};
-use rsa::{
-  RsaPrivateKey,
-  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
-  pkcs8::LineEnding,
-  rand_core::OsRng,
-};
-use tokio::sync::Mutex;
+use dashmap::DashMap;
+use tokio::spawn;
 use totp_rs::TOTP;
 use uuid::Uuid;
 use webauthn_rs::{
@@ -19,20 +13,20 @@ use webauthn_rs::{
 
 use crate::config::Config;
 
-#[derive(Default, Clone, FromRequestParts, OperationIo)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct PasskeyState {
-  pub reg_state: Arc<Mutex<HashMap<Uuid, PasskeyRegistration>>>,
-  pub auth_state: Arc<Mutex<HashMap<Uuid, DiscoverableAuthentication>>>,
-  pub non_discover_auth_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
-  pub special_access_state: Arc<Mutex<HashMap<Uuid, PasskeyAuthentication>>>,
+  pub reg_state: Arc<DashMap<Uuid, (PasskeyRegistration, Instant)>>,
+  pub auth_state: Arc<DashMap<Uuid, (DiscoverableAuthentication, Instant)>>,
+  pub non_discover_auth_state: Arc<DashMap<Uuid, (PasskeyAuthentication, Instant)>>,
+  pub special_access_state: Arc<DashMap<Uuid, (PasskeyAuthentication, Instant)>>,
 }
 
 #[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct TotpState {
   pub issuer: String,
-  pub reg_state: Arc<Mutex<HashMap<Uuid, TOTP>>>,
+  pub reg_state: Arc<DashMap<Uuid, (TOTP, Instant)>>,
 }
 
 #[derive(Clone, FromRequestParts, OperationIo)]
@@ -69,42 +63,63 @@ impl WebauthnState {
 
 impl PasskeyState {
   pub fn init() -> Self {
-    Self::default()
+    let reg_state = Arc::new(DashMap::new());
+    let auth_state = Arc::new(DashMap::new());
+    let non_discover_auth_state = Arc::new(DashMap::new());
+    let special_access_state = Arc::new(DashMap::new());
+
+    spawn({
+      let reg_state = Arc::clone(&reg_state);
+      let auth_state = Arc::clone(&auth_state);
+      let non_discover_auth_state = Arc::clone(&non_discover_auth_state);
+      let special_access_state = Arc::clone(&special_access_state);
+
+      async move {
+        loop {
+          let now = Instant::now();
+          reg_state.retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
+          auth_state.retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
+          non_discover_auth_state
+            .retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
+          special_access_state
+            .retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
+          tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        }
+      }
+    });
+
+    Self {
+      reg_state,
+      auth_state,
+      non_discover_auth_state,
+      special_access_state,
+    }
   }
 }
 
 impl TotpState {
   pub fn init(config: &Config) -> Self {
-    if config.auth_issuer.contains(":") {
+    if config.auth.auth_issuer.contains(":") {
       panic!("Issuer can not contain ':'");
     }
 
+    let reg_state = Arc::new(DashMap::new());
+
+    spawn({
+      let reg_state = Arc::clone(&reg_state);
+
+      async move {
+        loop {
+          let now = Instant::now();
+          reg_state.retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
+          tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        }
+      }
+    });
+
     Self {
-      issuer: config.auth_issuer.clone(),
-      reg_state: Default::default(),
+      issuer: config.auth.auth_issuer.clone(),
+      reg_state,
     }
   }
-}
-
-pub async fn init_pw_state(config: &Config, db: &Connection) -> PasswordState {
-  let key = if let Ok(key) = db.key().get_key_by_name("password".into()).await {
-    RsaPrivateKey::from_pkcs1_pem(&key.private_key).expect("Failed to parse private password key")
-  } else {
-    let mut rng = OsRng {};
-    let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
-    let key = private_key
-      .to_pkcs1_pem(LineEnding::CRLF)
-      .expect("Failed to export private key")
-      .to_string();
-
-    db.key()
-      .create_key("password".into(), key.clone(), Uuid::new_v4())
-      .await
-      .expect("Failed to save key");
-
-    private_key
-  };
-
-  let pepper = config.auth_pepper.as_bytes().to_vec();
-  PasswordState::init(pepper, key).await
 }

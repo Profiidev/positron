@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use aide::axum::{
   ApiRouter,
   routing::{get_with, post_with},
@@ -105,7 +107,9 @@ async fn start_registration(
     test.resident_key = Some(ResidentKeyRequirement::Required);
   }
 
-  state.reg_state.lock().await.insert(auth.user_id, reg_state);
+  state
+    .reg_state
+    .insert(auth.user_id, (reg_state, Instant::now()));
   Ok(Json(serde_json::to_value(ccr)?))
 }
 
@@ -136,8 +140,10 @@ async fn finish_registration(
     bail!(CONFLICT, "Passkey name already exists");
   }
 
-  let mut states = state.reg_state.lock().await;
-  let reg_state = states.remove(&user.id).context("state not found")?;
+  let (_, (reg_state, _)) = state
+    .reg_state
+    .remove(&user.id)
+    .context("state not found")?;
 
   let key = webauthn.finish_passkey_registration(&reg, &reg_state)?;
 
@@ -171,7 +177,9 @@ async fn start_authentication(
   let (rcr, auth_state) = webauthn.start_discoverable_authentication()?;
 
   let auth_id = Uuid::new_v4();
-  state.auth_state.lock().await.insert(auth_id, auth_state);
+  state
+    .auth_state
+    .insert(auth_id, (auth_state, Instant::now()));
 
   Ok(Json(AuthStartRes {
     res: serde_json::to_value(rcr)?,
@@ -198,9 +206,7 @@ async fn start_authentication_by_email(
   let auth_id = Uuid::new_v4();
   state
     .non_discover_auth_state
-    .lock()
-    .await
-    .insert(auth_id, auth_state);
+    .insert(auth_id, (auth_state, Instant::now()));
 
   Ok(Json(AuthStartRes {
     res: serde_json::to_value(rcr)?,
@@ -220,8 +226,10 @@ async fn finish_authentication(
   let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
     bail!(BAD_REQUEST, "Invalid authentication data");
   };
-  let mut states = state.auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).context("state not found")?;
+  let (_, (auth_state, _)) = state
+    .auth_state
+    .remove(&auth_id)
+    .context("state not found")?;
 
   let (_, cred_id) = webauthn.identify_discoverable_authentication(&auth)?;
 
@@ -266,8 +274,10 @@ async fn finish_authentication_by_email(
   let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
     bail!(BAD_REQUEST, "Invalid authentication data");
   };
-  let mut states = state.non_discover_auth_state.lock().await;
-  let auth_state = states.remove(&auth_id).context("state not found")?;
+  let (_, (auth_state, _)) = state
+    .non_discover_auth_state
+    .remove(&auth_id)
+    .context("state not found")?;
 
   let res = webauthn.finish_passkey_authentication(&auth, &auth_state)?;
 
@@ -314,9 +324,7 @@ async fn start_special_access(
 
   state
     .special_access_state
-    .lock()
-    .await
-    .insert(auth.user_id, auth_state);
+    .insert(auth.user_id, (auth_state, Instant::now()));
 
   Ok(Json(serde_json::to_value(rcr)?))
 }
@@ -330,12 +338,7 @@ async fn finish_special_access(
   mut cookies: CookieJar,
   Json(req): Json<serde_json::Value>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let Some(auth_state) = state
-    .special_access_state
-    .lock()
-    .await
-    .remove(&auth.user_id)
-  else {
+  let Some((_, (auth_state, _))) = state.special_access_state.remove(&auth.user_id) else {
     bail!("state not found");
   };
   let Ok(req) = serde_json::from_value::<PublicKeyCredential>(req) else {
