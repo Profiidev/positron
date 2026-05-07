@@ -29,7 +29,7 @@ struct UserInfo {
 }
 
 async fn info(auth: JwtClaims<JwtBase>, db: Connection) -> Result<Json<UserInfo>> {
-  let user = db.user_ext().get_user_ext(auth.user_id).await?;
+  let user = db.user_ext().get_user_by_id(auth.user_id).await?;
   let permissions = db.group().get_user_permissions(auth.user_id).await?;
 
   Ok(Json(UserInfo {

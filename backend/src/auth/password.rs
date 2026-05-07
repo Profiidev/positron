@@ -1,56 +1,62 @@
-use axum::{
-  extract::FromRequest,
-  routing::{get, post},
-  Json, Router,
-};
+use aide::axum::{ApiRouter, routing::post_with};
+use axum::Json;
 use axum_extra::extract::CookieJar;
-use centaurus::{auth::pw::PasswordState, bail, db::init::Connection, error::Result};
+use centaurus::{
+  backend::{
+    auth::{jwt_auth::JwtAuth, jwt_state::JwtState, password::key_route, pw_state::PasswordState},
+    middleware::rate_limiter::RateLimiter,
+    request::response::TokenRes,
+  },
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
+  error::Result,
+};
 use http::StatusCode;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tower_governor::GovernorLayer;
 use tracing::instrument;
 
-use crate::db::DBTrait;
+use crate::{
+  auth::jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
+  db::DBTrait,
+};
 
-use super::jwt::{JwtBase, JwtClaims, JwtSpecial, JwtState, JwtTotpRequired, TokenRes};
-
-pub fn router() -> Router {
-  Router::new()
-    .route("/key", get(key))
-    .route("/authenticate", post(authenticate))
-    .route("/special_access", post(special_access))
-    .route("/change", post(change))
+pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
+  ApiRouter::new()
+    .api_route(
+      "/authenticate",
+      post_with(authenticate, |op| op.id("passwordAuthenticate")),
+    )
+    .api_route(
+      "/special_access",
+      post_with(special_access, |op| op.id("passwordSpecialAccess")),
+    )
+    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .api_route("/key", key_route())
+    .api_route("/change", post_with(change, |op| op.id("changePassword")))
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct LoginReq {
   email: String,
   password: String,
 }
 
-#[derive(Serialize)]
-struct KeyRes {
-  key: String,
-}
-
-async fn key(state: PasswordState) -> Json<KeyRes> {
-  Json(KeyRes { key: state.pub_key })
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema, Debug)]
 struct AuthRes {
   totp: bool,
 }
 
-#[instrument(skip(db, state, jwt, cookies, req))]
 async fn authenticate(
   state: PasswordState,
   jwt: JwtState,
+  other: JwtStateOther,
   db: Connection,
   mut cookies: CookieJar,
-  req: LoginReq,
+  Json(req): Json<LoginReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
-  let user = db.user().get_user_by_email(&req.email).await?;
+  let user = db.user_ext().get_user_by_email(&req.email).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
@@ -58,57 +64,48 @@ async fn authenticate(
   }
 
   let (cookie, totp) = if user.totp.is_some() {
-    (jwt.create_token::<JwtTotpRequired>(user.id)?, true)
+    (other.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    db.user().logged_in(user.id).await?;
+    db.user_ext().logged_in(user.id).await?;
 
-    (jwt.create_token::<JwtBase>(user.id)?, false)
+    (jwt.create_token(user.id)?, false)
   };
 
   cookies = cookies.add(cookie);
 
-  Ok((
-    cookies,
-    TokenRes {
-      body: AuthRes { totp },
-    },
-  ))
+  Ok((cookies, TokenRes(AuthRes { totp })))
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct SpecialAccess {
   password: String,
 }
 
-#[instrument(skip(db, state, jwt, cookies, req))]
 async fn special_access(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth,
   state: PasswordState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   mut cookies: CookieJar,
-  req: SpecialAccess,
+  Json(req): Json<SpecialAccess>,
 ) -> Result<(CookieJar, TokenRes)> {
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;
 
   if hash != user.password {
     bail!(UNAUTHORIZED, "Invalid email or password");
   }
 
-  db.user().used_special_access(auth.sub).await?;
+  db.user_ext().used_special_access(auth.user_id).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(user.id)?;
   cookies = cookies.add(cookie);
-  cookies =
-    cookies.add(jwt.create_cookie::<JwtSpecial>("special_valid", "true".to_string(), false));
+  cookies = cookies.add(jwt.create_cookie("special_valid", "true".to_string(), false));
 
-  Ok((cookies, TokenRes::default()))
+  Ok((cookies, TokenRes(())))
 }
 
-#[derive(Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, JsonSchema)]
 struct PasswordChange {
   password: String,
   password_confirm: String,
@@ -116,12 +113,12 @@ struct PasswordChange {
 
 #[instrument(skip(db, state, req))]
 async fn change(
-  auth: JwtClaims<JwtSpecial>,
+  auth: JwtAuthOther<JwtSpecial>,
   state: PasswordState,
   db: Connection,
-  req: PasswordChange,
+  Json(req): Json<PasswordChange>,
 ) -> Result<StatusCode> {
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
   let hash = state.pw_hash(&user.salt, &req.password)?;
   let hash_confirm = state.pw_hash(&user.salt, &req.password_confirm)?;
 
@@ -129,7 +126,7 @@ async fn change(
     bail!(CONFLICT, "Passwords do not match");
   }
 
-  db.user().change_password(user.id, hash).await?;
+  db.user().update_user_password(user.id, hash).await?;
 
   Ok(StatusCode::OK)
 }
