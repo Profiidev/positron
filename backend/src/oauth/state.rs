@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{extract::FromRequestParts, Extension};
+use axum::{Extension, extract::FromRequestParts};
 use centaurus::serde::empty_string_as_none;
 use chrono::{Duration, Utc};
 use serde::Deserialize;
@@ -87,7 +87,7 @@ pub struct ClientState {
 
 impl ClientState {
   pub fn init(config: &Config) -> Self {
-    let pepper = config.auth_pepper.as_bytes().to_vec();
+    let pepper = config.auth.auth_pepper.as_bytes().to_vec();
 
     Self { pepper }
   }

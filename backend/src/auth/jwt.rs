@@ -5,7 +5,7 @@ use axum::{Extension, extract::FromRequestParts};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use centaurus::{
   backend::{
-    auth::{jwt::jwt_from_request, jwt_state::JwtState, settings::AuthConfig},
+    auth::{jwt::jwt_from_request, settings::AuthConfig},
     request::extract::StateExtractExt,
   },
   bail,
@@ -105,9 +105,15 @@ pub struct JwtStateOther {
   validation: Validation,
   pub iss: String,
   pub exp: i64,
+  pub public_key: RsaPublicKey,
+  pub kid: String,
 }
 
 impl JwtStateOther {
+  pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String> {
+    Ok(encode(&self.header, claims, &self.encoding_key)?)
+  }
+
   pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>> {
     let token = self.create_raw_token::<T>(uuid)?;
     Ok(self.create_cookie(T::cookie_name(), token, true))
@@ -144,8 +150,8 @@ impl JwtStateOther {
       .build()
   }
 
-  pub fn validate_token<T: JwtType + DeserializeOwned>(&self, token: &str) -> Result<JwtClaims<T>> {
-    Ok(decode::<JwtClaims<T>>(token, &self.decoding_key, &self.validation)?.claims)
+  pub fn validate_token<T: DeserializeOwned>(&self, token: &str) -> Result<T> {
+    Ok(decode::<T>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
   pub async fn init(config: &AuthConfig, db: &Connection) -> Self {
@@ -180,6 +186,8 @@ impl JwtStateOther {
       validation,
       iss: config.auth_issuer.clone(),
       exp: 300,
+      public_key,
+      kid,
     }
   }
 }

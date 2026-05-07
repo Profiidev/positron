@@ -8,7 +8,6 @@ mod m20241209_084022_create_apod_table;
 mod m20250412_072549_add_oauth_confidential;
 mod m20250415_162623_user_settings;
 mod m20260507_102052_user_ext;
-mod m20260507_135801_group_ext;
 
 pub struct Migrator;
 
@@ -30,7 +29,6 @@ impl MigratorTrait for Migrator {
       Box::new(m20250412_072549_add_oauth_confidential::Migration),
       Box::new(m20250415_162623_user_settings::Migration),
       Box::new(m20260507_102052_user_ext::Migration),
-      Box::new(m20260507_135801_group_ext::Migration),
     ]
   }
 }

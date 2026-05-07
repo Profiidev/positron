@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 
 use axum::extract::FromRequestParts;
+use centaurus::{
+  backend::{
+    auth::{jwt::jwt_from_request, jwt_state::JWT_COOKIE_NAME},
+    request::extract::StateExtractExt,
+  },
+  bail,
+};
 use http::request::Parts;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{auth::jwt::JwtBase, utils::jwt_from_request};
+use crate::auth::jwt::JwtStateOther;
 
 use super::scope::Scope;
 
@@ -35,7 +42,14 @@ impl<S: Sync> FromRequestParts<S> for OAuthClaims {
   type Rejection = centaurus::error::ErrorReport;
 
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-    jwt_from_request::<OAuthClaims, JwtBase>(parts).await
+    let token = jwt_from_request(parts, JWT_COOKIE_NAME).await?;
+
+    let state = parts.extract_state::<JwtStateOther>().await;
+    let Ok(claims) = state.validate_token(&token) else {
+      bail!(UNAUTHORIZED, "invalid token");
+    };
+
+    Ok(claims)
   }
 }
 

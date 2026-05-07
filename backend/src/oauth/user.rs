@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
 use axum::{
-  routing::{get, post},
   Json, Router,
+  routing::{get, post},
 };
-use centaurus::db::init::Connection;
+use centaurus::db::{init::Connection, tables::ConnectionExt};
 use serde::Serialize;
 use tracing::instrument;
 use uuid::Uuid;
-
-use crate::db::DBTrait;
 
 use super::{jwt::OAuthClaims, scope::Scope};
 
@@ -32,8 +30,8 @@ async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   let mut claims: UserInfo = claims.into();
 
   if claims.scope.contains("image") {
-    if let Ok(user) = db.user().get_user(claims.sub).await {
-      claims.image = Some(user.image);
+    if let Ok(user) = db.user().get_user_by_id(claims.sub).await {
+      claims.image = user.avatar;
     }
   }
 

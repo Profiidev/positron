@@ -21,10 +21,8 @@ mod auth;
 mod config;
 mod db;
 mod email;
-mod frontend;
 mod management;
 mod oauth;
-mod permission;
 mod s3;
 mod services;
 mod user;
@@ -58,17 +56,19 @@ fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
 }
 
 async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
+  // Needs to be added here because all endpoints in the api_router functions are prefixed with /api
+  router = router.nest("/.well-known", well_known::router());
+
   let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
 
   router = websocket::state(router).await;
   router = auth::state(router, &config, &db).await;
+  router = oauth::state(router, &config).await;
 
   self
     .email(&config)
     .await
     .management(&config)
-    .await
-    .oauth(&config)
     .await
     .s3(&config)
     .await

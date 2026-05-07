@@ -1,14 +1,19 @@
 use std::{collections::HashMap, str::FromStr};
 
-use axum::{extract::Query, routing::post, Form, Json, Router};
-use centaurus::{bail, db::init::Connection, serde::empty_string_as_none};
+use axum::{Form, Json, Router, extract::Query, routing::post};
+use centaurus::{
+  backend::auth::jwt_state::JwtInvalidState,
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
+  serde::empty_string_as_none,
+};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtInvalidState, JwtState},
+  auth::jwt::JwtStateOther,
   db::DBTrait,
   oauth::{
     client_auth::{TokenIssueReq, TokenRefreshReq},
@@ -20,7 +25,7 @@ use super::{
   client_auth::{ClientAuth, Error},
   jwt::OAuthClaims,
   scope::Scope,
-  state::{get_timestamp_10_min, AuthorizeState, ConfigurationState},
+  state::{AuthorizeState, ConfigurationState, get_timestamp_10_min},
 };
 
 pub fn router() -> Router {
@@ -43,7 +48,7 @@ struct TokenRes {
 #[instrument(skip(state, jwt, db, config))]
 async fn token(
   state: AuthorizeState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   auth: ClientAuth,
@@ -61,7 +66,7 @@ async fn token(
 #[instrument(skip(state, jwt, db, config))]
 async fn issue_token(
   state: AuthorizeState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   body: TokenIssueReq,
@@ -156,7 +161,7 @@ async fn issue_token(
 
 #[instrument(skip(jwt, db, config))]
 async fn refresh_token(
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   body: TokenRefreshReq,
@@ -211,12 +216,12 @@ async fn refresh_token(
 
 async fn create_access_token(
   db: &Connection,
-  jwt: &JwtState,
+  jwt: &JwtStateOther,
   code_info: &RefreshTokenClaims,
   config: &ConfigurationState,
   client_id: Uuid,
 ) -> Result<String, Error> {
-  let Ok(user) = db.user().get_user(code_info.sub).await else {
+  let Ok(user) = db.user().get_user_by_id(code_info.sub).await else {
     tracing::warn!("user not found: {}", code_info.sub);
     return Err(Error::from_str("unauthorized_client"));
   };
@@ -296,7 +301,7 @@ struct RevokeReq {
 async fn revoke(
   Query(req_p): Query<RevokeReqOption>,
   db: Connection,
-  state: JwtState,
+  state: JwtStateOther,
   invalidate: JwtInvalidState,
   Form(req_b): Form<RevokeReqOption>,
 ) -> centaurus::error::Result<()> {
@@ -311,10 +316,8 @@ async fn revoke(
   let claims = state.validate_token::<OAuthClaims>(&req.token)?;
   let exp = DateTime::from_timestamp(claims.exp, 0).unwrap();
 
-  let mut lock = invalidate.count.lock().await;
-
   db.invalid_jwt()
-    .invalidate_jwt(req.token, exp, &mut lock)
+    .invalidate_jwt(req.token, exp, invalidate.count.clone())
     .await?;
 
   Ok(())

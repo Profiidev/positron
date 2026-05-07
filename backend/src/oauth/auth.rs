@@ -1,15 +1,16 @@
 use std::str::FromStr;
 
 use axum::{
+  Form, Json, Router,
   extract::{FromRequestParts, Path, Query},
   routing::{get, post},
-  Form, Json, Router,
 };
 use centaurus::{
-  anyhow, bail,
-  db::init::Connection,
+  anyhow,
+  backend::{auth::jwt_auth::JwtAuth, request::redirect::Redirect},
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
   error::{ErrorReport, Result},
-  req::redirect::Redirect,
   serde::empty_string_as_none,
 };
 use chrono::Utc;
@@ -19,14 +20,11 @@ use tracing::instrument;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::{
-  auth::jwt::{JwtBase, JwtClaims},
-  db::DBTrait,
-};
+use crate::db::DBTrait;
 
 use super::{
   scope::Scope,
-  state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq},
+  state::{AuthReq, AuthorizeState, CodeReq, get_timestamp_10_min},
 };
 
 pub fn router() -> Router {
@@ -89,9 +87,8 @@ struct AuthConfirmQuery {
   allow: Option<bool>,
 }
 
-#[instrument(skip(state, db))]
 async fn authorize_confirm(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth,
   state: AuthorizeState,
   db: Connection,
   query: AuthConfirmQuery,
@@ -116,7 +113,7 @@ async fn authorize_confirm(
 
   let client_id = req.client_id.parse()?;
   let client = db.oauth_client().get_client(client_id).await?;
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
 
   if !db
     .oauth_client()
@@ -144,7 +141,7 @@ async fn authorize_confirm(
       client_id: client.id,
       redirect_uri: initial_redirect_uri,
       scope: req.scope.unwrap().parse().unwrap(),
-      user: auth.sub,
+      user: auth.user_id,
       exp: get_timestamp_10_min(),
       nonce: req.nonce,
     },
@@ -157,7 +154,7 @@ async fn authorize_confirm(
 
   let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
 
-  tracing::info!("User {} logged in to {}", auth.sub, client.name);
+  tracing::info!("User {} logged in to {}", auth.user_id, client.name);
   Ok(Json(AuthRes {
     location: url.to_string(),
   }))
