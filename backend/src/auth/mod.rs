@@ -30,7 +30,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/test_token", test_token::router())
     .nest("/passkey", passkey::router(rate_limiter))
     .nest("/password", password::router(rate_limiter))
-    .nest("/totp", totp::router())
+    .nest("/totp", totp::router(rate_limiter))
 }
 
 async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
