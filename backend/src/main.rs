@@ -64,13 +64,12 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   router = websocket::state(router).await;
   router = auth::state(router, &config, &db).await;
   router = oauth::state(router, &config).await;
+  router = s3::state(router, &config).await;
 
   self
     .email(&config)
     .await
     .management(&config)
-    .await
-    .s3(&config)
     .await
     .services(&config)
     .await

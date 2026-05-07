@@ -2,9 +2,9 @@ extern crate s3 as s3_crate;
 
 use std::sync::Arc;
 
-use axum::{extract::FromRequestParts, Extension};
-use centaurus::router_extension;
-use s3_crate::{creds::Credentials, Bucket, Region};
+use aide::axum::ApiRouter;
+use axum::{Extension, extract::FromRequestParts};
+use s3_crate::{Bucket, Region, creds::Credentials};
 use tracing::instrument;
 
 use crate::{config::Config, s3::apod::ApodFolder};
@@ -37,7 +37,7 @@ impl S3 {
     let bucket = Bucket::new(&config.s3_bucket, region, credentials)
       .expect("Failed to init S3 Bucket")
       .with_path_style()
-      .set_dangereous_config(true, false)
+      .set_dangerous_config(true, false)
       .expect("Failed to set S3 Bucket config");
 
     if !bucket
@@ -58,8 +58,6 @@ impl S3 {
   }
 }
 
-router_extension!(
-  async fn s3(self, config: &Config) -> Self {
-    self.layer(Extension(S3::init(config).await))
-  }
-);
+pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+  router.layer(Extension(S3::init(config).await))
+}
