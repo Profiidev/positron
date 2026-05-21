@@ -2,7 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::{
   backend::{
-    endpoints::{group, mail, user, websocket},
+    endpoints::{group, mail, websocket},
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -20,10 +20,11 @@ mod auth;
 mod config;
 mod db;
 mod oauth;
-mod storage;
 mod services;
 mod settings;
 mod setup;
+mod storage;
+mod user;
 mod utils;
 mod well_known;
 
@@ -47,7 +48,7 @@ fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/ws", websocket::router::<UpdateMessage>())
     .nest("/setup", setup::router())
     .nest("/auth", auth::router(rate_limiter))
-    .nest("/user", user::router::<UpdateMessage>(rate_limiter))
+    .nest("/user", user::router(rate_limiter))
     .nest("/settings", settings::router())
     .nest("/mail", mail::router(rate_limiter))
     .nest("/group", group::router::<UpdateMessage>())

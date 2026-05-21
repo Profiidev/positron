@@ -450,62 +450,6 @@ export const authConfig = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({ url: '/api/auth/config', ...options });
 
-export const updateAvatar = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateAvatarData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    UpdateAvatarResponses,
-    UpdateAvatarErrors,
-    ThrowOnError
-  >({
-    url: '/api/user/account/avatar',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
-export const updatePassword = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePasswordData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    UpdatePasswordResponses,
-    UpdatePasswordErrors,
-    ThrowOnError
-  >({
-    url: '/api/user/account/password',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
-export const updateAccount = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateAccountData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    UpdateAccountResponses,
-    UpdateAccountErrors,
-    ThrowOnError
-  >({
-    url: '/api/user/account/update',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
-export const info = <ThrowOnError extends boolean = false>(
-  options?: Options<InfoData, ThrowOnError>
-) =>
-  (options?.client ?? client).get<InfoResponses, InfoErrors, ThrowOnError>({
-    url: '/api/user/info',
-    ...options
-  });
-
 export const resetUserAvatar = <ThrowOnError extends boolean = false>(
   options: Options<ResetUserAvatarData, ThrowOnError>
 ) =>
@@ -620,6 +564,62 @@ export const resetUserPassword = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers
     }
+  });
+
+export const updateAvatar = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateAvatarData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    UpdateAvatarResponses,
+    UpdateAvatarErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/avatar',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const updatePassword = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePasswordData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    UpdatePasswordResponses,
+    UpdatePasswordErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/password',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const updateAccount = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateAccountData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    UpdateAccountResponses,
+    UpdateAccountErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/update',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const info = <ThrowOnError extends boolean = false>(
+  options?: Options<InfoData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<InfoResponses, InfoErrors, ThrowOnError>({
+    url: '/api/user/info',
+    ...options
   });
 
 export const getMailSettings = <ThrowOnError extends boolean = false>(

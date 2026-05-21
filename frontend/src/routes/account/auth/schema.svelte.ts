@@ -1,17 +1,25 @@
 import { z } from 'zod';
 
-export const authSettings = z
-  .object({
-    new_password: z.string().min(1, 'New password is required'),
-    new_password_confirm: z.string().min(1, 'Please confirm your new password'),
-    old_password: z.string().min(1, 'Old password is required')
-  })
-  .superRefine(({ new_password, new_password_confirm }, ctx) => {
-    if (new_password !== new_password_confirm) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'New password and confirmation do not match',
-        path: ['new_password_confirm']
-      });
-    }
-  });
+export const passkeyCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required')
+});
+
+export const passkeyEditSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  phantom: z.string().default('').optional()
+});
+
+export const passwordChange = z.object({
+  password: z.string().min(1, 'Password is required'),
+  password_confirm: z.string().min(1, 'Password Confirm is required')
+});
+
+export const totpAdd = z.object({
+  code: z.string().min(6, 'Code must be 6 characters long')
+});
+
+export const totpRemove = z.object({
+  phantom: z.string().default('').optional()
+});
+
+export const passkeyDeleteSchema = z.object({});

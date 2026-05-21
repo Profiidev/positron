@@ -13,7 +13,7 @@ use centaurus::{
   bail,
   db::init::Connection,
   error::Result,
-  eyre::ContextCompat,
+  eyre::{Context, ContextCompat},
 };
 use http::StatusCode;
 use schemars::JsonSchema;
@@ -101,7 +101,10 @@ async fn finish_setup(
     .reg_state
     .get(&auth.user_id)
     .context("Failed to lock")?;
-  let valid = totp.0.check_current(&req.code).unwrap();
+  let valid = totp
+    .0
+    .check_current(&req.code)
+    .context("Failed to check code")?;
   if !valid {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   }
@@ -110,6 +113,7 @@ async fn finish_setup(
     .add_totp(auth.user_id, totp.0.get_secret_base32())
     .await?;
 
+  drop(totp);
   state.reg_state.remove(&auth.user_id);
   updater
     .send_to(auth.user_id, UpdateMessage::User { uuid: auth.user_id })

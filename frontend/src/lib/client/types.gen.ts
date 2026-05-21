@@ -230,6 +230,7 @@ export type UserInfo = {
   email: string;
   name: string;
   permissions: Array<string>;
+  totp_enabled: boolean;
   uuid: string;
 };
 
@@ -900,148 +901,6 @@ export type AuthConfigResponses = {
 
 export type AuthConfigResponse = AuthConfigResponses[keyof AuthConfigResponses];
 
-export type UpdateAvatarData = {
-  body: AvatarUpdate;
-  path?: never;
-  query?: never;
-  url: '/api/user/account/avatar';
-};
-
-export type UpdateAvatarErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type UpdateAvatarError = UpdateAvatarErrors[keyof UpdateAvatarErrors];
-
-export type UpdateAvatarResponses = {
-  /**
-   * no content
-   */
-  200: unknown;
-};
-
-export type UpdatePasswordData = {
-  body: PasswordUpdate;
-  path?: never;
-  query?: never;
-  url: '/api/user/account/password';
-};
-
-export type UpdatePasswordErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type UpdatePasswordError =
-  UpdatePasswordErrors[keyof UpdatePasswordErrors];
-
-export type UpdatePasswordResponses = {
-  /**
-   * no content
-   */
-  200: unknown;
-};
-
-export type UpdateAccountData = {
-  body: AccountUpdate;
-  path?: never;
-  query?: never;
-  url: '/api/user/account/update';
-};
-
-export type UpdateAccountErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type UpdateAccountError = UpdateAccountErrors[keyof UpdateAccountErrors];
-
-export type UpdateAccountResponses = {
-  /**
-   * no content
-   */
-  200: unknown;
-};
-
-export type InfoData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/api/user/info';
-};
-
-export type InfoErrors = {
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type InfoResponses = {
-  200: UserInfo;
-};
-
-export type InfoResponse = InfoResponses[keyof InfoResponses];
-
 export type ResetUserAvatarData = {
   body: UserAvatarResetRequest;
   path?: never;
@@ -1338,6 +1197,148 @@ export type ResetUserPasswordResponses = {
    */
   200: unknown;
 };
+
+export type UpdateAvatarData = {
+  body: AvatarUpdate;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/avatar';
+};
+
+export type UpdateAvatarErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type UpdateAvatarError = UpdateAvatarErrors[keyof UpdateAvatarErrors];
+
+export type UpdateAvatarResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type UpdatePasswordData = {
+  body: PasswordUpdate;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/password';
+};
+
+export type UpdatePasswordErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type UpdatePasswordError =
+  UpdatePasswordErrors[keyof UpdatePasswordErrors];
+
+export type UpdatePasswordResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type UpdateAccountData = {
+  body: AccountUpdate;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/update';
+};
+
+export type UpdateAccountErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type UpdateAccountError = UpdateAccountErrors[keyof UpdateAccountErrors];
+
+export type UpdateAccountResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type InfoData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/user/info';
+};
+
+export type InfoErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoResponses = {
+  200: UserInfo;
+};
+
+export type InfoResponse = InfoResponses[keyof InfoResponses];
 
 export type GetMailSettingsData = {
   body?: never;
