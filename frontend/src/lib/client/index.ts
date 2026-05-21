@@ -53,8 +53,8 @@ export {
   updateAccount,
   updateAvatar,
   updatePassword,
-  userInfo,
-} from "./sdk.gen";
+  userInfo
+} from './sdk.gen';
 export type {
   AccountUpdate,
   AuthConfig,
@@ -294,5 +294,5 @@ export type {
   UserInfoResponse,
   UserInfoResponses,
   UserListInfo,
-  UserViewPath,
-} from "./types.gen";
+  UserViewPath
+} from './types.gen';

@@ -30,12 +30,12 @@
     let ret = await saveMailSettings({ body: formData });
 
     if (ret.error) {
-      if (ret.response.status === 406) {
+      if (ret.response?.status === 406) {
         return {
           field: 'smtp_from_address',
           error: 'Invalid From Address provided'
         };
-      } else if (ret.response.status === 400) {
+      } else if (ret.response?.status === 400) {
         return {
           field: 'smtp_host',
           error: 'Failed to create SMTP transport with provided settings'
@@ -53,7 +53,7 @@
     isLoading = true;
     let ret = await testMail();
     isLoading = false;
-    if (ret.error && ret.response.status === 429) {
+    if (ret.error && ret.response?.status === 429) {
       toast.error('Rate limit exceeded. Please try again later.');
     } else if (ret.error) {
       toast.error('Failed to send test email. Check SMTP settings.');

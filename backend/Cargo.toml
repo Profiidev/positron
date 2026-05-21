@@ -17,7 +17,7 @@ aide = { version = "0.16.0-alpha.4", features = [
   "axum-query",
   "axum-tokio",
   "axum-ws",
-  "macros",
+  "macros"
 ] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
 aws-config = { version = "1.8.15", features = ["behavior-version-latest"] }
@@ -33,7 +33,7 @@ centaurus = { version = "0.11.2", features = [
 ] }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
-  "std",
+  "std"
 ] }
 dashmap = "6.1.0"
 dotenvy = "0.15.7"
@@ -44,7 +44,7 @@ http = "1.4.0"
 image = { version = "0.25.10", default-features = false, features = [
   "jpeg",
   "png",
-  "webp",
+  "webp"
 ] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 lettre = { version = "0.11.21", default-features = false, features = [
@@ -52,21 +52,19 @@ lettre = { version = "0.11.21", default-features = false, features = [
   "ring",
   "rustls",
   "rustls-native-certs",
-  "smtp-transport",
+  "smtp-transport"
 ] }
 migration = { path = "migration" }
 openssl = { version = "0.10.79", features = ["vendored"] }
 tokio-util = { version = "0.7.18", features = ["io"] }
-rand = { version = "0.10.1", default-features = false, features = [
-  "std",
-] }
+rand = { version = "0.10.1", default-features = false, features = ["std"] }
 reqwest = { version = "0.13.3", features = ["form", "json"] }
 rsa = "0.9.10"
 schemars = { version = "1.2.1", features = ["uuid1", "chrono04"] }
 sea-orm = { version = "1.1.20", features = [
   "runtime-tokio-rustls",
   "sqlx-postgres",
-  "sqlx-sqlite",
+  "sqlx-sqlite"
 ] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
