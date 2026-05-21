@@ -1,4 +1,5 @@
 use axum::{Json, extract::FromRequest};
+use centaurus::db::tables::user::SimpleGroupInfo;
 use entity::{group_user, o_auth_client, o_auth_client_group, o_auth_client_user, prelude::*};
 use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -6,14 +7,11 @@ use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
 use crate::{
-  db::{
-    user::{group::BasicGroupInfo, user_ext::BasicUserInfo},
-    util::update_relations,
-  },
+  db::{user::user_ext::BasicUserInfo, util::update_relations},
   oauth::scope::Scope,
 };
 
-#[derive(Serialize, Deserialize, Debug, FromRequest)]
+#[derive(Serialize, Deserialize, FromRequest)]
 #[from_request(via(Json))]
 pub struct OAuthClientInfo {
   pub name: String,
@@ -21,7 +19,7 @@ pub struct OAuthClientInfo {
   pub redirect_uri: Url,
   pub additional_redirect_uris: Vec<Url>,
   pub default_scope: Scope,
-  pub group_access: Vec<BasicGroupInfo>,
+  pub group_access: Vec<SimpleGroupInfo>,
   pub user_access: Vec<BasicUserInfo>,
   pub confidential: bool,
 }
@@ -87,14 +85,14 @@ impl<'db> OauthClientTable<'db> {
       .all(self.db)
       .await?;
 
-    let client_group: Vec<(Uuid, Vec<BasicGroupInfo>)> = client_group
+    let client_group: Vec<(Uuid, Vec<SimpleGroupInfo>)> = client_group
       .into_iter()
       .map(|(c, groups)| {
         (
           c.id,
           groups
             .into_iter()
-            .map(|g| BasicGroupInfo {
+            .map(|g| SimpleGroupInfo {
               name: g.name,
               uuid: g.id,
             })
@@ -120,7 +118,12 @@ impl<'db> OauthClientTable<'db> {
           .find(|(id, _)| *id == c.id)
           .unwrap()
           .1
-          .clone(),
+          .iter()
+          .map(|g| SimpleGroupInfo {
+            name: g.name.clone(),
+            uuid: g.uuid,
+          })
+          .collect(),
         user_access: users
           .into_iter()
           .map(|u| BasicUserInfo {

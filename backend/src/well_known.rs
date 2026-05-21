@@ -60,7 +60,7 @@ async fn webfinger(resource: Resource, state: ConfigurationState) -> Json<WebFin
     subject: resource.resource,
     links: vec![Link {
       rel: "http://openid.net/specs/connect/1.0/issuer".to_string(),
-      href: state.issuer,
+      href: state.issuer.to_string(),
     }],
   })
 }

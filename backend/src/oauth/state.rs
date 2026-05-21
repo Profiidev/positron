@@ -5,6 +5,7 @@ use centaurus::serde::empty_string_as_none;
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use tokio::sync::Mutex;
+use url::Url;
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -37,7 +38,7 @@ pub struct CodeReq {
 #[derive(Clone, FromRequestParts)]
 #[from_request(via(Extension))]
 pub struct AuthorizeState {
-  pub frontend_url: String,
+  pub frontend_url: Url,
   pub auth_pending: Arc<Mutex<HashMap<Uuid, (i64, AuthReq)>>>,
   pub auth_codes: Arc<Mutex<HashMap<Uuid, CodeReq>>>,
 }
@@ -45,18 +46,21 @@ pub struct AuthorizeState {
 #[derive(Clone, FromRequestParts)]
 #[from_request(via(Extension))]
 pub struct ConfigurationState {
-  pub issuer: String,
-  pub backend_url: String,
-  pub backend_url_internal: String,
+  pub issuer: Url,
   pub refresh_exp: i64,
 }
 
 impl ConfigurationState {
   pub fn init(config: &Config) -> Self {
+    let mut issuer = config.site.site_url.clone();
+    issuer
+      .path_segments_mut()
+      .expect("Failed to get path segments from site_url")
+      .push("api")
+      .push("oauth");
+
     Self {
-      issuer: config.oidc_issuer.clone(),
-      backend_url: config.oidc_backend_url.clone(),
-      backend_url_internal: config.oidc_backend_internal.clone(),
+      issuer,
       refresh_exp: config.oidc_refresh_exp,
     }
   }
@@ -65,7 +69,7 @@ impl ConfigurationState {
 impl AuthorizeState {
   pub fn init(config: &Config) -> Self {
     Self {
-      frontend_url: config.frontend_url.clone(),
+      frontend_url: config.site.site_url.clone(),
       auth_pending: Default::default(),
       auth_codes: Default::default(),
     }

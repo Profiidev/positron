@@ -29,10 +29,10 @@ async fn user_post(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
 async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   let mut claims: UserInfo = claims.into();
 
-  if claims.scope.contains("image") {
-    if let Ok(user) = db.user().get_user_by_id(claims.sub).await {
-      claims.image = user.avatar;
-    }
+  if claims.scope.contains("image")
+    && let Ok(user) = db.user().get_user_by_id(claims.sub).await
+  {
+    claims.image = user.avatar;
   }
 
   Json(claims)

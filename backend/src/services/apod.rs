@@ -1,56 +1,62 @@
 use std::io::Cursor;
 
-use axum::{
-  extract::FromRequest,
-  routing::{get, post},
-  Json, Router,
+use aide::axum::{
+  ApiRouter,
+  routing::{get_with, post_with},
 };
+use axum::Json;
 use base64::prelude::*;
 use centaurus::{
+  backend::auth::jwt_auth::JwtAuth,
   bail,
-  db::init::Connection,
+  db::{init::Connection, tables::group::SimpleUserInfo},
   error::{ErrorReportStatusExt, Result},
 };
 use chrono::{DateTime, Utc};
-use entity::{apod, sea_orm_active_enums::Permission};
+use entity::apod;
 use http::StatusCode;
-use image::{imageops::FilterType, ImageFormat};
+use image::{ImageFormat, imageops::FilterType};
 use rand::seq::IndexedRandom;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtBase, JwtClaims},
-  db::{user::user::BasicUserInfo, DBTrait},
-  permission::PermissionTrait,
+  db::DBTrait,
   s3::S3,
-  ws::state::{UpdateState, UpdateType},
+  utils::{ApodList, ApodSelect, UpdateMessage, Updater},
 };
 
 use super::state::ApodState;
 
-pub fn router() -> Router {
-  Router::new()
-    .route("/list", get(list))
-    .route("/set_good", post(set_good))
-    .route("/get_image_info", post(get_image_info))
-    .route("/get_image", post(get_image))
-    .route("/random", get(random))
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
+    .api_route("/", get_with(list, |op| op.id("listApod")))
+    .api_route("/", post_with(set_good, |op| op.id("setGoodApod")))
+    .api_route(
+      "/get_image_info",
+      post_with(get_image_info, |op| op.id("getApodImageInfo")),
+    )
+    .api_route(
+      "/get_image",
+      post_with(get_image, |op| op.id("getApodImage")),
+    )
+    .api_route(
+      "/random",
+      get_with(random, |op| op.id("getRandomApodImage")),
+    )
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 struct ListRes {
   image: String,
   title: String,
   date: DateTime<Utc>,
-  user: BasicUserInfo,
+  user: SimpleUserInfo,
 }
 
-#[instrument(skip(db, s3))]
-async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
-  Permission::check(&db, auth.sub, Permission::ApodList).await?;
-
+async fn list(_auth: JwtAuth<ApodList>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
   let apods = db.apod().list().await?;
   let mut apod_infos = Vec::new();
 
@@ -75,54 +81,51 @@ async fn list(auth: JwtClaims<JwtBase>, db: Connection, s3: S3) -> Result<Json<V
   Ok(Json(apod_infos))
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct SetGoodReq {
   date: DateTime<Utc>,
   good: bool,
 }
 
-#[instrument(skip(db, updater))]
 async fn set_good(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth<ApodSelect>,
   db: Connection,
-  updater: UpdateState,
-  req: SetGoodReq,
+  updater: Updater,
+  Json(req): Json<SetGoodReq>,
 ) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::ApodSelect).await?;
-
   db.apod()
-    .set_good(req.date.date_naive(), auth.sub, req.good)
+    .set_good(req.date.date_naive(), auth.user_id, req.good)
     .await?;
 
-  tracing::info!("User {} set {} to good: {}", auth.sub, req.date, req.good);
-  updater.broadcast_message(UpdateType::Apod).await;
+  tracing::info!(
+    "User {} set {} to good: {}",
+    auth.user_id,
+    req.date,
+    req.good
+  );
+  updater.broadcast(UpdateMessage::Apod).await;
 
   Ok(())
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct GetReq {
   date: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, JsonSchema)]
 struct GetInfoRes {
   title: String,
-  user: Option<BasicUserInfo>,
+  user: Option<SimpleUserInfo>,
 }
 
-#[instrument(skip(state, db, s3))]
 async fn get_image_info(
-  auth: JwtClaims<JwtBase>,
+  _auth: JwtAuth<ApodList>,
   db: Connection,
   state: ApodState,
   s3: S3,
-  req: GetReq,
+  Json(req): Json<GetReq>,
 ) -> Result<Json<GetInfoRes>> {
-  Permission::check(&db, auth.sub, Permission::ApodList).await?;
-
   let res = if let Some((apod, user)) = db.apod().get_for_date(req.date.date_naive()).await? {
     GetInfoRes {
       title: apod.title,
@@ -168,21 +171,16 @@ async fn get_image_info(
   Ok(Json(res))
 }
 
-#[derive(Serialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Serialize, JsonSchema)]
 struct GetRes {
   image: String,
 }
 
-#[instrument(skip(s3, db))]
 async fn get_image(
-  auth: JwtClaims<JwtBase>,
+  _auth: JwtAuth<ApodList>,
   s3: S3,
-  db: Connection,
-  req: GetReq,
+  Json(req): Json<GetReq>,
 ) -> Result<Json<GetRes>> {
-  Permission::check(&db, auth.sub, Permission::ApodList).await?;
-
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
   let image = s3.apod().download(&format!("{file_name}.webp")).await?;
   Ok(Json(GetRes {

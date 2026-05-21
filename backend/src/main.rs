@@ -2,7 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::{
   backend::{
-    endpoints::websocket,
+    endpoints::{group, mail, setup, user, websocket},
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -16,16 +16,13 @@ use tracing::info;
 
 use crate::{config::Config, utils::UpdateMessage};
 
-mod account;
 mod auth;
 mod config;
 mod db;
-mod email;
-mod management;
 mod oauth;
 mod s3;
 mod services;
-mod user;
+mod settings;
 mod utils;
 mod well_known;
 
@@ -46,13 +43,15 @@ async fn main() {
 
 fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
-    .nest("/auth", auth::router(rate_limiter))
-    .nest("/account", account::router())
-    .nest("/email", email::router())
-    .nest("/management", management::router())
-    .nest("/oauth", oauth::router())
-    .nest("/services", services::router())
     .nest("/ws", websocket::router::<UpdateMessage>())
+    .nest("/setup", setup::router())
+    .nest("/auth", auth::router(rate_limiter))
+    .nest("/user", user::router::<UpdateMessage>(rate_limiter))
+    .nest("/settings", settings::router())
+    .nest("/mail", mail::router(rate_limiter))
+    .nest("/group", group::router::<UpdateMessage>())
+    .nest("/services", services::router())
+    .nest("/oauth", oauth::router())
 }
 
 async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
@@ -60,21 +59,17 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   router = router.nest("/.well-known", well_known::router());
 
   let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
+  centaurus::backend::endpoints::setup::create_admin_group(&db, utils::permissions())
+    .await
+    .expect("Failed to create admin group");
 
-  router = websocket::state(router).await;
   router = auth::state(router, &config, &db).await;
+  router = mail::state(router, &db).await;
   router = oauth::state(router, &config).await;
   router = s3::state(router, &config).await;
-
-  self
-    .email(&config)
-    .await
-    .management(&config)
-    .await
-    .services(&config)
-    .await
-    .well_known(&config)
-    .await;
+  router = services::state(router, &config).await;
+  router = well_known::state(router, &config).await;
+  router = websocket::state::<UpdateMessage>(router).await;
 
   router.layer(Extension(db))
 }

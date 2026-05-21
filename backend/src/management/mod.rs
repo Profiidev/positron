@@ -1,5 +1,5 @@
-use axum::{Extension, Router};
-use centaurus::router_extension;
+use aide::axum::ApiRouter;
+use axum::Extension;
 use state::ClientState;
 
 use crate::config::Config;
@@ -11,8 +11,8 @@ mod oauth_scope;
 mod state;
 mod user;
 
-pub fn router() -> Router {
-  Router::new()
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
     .nest("/user", user::router())
     .nest("/group", group::router())
     .nest("/oauth_client", oauth_client::router())
@@ -20,8 +20,6 @@ pub fn router() -> Router {
     .nest("/oauth_scope", oauth_scope::router())
 }
 
-router_extension!(
-  async fn management(self, config: &Config) -> Self {
-    self.layer(Extension(ClientState::init(config)))
-  }
-);
+async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+  router.layer(Extension(ClientState::init(config)))
+}

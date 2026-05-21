@@ -1,18 +1,17 @@
-use axum::{extract::FromRequest, Json};
+use axum::{Json, extract::FromRequest};
+use centaurus::db::tables::user::SimpleGroupInfo;
 use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::db::user::group::BasicGroupInfo;
-
-#[derive(Serialize, Deserialize, Debug, FromRequest)]
+#[derive(Serialize, Deserialize, FromRequest)]
 #[from_request(via(Json))]
 pub struct OAuthPolicyInfo {
   pub uuid: Uuid,
   pub name: String,
   pub claim: String,
   pub default: String,
-  pub group: Vec<(BasicGroupInfo, String)>,
+  pub group: Vec<(SimpleGroupInfo, String)>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -54,7 +53,7 @@ impl<'db> OAuthPolicyTable<'db> {
           .map(|c| {
             let group = groups.iter().find(|g| g.id == c.group).unwrap();
             (
-              BasicGroupInfo {
+              SimpleGroupInfo {
                 name: group.name.clone(),
                 uuid: group.id,
               },

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use axum::{extract::FromRequest, Json};
+use axum::{Json, extract::FromRequest};
+use centaurus::db::tables::user::SimpleGroupInfo;
 use entity::{group, o_auth_scope, o_auth_scope_o_auth_policy, prelude::*};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::db::util::update_relations;
@@ -48,7 +49,7 @@ impl<'db> OAuthScopeTable<'db> {
   pub async fn get_values_for_user(
     &self,
     scope: String,
-    groups: &[group::Model],
+    groups: &[SimpleGroupInfo],
   ) -> Result<HashMap<String, String>, DbErr> {
     let scope = self.get_scope_by_name(scope).await?;
     let policies = self.get_policy_ids(scope.id).await?;
@@ -69,8 +70,8 @@ impl<'db> OAuthScopeTable<'db> {
         .filter_map(|content| {
           groups
             .iter()
-            .find(|group| content.group == group.id)
-            .map(|group| (group.access_level, content.content))
+            .find(|group| content.group == group.uuid)
+            .map(|group| (0 /*group.access_level*/, content.content))
         })
         .max_by_key(|(a, _)| *a);
 

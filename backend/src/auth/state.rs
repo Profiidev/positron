@@ -49,7 +49,13 @@ impl WebauthnState {
       .filter_map(|s| Url::parse(s).ok())
       .collect::<Vec<_>>();
 
-    let mut webauthn = WebauthnBuilder::new(&config.webauthn_id, &config.webauthn_origin)
+    let webauthn_id = config
+      .site
+      .site_url
+      .host_str()
+      .expect("Failed to get host from site_url");
+
+    let mut webauthn = WebauthnBuilder::new(webauthn_id, &config.site.site_url)
       .expect("Failed creating WebauthnBuilder")
       .rp_name(&config.webauthn_name);
 

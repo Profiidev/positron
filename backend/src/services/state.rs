@@ -1,4 +1,5 @@
-use axum::{extract::FromRequestParts, Extension};
+use aide::OperationIo;
+use axum::{Extension, extract::FromRequestParts};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
@@ -6,7 +7,7 @@ use tracing::instrument;
 
 use crate::config::Config;
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct ApodState {
   api_key: String,

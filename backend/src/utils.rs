@@ -1,4 +1,11 @@
-use centaurus::{UpdateMessage, backend::endpoints::websocket};
+use centaurus::{
+  UpdateMessage,
+  backend::{
+    auth::permission::{self, Permission},
+    endpoints::websocket,
+  },
+  permission,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -20,4 +27,15 @@ pub enum UpdateMessage {
     uuid: Uuid,
   },
   Passkey,
+  Apod,
 }
+
+pub fn permissions() -> Vec<&'static str> {
+  let mut perms = permission::permissions();
+  perms.extend_from_slice(&[ApodList::name(), ApodSelect::name()]);
+  perms
+}
+
+// Apod
+permission!(ApodList, "apod:list");
+permission!(ApodSelect, "apod:select");

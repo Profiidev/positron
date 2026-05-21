@@ -2,7 +2,7 @@ extern crate s3 as s3_crate;
 
 use std::sync::Arc;
 
-use aide::axum::ApiRouter;
+use aide::{OperationIo, axum::ApiRouter};
 use axum::{Extension, extract::FromRequestParts};
 use s3_crate::{Bucket, Region, creds::Credentials};
 use tracing::instrument;
@@ -12,7 +12,7 @@ use crate::{config::Config, s3::apod::ApodFolder};
 pub mod apod;
 pub mod error;
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct S3 {
   bucket: Arc<Bucket>,
@@ -26,8 +26,8 @@ impl S3 {
       endpoint: config.s3_host.clone(),
     };
     let credentials = Credentials::new(
-      Some(&config.s3_key_id),
       Some(&config.s3_access_key),
+      Some(&config.s3_secret_key),
       None,
       None,
       None,

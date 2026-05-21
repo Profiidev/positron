@@ -133,7 +133,7 @@ async fn issue_token(
     scope: code_info.scope,
     nonce: code_info.nonce,
     exp,
-    iss: config.issuer.clone(),
+    iss: config.issuer.clone().to_string(),
   };
 
   let token = create_access_token(&db, &jwt, &code_info, &config, client_id).await?;
@@ -225,7 +225,7 @@ async fn create_access_token(
     tracing::warn!("user not found: {}", code_info.sub);
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db.groups().get_groups_for_user(user.id).await else {
+  let Ok(groups) = db.user().get_user_groups(user.id).await else {
     tracing::warn!("failed to get groups for user: {}", user.id);
     return Err(Error::from_str("unauthorized_client"));
   };
@@ -257,7 +257,7 @@ async fn create_access_token(
   let claims = OAuthClaims {
     sub: code_info.sub,
     exp: get_timestamp_10_min(),
-    iss: config.issuer.clone(),
+    iss: config.issuer.clone().to_string(),
     aud: code_info.aud,
     iat: time,
     auth_time: time,

@@ -1,10 +1,6 @@
-use axum::{
-  extract::{FromRequestParts, Query},
-  routing::get,
-  Json, Router,
-};
-use centaurus::{db::init::Connection, error::Result, serde::empty_string_as_none};
-use serde::{Deserialize, Serialize};
+use axum::{Json, Router, routing::get};
+use centaurus::{db::init::Connection, error::Result};
+use serde::Serialize;
 use tracing::instrument;
 
 use crate::db::DBTrait;
@@ -33,19 +29,8 @@ struct Configuration {
   claims_supported: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, FromRequestParts)]
-#[from_request(via(Query))]
-struct ConfigQuery {
-  #[serde(default, deserialize_with = "empty_string_as_none")]
-  internal: Option<bool>,
-}
-
 #[instrument(skip(state, db))]
-async fn config(
-  state: ConfigurationState,
-  db: Connection,
-  query: ConfigQuery,
-) -> Result<Json<Configuration>> {
+async fn config(state: ConfigurationState, db: Connection) -> Result<Json<Configuration>> {
   let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
   scopes_supported.extend_from_slice(
     &DEFAULT_SCOPES
@@ -54,18 +39,14 @@ async fn config(
       .collect::<Vec<String>>(),
   );
 
-  let backend_url = if query.internal == Some(true) {
-    &state.backend_url_internal
-  } else {
-    &state.backend_url
-  };
+  let backend_url = state.issuer.clone().to_string();
 
   Ok(Json(Configuration {
-    issuer: state.issuer.clone(),
-    authorization_endpoint: format!("{}/authorize", state.backend_url),
+    issuer: backend_url.clone(),
+    authorization_endpoint: format!("{backend_url}/authorize"),
     token_endpoint: format!("{backend_url}/token"),
     userinfo_endpoint: format!("{backend_url}/user"),
-    end_session_endpoint: format!("{}/logout", state.backend_url),
+    end_session_endpoint: format!("{backend_url}/logout"),
     revocation_endpoint: format!("{backend_url}/revoke"),
     response_types_supported: vec!["code".into()],
     jwks_uri: format!("{backend_url}/jwks"),
