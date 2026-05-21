@@ -11,8 +11,7 @@ use figment::{
   providers::{Env, Serialized},
 };
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
-use url::Url;
+use tracing::{instrument, warn};
 
 #[derive(Deserialize, Serialize, Clone, Config)]
 pub struct Config {
@@ -29,6 +28,8 @@ pub struct Config {
   pub site: SiteConfig,
   #[serde(flatten)]
   pub auth: AuthConfig,
+  #[serde(flatten)]
+  pub storage: StorageConfig,
 
   pub db_url: String,
 
@@ -41,14 +42,6 @@ pub struct Config {
 
   //oidc
   pub oidc_refresh_exp: i64,
-
-  //s3
-  pub s3_bucket: String,
-  pub s3_region: String,
-  pub s3_host: String,
-  pub s3_access_key: String,
-  pub s3_secret_key: String,
-  pub s3_force_path_style: bool,
 
   //services
   pub apod_api_key: String,
@@ -64,12 +57,7 @@ impl Default for Config {
       webauthn_name: "Positron".to_string(),
       webauthn_additional_origins: "".to_string(),
       oidc_refresh_exp: 604800,
-      s3_bucket: "positron".to_string(),
-      s3_region: "us-east-1".to_string(),
-      s3_host: "http://localhost:9000".to_string(),
-      s3_access_key: "minioadmin".to_string(),
-      s3_secret_key: "minioadmin".to_string(),
-      s3_force_path_style: false,
+      storage: StorageConfig::default(),
       apod_api_key: "".to_string(),
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
@@ -91,6 +79,52 @@ impl Config {
       panic!("Database URL (DB_URL) must be set");
     }
 
+    config.storage.validate();
+
     config
+  }
+}
+
+#[derive(Deserialize, Serialize, Clone, Default)]
+pub struct StorageConfig {
+  pub storage_path: String,
+  pub s3_bucket: Option<String>,
+  pub s3_region: Option<String>,
+  pub s3_host: Option<String>,
+  pub s3_access_key: Option<String>,
+  pub s3_secret_key: Option<String>,
+  pub s3_force_path_style: bool,
+}
+
+impl StorageConfig {
+  fn validate(&self) {
+    if (self.s3_bucket.is_some()
+      || self.s3_region.is_some()
+      || self.s3_access_key.is_some()
+      || self.s3_secret_key.is_some()
+      || self.s3_host.is_some())
+      && !self.use_s3()
+    {
+      warn!(
+        "Only some S3 config options are set: Bucket: {}, Region: {}, Host: {}, Access Key: {}, Secret Key: {}",
+        self.s3_bucket.is_some(),
+        self.s3_region.is_some(),
+        self.s3_host.is_some(),
+        self.s3_access_key.is_some(),
+        self.s3_secret_key.is_some()
+      );
+    }
+
+    if !self.use_s3() && self.storage_path.is_empty() {
+      panic!("STORAGE_PATH is not set and S3 config is incomplete");
+    }
+  }
+
+  pub fn use_s3(&self) -> bool {
+    self.s3_bucket.is_some()
+      && self.s3_region.is_some()
+      && self.s3_access_key.is_some()
+      && self.s3_secret_key.is_some()
+      && self.s3_host.is_some()
   }
 }

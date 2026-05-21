@@ -4,13 +4,18 @@ use aide::axum::{
   ApiRouter,
   routing::{get_with, post_with},
 };
-use axum::Json;
+use axum::{
+  Json,
+  body::{Body, to_bytes},
+  routing::get,
+};
 use base64::prelude::*;
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
   db::{init::Connection, tables::group::SimpleUserInfo},
   error::{ErrorReportStatusExt, Result},
+  eyre::Context,
 };
 use chrono::{DateTime, Utc};
 use entity::apod;
@@ -24,7 +29,7 @@ use uuid::Uuid;
 
 use crate::{
   db::DBTrait,
-  s3::S3,
+  storage::FileStorage,
   utils::{ApodList, ApodSelect, UpdateMessage, Updater},
 };
 
@@ -42,10 +47,7 @@ pub fn router() -> ApiRouter {
       "/get_image",
       post_with(get_image, |op| op.id("getApodImage")),
     )
-    .api_route(
-      "/random",
-      get_with(random, |op| op.id("getRandomApodImage")),
-    )
+    .route("/random", get(random))
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -56,7 +58,11 @@ struct ListRes {
   user: SimpleUserInfo,
 }
 
-async fn list(_auth: JwtAuth<ApodList>, db: Connection, s3: S3) -> Result<Json<Vec<ListRes>>> {
+async fn list(
+  _auth: JwtAuth<ApodList>,
+  db: Connection,
+  s3: FileStorage,
+) -> Result<Json<Vec<ListRes>>> {
   let apods = db.apod().list().await?;
   let mut apod_infos = Vec::new();
 
@@ -68,7 +74,11 @@ async fn list(_auth: JwtAuth<ApodList>, db: Connection, s3: S3) -> Result<Json<V
       .await?;
 
     apod_infos.push(ListRes {
-      image: BASE64_STANDARD.encode(image),
+      image: BASE64_STANDARD.encode(
+        to_bytes(image, 10 * 1024 * 1024)
+          .await
+          .context("Failed to read image")?,
+      ),
       title: apod.title,
       date: apod.date.and_hms_micro_opt(0, 0, 0, 0).unwrap().and_utc(),
       user: apod.user,
@@ -123,7 +133,7 @@ async fn get_image_info(
   _auth: JwtAuth<ApodList>,
   db: Connection,
   state: ApodState,
-  s3: S3,
+  s3: FileStorage,
   Json(req): Json<GetReq>,
 ) -> Result<Json<GetInfoRes>> {
   let res = if let Some((apod, user)) = db.apod().get_for_date(req.date.date_naive()).await? {
@@ -147,10 +157,13 @@ async fn get_image_info(
 
     let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
     s3.apod()
-      .upload(&format!("{file_name}.webp"), &image)
+      .upload(&format!("{file_name}.webp"), &mut Cursor::new(image))
       .await?;
     s3.apod()
-      .upload(&format!("{file_name}_preview.webp"), &image_scaled)
+      .upload(
+        &format!("{file_name}_preview.webp"),
+        &mut Cursor::new(image_scaled),
+      )
       .await?;
 
     db.apod()
@@ -178,18 +191,22 @@ struct GetRes {
 
 async fn get_image(
   _auth: JwtAuth<ApodList>,
-  s3: S3,
+  s3: FileStorage,
   Json(req): Json<GetReq>,
 ) -> Result<Json<GetRes>> {
   let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
   let image = s3.apod().download(&format!("{file_name}.webp")).await?;
   Ok(Json(GetRes {
-    image: BASE64_STANDARD.encode(image),
+    image: BASE64_STANDARD.encode(
+      to_bytes(image, 10 * 1024 * 1024)
+        .await
+        .context("Failed to read image")?,
+    ),
   }))
 }
 
 #[instrument(skip(s3, db))]
-async fn random(s3: S3, db: Connection) -> Result<Vec<u8>> {
+async fn random(s3: FileStorage, db: Connection) -> Result<Body> {
   let list = db.apod().list().await?;
 
   let Some(choice) = list.choose(&mut rand::rng()) else {
