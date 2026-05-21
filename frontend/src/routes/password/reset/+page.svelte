@@ -27,7 +27,7 @@
       }
     });
 
-    if (ret.error && ret.response.status === 429) {
+    if (ret.error && ret.response?.status === 429) {
       return { error: 'Rate limit exceeded. Please try again later.' };
     } else if (ret.error) {
       return { error: 'Failed to reset password.' };

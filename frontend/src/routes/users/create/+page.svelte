@@ -47,7 +47,7 @@
     });
 
     if (!res.data) {
-      if (res.response.status === 409) {
+      if (res.response?.status === 409) {
         return {
           error: 'A user with this email already exists.',
           field: 'email'

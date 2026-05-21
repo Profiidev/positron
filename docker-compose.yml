@@ -58,13 +58,5 @@ services:
       start_period: 10s
       start_interval: 1s
 
-  nats:
-    image: nats:latest
-    tty: true
-    networks:
-      - nginx
-    ports:
-      - 4222:4222
-
 networks:
   nginx:

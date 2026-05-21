@@ -16,7 +16,6 @@
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import FormSelect from '@profidev/pleiades/components/form/form-select.svelte';
   import Permissions from './Permissions.svelte';
-  import CacheAccess from './CacheAccess.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { deleteGroup, editGroup } from '$lib/client';
 
@@ -27,7 +26,6 @@
   let readonly = $derived(
     !data.user?.permissions.includes(Permission.GROUP_EDIT)
   );
-  let mappings = $derived(data.group.caches);
 
   const deleteItemConfirm = async () => {
     isLoading = true;
@@ -45,11 +43,11 @@
   };
 
   const onsubmit = async (form: FormValue<typeof groupSettings>) => {
-    let group = reformatData(form, data.group.id, mappings);
+    let group = reformatData(form, data.group.id);
     let res = await editGroup({ body: group });
 
     if (res.error) {
-      if (res.response.status === 409) {
+      if (res.response?.status === 409) {
         return { error: 'This group name is already in use', field: 'name' };
       } else {
         return { error: 'Failed to update group' };
@@ -110,13 +108,6 @@
                 })) || []}
               />
               <Permissions user={data.user} {readonly} {...props} />
-              <CacheAccess
-                caches={data.caches ?? []}
-                bind:mappings
-                disabled={!data.user?.permissions.includes(
-                  Permission.CACHE_EDIT
-                ) || isLoading}
-              />
             </div>
           </div>
         </ScrollArea>

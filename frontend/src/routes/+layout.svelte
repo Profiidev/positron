@@ -10,6 +10,7 @@
   import { setMode } from 'mode-watcher';
   import { logout, testToken } from '$lib/client';
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
+  import Atom from '@lucide/svelte/icons/atom';
 
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
@@ -51,7 +52,8 @@
           name: '',
           permissions: []
         }}
-    app_name="Hibernation"
+    app_name="Positron"
+    app_icon={Atom}
     {version}
     {items}
     logout={async () => {

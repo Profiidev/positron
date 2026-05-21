@@ -3,6 +3,9 @@
 import type { Client, Options as Options2, TDataShape } from "./client";
 import { client } from "./client.gen";
 import type {
+  AuthConfigData,
+  AuthConfigErrors,
+  AuthConfigResponses,
   ChangePasswordData,
   ChangePasswordErrors,
   CompleteSetupData,
@@ -45,9 +48,6 @@ import type {
   GetMailSettingsData,
   GetMailSettingsErrors,
   GetMailSettingsResponses,
-  GetRandomApodImageData,
-  GetRandomApodImageErrors,
-  GetRandomApodImageResponses,
   GroupInfoData,
   GroupInfoErrors,
   GroupInfoResponses,
@@ -441,6 +441,15 @@ export const totpRemove = <ThrowOnError extends boolean = false>(
     ...options,
   });
 
+export const authConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<AuthConfigData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    AuthConfigResponses,
+    AuthConfigErrors,
+    ThrowOnError
+  >({ url: "/api/auth/config", ...options });
+
 export const updateAvatar = <ThrowOnError extends boolean = false>(
   options: Options<UpdateAvatarData, ThrowOnError>,
 ) =>
@@ -810,12 +819,3 @@ export const getApodImage = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
-
-export const getRandomApodImage = <ThrowOnError extends boolean = false>(
-  options?: Options<GetRandomApodImageData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<
-    GetRandomApodImageResponses,
-    GetRandomApodImageErrors,
-    ThrowOnError
-  >({ url: "/api/services/apod/random", ...options });

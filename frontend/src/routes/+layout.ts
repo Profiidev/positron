@@ -21,7 +21,7 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
   if (
     !user &&
-    response.status !== 401 &&
+    response?.status !== 401 &&
     !noSidebarPaths.includes(url.pathname) &&
     !status?.is_setup
   ) {

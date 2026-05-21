@@ -23,7 +23,6 @@
   import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
-  import CacheAccess from '../../groups/[uuid]/CacheAccess.svelte';
   import {
     deleteUser,
     editUser,
@@ -45,7 +44,6 @@
       data.user?.permissions.includes(perm)
     )
   );
-  let mappings = $derived(data.userInfo.caches);
 
   const deleteItemConfirm = async () => {
     isLoading = true;
@@ -57,9 +55,9 @@
     isLoading = false;
 
     if (ret.error) {
-      if (ret.response.status === 409) {
+      if (ret.response?.status === 409) {
         return { error: 'Cannot delete the last user from the admin group' };
-      } else if (ret.response.status === 403) {
+      } else if (ret.response?.status === 403) {
         return { error: 'You do not have permission to delete this user' };
       } else {
         return { error: 'Failed to delete user' };
@@ -73,15 +71,15 @@
   };
 
   const onsubmit = async (form: FormValue<typeof userSettings>) => {
-    let user = reformatData(form, data.userInfo.uuid, mappings);
+    let user = reformatData(form, data.userInfo.uuid);
     let res = await editUser({
       body: user
     });
 
     if (res.error) {
-      if (res.response.status === 409) {
+      if (res.response?.status === 409) {
         return { error: 'Cannot remove the last user from the admin group' };
-      } else if (res.response.status === 403) {
+      } else if (res.response?.status === 403) {
         return { error: 'Cannot assign permissions that you do not have' };
       } else {
         return { error: 'Failed to update user' };
@@ -107,7 +105,7 @@
     });
 
     if (res.error) {
-      if (res.response.status === 403) {
+      if (res.response?.status === 403) {
         return { error: 'You do not have permission to reset this password' };
       } else {
         return { error: 'Failed to reset password' };
@@ -205,13 +203,6 @@
                   label: group.name,
                   value: group.uuid
                 })) || []}
-              />
-              <CacheAccess
-                caches={data.caches ?? []}
-                bind:mappings
-                disabled={!data.user?.permissions.includes(
-                  Permission.CACHE_EDIT
-                ) || isLoading}
               />
             </div>
           </div>

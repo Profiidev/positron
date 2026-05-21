@@ -55,8 +55,6 @@ impl<'db> UserExtTable<'db> {
     let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
 
     user.totp = Set(Some(secret));
-    user.totp_created = Set(Some(Utc::now().naive_utc()));
-    user.totp_last_used = Set(Some(Utc::now().naive_utc()));
 
     user.update(self.db).await?;
 
@@ -67,39 +65,6 @@ impl<'db> UserExtTable<'db> {
     let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
 
     user.totp = Set(None);
-    user.totp_created = Set(None);
-    user.totp_last_used = Set(None);
-
-    user.update(self.db).await?;
-
-    Ok(())
-  }
-
-  pub async fn logged_in(&self, uuid: Uuid) -> Result<(), DbErr> {
-    let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
-
-    user.last_login = Set(Utc::now().naive_utc());
-
-    user.update(self.db).await?;
-    tracing::info!("User {} logged in", uuid);
-
-    Ok(())
-  }
-
-  pub async fn used_special_access(&self, uuid: Uuid) -> Result<(), DbErr> {
-    let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
-
-    user.last_special_access = Set(Utc::now().naive_utc());
-
-    user.update(self.db).await?;
-
-    Ok(())
-  }
-
-  pub async fn used_totp(&self, uuid: Uuid) -> Result<(), DbErr> {
-    let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
-
-    user.totp_last_used = Set(Some(Utc::now().naive_utc()));
 
     user.update(self.db).await?;
 

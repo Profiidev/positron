@@ -6,10 +6,6 @@
 
   const routes = [
     {
-      title: 'User',
-      href: '/settings/user'
-    },
-    {
       title: 'Mail',
       href: '/settings/mail'
     }

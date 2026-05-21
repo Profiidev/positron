@@ -66,8 +66,6 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (other.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    db.user_ext().logged_in(user.id).await?;
-
     (jwt.create_token(user.id)?, false)
   };
 
@@ -95,8 +93,6 @@ async fn special_access(
   if hash != user.password {
     bail!(UNAUTHORIZED, "Invalid email or password");
   }
-
-  db.user_ext().used_special_access(auth.user_id).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(user.id)?;
   cookies = cookies.add(cookie);

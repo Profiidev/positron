@@ -254,8 +254,6 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  db.user_ext().logged_in(user.id).await?;
-
   let cookie = jwt.create_token(user.id)?;
   cookies = cookies.add(cookie);
 
@@ -299,7 +297,6 @@ async fn finish_authentication_by_email(
     .await;
 
   let user = db.user().get_user_by_id(passkey_db.user).await?;
-  db.user_ext().logged_in(user.id).await?;
 
   let cookie = jwt.create_token(user.id)?;
   cookies = cookies.add(cookie);
@@ -362,8 +359,6 @@ async fn finish_special_access(
     .passkey()
     .update_passkey_record(passkey_db.id, json_key)
     .await;
-
-  db.user_ext().used_special_access(auth.user_id).await?;
 
   let cookie = jwt.create_token::<JwtSpecial>(auth.user_id)?;
   cookies = cookies.add(cookie);

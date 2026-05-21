@@ -44,9 +44,9 @@
     });
 
     if (!ret.data) {
-      if (ret.response.status === 409) {
+      if (ret.response?.status === 409) {
         return { error: 'The setup was already completed.' };
-      } else if (ret.response.status === 500) {
+      } else if (ret.response?.status === 500) {
         return { error: 'The server failed to find the admin group.' };
       } else {
         return { error: 'An unknown error occurred.' };

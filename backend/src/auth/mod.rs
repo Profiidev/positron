@@ -18,6 +18,7 @@ use crate::{
   config::Config,
 };
 
+mod config;
 pub mod jwt;
 mod passkey;
 mod password;
@@ -31,6 +32,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/passkey", passkey::router(rate_limiter))
     .nest("/password", password::router(rate_limiter))
     .nest("/totp", totp::router(rate_limiter))
+    .nest("/config", config::router())
 }
 
 pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {

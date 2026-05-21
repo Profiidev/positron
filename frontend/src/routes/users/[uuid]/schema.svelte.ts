@@ -1,4 +1,4 @@
-import type { CacheMapping, DetailUserInfo, UserEditReq } from '$lib/client';
+import type { DetailUserInfo, UserEditReq } from '$lib/client';
 import type { FormValue } from '@profidev/pleiades/components/form/types';
 import { z } from 'zod';
 
@@ -9,10 +9,8 @@ export const userSettings = z.object({
 
 export const reformatData = (
   data: FormValue<typeof userSettings>,
-  uuid: string,
-  caches: CacheMapping[]
+  uuid: string
 ): UserEditReq => ({
-  caches,
   groups: data.groups || [],
   name: data.name,
   uuid

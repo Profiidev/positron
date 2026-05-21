@@ -137,9 +137,6 @@ async fn confirm(
   if !totp.check_current(&req.code).unwrap() {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
-    db.user_ext().used_totp(auth.user_id).await?;
-    db.user_ext().logged_in(auth.user_id).await?;
-
     let cookie = jwt.create_token(auth.user_id)?;
     cookies = cookies.add(cookie);
 

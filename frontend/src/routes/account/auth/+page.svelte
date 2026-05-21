@@ -26,9 +26,9 @@
     });
 
     if (ret.error) {
-      if (ret.response.status === 403) {
+      if (ret.response?.status === 403) {
         return { error: 'Old password is incorrect', field: 'old_password' };
-      } else if (ret.response.status === 429) {
+      } else if (ret.response?.status === 429) {
         return { error: 'Rate limit exceeded. Please try again later.' };
       } else {
         return { error: 'An unknown error occurred' };

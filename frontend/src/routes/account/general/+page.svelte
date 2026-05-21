@@ -43,7 +43,7 @@
             let file = await ImageCropper.getFileFromUrl(url);
             let data = arrayBufferToBase64(await file.arrayBuffer());
             let ret = await updateAvatar({ body: { avatar: data } });
-            if (ret.error && ret.response.status === 429) {
+            if (ret.error && ret.response?.status === 429) {
               toast.error('Rate limit exceeded. Please try again later.');
             } else if (ret.error) {
               toast.error('Failed to update avatar');

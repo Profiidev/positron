@@ -10,8 +10,8 @@
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
-  import { authenticate, SsoType } from '$lib/client';
   import { getEncrypt } from '$lib/backend/auth.svelte';
+  import { passwordAuthenticate } from '$lib/client';
 
   let { data } = $props();
 
@@ -39,10 +39,6 @@
       url.searchParams.delete('error');
       updated = true;
     }
-    if (data.skip) {
-      url.searchParams.delete('skip');
-      updated = true;
-    }
     if (updated) {
       window.history.replaceState({}, '', url);
     }
@@ -56,16 +52,16 @@
       };
     }
 
-    let ret = await authenticate({
+    let ret = await passwordAuthenticate({
       body: {
         email: formData.email,
         password: encrypt.encrypt(formData.password) || ''
       }
     });
 
-    if (!ret.data && ret.response.status === 401) {
+    if (!ret.data && ret.response?.status === 401) {
       return { error: 'Invalid email or password.' };
-    } else if (!ret.data && ret.response.status === 429) {
+    } else if (!ret.data && ret.response?.status === 429) {
       return { error: 'Rate limit exceeded. Please try again later.' };
     } else if (!ret.data) {
       return { error: 'Login failed. Please try again.' };
@@ -107,6 +103,7 @@
               <a
                 href="/password/forgot"
                 class="ms-auto inline-block text-sm underline"
+                tabindex="-1"
               >
                 Forgot your password?
               </a>
@@ -117,23 +114,10 @@
           {@render defaultBtn({ content: 'Login' })}
         {/snippet}
       </BaseForm>
-      {#if data.config?.sso_type !== SsoType.NONE}
-        <FieldSeparator
-          class="*:data-[slot=field-separator-content]:bg-card my-4"
-          >Or continue with</FieldSeparator
-        >
-        <Button
-          variant="outline"
-          class="w-full cursor-pointer"
-          onclick={() => {
-            if (!data.oidc_url) {
-              toast.error('Failed to get OIDC URL.');
-              return;
-            }
-            window.location.href = data.oidc_url.toString();
-          }}>OIDC Provider</Button
-        >
-      {/if}
+      <FieldSeparator class="*:data-[slot=field-separator-content]:bg-card my-4"
+        >Or continue with</FieldSeparator
+      >
+      <Button variant="outline" class="w-full cursor-pointer">Passkey</Button>
     </Card.Content>
   </Card.Root>
 </div>

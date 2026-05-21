@@ -6,7 +6,7 @@ export const mailSettings = z
   .object({
     smtp_enabled: z.boolean(),
     smtp_from_address: z.email().optional(),
-    smtp_from_name: z.string().optional().default('Hibernation'),
+    smtp_from_name: z.string().optional().default('Positron'),
     smtp_host: z.string().optional(),
     smtp_password: z.string().optional(),
     smtp_port: z.number().optional(),
@@ -57,7 +57,7 @@ export const unReformat = (
 ): FormValue<typeof mailSettings> => ({
   smtp_enabled: Boolean(settings.smtp),
   smtp_from_address: settings.smtp?.from_address,
-  smtp_from_name: settings.smtp?.from_name || 'Hibernation',
+  smtp_from_name: settings.smtp?.from_name || 'Positron',
   smtp_host: settings.smtp?.server,
   smtp_password: settings.smtp?.password || '',
   smtp_port: settings.smtp?.port,

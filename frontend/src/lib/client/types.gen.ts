@@ -8,6 +8,10 @@ export type AccountUpdate = {
   username: string;
 };
 
+export type AuthConfig = {
+  mail_enabled: boolean;
+};
+
 export type AuthStartRes = {
   id: string;
 };
@@ -92,6 +96,7 @@ export type GroupViewPath = {
 export type IsSetupResponse = {
   db_backend: string;
   is_setup: boolean;
+  storage_backend: string;
 };
 
 export type KeyRes = {
@@ -870,6 +875,30 @@ export type TotpRemoveErrors = {
    */
   "5XX": unknown;
 };
+
+export type AuthConfigData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/auth/config";
+};
+
+export type AuthConfigErrors = {
+  /**
+   * An error occurred
+   */
+  "4XX": unknown;
+  /**
+   * An error occurred
+   */
+  "5XX": unknown;
+};
+
+export type AuthConfigResponses = {
+  200: AuthConfig;
+};
+
+export type AuthConfigResponse = AuthConfigResponses[keyof AuthConfigResponses];
 
 export type UpdateAvatarData = {
   body: AvatarUpdate;
@@ -1795,31 +1824,3 @@ export type GetApodImageResponses = {
 
 export type GetApodImageResponse =
   GetApodImageResponses[keyof GetApodImageResponses];
-
-export type GetRandomApodImageData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: "/api/services/apod/random";
-};
-
-export type GetRandomApodImageErrors = {
-  /**
-   * An error occurred
-   */
-  "4XX": unknown;
-  /**
-   * An error occurred
-   */
-  "5XX": unknown;
-};
-
-export type GetRandomApodImageResponses = {
-  /**
-   * byte stream
-   */
-  200: Blob | File;
-};
-
-export type GetRandomApodImageResponse =
-  GetRandomApodImageResponses[keyof GetRandomApodImageResponses];

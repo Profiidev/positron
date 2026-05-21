@@ -13,11 +13,7 @@ pub struct Model {
   pub password: String,
   pub salt: String,
   pub avatar: Option<String>,
-  pub last_login: DateTime,
-  pub last_special_access: DateTime,
   pub totp: Option<String>,
-  pub totp_created: Option<DateTime>,
-  pub totp_last_used: Option<DateTime>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
