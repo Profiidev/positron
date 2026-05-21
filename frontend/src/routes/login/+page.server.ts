@@ -1,25 +1,10 @@
-import type { OAuthParams } from '$lib/backend/auth/types.svelte.js';
 import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types.js';
+import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ cookies, url }) => {
-  let cookie = cookies.get('token');
+export const load: PageServerLoad = ({ cookies, url }) => {
+  const cookie = cookies.get('centaurus_jwt');
 
-  let code = url.searchParams.get('code');
-  let name = url.searchParams.get('name');
-
-  if (cookie) {
-    if (code && name) {
-      redirect(302, `/oauth?code=${code}&name=${name}`);
-    } else {
-      redirect(302, '/');
-    }
-  } else if (code && name) {
-    return {
-      oauth_params: {
-        code,
-        name
-      } as OAuthParams
-    };
+  if (cookie && url.pathname === '/login') {
+    redirect(302, '/');
   }
 };

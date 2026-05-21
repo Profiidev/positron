@@ -1,32 +1,34 @@
 <script lang="ts">
-  import { Toaster } from '@profidev/pleiades/components/ui/sonner';
   import { ModeWatcher } from '@profidev/pleiades/components/util/general';
-  import * as Sidebar from '@profidev/pleiades/components/ui/sidebar';
+  import { Toaster } from '@profidev/pleiades/components/ui/sonner';
   import '../app.css';
-  import { page } from '$app/state';
-  import SidebarApp from '$lib/components/nav/sidebar-app/sidebar-app.svelte';
-  import { connect_updater } from '$lib/backend/ws/updater.svelte';
-  import { test_token } from '$lib/backend/auth/other.svelte';
-  import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
+  import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { items, noSidebarPaths } from '$lib/components/nav.svelte';
+  import { setMode } from 'mode-watcher';
+  import { logout, testToken } from '$lib/client';
+  import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
 
-  interface Props {
-    children?: import('svelte').Snippet;
-  }
+  // @ts-ignore this is injected at build time via Vite's define option
+  let version = __version__;
 
-  let { children }: Props = $props();
+  let { children, data } = $props();
 
-  const noLayout = ['/login', '/oauth', '/oauth/logout'];
-
-  connect_updater();
   onMount(() => {
-    test_token().then((valid) => {
-      if (!valid && browser) {
-        let url = page.url.pathname;
-        if (url !== '/login') {
+    setMode('dark');
+    testToken().then(({ data: dataRaw }) => {
+      let { valid } = (dataRaw as { valid: boolean } | undefined) ?? {
+        valid: false
+      };
+      // can also be undefined if there was an error
+      if (valid === false) {
+        if (!noSidebarPaths.includes(page.url.pathname)) {
           goto('/login');
         }
+      } else {
+        connectWebsocket(data.user?.uuid ?? '');
       }
     });
   });
@@ -35,14 +37,30 @@
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-{#if !noLayout.includes(page.url.pathname)}
-  <Sidebar.Provider class="h-full">
-    <SidebarApp />
-    <Sidebar.Trigger class="absolute top-3 left-3 flex md:hidden" />
-    <main class="flex h-full w-full">
-      {@render children?.()}
-    </main>
-  </Sidebar.Provider>
+{#if noSidebarPaths.includes(page.url.pathname)}
+  {@render children()}
 {:else}
-  {@render children?.()}
+  <Sidebar
+    user={data.user
+      ? {
+          ...data.user,
+          avatar: data.user.avatar || undefined
+        }
+      : {
+          email: '',
+          name: '',
+          permissions: []
+        }}
+    app_name="Hibernation"
+    {version}
+    {items}
+    logout={async () => {
+      let res = await logout();
+      return {
+        error: res.error ? 'err' : undefined
+      };
+    }}
+  >
+    {@render children()}
+  </Sidebar>
 {/if}
