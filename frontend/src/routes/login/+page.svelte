@@ -5,7 +5,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import * as Card from '@profidev/pleiades/components/ui/card';
   import { FieldSeparator } from '@profidev/pleiades/components/ui/field';
-  import { login } from './schema.svelte';
+  import { login, totpSchema } from './schema.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { goto, invalidate } from '$app/navigation';
   import { connectWebsocket } from '$lib/backend/updater.svelte';
@@ -15,7 +15,8 @@
   import {
     finishAuthentication,
     passwordAuthenticate,
-    startAuthentication
+    startAuthentication,
+    totpConfirm
   } from '$lib/client';
   import {
     type AuthenticationResponseJSON,
@@ -23,11 +24,13 @@
     startAuthentication as webauthnStart
   } from '@simplewebauthn/browser';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
+  import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
 
   let { data } = $props();
 
   let passkeyError = $state('');
   let isLoading = $state(false);
+  let totp = $state(false);
 
   $effect(() => {
     const url = new URL(window.location.href);
@@ -88,6 +91,27 @@
     } else if (!ret.data) {
       return { error: 'Login failed. Please try again.' };
     } else {
+      let user = (ret.data as { user?: string }).user;
+      if (user) {
+        loginSuccess(user);
+      } else {
+        totp = true;
+      }
+    }
+  };
+
+  const confirmTotp = async (formData: FormValue<typeof totpSchema>) => {
+    let ret = await totpConfirm({
+      body: {
+        code: formData.code
+      }
+    });
+
+    if (!ret.data && ret.response?.status === 401) {
+      return { error: 'Invalid code.' };
+    } else if (!ret.data) {
+      return { error: 'Failed to confirm code. Please try again.' };
+    } else {
       loginSuccess((ret.data as { user: string }).user);
     }
   };
@@ -144,40 +168,53 @@
     <Card.Header>
       <Card.Title class="text-2xl">Login</Card.Title>
       <Card.Description
-        >Enter your login details below to login</Card.Description
+        >{totp
+          ? 'Enter the 6-digit code from your authenticator app to continue'
+          : 'Enter your login details below to login'}</Card.Description
       >
     </Card.Header>
     <Card.Content>
-      <BaseForm schema={login} {onsubmit} bind:isLoading>
-        {#snippet children({ props })}
-          <FormInput
-            {...props}
-            label="Email"
-            type="email"
-            placeholder="mail@example.com"
-            key="email"
-          />
-          <FormInputPassword
-            {...props}
-            label="Password"
-            placeholder="Your password"
-            key="password"
-          >
-            {#if data.config?.mail_enabled}
-              <a
-                href="/password/forgot"
-                class="ms-auto inline-block text-sm underline"
-                tabindex="-1"
-              >
-                Forgot your password?
-              </a>
-            {/if}
-          </FormInputPassword>
-        {/snippet}
-        {#snippet footer({ defaultBtn })}
-          {@render defaultBtn({ content: 'Login' })}
-        {/snippet}
-      </BaseForm>
+      {#if totp}
+        <BaseForm schema={totpSchema} bind:isLoading onsubmit={confirmTotp}>
+          {#snippet children({ props })}
+            <Totp6 {...props} key="code" label="" class="justify-evenly" />
+          {/snippet}
+          {#snippet footer({ defaultBtn })}
+            {@render defaultBtn({ content: 'Continue' })}
+          {/snippet}
+        </BaseForm>
+      {:else}
+        <BaseForm schema={login} {onsubmit} bind:isLoading>
+          {#snippet children({ props })}
+            <FormInput
+              {...props}
+              label="Email"
+              type="email"
+              placeholder="mail@example.com"
+              key="email"
+            />
+            <FormInputPassword
+              {...props}
+              label="Password"
+              placeholder="Your password"
+              key="password"
+            >
+              {#if data.config?.mail_enabled}
+                <a
+                  href="/password/forgot"
+                  class="ms-auto inline-block text-sm underline"
+                  tabindex="-1"
+                >
+                  Forgot your password?
+                </a>
+              {/if}
+            </FormInputPassword>
+          {/snippet}
+          {#snippet footer({ defaultBtn })}
+            {@render defaultBtn({ content: 'Login' })}
+          {/snippet}
+        </BaseForm>
+      {/if}
       <FieldSeparator class="*:data-[slot=field-separator-content]:bg-card my-4"
         >Or continue with</FieldSeparator
       >
