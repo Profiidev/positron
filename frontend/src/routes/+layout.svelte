@@ -49,6 +49,7 @@
     }}
     app_name="Positron"
     app_icon={Atom}
+    iconClass="text-[#000057]"
     {version}
     {items}
     logout={async () => {

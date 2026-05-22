@@ -14,7 +14,7 @@
     "api": "openapi-ts"
   },
   "dependencies": {
-    "@profidev/pleiades": "^1.8.1",
+    "@profidev/pleiades": "^1.8.2",
     "@simplewebauthn/browser": "^13.3.0",
     "@sveltejs/enhanced-img": "0.10.4",
     "jsencrypt": "3.5.4",
