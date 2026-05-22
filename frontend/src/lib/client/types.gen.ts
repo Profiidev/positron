@@ -86,6 +86,11 @@ export type GroupDetails = {
   users: Array<SimpleUserInfo>;
 };
 
+export type GroupDetailsResponse = {
+  admin_group: string;
+  group: GroupDetails;
+};
+
 export type GroupInfo = {
   id: string;
   name: string;
@@ -129,7 +134,19 @@ export type MailActiveResponse = {
 };
 
 export type MailSettings = {
-  smtp?: SmtpSettings | null;
+  smtp_enabled: boolean;
+  smtp_from_address?: string | null;
+  smtp_from_name?: string | null;
+  smtp_password?: string | null;
+  smtp_port?: number | null;
+  smtp_server?: string | null;
+  smtp_use_tls?: boolean | null;
+  smtp_username?: string | null;
+};
+
+export type MailSettingsResponse = {
+  from_env: Array<string>;
+  settings: MailSettings;
 };
 
 export type PasskeyEdit = {
@@ -194,16 +211,6 @@ export type SimpleGroupInfo = {
 export type SimpleUserInfo = {
   id: string;
   name: string;
-};
-
-export type SmtpSettings = {
-  from_address: string;
-  from_name: string;
-  password: string;
-  port: number;
-  server: string;
-  use_tls: boolean;
-  username: string;
 };
 
 export type SpecialAccess = {
@@ -1307,7 +1314,7 @@ export type GetMailSettingsErrors = {
 };
 
 export type GetMailSettingsResponses = {
-  200: MailSettings;
+  200: MailSettingsResponse;
 };
 
 export type GetMailSettingsResponse =
@@ -1602,7 +1609,7 @@ export type GroupInfoErrors = {
 };
 
 export type GroupInfoResponses = {
-  200: GroupDetails;
+  200: GroupDetailsResponse;
 };
 
 export type GroupInfoResponse = GroupInfoResponses[keyof GroupInfoResponses];

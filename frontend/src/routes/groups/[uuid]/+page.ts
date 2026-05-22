@@ -20,7 +20,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
   }
 
   return {
-    group: res.data,
+    adminGroup: res.data.admin_group,
+    group: res.data.group,
     users: users.data,
     uuid: params.uuid
   };

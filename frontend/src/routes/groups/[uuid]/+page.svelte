@@ -49,6 +49,11 @@
     if (res.error) {
       if (res.response?.status === 409) {
         return { error: 'This group name is already in use', field: 'name' };
+      } else if (res.response?.status === 406) {
+        return {
+          error: 'Admin group must have at least 1 user',
+          field: 'users'
+        };
       } else {
         return { error: 'Failed to update group' };
       }
@@ -107,7 +112,11 @@
                   value: user.id
                 })) || []}
               />
-              <Permissions user={data.user} {readonly} {...props} />
+              <Permissions
+                user={data.user}
+                readonly={readonly || data.adminGroup === data.group.id}
+                {...props}
+              />
             </div>
           </div>
         </ScrollArea>

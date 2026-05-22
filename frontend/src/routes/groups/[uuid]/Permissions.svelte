@@ -29,6 +29,7 @@
           key="settings_view"
           label="View Settings"
           disabled={readonly}
+          {readonly}
         />
       {/if}
       {#if user?.permissions.includes(Permission.SETTINGS_EDIT)}
@@ -37,6 +38,7 @@
           key="settings_edit"
           label="Edit Settings"
           disabled={readonly}
+          {readonly}
         />
       {/if}
     </div>
@@ -50,6 +52,7 @@
           key="group_view"
           label="View Groups"
           disabled={readonly}
+          {readonly}
         />
       {/if}
       {#if user?.permissions.includes(Permission.GROUP_EDIT)}
@@ -58,6 +61,7 @@
           key="group_edit"
           label="Edit Groups"
           disabled={readonly}
+          {readonly}
         />
       {/if}
     </div>
@@ -71,6 +75,7 @@
           key="user_view"
           label="View Users"
           disabled={readonly}
+          {readonly}
         />
       {/if}
       {#if user?.permissions.includes(Permission.USER_EDIT)}
@@ -79,6 +84,7 @@
           key="user_edit"
           label="Edit Users"
           disabled={readonly}
+          {readonly}
         />
       {/if}
     </div>
