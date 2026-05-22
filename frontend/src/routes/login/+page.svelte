@@ -1,6 +1,7 @@
 <script lang="ts">
   import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+  import KeyRound from '@lucide/svelte/icons/key-round';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import * as Card from '@profidev/pleiades/components/ui/card';
   import { FieldSeparator } from '@profidev/pleiades/components/ui/field';
@@ -11,9 +12,22 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import { getEncrypt } from '$lib/backend/auth.svelte';
-  import { passwordAuthenticate } from '$lib/client';
+  import {
+    finishAuthentication,
+    passwordAuthenticate,
+    startAuthentication
+  } from '$lib/client';
+  import {
+    type AuthenticationResponseJSON,
+    type PublicKeyCredentialRequestOptionsJSON,
+    startAuthentication as webauthnStart
+  } from '@simplewebauthn/browser';
+  import { Spinner } from '@profidev/pleiades/components/ui/spinner';
 
   let { data } = $props();
+
+  let passkeyError = $state('');
+  let isLoading = $state(false);
 
   $effect(() => {
     const url = new URL(window.location.href);
@@ -44,6 +58,14 @@
     }
   });
 
+  const loginSuccess = (user: string) => {
+    setTimeout(async () => {
+      connectWebsocket(user);
+      await invalidate('/api/user/info');
+      await goto('/');
+    });
+  };
+
   const onsubmit = async (formData: FormValue<typeof login>) => {
     let encrypt = getEncrypt();
     if (!encrypt) {
@@ -66,12 +88,54 @@
     } else if (!ret.data) {
       return { error: 'Login failed. Please try again.' };
     } else {
-      setTimeout(() => {
-        connectWebsocket((ret.data as { user: string }).user);
-        invalidate('/api/user/info');
-        goto('/');
-      });
+      loginSuccess((ret.data as { user: string }).user);
     }
+  };
+
+  const passkeyLogin = async () => {
+    passkeyError = '';
+    isLoading = true;
+
+    let { data, response } = await startAuthentication();
+    if (response?.status !== 200) {
+      passkeyError = 'There was an error while starting passkey registration';
+      isLoading = false;
+      return;
+    }
+
+    let reqData = data as {
+      res: { publicKey: PublicKeyCredentialRequestOptionsJSON };
+      id: string;
+    };
+    let optionsJSON = reqData.res.publicKey;
+
+    let passkeyResponse: AuthenticationResponseJSON;
+    try {
+      passkeyResponse = await webauthnStart({ optionsJSON });
+    } catch {
+      passkeyError =
+        'There was an error during passkey registration. Please try again.';
+      isLoading = false;
+      return;
+    }
+
+    let { response: regResponse, data: authData } = await finishAuthentication({
+      body: passkeyResponse,
+      path: {
+        auth_id: reqData.id
+      }
+    });
+
+    if (regResponse?.status !== 200) {
+      if (regResponse?.status === 401) {
+        passkeyError = 'There was an error with your passkey';
+      } else {
+        passkeyError = 'There was an error while signing in.';
+      }
+    } else {
+      loginSuccess((authData as { user: string }).user);
+    }
+    isLoading = false;
   };
 </script>
 
@@ -84,7 +148,7 @@
       >
     </Card.Header>
     <Card.Content>
-      <BaseForm schema={login} {onsubmit}>
+      <BaseForm schema={login} {onsubmit} bind:isLoading>
         {#snippet children({ props })}
           <FormInput
             {...props}
@@ -117,7 +181,22 @@
       <FieldSeparator class="*:data-[slot=field-separator-content]:bg-card my-4"
         >Or continue with</FieldSeparator
       >
-      <Button variant="outline" class="w-full cursor-pointer">Passkey</Button>
+      {#if passkeyError}
+        <div class="text-destructive mb-2 text-sm">{passkeyError}</div>
+      {/if}
+      <Button
+        variant="outline"
+        class="w-full cursor-pointer"
+        onclick={passkeyLogin}
+        disabled={isLoading}
+      >
+        {#if isLoading}
+          <Spinner />
+        {:else}
+          <KeyRound />
+        {/if}
+        Passkey</Button
+      >
     </Card.Content>
   </Card.Root>
 </div>

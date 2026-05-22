@@ -16,6 +16,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tower_governor::GovernorLayer;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
@@ -45,7 +46,7 @@ struct LoginReq {
 
 #[derive(Serialize, JsonSchema, Debug)]
 struct AuthRes {
-  totp: bool,
+  user: Option<Uuid>,
 }
 
 async fn authenticate(
@@ -71,7 +72,12 @@ async fn authenticate(
 
   cookies = cookies.add(cookie);
 
-  Ok((cookies, TokenRes(AuthRes { totp })))
+  Ok((
+    cookies,
+    TokenRes(AuthRes {
+      user: (!totp).then_some(user.id),
+    }),
+  ))
 }
 
 #[derive(Deserialize, JsonSchema)]

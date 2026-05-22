@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
 use tower_governor::GovernorLayer;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::{
   auth::jwt::{JwtAuthOther, JwtSpecial, JwtTotpRequired},
@@ -122,6 +123,11 @@ async fn finish_setup(
   Ok(StatusCode::OK)
 }
 
+#[derive(Serialize, JsonSchema, Debug)]
+struct AuthRes {
+  user: Uuid,
+}
+
 #[instrument(skip(db, jwt, cookies))]
 async fn confirm(
   auth: JwtAuthOther<JwtTotpRequired>,
@@ -129,7 +135,7 @@ async fn confirm(
   jwt: JwtState,
   mut cookies: CookieJar,
   Json(req): Json<TotpReq>,
-) -> Result<(CookieJar, TokenRes)> {
+) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.user_ext().get_user_by_id(auth.user_id).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
@@ -144,7 +150,7 @@ async fn confirm(
     let cookie = jwt.create_token(auth.user_id)?;
     cookies = cookies.add(cookie);
 
-    Ok((cookies, TokenRes(())))
+    Ok((cookies, TokenRes(AuthRes { user: auth.user_id })))
   }
 }
 

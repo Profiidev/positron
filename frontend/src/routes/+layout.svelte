@@ -42,16 +42,11 @@
   {@render children()}
 {:else}
   <Sidebar
-    user={data.user
-      ? {
-          ...data.user,
-          avatar: data.user.avatar || undefined
-        }
-      : {
-          email: '',
-          name: '',
-          permissions: []
-        }}
+    user={data.user ?? {
+      email: '',
+      name: '',
+      permissions: []
+    }}
     app_name="Positron"
     app_icon={Atom}
     {version}

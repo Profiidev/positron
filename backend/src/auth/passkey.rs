@@ -46,14 +46,8 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       post_with(finish_registration, |op| op.id("finishRegistration")),
     )
     .api_route(
-      "/finish_authentication/{id}",
+      "/finish_authentication/{auth_id}",
       post_with(finish_authentication, |op| op.id("finishAuthentication")),
-    )
-    .api_route(
-      "/finish_authentication_by_email/{id}",
-      post_with(finish_authentication_by_email, |op| {
-        op.id("finishAuthenticationByEmail")
-      }),
     )
     .api_route(
       "/finish_special_access",
@@ -67,12 +61,6 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .api_route(
       "/start_authentication",
       get_with(start_authentication, |op| op.id("startAuthentication")),
-    )
-    .api_route(
-      "/start_authentication/{email}",
-      get_with(start_authentication_by_email, |op| {
-        op.id("startAuthenticationByEmail")
-      }),
     )
     .api_route(
       "/start_special_access",
@@ -187,42 +175,25 @@ async fn start_authentication(
   }))
 }
 
-async fn start_authentication_by_email(
-  Path(email): Path<String>,
-  webauthn: WebauthnState,
-  state: PasskeyState,
-  db: Connection,
-) -> Result<Json<AuthStartRes>> {
-  let user = db.user().get_user_by_email(&email).await?;
-  let passkeys = db.passkey().get_passkeys_for_user(user.id).await?;
+#[derive(Deserialize, JsonSchema)]
+struct FinishAuthPath {
+  auth_id: Uuid,
+}
 
-  let passkeys = passkeys
-    .into_iter()
-    .flat_map(|p| serde_json::from_str::<Passkey>(&p.data))
-    .collect::<Vec<Passkey>>();
-
-  let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
-
-  let auth_id = Uuid::new_v4();
-  state
-    .non_discover_auth_state
-    .insert(auth_id, (auth_state, Instant::now()));
-
-  Ok(Json(AuthStartRes {
-    res: serde_json::to_value(rcr)?,
-    id: auth_id,
-  }))
+#[derive(Serialize, JsonSchema, Debug)]
+struct AuthRes {
+  user: Uuid,
 }
 
 async fn finish_authentication(
-  Path(auth_id): Path<Uuid>,
+  Path(FinishAuthPath { auth_id }): Path<FinishAuthPath>,
   db: Connection,
   webauthn: WebauthnState,
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
   Json(auth): Json<serde_json::Value>,
-) -> Result<(CookieJar, TokenRes)> {
+) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
     bail!(BAD_REQUEST, "Invalid authentication data");
   };
@@ -257,51 +228,7 @@ async fn finish_authentication(
   let cookie = jwt.create_token(user.id)?;
   cookies = cookies.add(cookie);
 
-  Ok((cookies, TokenRes(())))
-}
-
-async fn finish_authentication_by_email(
-  Path(auth_id): Path<Uuid>,
-  db: Connection,
-  webauthn: WebauthnState,
-  state: PasskeyState,
-  jwt: JwtState,
-  mut cookies: CookieJar,
-  Json(auth): Json<serde_json::Value>,
-) -> Result<(CookieJar, TokenRes)> {
-  let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
-    bail!(BAD_REQUEST, "Invalid authentication data");
-  };
-  let (_, (auth_state, _)) = state
-    .non_discover_auth_state
-    .remove(&auth_id)
-    .context("state not found")?;
-
-  let res = webauthn.finish_passkey_authentication(&auth, &auth_state)?;
-
-  let passkey_db = db
-    .passkey()
-    .get_passkey_by_cred_id(BASE64_STANDARD.encode(res.cred_id()))
-    .await?;
-  let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
-
-  if res.needs_update() {
-    passkey.update_credential(&res);
-  }
-
-  let json_key = serde_json::to_string(&passkey)?;
-
-  let _ = db
-    .passkey()
-    .update_passkey_record(passkey_db.id, json_key)
-    .await;
-
-  let user = db.user().get_user_by_id(passkey_db.user).await?;
-
-  let cookie = jwt.create_token(user.id)?;
-  cookies = cookies.add(cookie);
-
-  Ok((cookies, TokenRes(())))
+  Ok((cookies, TokenRes(AuthRes { user: user.id })))
 }
 
 async fn start_special_access(

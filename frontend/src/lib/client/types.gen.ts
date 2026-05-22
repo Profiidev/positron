@@ -58,6 +58,10 @@ export type EditGroupRequest = {
   uuid: string;
 };
 
+export type FinishAuthPath = {
+  auth_id: string;
+};
+
 export type GetInfoRes = {
   title: string;
   user?: SimpleUserInfo | null;
@@ -362,9 +366,11 @@ export type FinishRegistrationError =
 
 export type FinishAuthenticationData = {
   body: unknown;
-  path?: never;
+  path: {
+    auth_id: string;
+  };
   query?: never;
-  url: '/api/auth/passkey/finish_authentication/{id}';
+  url: '/api/auth/passkey/finish_authentication/{auth_id}';
 };
 
 export type FinishAuthenticationErrors = {
@@ -392,39 +398,6 @@ export type FinishAuthenticationErrors = {
 
 export type FinishAuthenticationError =
   FinishAuthenticationErrors[keyof FinishAuthenticationErrors];
-
-export type FinishAuthenticationByEmailData = {
-  body: unknown;
-  path?: never;
-  query?: never;
-  url: '/api/auth/passkey/finish_authentication_by_email/{id}';
-};
-
-export type FinishAuthenticationByEmailErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type FinishAuthenticationByEmailError =
-  FinishAuthenticationByEmailErrors[keyof FinishAuthenticationByEmailErrors];
 
 export type FinishSpecialAccessData = {
   body: unknown;
@@ -505,31 +478,6 @@ export type StartAuthenticationResponses = {
 
 export type StartAuthenticationResponse =
   StartAuthenticationResponses[keyof StartAuthenticationResponses];
-
-export type StartAuthenticationByEmailData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/api/auth/passkey/start_authentication/{email}';
-};
-
-export type StartAuthenticationByEmailErrors = {
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type StartAuthenticationByEmailResponses = {
-  200: AuthStartRes;
-};
-
-export type StartAuthenticationByEmailResponse =
-  StartAuthenticationByEmailResponses[keyof StartAuthenticationByEmailResponses];
 
 export type StartSpecialAccessData = {
   body?: never;

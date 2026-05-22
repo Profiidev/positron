@@ -18,7 +18,6 @@ use crate::config::Config;
 pub struct PasskeyState {
   pub reg_state: Arc<DashMap<Uuid, (PasskeyRegistration, Instant)>>,
   pub auth_state: Arc<DashMap<Uuid, (DiscoverableAuthentication, Instant)>>,
-  pub non_discover_auth_state: Arc<DashMap<Uuid, (PasskeyAuthentication, Instant)>>,
   pub special_access_state: Arc<DashMap<Uuid, (PasskeyAuthentication, Instant)>>,
 }
 
@@ -71,13 +70,11 @@ impl PasskeyState {
   pub fn init() -> Self {
     let reg_state = Arc::new(DashMap::new());
     let auth_state = Arc::new(DashMap::new());
-    let non_discover_auth_state = Arc::new(DashMap::new());
     let special_access_state = Arc::new(DashMap::new());
 
     spawn({
       let reg_state = Arc::clone(&reg_state);
       let auth_state = Arc::clone(&auth_state);
-      let non_discover_auth_state = Arc::clone(&non_discover_auth_state);
       let special_access_state = Arc::clone(&special_access_state);
 
       async move {
@@ -85,8 +82,6 @@ impl PasskeyState {
           let now = Instant::now();
           reg_state.retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
           auth_state.retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
-          non_discover_auth_state
-            .retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
           special_access_state
             .retain(|_, (_, timestamp)| now.duration_since(*timestamp).as_secs() < 300);
           tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -97,7 +92,6 @@ impl PasskeyState {
     Self {
       reg_state,
       auth_state,
-      non_discover_auth_state,
       special_access_state,
     }
   }

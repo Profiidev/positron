@@ -31,8 +31,6 @@ import type {
   EditUserData,
   EditUserErrors,
   EditUserResponses,
-  FinishAuthenticationByEmailData,
-  FinishAuthenticationByEmailErrors,
   FinishAuthenticationData,
   FinishAuthenticationErrors,
   FinishRegistrationData,
@@ -107,9 +105,6 @@ import type {
   SetGoodApodData,
   SetGoodApodErrors,
   SetGoodApodResponses,
-  StartAuthenticationByEmailData,
-  StartAuthenticationByEmailErrors,
-  StartAuthenticationByEmailResponses,
   StartAuthenticationData,
   StartAuthenticationErrors,
   StartAuthenticationResponses,
@@ -225,25 +220,7 @@ export const finishAuthentication = <ThrowOnError extends boolean = false>(
     FinishAuthenticationErrors,
     ThrowOnError
   >({
-    url: '/api/auth/passkey/finish_authentication/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
-export const finishAuthenticationByEmail = <
-  ThrowOnError extends boolean = false
->(
-  options: Options<FinishAuthenticationByEmailData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    unknown,
-    FinishAuthenticationByEmailErrors,
-    ThrowOnError
-  >({
-    url: '/api/auth/passkey/finish_authentication_by_email/{id}',
+    url: '/api/auth/passkey/finish_authentication/{auth_id}',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -284,17 +261,6 @@ export const startAuthentication = <ThrowOnError extends boolean = false>(
     StartAuthenticationErrors,
     ThrowOnError
   >({ url: '/api/auth/passkey/start_authentication', ...options });
-
-export const startAuthenticationByEmail = <
-  ThrowOnError extends boolean = false
->(
-  options?: Options<StartAuthenticationByEmailData, ThrowOnError>
-) =>
-  (options?.client ?? client).get<
-    StartAuthenticationByEmailResponses,
-    StartAuthenticationByEmailErrors,
-    ThrowOnError
-  >({ url: '/api/auth/passkey/start_authentication/{email}', ...options });
 
 export const startSpecialAccess = <ThrowOnError extends boolean = false>(
   options?: Options<StartSpecialAccessData, ThrowOnError>
