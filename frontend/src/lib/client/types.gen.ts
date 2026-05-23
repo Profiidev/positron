@@ -16,6 +16,10 @@ export type AuthStartRes = {
   id: string;
 };
 
+export type AvatarPath = {
+  uuid: string;
+};
+
 export type AvatarUpdate = {
   avatar: string;
 };
@@ -43,7 +47,6 @@ export type DeleteUserRequest = {
 };
 
 export type DetailUserInfo = {
-  avatar?: string | null;
   email: string;
   groups: Array<SimpleGroupInfo>;
   name: string;
@@ -134,7 +137,7 @@ export type MailActiveResponse = {
 };
 
 export type MailSettings = {
-  smtp_enabled: boolean;
+  smtp_enabled?: boolean;
   smtp_from_address?: string | null;
   smtp_from_name?: string | null;
   smtp_password?: string | null;
@@ -237,7 +240,6 @@ export type UserEditReq = {
 };
 
 export type UserInfo = {
-  avatar?: string | null;
   email: string;
   name: string;
   permissions: Array<string>;
@@ -246,7 +248,6 @@ export type UserInfo = {
 };
 
 export type UserListInfo = {
-  avatar?: string | null;
   email: string;
   groups: Array<SimpleGroupInfo>;
   name: string;
@@ -1294,6 +1295,62 @@ export type InfoResponses = {
 };
 
 export type InfoResponse = InfoResponses[keyof InfoResponses];
+
+export type AvatarData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/user/info/avatar';
+};
+
+export type AvatarErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type AvatarResponses = {
+  /**
+   * byte stream
+   */
+  200: Blob | File;
+};
+
+export type AvatarResponse = AvatarResponses[keyof AvatarResponses];
+
+export type AvatarByIdData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/user/info/avatar/{uuid}';
+};
+
+export type AvatarByIdErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type AvatarByIdResponses = {
+  /**
+   * byte stream
+   */
+  200: Blob | File;
+};
+
+export type AvatarByIdResponse = AvatarByIdResponses[keyof AvatarByIdResponses];
 
 export type GetMailSettingsData = {
   body?: never;

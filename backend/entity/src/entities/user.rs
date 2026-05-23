@@ -12,7 +12,6 @@ pub struct Model {
   pub email: String,
   pub password: String,
   pub salt: String,
-  pub avatar: Option<String>,
   pub totp: Option<String>,
 }
 
@@ -26,6 +25,8 @@ pub enum Relation {
   OAuthClientUser,
   #[sea_orm(has_many = "super::passkey::Entity")]
   Passkey,
+  #[sea_orm(has_one = "super::user_avatar::Entity")]
+  UserAvatar,
   #[sea_orm(has_one = "super::user_settings::Entity")]
   UserSettings,
 }
@@ -51,6 +52,12 @@ impl Related<super::o_auth_client_user::Entity> for Entity {
 impl Related<super::passkey::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Passkey.def()
+  }
+}
+
+impl Related<super::user_avatar::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::UserAvatar.def()
   }
 }
 

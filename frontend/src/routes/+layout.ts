@@ -1,34 +1,21 @@
-import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
-import { noSidebarPaths } from '$lib/components/nav.svelte';
-import { info, isSetup } from '$lib/client';
+import { info, isSetup, type UserInfo } from '$lib/client';
 
-export const load: LayoutLoad = async ({ fetch, url }) => {
-  const { data: status, error } = await isSetup({ fetch });
-  if (error) {
-    return {};
-  }
-
-  if (!status?.is_setup && url.pathname !== '/setup') {
-    redirect(302, '/setup');
-  }
-
-  if (!status?.is_setup && url.pathname === '/setup') {
-    return {};
-  }
-
-  const { data: user, response } = await info({ fetch });
-
-  if (
-    !user &&
-    response?.status !== 401 &&
-    !noSidebarPaths.includes(url.pathname) &&
-    !status?.is_setup
-  ) {
-    redirect(302, '/setup');
-  }
+export const load: LayoutLoad = ({ fetch }) => {
+  const setupStatus = isSetup({ fetch });
+  const user: Promise<UserInfo> = info({ fetch }).then(
+    ({ data }) =>
+      data ?? {
+        uuid: '',
+        name: 'Unknown User',
+        email: 'unknown@example.com',
+        permissions: [],
+        totp_enabled: false
+      }
+  );
 
   return {
+    setupStatus,
     user
   };
 };

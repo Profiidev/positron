@@ -3,7 +3,11 @@ use axum::Json;
 use centaurus::{
   backend::{
     auth::jwt_auth::JwtAuth,
-    endpoints::user::{account, management},
+    endpoints::user::{
+      account,
+      info::{avatar_route, self_avatar_route},
+      management,
+    },
     middleware::rate_limiter::RateLimiter,
   },
   db::{init::Connection, tables::ConnectionExt},
@@ -23,7 +27,10 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
 }
 
 fn info_router() -> ApiRouter {
-  ApiRouter::new().api_route("/", get_with(info, |op| op.id("info")))
+  ApiRouter::new()
+    .api_route("/", get_with(info, |op| op.id("info")))
+    .api_route("/avatar", self_avatar_route())
+    .api_route("/avatar/{uuid}", avatar_route())
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -32,7 +39,6 @@ struct UserInfo {
   name: String,
   email: String,
   permissions: Vec<String>,
-  avatar: Option<String>,
   totp_enabled: bool,
 }
 
@@ -45,7 +51,6 @@ async fn info(auth: JwtAuth, db: Connection) -> Result<Json<UserInfo>> {
     name: user.name,
     email: user.email,
     permissions,
-    avatar: user.avatar,
     totp_enabled: user.totp.is_some(),
   }))
 }

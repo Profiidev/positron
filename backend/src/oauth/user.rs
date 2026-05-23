@@ -32,7 +32,7 @@ async fn user_internal(claims: OAuthClaims, db: Connection) -> Json<UserInfo> {
   if claims.scope.contains("image")
     && let Ok(user) = db.user().get_user_by_id(claims.sub).await
   {
-    claims.image = user.avatar;
+    //claims.image = user.avatar;
   }
 
   Json(claims)

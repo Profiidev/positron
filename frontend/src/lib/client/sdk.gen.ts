@@ -6,6 +6,12 @@ import type {
   AuthConfigData,
   AuthConfigErrors,
   AuthConfigResponses,
+  AvatarByIdData,
+  AvatarByIdErrors,
+  AvatarByIdResponses,
+  AvatarData,
+  AvatarErrors,
+  AvatarResponses,
   ChangePasswordData,
   ChangePasswordErrors,
   CompleteSetupData,
@@ -587,6 +593,23 @@ export const info = <ThrowOnError extends boolean = false>(
     url: '/api/user/info',
     ...options
   });
+
+export const avatar = <ThrowOnError extends boolean = false>(
+  options?: Options<AvatarData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<AvatarResponses, AvatarErrors, ThrowOnError>({
+    url: '/api/user/info/avatar',
+    ...options
+  });
+
+export const avatarById = <ThrowOnError extends boolean = false>(
+  options: Options<AvatarByIdData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    AvatarByIdResponses,
+    AvatarByIdErrors,
+    ThrowOnError
+  >({ url: '/api/user/info/avatar/{uuid}', ...options });
 
 export const getMailSettings = <ThrowOnError extends boolean = false>(
   options?: Options<GetMailSettingsData, ThrowOnError>
