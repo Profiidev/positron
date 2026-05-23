@@ -12,14 +12,42 @@
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import Send from '@lucide/svelte/icons/send';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-  import { saveMailSettings, testMail } from '$lib/client';
+  import {
+    saveMailSettings,
+    testMail,
+    type MailSettingsResponse,
+    type UserInfo
+  } from '$lib/client';
 
   let { data } = $props();
 
-  let readonly = $derived(
-    !data.user?.permissions.includes(Permission.SETTINGS_EDIT)
-  );
+  let settings: MailSettingsResponse | undefined = $state();
+  let user: UserInfo | undefined = $state();
   let isLoading = $state(false);
+  let form: BaseForm<typeof mailSettings> | undefined = $state();
+
+  let readonly = $derived(
+    !user?.permissions.includes(Permission.SETTINGS_EDIT)
+  );
+
+  $effect(() => {
+    data.user.then((userInfo) => {
+      user = userInfo;
+    });
+  });
+
+  $effect(() => {
+    data.settings.then((settingsInfo) => {
+      settings = settingsInfo;
+      form?.setValue(
+        unReformat(
+          settings?.settings ?? {
+            smtp_enabled: false
+          }
+        )
+      );
+    });
+  });
 
   const onsubmit = async (form: FormValue<typeof mailSettings>) => {
     let ret = await saveMailSettings({ body: form });
@@ -59,24 +87,8 @@
 </script>
 
 <h4 class="mb-2">Mail Settings</h4>
-{#if (data.settings?.from_env.length ?? 0) > 0}
-  <div class="mb-2 flex items-center">
-    <TriangleAlert class="size-6 text-yellow-600" />
-    <p class="ml-2 text-yellow-600">
-      Values loaded from environment variables cannot be edited here.
-    </p>
-  </div>
-{/if}
-<BaseForm
-  schema={mailSettings}
-  {onsubmit}
-  initialValue={unReformat(
-    data.settings?.settings ?? {
-      smtp_enabled: false
-    }
-  )}
-  bind:isLoading
->
+
+<BaseForm schema={mailSettings} {onsubmit} bind:this={form} bind:isLoading>
   {#snippet children({ props })}
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div class="flex flex-col gap-1">
@@ -84,15 +96,14 @@
           {...props}
           key="smtp_enabled"
           label="Enable SMTP"
-          disabled={readonly ||
-            data.settings?.from_env.includes('smtp_enabled')}
+          disabled={readonly || settings?.from_env.includes('smtp_enabled')}
         />
         <FormInput
           {...props}
           label="SMTP Host"
           key="smtp_server"
           placeholder="mail.example.com"
-          disabled={readonly || data.settings?.from_env.includes('smtp_server')}
+          disabled={readonly || settings?.from_env.includes('smtp_server')}
         />
         <FormInput
           {...props}
@@ -100,23 +111,21 @@
           key="smtp_port"
           placeholder="587"
           type="number"
-          disabled={readonly || data.settings?.from_env.includes('smtp_port')}
+          disabled={readonly || settings?.from_env.includes('smtp_port')}
         />
         <FormInput
           {...props}
           label="SMTP Username"
           key="smtp_username"
           placeholder="user@example.com"
-          disabled={readonly ||
-            data.settings?.from_env.includes('smtp_username')}
+          disabled={readonly || settings?.from_env.includes('smtp_username')}
         />
         <FormInputPassword
           {...props}
           label="SMTP Password"
           key="smtp_password"
           placeholder="Password"
-          disabled={readonly ||
-            data.settings?.from_env.includes('smtp_password')}
+          disabled={readonly || settings?.from_env.includes('smtp_password')}
         />
         <FormInput
           {...props}
@@ -124,52 +133,60 @@
           key="smtp_from_address"
           placeholder="no-reply@example.com"
           disabled={readonly ||
-            data.settings?.from_env.includes('smtp_from_address')}
+            settings?.from_env.includes('smtp_from_address')}
         />
         <FormInput
           {...props}
           label="From Name"
           key="smtp_from_name"
           placeholder="Example App"
-          disabled={readonly ||
-            data.settings?.from_env.includes('smtp_from_name')}
+          disabled={readonly || settings?.from_env.includes('smtp_from_name')}
         />
         <FormSwitch
           {...props}
           key="smtp_use_tls"
           label="Use TLS"
-          disabled={readonly ||
-            data.settings?.from_env.includes('smtp_use_tls')}
+          disabled={readonly || settings?.from_env.includes('smtp_use_tls')}
         />
       </div>
     </div>
   {/snippet}
   {#snippet footer({ isLoading }: { isLoading: boolean })}
-    <div class="mt-4 grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
-      <div class="flex">
-        {#if !readonly && data.settings?.settings?.smtp_enabled}
-          <Button
-            disabled={isLoading}
-            variant="secondary"
-            onclick={testEmail}
-            class="cursor-pointer"
-          >
-            <Send />
-            Send Test Email
-          </Button>
+    <div class="grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
+      <div class="flex flex-col">
+        {#if (settings?.from_env.length ?? 0) > 0}
+          <div class="mb-2 flex items-center">
+            <TriangleAlert class="size-6 text-yellow-600" />
+            <p class="ml-2 text-yellow-600">
+              Values loaded from environment variables cannot be edited here.
+            </p>
+          </div>
         {/if}
-        <Button
-          class="ml-auto cursor-pointer"
-          type="submit"
-          disabled={isLoading}
-        >
-          {#if isLoading}
-            <Spinner />
-          {:else}
-            <Save />
+        <div class="mt-4 flex">
+          {#if !readonly && settings?.settings?.smtp_enabled}
+            <Button
+              disabled={isLoading}
+              variant="secondary"
+              onclick={testEmail}
+              class="cursor-pointer"
+            >
+              <Send />
+              Send Test Email
+            </Button>
           {/if}
-          Save Changes</Button
-        >
+          <Button
+            class="ml-auto cursor-pointer"
+            type="submit"
+            disabled={isLoading}
+          >
+            {#if isLoading}
+              <Spinner />
+            {:else}
+              <Save />
+            {/if}
+            Save Changes</Button
+          >
+        </div>
       </div>
     </div>
   {/snippet}
