@@ -90,7 +90,7 @@
 
 <BaseForm schema={mailSettings} {onsubmit} bind:this={form} bind:isLoading>
   {#snippet children({ props })}
-    <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <div class="flex flex-col gap-1">
         <FormSwitch
           {...props}
@@ -152,11 +152,11 @@
     </div>
   {/snippet}
   {#snippet footer({ isLoading }: { isLoading: boolean })}
-    <div class="grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
+    <div class="grid w-full grid-cols-1 gap-8 xl:grid-cols-2">
       <div class="flex flex-col">
         {#if (settings?.from_env.length ?? 0) > 0}
           <div class="mb-2 flex items-center">
-            <TriangleAlert class="size-6 text-yellow-600" />
+            <TriangleAlert class="size-6 min-h-6 min-w-6 text-yellow-600" />
             <p class="ml-2 text-yellow-600">
               Values loaded from environment variables cannot be edited here.
             </p>

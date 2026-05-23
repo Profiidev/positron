@@ -18,9 +18,9 @@ export const columns = ({
     accessorKey: 'avatar',
     cell: ({ row }) =>
       DataTable.renderComponent(SimpleAvatar, {
+        alt: row.original.name,
         class: 'size-8',
-        src: avatarUrl + `/${row.original.uuid}`,
-        alt: row.original.name
+        src: `${avatarUrl}/${row.original.uuid}`
       }),
     header: () => {},
     size: 10
@@ -36,14 +36,13 @@ export const columns = ({
   createColumn('uuid', 'UUID'),
   {
     accessorKey: 'actions',
-    cell: ({ row }) => {
-      return DataTable.renderComponent(Actions, {
+    cell: ({ row }) =>
+      DataTable.renderComponent(Actions, {
         delete_disabled: !canEdit,
         edit: `/users/${row.original.uuid}`,
         edit_disabled: !canEdit,
         remove: () => deleteUser(row.original)
-      });
-    },
+      }),
     enableHiding: false,
     header: () => {}
   }
