@@ -192,7 +192,7 @@
                 key="name"
                 label="User Name"
                 placeholder="Enter user name"
-                {readonly}
+                disabled={readonly}
               />
               <FormSelect
                 {...props}

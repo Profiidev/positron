@@ -66,7 +66,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
     .expect("Failed to create admin group");
 
   router = auth::state(router, &config, &db).await;
-  router = mail::state(router, &db).await;
+  router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;
   router = storage::state(router, &config).await;
   router = services::state(router, &config).await;

@@ -30,7 +30,7 @@ centaurus = { version = "0.11.2", features = [
   "fix-migrations",
   "uuid",
   "webauthn"
-] }
+], rev = "08bb6d4bb0f8de50df12bc20dc72b3ddb6827121", git = "https://github.com/profiidev/centaurus.git" }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"

@@ -5,6 +5,7 @@ use centaurus::{
     config::{BaseConfig, MetricsConfig, SiteConfig},
   },
   db::config::DBConfig,
+  mail::MailSettings,
 };
 use figment::{
   Figment,
@@ -26,8 +27,12 @@ pub struct Config {
   #[site]
   #[serde(flatten)]
   pub site: SiteConfig,
+  #[auth]
   #[serde(flatten)]
   pub auth: AuthConfig,
+  #[mail]
+  #[serde(flatten)]
+  pub mail: MailSettings,
   #[serde(flatten)]
   pub storage: StorageConfig,
 
@@ -62,6 +67,7 @@ impl Default for Config {
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
       auth: AuthConfig::default(),
+      mail: MailSettings::default(),
     }
   }
 }

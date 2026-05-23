@@ -101,7 +101,7 @@
                 key="name"
                 label="Group Name"
                 placeholder="Enter group name"
-                {readonly}
+                disabled={readonly}
               />
               <FormSelect
                 {...props}

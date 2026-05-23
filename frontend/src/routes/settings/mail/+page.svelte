@@ -1,6 +1,6 @@
 <script lang="ts">
   import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
-  import { mailSettings, reformat, unReformat } from './schema.svelte';
+  import { mailSettings, unReformat } from './schema.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
@@ -11,23 +11,18 @@
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import Send from '@lucide/svelte/icons/send';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import { saveMailSettings, testMail } from '$lib/client';
 
   let { data } = $props();
 
-  // svelte-ignore state_referenced_locally
-  let smtpEnabled = $state(!!data.settings?.smtp);
-  $effect(() => {
-    smtpEnabled = !!data.settings?.smtp;
-  });
   let readonly = $derived(
     !data.user?.permissions.includes(Permission.SETTINGS_EDIT)
   );
   let isLoading = $state(false);
 
   const onsubmit = async (form: FormValue<typeof mailSettings>) => {
-    let formData = reformat(form);
-    let ret = await saveMailSettings({ body: formData });
+    let ret = await saveMailSettings({ body: form });
 
     if (ret.error) {
       if (ret.response?.status === 406) {
@@ -37,7 +32,7 @@
         };
       } else if (ret.response?.status === 400) {
         return {
-          field: 'smtp_host',
+          field: 'smtp_server',
           error: 'Failed to create SMTP transport with provided settings'
         };
       }
@@ -64,10 +59,22 @@
 </script>
 
 <h4 class="mb-2">Mail Settings</h4>
+{#if (data.settings?.from_env.length ?? 0) > 0}
+  <div class="mb-2 flex items-center">
+    <TriangleAlert class="size-6 text-yellow-600" />
+    <p class="ml-2 text-yellow-600">
+      Values loaded from environment variables cannot be edited here.
+    </p>
+  </div>
+{/if}
 <BaseForm
   schema={mailSettings}
   {onsubmit}
-  initialValue={unReformat(data.settings ?? {})}
+  initialValue={unReformat(
+    data.settings?.settings ?? {
+      smtp_enabled: false
+    }
+  )}
   bind:isLoading
 >
   {#snippet children({ props })}
@@ -77,67 +84,70 @@
           {...props}
           key="smtp_enabled"
           label="Enable SMTP"
-          onCheckedChange={(v) => (smtpEnabled = v)}
-          disabled={readonly}
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_enabled')}
         />
-        {#if smtpEnabled}
-          <FormInput
-            {...props}
-            label="SMTP Host"
-            key="smtp_host"
-            placeholder="mail.example.com"
-            {readonly}
-          />
-          <FormInput
-            {...props}
-            label="SMTP Port"
-            key="smtp_port"
-            placeholder="587"
-            type="number"
-            {readonly}
-          />
-          <FormInput
-            {...props}
-            label="SMTP Username"
-            key="smtp_user"
-            placeholder="user@example.com"
-            {readonly}
-          />
-          <FormInputPassword
-            {...props}
-            label="SMTP Password"
-            key="smtp_password"
-            placeholder="Password"
-            {readonly}
-          />
-          <FormInput
-            {...props}
-            label="From Address"
-            key="smtp_from_address"
-            placeholder="no-reply@example.com"
-            {readonly}
-          />
-          <FormInput
-            {...props}
-            label="From Name"
-            key="smtp_from_name"
-            placeholder="Example App"
-            {readonly}
-          />
-          <FormSwitch
-            {...props}
-            key="use_tls"
-            label="Use TLS"
-            disabled={readonly}
-          />
-        {/if}
+        <FormInput
+          {...props}
+          label="SMTP Host"
+          key="smtp_server"
+          placeholder="mail.example.com"
+          disabled={readonly || data.settings?.from_env.includes('smtp_server')}
+        />
+        <FormInput
+          {...props}
+          label="SMTP Port"
+          key="smtp_port"
+          placeholder="587"
+          type="number"
+          disabled={readonly || data.settings?.from_env.includes('smtp_port')}
+        />
+        <FormInput
+          {...props}
+          label="SMTP Username"
+          key="smtp_username"
+          placeholder="user@example.com"
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_username')}
+        />
+        <FormInputPassword
+          {...props}
+          label="SMTP Password"
+          key="smtp_password"
+          placeholder="Password"
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_password')}
+        />
+        <FormInput
+          {...props}
+          label="From Address"
+          key="smtp_from_address"
+          placeholder="no-reply@example.com"
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_from_address')}
+        />
+        <FormInput
+          {...props}
+          label="From Name"
+          key="smtp_from_name"
+          placeholder="Example App"
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_from_name')}
+        />
+        <FormSwitch
+          {...props}
+          key="smtp_use_tls"
+          label="Use TLS"
+          disabled={readonly ||
+            data.settings?.from_env.includes('smtp_use_tls')}
+        />
       </div>
     </div>
   {/snippet}
   {#snippet footer({ isLoading }: { isLoading: boolean })}
     <div class="mt-4 grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
       <div class="flex">
-        {#if !readonly && smtpEnabled}
+        {#if !readonly && data.settings?.settings?.smtp_enabled}
           <Button
             disabled={isLoading}
             variant="secondary"
