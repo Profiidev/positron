@@ -31,6 +31,13 @@
   let passkeyError = $state('');
   let isLoading = $state(false);
   let totp = $state(false);
+  let mailEnabled = $state(false);
+
+  $effect(() => {
+    data.config?.then((config) => {
+      mailEnabled = config?.mail_enabled || false;
+    });
+  });
 
   $effect(() => {
     const url = new URL(window.location.href);
@@ -91,11 +98,11 @@
     } else if (!ret.data) {
       return { error: 'Login failed. Please try again.' };
     } else {
-      let user = (ret.data as { user?: string }).user;
+      let user = ((await ret.response?.json()) as { user?: string } | undefined)
+        ?.user;
       if (user) {
         loginSuccess(user);
       } else {
-        totp = true;
       }
     }
   };
@@ -112,7 +119,9 @@
     } else if (!ret.data) {
       return { error: 'Failed to confirm code. Please try again.' };
     } else {
-      loginSuccess((ret.data as { user: string }).user);
+      let user = ((await ret.response?.json()) as { user?: string } | undefined)
+        ?.user;
+      loginSuccess(user || '');
     }
   };
 
@@ -199,7 +208,7 @@
               placeholder="Your password"
               key="password"
             >
-              {#if data.config?.mail_enabled}
+              {#if mailEnabled}
                 <a
                   href="/password/forgot"
                   class="ms-auto inline-block text-sm underline"

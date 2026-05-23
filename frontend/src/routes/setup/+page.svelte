@@ -52,8 +52,11 @@
         return { error: 'An unknown error occurred.' };
       }
     } else {
-      setTimeout(() => {
-        connectWebsocket((ret.data as { user: string }).user);
+      setTimeout(async () => {
+        let user = (
+          (await ret.response?.json()) as { user?: string } | undefined
+        )?.user;
+        connectWebsocket(user || '');
         goto('/');
       });
     }
