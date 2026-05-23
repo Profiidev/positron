@@ -80,7 +80,7 @@
 
     if (response?.status !== 200) {
       if (response?.status === 401) {
-        return { error: 'TOTP code invalid', field: 'code' };
+        return { error: 'TOTP code invalid', field: 'code' } as const;
       } else {
         return { error: 'Error while adding TOTP' };
       }

@@ -11,6 +11,7 @@
   import { arrayBufferToBase64 } from '@profidev/pleiades/util/convert.svelte';
   import { updateAccount, updateAvatar, type UserInfo } from '$lib/client';
   import { avatarUrl } from '$lib/permissions.svelte';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
   let { data } = $props();
 
@@ -83,15 +84,28 @@
       </div>
     </div>
   {/snippet}
-  {#snippet footer({ isLoading }: { isLoading: boolean })}
+  {#snippet footer({
+    isLoading,
+    isError
+  }: {
+    isLoading: boolean;
+    isError: boolean;
+  })}
     <div class="mt-4 grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
-      <Button class="ml-auto cursor-pointer" type="submit" disabled={isLoading}>
+      <Button
+        class="ml-auto cursor-pointer"
+        type="submit"
+        disabled={isLoading}
+        variant={isError ? 'destructive' : undefined}
+      >
         {#if isLoading}
           <Spinner />
+        {:else if isError}
+          <RotateCcw />
         {:else}
           <Save />
         {/if}
-        Save Changes</Button
+        {isError ? 'Retry' : 'Save Changes'}</Button
       >
     </div>
   {/snippet}

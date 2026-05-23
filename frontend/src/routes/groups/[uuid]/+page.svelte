@@ -3,6 +3,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { Permission } from '$lib/permissions.svelte';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
@@ -93,12 +94,15 @@
 
     if (res.error) {
       if (res.response?.status === 409) {
-        return { error: 'This group name is already in use', field: 'name' };
+        return {
+          error: 'This group name is already in use',
+          field: 'name'
+        } as const;
       } else if (res.response?.status === 406) {
         return {
           error: 'Admin group must have at least 1 user',
           field: 'users'
-        };
+        } as const;
       } else {
         return { error: 'Failed to update group' };
       }
@@ -175,19 +179,28 @@
           </div>
         </ScrollArea>
       {/snippet}
-      {#snippet footer({ isLoading }: { isLoading: boolean })}
+      {#snippet footer({
+        isLoading,
+        isError
+      }: {
+        isLoading: boolean;
+        isError: boolean;
+      })}
         <div class="mt-4 grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
           <Button
             class="ml-auto cursor-pointer"
             type="submit"
             disabled={isLoading}
+            variant={isError ? 'destructive' : undefined}
           >
             {#if isLoading}
               <Spinner />
+            {:else if isError}
+              <RotateCcw />
             {:else}
               <Save />
             {/if}
-            Save Changes</Button
+            {isError ? 'Retry' : 'Save Changes'}</Button
           >
         </div>
       {/snippet}

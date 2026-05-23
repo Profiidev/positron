@@ -82,7 +82,7 @@
       if (regResponse?.status === 401) {
         return { error: 'There was an error with your passkey' };
       } else if (regResponse?.status === 409) {
-        return { field: 'name', error: 'Name already taken' };
+        return { field: 'name', error: 'Name already taken' } as const;
       } else {
         return { error: 'There was an error while creating passkey' };
       }
@@ -142,7 +142,7 @@
 
     if (response?.status !== 200) {
       if (response?.status === 401) {
-        return { field: 'name', error: 'Name already taken' };
+        return { field: 'name', error: 'Name already taken' } as const;
       } else {
         return { error: 'There was an error while editing passkey name' };
       }

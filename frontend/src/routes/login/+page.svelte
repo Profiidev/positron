@@ -25,10 +25,11 @@
   } from '@simplewebauthn/browser';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
   let { data } = $props();
 
-  let passkeyError = $state('');
+  let passkeyError = $state(false);
   let isLoading = $state(false);
   let totp = $state(false);
   let mailEnabled = $state(false);
@@ -92,7 +93,10 @@
     });
 
     if (!ret.data && ret.response?.status === 401) {
-      return { error: 'Invalid email or password.' };
+      return {
+        error: 'Invalid email or password.',
+        field: 'password'
+      } as const;
     } else if (!ret.data && ret.response?.status === 429) {
       return { error: 'Rate limit exceeded. Please try again later.' };
     } else if (!ret.data) {
@@ -126,12 +130,13 @@
   };
 
   const passkeyLogin = async () => {
-    passkeyError = '';
+    passkeyError = false;
     isLoading = true;
 
     let { data, response } = await startAuthentication();
     if (response?.status !== 200) {
-      passkeyError = 'There was an error while starting passkey registration';
+      passkeyError = true;
+      toast.error('There was an error while starting passkey authentication.');
       isLoading = false;
       return;
     }
@@ -146,8 +151,8 @@
     try {
       passkeyResponse = await webauthnStart({ optionsJSON });
     } catch {
-      passkeyError =
-        'There was an error during passkey registration. Please try again.';
+      passkeyError = true;
+      toast.error('There was an error with your passkey. Please try again.');
       isLoading = false;
       return;
     }
@@ -161,9 +166,11 @@
 
     if (regResponse?.status !== 200) {
       if (regResponse?.status === 401) {
-        passkeyError = 'There was an error with your passkey';
+        passkeyError = true;
+        toast.error('There was an error with your passkey');
       } else {
-        passkeyError = 'There was an error while signing in.';
+        passkeyError = true;
+        toast.error('There was an error while signing in.');
       }
     } else {
       loginSuccess((authData as { user: string }).user);
@@ -184,16 +191,18 @@
     </Card.Header>
     <Card.Content>
       {#if totp}
-        <BaseForm schema={totpSchema} bind:isLoading onsubmit={confirmTotp}>
+        <BaseForm
+          schema={totpSchema}
+          bind:isLoading
+          onsubmit={confirmTotp}
+          submitText="Continue"
+        >
           {#snippet children({ props })}
             <Totp6 {...props} key="code" label="" class="justify-evenly" />
           {/snippet}
-          {#snippet footer({ defaultBtn })}
-            {@render defaultBtn({ content: 'Continue' })}
-          {/snippet}
         </BaseForm>
       {:else}
-        <BaseForm schema={login} {onsubmit} bind:isLoading>
+        <BaseForm schema={login} {onsubmit} bind:isLoading submitText="Login">
           {#snippet children({ props })}
             <FormInput
               {...props}
@@ -219,29 +228,25 @@
               {/if}
             </FormInputPassword>
           {/snippet}
-          {#snippet footer({ defaultBtn })}
-            {@render defaultBtn({ content: 'Login' })}
-          {/snippet}
         </BaseForm>
       {/if}
       <FieldSeparator class="*:data-[slot=field-separator-content]:bg-card my-4"
         >Or continue with</FieldSeparator
       >
-      {#if passkeyError}
-        <div class="text-destructive mb-2 text-sm">{passkeyError}</div>
-      {/if}
       <Button
-        variant="outline"
         class="w-full cursor-pointer"
         onclick={passkeyLogin}
         disabled={isLoading}
+        variant={passkeyError ? 'destructive' : 'outline'}
       >
         {#if isLoading}
           <Spinner />
+        {:else if passkeyError}
+          <RotateCcw />
         {:else}
           <KeyRound />
         {/if}
-        Passkey</Button
+        {passkeyError ? 'Retry Passkey' : 'Passkey'}</Button
       >
     </Card.Content>
   </Card.Root>

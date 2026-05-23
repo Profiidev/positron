@@ -31,7 +31,7 @@
       >
     </Card.Header>
     <Card.Content>
-      <BaseForm schema={forgotPassword} {onsubmit}>
+      <BaseForm schema={forgotPassword} {onsubmit} submitText="Send Reset Link">
         {#snippet children({ props })}
           <FormInput
             {...props}
@@ -40,9 +40,6 @@
             placeholder="mail@example.com"
             key="email"
           />
-        {/snippet}
-        {#snippet footer({ defaultBtn })}
-          {@render defaultBtn({ content: 'Send Reset Link' })}
         {/snippet}
       </BaseForm>
     </Card.Content>

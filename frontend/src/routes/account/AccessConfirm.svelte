@@ -18,6 +18,7 @@
     type AuthenticationResponseJSON,
     type PublicKeyCredentialRequestOptionsJSON
   } from '@simplewebauthn/browser';
+  import { toast } from '@profidev/pleiades/components/util/general';
 
   interface Props {
     specialAccessValid: boolean;
@@ -42,7 +43,7 @@
 
   let cb: (value: boolean) => void;
   let open = $state(false);
-  let passkeyError = $state('');
+  let passkeyError = $state(false);
   let isLoading = $state(false);
 
   export const requestAccess = async () => {
@@ -53,7 +54,7 @@
   };
 
   const confirm = async (form: FormValue<typeof confirmSchema>) => {
-    passkeyError = '';
+    passkeyError = false;
     let encrypt = getEncrypt();
     if (!encrypt) {
       return {
@@ -69,7 +70,7 @@
 
     if (ret.response?.status !== 200) {
       if (ret.response?.status === 401) {
-        return { error: 'Wrong Password' };
+        return { error: 'Wrong Password', field: 'password' } as const;
       } else {
         return { error: 'There was an error while confirming access' };
       }
@@ -81,12 +82,13 @@
 
   const passkeyClick = async () => {
     isLoading = true;
-    passkeyError = '';
+    passkeyError = false;
 
     let { data, response } = await startSpecialAccess();
     if (response?.status !== 200) {
       isLoading = false;
-      passkeyError = 'There was an error while starting passkey authentication';
+      passkeyError = true;
+      toast.error('There was an error while starting passkey authentication');
       return;
     }
 
@@ -99,7 +101,8 @@
       authRes = await startAuthentication({ optionsJSON });
     } catch {
       isLoading = false;
-      passkeyError = 'Authentication failed or was cancelled';
+      passkeyError = true;
+      toast.error('Authentication failed or was cancelled');
       return;
     }
 
@@ -111,9 +114,11 @@
 
     if (authResponse?.status !== 200) {
       if (authResponse?.status === 401) {
-        passkeyError = 'There was an error with your passkey';
+        passkeyError = true;
+        toast.error('There was an error with your passkey');
       } else {
-        passkeyError = 'There was an error while signing in';
+        passkeyError = true;
+        toast.error('There was an error while confirming access');
       }
     } else {
       cb(true);
@@ -134,7 +139,12 @@
       <Dialog.Title>Confirm Access</Dialog.Title>
       <Dialog.Description>Confirm access to your account</Dialog.Description>
     </Dialog.Header>
-    <BaseForm onsubmit={confirm} bind:isLoading schema={confirmSchema}>
+    <BaseForm
+      onsubmit={confirm}
+      bind:isLoading
+      schema={confirmSchema}
+      submitText="Confirm Access"
+    >
       {#snippet children({ props })}
         <FormInput
           {...props}
@@ -146,9 +156,6 @@
           autocorrect="off"
           type="password"
         />
-      {/snippet}
-      {#snippet footer({ defaultBtn })}
-        {@render defaultBtn({ content: 'Confirm Access' })}
       {/snippet}
     </BaseForm>
     <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />

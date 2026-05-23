@@ -5,6 +5,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import Save from '@lucide/svelte/icons/save';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { Permission } from '$lib/permissions.svelte';
   import FormSwitch from '@profidev/pleiades/components/form/form-switch.svelte';
@@ -57,12 +58,12 @@
         return {
           field: 'smtp_from_address',
           error: 'Invalid From Address provided'
-        };
+        } as const;
       } else if (ret.response?.status === 400) {
         return {
           field: 'smtp_server',
           error: 'Failed to create SMTP transport with provided settings'
-        };
+        } as const;
       }
       toast.error('Failed to save mail settings');
     } else {
@@ -151,7 +152,13 @@
       </div>
     </div>
   {/snippet}
-  {#snippet footer({ isLoading }: { isLoading: boolean })}
+  {#snippet footer({
+    isLoading,
+    isError
+  }: {
+    isLoading: boolean;
+    isError: boolean;
+  })}
     <div class="grid w-full grid-cols-1 gap-8 xl:grid-cols-2">
       <div class="flex flex-col">
         {#if (settings?.from_env.length ?? 0) > 0}
@@ -178,13 +185,16 @@
             class="ml-auto cursor-pointer"
             type="submit"
             disabled={isLoading}
+            variant={isError ? 'destructive' : undefined}
           >
             {#if isLoading}
               <Spinner />
+            {:else if isError}
+              <RotateCcw />
             {:else}
               <Save />
             {/if}
-            Save Changes</Button
+            {isError ? 'Retry' : 'Save Changes'}</Button
           >
         </div>
       </div>

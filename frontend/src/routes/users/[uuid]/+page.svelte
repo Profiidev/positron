@@ -114,7 +114,10 @@
 
     if (res.error) {
       if (res.response?.status === 409) {
-        return { error: 'Cannot remove the last user from the admin group' };
+        return {
+          error: 'Cannot remove the last user from the admin group',
+          field: 'groups'
+        } as const;
       } else if (res.response?.status === 403) {
         return { error: 'Cannot assign permissions that you do not have' };
       } else {
@@ -245,19 +248,28 @@
             </div>
           </div>
         {/snippet}
-        {#snippet footer({ isLoading }: { isLoading: boolean })}
+        {#snippet footer({
+          isLoading,
+          isError
+        }: {
+          isLoading: boolean;
+          isError: boolean;
+        })}
           <div class="mt-4 grid w-full grid-cols-1 gap-8 lg:grid-cols-2">
             <Button
               class="ml-auto cursor-pointer"
               type="submit"
               disabled={isLoading || readonly}
+              variant={isError ? 'destructive' : undefined}
             >
               {#if isLoading}
                 <Spinner />
+              {:else if isError}
+                <RotateCcw />
               {:else}
                 <Save />
               {/if}
-              Save Changes</Button
+              {isError ? 'Retry' : 'Save Changes'}</Button
             >
           </div>
         {/snippet}

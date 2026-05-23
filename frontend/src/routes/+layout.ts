@@ -1,16 +1,16 @@
 import type { LayoutLoad } from './$types';
-import { info, isSetup, type UserInfo } from '$lib/client';
+import { type UserInfo, info, isSetup } from '$lib/client';
 
 export const load: LayoutLoad = ({ fetch }) => {
   const setupStatus = isSetup({ fetch });
   const user: Promise<UserInfo> = info({ fetch }).then(
     ({ data }) =>
       data ?? {
-        uuid: '',
-        name: 'Unknown User',
         email: 'unknown@example.com',
+        name: 'Unknown User',
         permissions: [],
-        totp_enabled: false
+        totp_enabled: false,
+        uuid: ''
       }
   );
 

@@ -27,7 +27,10 @@
 
   const changeConfirm = async (form: FormValue<typeof passwordChange>) => {
     if (form.password !== form.password_confirm) {
-      return { error: 'Passwords are not equal', field: 'password_confirm' };
+      return {
+        error: 'Passwords are not equal',
+        field: 'password_confirm'
+      } as const;
     }
 
     let encrypt = getEncrypt();
@@ -46,7 +49,10 @@
 
     if (response?.status !== 200) {
       if (response?.status === 401) {
-        return { error: 'Passwords are not equal', field: 'password_confirm' };
+        return {
+          error: 'Passwords are not equal',
+          field: 'password_confirm'
+        } as const;
       } else {
         return { error: 'Error while updating password' };
       }

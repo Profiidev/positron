@@ -55,6 +55,7 @@
         schema={resetPassword}
         {onsubmit}
         initialValue={{ token: data.token ?? '' }}
+        submitText="Reset Password"
       >
         {#snippet children({ props })}
           <FormInput
@@ -75,9 +76,6 @@
             placeholder="Confirm your new password"
             key="confirm_password"
           />
-        {/snippet}
-        {#snippet footer({ defaultBtn })}
-          {@render defaultBtn({ content: 'Reset Password' })}
         {/snippet}
       </BaseForm>
     </Card.Content>
