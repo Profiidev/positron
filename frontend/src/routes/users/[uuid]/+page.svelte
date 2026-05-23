@@ -20,36 +20,72 @@
   import Save from '@lucide/svelte/icons/save';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import FormSelect from '@profidev/pleiades/components/form/form-select.svelte';
-  import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import {
     deleteUser,
     editUser,
     resetUserAvatar,
-    resetUserPassword
+    resetUserPassword,
+    type DetailUserInfo,
+    type SimpleGroupInfo
   } from '$lib/client';
   import { getEncrypt } from '$lib/backend/auth.svelte.js';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { avatarUrl } from '../table.svelte.js';
+  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
 
   const { data } = $props();
 
   let resetOpen = $state(false);
   let deleteOpen = $state(false);
   let isLoading = $state(false);
-  let readonly = $derived(
-    !data.user?.permissions.includes(Permission.USER_EDIT)
-  );
-  let allowSpecialEdit = $derived(
-    data.userInfo.permissions.every((perm) =>
-      data.user?.permissions.includes(perm)
-    )
-  );
+  let readonly = $state(true);
+  let allowSpecialEdit = $state(false);
+  let mailActive = $state(false);
+  let userInfo: DetailUserInfo | undefined = $state();
+  let groups: SimpleGroupInfo[] = $state([]);
+  let form: BaseForm<typeof userSettings> | undefined = $state();
+
+  $effect(() => {
+    Promise.all([data.user, data.userInfoPromise]).then(([user, res]) => {
+      if (!res.data) {
+        if (res.response?.status === 404) {
+          goto('/users?error=user_not_found');
+        } else {
+          goto('/users?error=user_other');
+        }
+        return;
+      }
+      const detailUserInfo = res.data;
+
+      userInfo = detailUserInfo;
+      form?.setValue(formatData(detailUserInfo));
+      readonly = !user.permissions.includes(Permission.USER_EDIT);
+      allowSpecialEdit = detailUserInfo.permissions.every((perm) =>
+        user.permissions.includes(perm)
+      );
+    });
+  });
+
+  $effect(() => {
+    data.mailActivePromise.then((res) => {
+      mailActive = res;
+    });
+  });
+
+  $effect(() => {
+    data.groupsPromise.then((res) => {
+      groups = res;
+    });
+  });
 
   const deleteItemConfirm = async () => {
+    if (!userInfo) return;
     isLoading = true;
     let ret = await deleteUser({
       body: {
-        uuid: data.userInfo.uuid
+        uuid: userInfo.uuid
       }
     });
     isLoading = false;
@@ -63,7 +99,7 @@
         return { error: 'Failed to delete user' };
       }
     } else {
-      toast.success(`User ${data.userInfo.name} deleted successfully`);
+      toast.success(`User ${userInfo.name} deleted successfully`);
       setTimeout(() => {
         goto('/users');
       });
@@ -71,7 +107,8 @@
   };
 
   const onsubmit = async (form: FormValue<typeof userSettings>) => {
-    let user = reformatData(form, data.userInfo.uuid);
+    if (!userInfo) return;
+    let user = reformatData(form, userInfo.uuid);
     let res = await editUser({
       body: user
     });
@@ -85,13 +122,14 @@
         return { error: 'Failed to update user' };
       }
     } else {
-      toast.success(`User ${data.userInfo.name} updated successfully`);
+      toast.success(`User ${userInfo.name} updated successfully`);
       // do not trigger form reset
       return { error: '' };
     }
   };
 
   const resetPasswordSubmit = async (form: FormValue<typeof resetPassword>) => {
+    if (!userInfo) return;
     let encrypt = getEncrypt();
     if (!encrypt) {
       return { error: 'Encryption function not available' };
@@ -99,7 +137,7 @@
 
     let res = await resetUserPassword({
       body: {
-        uuid: data.userInfo.uuid,
+        uuid: userInfo.uuid,
         new_password: encrypt.encrypt(form.new_password) || ''
       }
     });
@@ -111,9 +149,7 @@
         return { error: 'Failed to reset password' };
       }
     } else {
-      toast.success(
-        `Password for user ${data.userInfo.name} reset successfully`
-      );
+      toast.success(`Password for user ${userInfo.name} reset successfully`);
     }
   };
 </script>
@@ -123,8 +159,15 @@
     <Button size="icon" variant="ghost" href="/users" class="mr-2">
       <ArrowLeft class="size-5" />
     </Button>
-    <h3 class="text-xl font-medium">User: {data.userInfo.name}</h3>
-    {#if !data.mailActive && allowSpecialEdit}
+    <h3 class="flex text-xl font-medium">
+      User:
+      {#if !userInfo}
+        <Skeleton class="ml-2 h-7 w-20" />
+      {:else}
+        {userInfo.name}
+      {/if}
+    </h3>
+    {#if !mailActive && allowSpecialEdit}
       <Button
         variant="secondary"
         class="mr-2 ml-auto cursor-pointer"
@@ -137,7 +180,7 @@
     {/if}
     <Button
       class={'cursor-pointer' +
-        (data.mailActive || !allowSpecialEdit ? ' ml-auto' : '')}
+        (mailActive || !allowSpecialEdit ? ' ml-auto' : '')}
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
@@ -152,17 +195,13 @@
   >
     <div class="flex-1">
       <h4 class="mb-2">Settings</h4>
-      <BaseForm
-        schema={userSettings}
-        {onsubmit}
-        initialValue={formatData(data.userInfo)}
-      >
+      <BaseForm schema={userSettings} {onsubmit} bind:this={form}>
         {#snippet children({ props })}
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr]">
             <div>
               <div class="mb-2 flex items-center">
                 <SimpleAvatar
-                  src={data.userInfo.avatar ?? ''}
+                  src={userInfo ? avatarUrl + `/${userInfo.uuid}` : ''}
                   class="size-14"
                 />
                 <Button
@@ -173,7 +212,7 @@
                     if (
                       (
                         await resetUserAvatar({
-                          body: { uuid: data.userInfo.uuid }
+                          body: { uuid: userInfo?.uuid || '' }
                         })
                       ).error
                     ) {
@@ -199,10 +238,10 @@
                 key="groups"
                 label="Group Membership"
                 disabled={readonly || !allowSpecialEdit}
-                data={data.groups?.map((group) => ({
+                data={groups.map((group) => ({
                   label: group.name,
                   value: group.uuid
-                })) || []}
+                }))}
               />
             </div>
           </div>
@@ -212,7 +251,7 @@
             <Button
               class="ml-auto cursor-pointer"
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || readonly}
             >
               {#if isLoading}
                 <Spinner />
@@ -229,7 +268,7 @@
 </div>
 <FormDialog
   title={`Delete User`}
-  description={`Do you really want to delete the user ${data.userInfo.name}?`}
+  description={`Do you really want to delete the user ${userInfo?.name}?`}
   confirm="Delete"
   confirmVariant="destructive"
   onsubmit={deleteItemConfirm}
@@ -239,7 +278,7 @@
 />
 <FormDialog
   title={`Reset Password`}
-  description={`Do you really want to reset the password for user ${data.userInfo.name}?`}
+  description={`Do you really want to reset the password for user ${userInfo?.name}?`}
   confirm="Reset"
   onsubmit={resetPasswordSubmit}
   bind:open={resetOpen}

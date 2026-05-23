@@ -15,6 +15,13 @@
   let selected: UserListInfo | undefined = $state();
   let deleteOpen = $state(false);
   let isLoading = $state(false);
+  let canEdit = $state(false);
+
+  $effect(() => {
+    data.user.then((user) => {
+      canEdit = user?.permissions.includes(Permission.USER_EDIT) ?? false;
+    });
+  });
 
   $effect(() => {
     if (data.error) {
@@ -61,7 +68,7 @@
     <Button
       class="ml-auto cursor-pointer"
       href="/users/create"
-      disabled={!data.user?.permissions.includes(Permission.USER_EDIT)}
+      disabled={!canEdit}
     >
       <Plus />
       Create
@@ -73,7 +80,7 @@
     class="mt-4"
     columnData={{
       deleteUser: startDeleteUser,
-      user: data.user
+      canEdit
     }}
   />
 </div>

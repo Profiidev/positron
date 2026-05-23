@@ -1,24 +1,26 @@
 import type { ColumnDef } from '@tanstack/table-core';
 import * as DataTable from '@profidev/pleiades/components/ui/data-table';
 import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
-import { Permission } from '$lib/permissions.svelte';
-import SimpleAvatar from '@profidev/pleiades/components/util/simple-avatar.svelte';
-import type { SimpleGroupInfo, UserInfo, UserListInfo } from '$lib/client';
+import type { AvatarData, SimpleGroupInfo, UserListInfo } from '$lib/client';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
+import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+
+export const avatarUrl: AvatarData['url'] = '/api/user/info/avatar';
 
 export const columns = ({
   deleteUser,
-  user
+  canEdit
 }: {
   deleteUser: (user: UserListInfo) => void;
-  user?: UserInfo;
+  canEdit: boolean;
 }): ColumnDef<UserListInfo>[] => [
   {
     accessorKey: 'avatar',
     cell: ({ row }) =>
       DataTable.renderComponent(SimpleAvatar, {
         class: 'size-8',
-        src: row.getValue('avatar') as string // oxlint-disable-line no-unnecessary-type-assertion
+        src: avatarUrl + `/${row.original.uuid}`,
+        alt: row.original.name
       }),
     header: () => {},
     size: 10
@@ -35,12 +37,10 @@ export const columns = ({
   {
     accessorKey: 'actions',
     cell: ({ row }) => {
-      const disabled = !user?.permissions.includes(Permission.USER_EDIT);
-
       return DataTable.renderComponent(Actions, {
-        delete_disabled: disabled,
+        delete_disabled: !canEdit,
         edit: `/users/${row.original.uuid}`,
-        edit_disabled: disabled,
+        edit_disabled: !canEdit,
         remove: () => deleteUser(row.original)
       });
     },

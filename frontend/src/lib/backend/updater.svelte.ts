@@ -33,9 +33,11 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate('/api/user/management').catch(() => {});
       invalidate(`/api/user/management/${msg.uuid}`).catch(() => {});
       invalidate('/api/group/users').catch(() => {});
+      invalidate(`/api/user/info/avatar/${msg.uuid}`).catch(() => {});
       // Same as current user
       if (msg.uuid === user) {
         invalidate('/api/user/info').catch(() => {});
+        invalidate('/api/user/info/avatar').catch(() => {});
       }
       break;
     }
