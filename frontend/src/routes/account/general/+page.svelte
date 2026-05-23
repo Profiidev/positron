@@ -9,9 +9,22 @@
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import * as ImageCropper from '@profidev/pleiades/components/ui-extra/image-cropper';
   import { arrayBufferToBase64 } from '@profidev/pleiades/util/convert.svelte';
-  import { updateAccount, updateAvatar } from '$lib/client';
+  import { updateAccount, updateAvatar, type UserInfo } from '$lib/client';
+  import { avatarUrl } from '../../users/table.svelte';
 
   let { data } = $props();
+
+  let user: UserInfo | undefined = $state();
+  let form: BaseForm<typeof generalSettings> | undefined = $state();
+
+  $effect(() => {
+    data.user.then((d) => {
+      user = d;
+      form?.setValue({
+        username: user.name
+      });
+    });
+  });
 
   const onsubmit = async (form: FormValue<typeof generalSettings>) => {
     let ret = await updateAccount({ body: form });
@@ -27,18 +40,12 @@
 </script>
 
 <h4 class="mb-2">General Settings</h4>
-<BaseForm
-  schema={generalSettings}
-  {onsubmit}
-  initialValue={{
-    username: data.user?.name || ''
-  }}
->
+<BaseForm schema={generalSettings} {onsubmit} bind:this={form}>
   {#snippet children({ props })}
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div class="flex flex-col gap-2">
         <ImageCropper.Root
-          src={`data:image/webp;base64,${data.user?.avatar || ''}`}
+          src={avatarUrl}
           onCropped={async (url) => {
             let file = await ImageCropper.getFileFromUrl(url);
             let data = arrayBufferToBase64(await file.arrayBuffer());
@@ -71,6 +78,7 @@
           label="Username"
           key="username"
           placeholder="Enter your username"
+          disabled={!user}
         />
       </div>
     </div>

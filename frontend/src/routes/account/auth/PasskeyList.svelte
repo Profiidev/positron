@@ -154,62 +154,60 @@
   };
 </script>
 
+<div class="mt-2 flex">
+  <h5 class="my-2">Passkeys:</h5>
+  <FormDialog
+    title="Create new Passkey"
+    description="Enter the name for your new passkey"
+    confirm="Create"
+    trigger={{
+      text: 'Add Passkey',
+      class: 'ml-auto',
+      loadIcon: true
+    }}
+    onopen={startCreatePasskey}
+    onsubmit={createPasskey}
+    schema={passkeyCreateSchema}
+  >
+    {#snippet children({ props })}
+      <FormInput
+        label="Passkey Name"
+        placeholder="Name"
+        key="name"
+        {...props}
+      />
+    {/snippet}
+  </FormDialog>
+  <FormDialog
+    title="Change Passkey Name"
+    description="Enter a new name for your passkey"
+    confirm="Confirm"
+    trigger={undefined}
+    onsubmit={editPasskey}
+    bind:this={editDialog}
+    schema={passkeyEditSchema}
+  >
+    {#snippet children({ props })}
+      <FormInput
+        label="Passkey Name"
+        placeholder="Name"
+        key="name"
+        {...props}
+      />
+    {/snippet}
+  </FormDialog>
+  <FormDialog
+    title="Delete Passkey"
+    description={`This will permanently remove the passkey "${editing}" from your account`}
+    confirm="Confirm"
+    confirmVariant="destructive"
+    trigger={undefined}
+    onsubmit={deletePasskey}
+    bind:this={deleteDialog}
+    schema={passkeyDeleteSchema}
+  ></FormDialog>
+</div>
 <div class="rounded-xl border">
-  <div class="flex items-center p-2">
-    <p class="text-muted-foreground rounded-lg">Your Passkeys</p>
-    <FormDialog
-      title="Create new Passkey"
-      description="Enter the name for your new passkey"
-      confirm="Create"
-      trigger={{
-        text: 'Create new',
-        variant: 'secondary',
-        class: 'ml-auto',
-        loadIcon: true
-      }}
-      onopen={startCreatePasskey}
-      onsubmit={createPasskey}
-      schema={passkeyCreateSchema}
-    >
-      {#snippet children({ props })}
-        <FormInput
-          label="Passkey Name"
-          placeholder="Name"
-          key="name"
-          {...props}
-        />
-      {/snippet}
-    </FormDialog>
-    <FormDialog
-      title="Change Passkey Name"
-      description="Enter a new name for your passkey"
-      confirm="Confirm"
-      trigger={undefined}
-      onsubmit={editPasskey}
-      bind:this={editDialog}
-      schema={passkeyEditSchema}
-    >
-      {#snippet children({ props })}
-        <FormInput
-          label="Passkey Name"
-          placeholder="Name"
-          key="name"
-          {...props}
-        />
-      {/snippet}
-    </FormDialog>
-    <FormDialog
-      title="Delete Passkey"
-      description={`This will permanently remove the passkey "${editing}" from your account`}
-      confirm="Confirm"
-      confirmVariant="destructive"
-      trigger={undefined}
-      onsubmit={deletePasskey}
-      bind:this={deleteDialog}
-      schema={passkeyDeleteSchema}
-    ></FormDialog>
-  </div>
-  <Separator />
   {#if !passkeys}
     <div class="flex items-center p-1">
       <div class="space-y-1 p-2">

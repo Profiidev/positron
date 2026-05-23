@@ -162,7 +162,7 @@
         </FormDialog>
       {/if}
     {:else}
-      <Skeleton class="m-2 ml-auto h-10 w-20" />
+      <Skeleton class="m-2 ml-auto h-8 w-20" />
     {/if}
   </div>
 </div>
