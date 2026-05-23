@@ -10,7 +10,7 @@
   import * as ImageCropper from '@profidev/pleiades/components/ui-extra/image-cropper';
   import { arrayBufferToBase64 } from '@profidev/pleiades/util/convert.svelte';
   import { updateAccount, updateAvatar, type UserInfo } from '$lib/client';
-  import { avatarUrl } from '../../users/table.svelte';
+  import { avatarUrl } from '$lib/permissions.svelte';
 
   let { data } = $props();
 
@@ -45,7 +45,7 @@
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div class="flex flex-col gap-2">
         <ImageCropper.Root
-          src={avatarUrl}
+          src={user ? `${avatarUrl}/${user.uuid}` : undefined}
           onCropped={async (url) => {
             let file = await ImageCropper.getFileFromUrl(url);
             let data = arrayBufferToBase64(await file.arrayBuffer());

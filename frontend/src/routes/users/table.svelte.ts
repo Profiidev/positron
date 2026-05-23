@@ -1,11 +1,10 @@
 import type { ColumnDef } from '@tanstack/table-core';
 import * as DataTable from '@profidev/pleiades/components/ui/data-table';
 import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
-import type { AvatarData, SimpleGroupInfo, UserListInfo } from '$lib/client';
+import type { SimpleGroupInfo, UserListInfo } from '$lib/client';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
 import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
-
-export const avatarUrl: AvatarData['url'] = '/api/user/info/avatar';
+import { avatarUrl } from '$lib/permissions.svelte';
 
 export const columns = ({
   deleteUser,

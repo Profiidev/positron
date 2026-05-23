@@ -1,3 +1,5 @@
+import type { AvatarData } from './client';
+
 export enum Permission {
   SETTINGS_VIEW = 'settings:view',
   SETTINGS_EDIT = 'settings:edit',
@@ -6,3 +8,5 @@ export enum Permission {
   USER_VIEW = 'user:view',
   USER_EDIT = 'user:edit'
 }
+
+export const avatarUrl: AvatarData['url'] = '/api/user/info/avatar';

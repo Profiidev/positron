@@ -3,7 +3,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
-  import { Permission } from '$lib/permissions.svelte';
+  import { avatarUrl, Permission } from '$lib/permissions.svelte';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
@@ -32,7 +32,6 @@
   } from '$lib/client';
   import { getEncrypt } from '$lib/backend/auth.svelte.js';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
-  import { avatarUrl } from '../table.svelte.js';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
 
   const { data } = $props();

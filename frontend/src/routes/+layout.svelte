@@ -8,15 +8,23 @@
   import { page } from '$app/state';
   import { items, noSidebarPaths } from '$lib/components/nav.svelte';
   import { setMode } from 'mode-watcher';
-  import { logout, testToken, type AvatarData } from '$lib/client';
+  import { logout, testToken, type UserInfo } from '$lib/client';
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
   import Atom from '@lucide/svelte/icons/atom';
+  import { avatarUrl } from '$lib/permissions.svelte';
 
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
-  let avatarUrl: AvatarData['url'] = '/api/user/info/avatar';
 
   let { children, data } = $props();
+
+  let user: UserInfo | undefined = $state();
+
+  $effect(() => {
+    data.user.then((u) => {
+      user = u;
+    });
+  });
 
   onMount(() => {
     setMode('dark');
@@ -53,11 +61,11 @@
   {@render children()}
 {:else}
   <Sidebar
-    user={data.user}
+    {user}
     app_name="Positron"
     app_icon={Atom}
     iconClass="text-[#000057]"
-    avatar={avatarUrl}
+    avatar={user ? `${avatarUrl}/${user.uuid}` : undefined}
     {version}
     {items}
     logout={async () => {
