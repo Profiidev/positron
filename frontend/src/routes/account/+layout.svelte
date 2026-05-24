@@ -10,6 +10,10 @@
       href: '/account/general'
     },
     {
+      title: 'Settings',
+      href: '/account/settings'
+    },
+    {
       title: 'Authentication',
       href: '/account/auth'
     }

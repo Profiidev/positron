@@ -200,6 +200,10 @@ export type SetGoodReq = {
   good: boolean;
 };
 
+export type SettingsInfo = {
+  o_auth_instant_confirm: boolean;
+};
+
 export type SetupPayload = {
   admin_email: string;
   admin_password: string;
@@ -1296,33 +1300,6 @@ export type InfoResponses = {
 
 export type InfoResponse = InfoResponses[keyof InfoResponses];
 
-export type AvatarData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/api/user/info/avatar';
-};
-
-export type AvatarErrors = {
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type AvatarResponses = {
-  /**
-   * byte stream
-   */
-  200: Blob | File;
-};
-
-export type AvatarResponse = AvatarResponses[keyof AvatarResponses];
-
 export type AvatarByIdData = {
   body?: never;
   path: {
@@ -1411,6 +1388,71 @@ export type SaveMailSettingsError =
   SaveMailSettingsErrors[keyof SaveMailSettingsErrors];
 
 export type SaveMailSettingsResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type AccountSettingsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/settings/account';
+};
+
+export type AccountSettingsErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type AccountSettingsResponses = {
+  200: SettingsInfo;
+};
+
+export type AccountSettingsResponse =
+  AccountSettingsResponses[keyof AccountSettingsResponses];
+
+export type SaveAccountSettingsData = {
+  body: SettingsInfo;
+  path?: never;
+  query?: never;
+  url: '/api/settings/account';
+};
+
+export type SaveAccountSettingsErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type SaveAccountSettingsError =
+  SaveAccountSettingsErrors[keyof SaveAccountSettingsErrors];
+
+export type SaveAccountSettingsResponses = {
   /**
    * no content
    */

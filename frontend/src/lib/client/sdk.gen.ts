@@ -3,15 +3,15 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type {
+  AccountSettingsData,
+  AccountSettingsErrors,
+  AccountSettingsResponses,
   AuthConfigData,
   AuthConfigErrors,
   AuthConfigResponses,
   AvatarByIdData,
   AvatarByIdErrors,
   AvatarByIdResponses,
-  AvatarData,
-  AvatarErrors,
-  AvatarResponses,
   ChangePasswordData,
   ChangePasswordErrors,
   CompleteSetupData,
@@ -102,6 +102,9 @@ import type {
   ResetUserPasswordData,
   ResetUserPasswordErrors,
   ResetUserPasswordResponses,
+  SaveAccountSettingsData,
+  SaveAccountSettingsErrors,
+  SaveAccountSettingsResponses,
   SaveMailSettingsData,
   SaveMailSettingsErrors,
   SaveMailSettingsResponses,
@@ -594,14 +597,6 @@ export const info = <ThrowOnError extends boolean = false>(
     ...options
   });
 
-export const avatar = <ThrowOnError extends boolean = false>(
-  options?: Options<AvatarData, ThrowOnError>
-) =>
-  (options?.client ?? client).get<AvatarResponses, AvatarErrors, ThrowOnError>({
-    url: '/api/user/info/avatar',
-    ...options
-  });
-
 export const avatarById = <ThrowOnError extends boolean = false>(
   options: Options<AvatarByIdData, ThrowOnError>
 ) =>
@@ -629,6 +624,31 @@ export const saveMailSettings = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/settings/mail',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const accountSettings = <ThrowOnError extends boolean = false>(
+  options?: Options<AccountSettingsData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    AccountSettingsResponses,
+    AccountSettingsErrors,
+    ThrowOnError
+  >({ url: '/api/settings/account', ...options });
+
+export const saveAccountSettings = <ThrowOnError extends boolean = false>(
+  options: Options<SaveAccountSettingsData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    SaveAccountSettingsResponses,
+    SaveAccountSettingsErrors,
+    ThrowOnError
+  >({
+    url: '/api/settings/account',
     ...options,
     headers: {
       'Content-Type': 'application/json',
