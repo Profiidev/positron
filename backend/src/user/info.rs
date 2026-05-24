@@ -1,11 +1,7 @@
 use aide::axum::{ApiRouter, routing::get_with};
 use axum::Json;
 use centaurus::{
-  backend::{
-    auth::jwt_auth::JwtAuth,
-    endpoints::user::{account, info::avatar_route, management},
-    middleware::rate_limiter::RateLimiter,
-  },
+  backend::{auth::jwt_auth::JwtAuth, endpoints::user::info::avatar_route},
   db::{init::Connection, tables::ConnectionExt},
   error::Result,
 };
@@ -13,16 +9,9 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{db::DBTrait, utils::UpdateMessage};
+use crate::db::DBTrait;
 
-pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
-  ApiRouter::new()
-    .nest("/management", management::router::<UpdateMessage>())
-    .nest("/account", account::router::<UpdateMessage>(rate_limiter))
-    .nest("/info", info_router())
-}
-
-fn info_router() -> ApiRouter {
+pub fn router() -> ApiRouter {
   ApiRouter::new()
     .api_route("/", get_with(info, |op| op.id("info")))
     .api_route("/avatar/{uuid}", avatar_route())

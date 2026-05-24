@@ -61,6 +61,15 @@ export type EditGroupRequest = {
   uuid: string;
 };
 
+export type EmailChange = {
+  new_email: string;
+};
+
+export type EmailChangeConfirm = {
+  new_code: string;
+  old_code: string;
+};
+
 export type FinishAuthPath = {
   auth_id: string;
 };
@@ -1237,6 +1246,46 @@ export type UpdatePasswordResponses = {
   200: unknown;
 };
 
+export type StartEmailChangeData = {
+  body: EmailChange;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/email_change_start';
+};
+
+export type StartEmailChangeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type StartEmailChangeError =
+  StartEmailChangeErrors[keyof StartEmailChangeErrors];
+
+export type StartEmailChangeResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
 export type UpdateAccountData = {
   body: AccountUpdate;
   path?: never;
@@ -1270,6 +1319,46 @@ export type UpdateAccountErrors = {
 export type UpdateAccountError = UpdateAccountErrors[keyof UpdateAccountErrors];
 
 export type UpdateAccountResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ConfirmEmailChangeData = {
+  body: EmailChangeConfirm;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/email_change_confirm';
+};
+
+export type ConfirmEmailChangeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ConfirmEmailChangeError =
+  ConfirmEmailChangeErrors[keyof ConfirmEmailChangeErrors];
+
+export type ConfirmEmailChangeResponses = {
   /**
    * no content
    */

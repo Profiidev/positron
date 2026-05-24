@@ -16,6 +16,9 @@ import type {
   ChangePasswordErrors,
   CompleteSetupData,
   CompleteSetupErrors,
+  ConfirmEmailChangeData,
+  ConfirmEmailChangeErrors,
+  ConfirmEmailChangeResponses,
   CreateGroupData,
   CreateGroupErrors,
   CreateGroupResponses,
@@ -117,6 +120,9 @@ import type {
   StartAuthenticationData,
   StartAuthenticationErrors,
   StartAuthenticationResponses,
+  StartEmailChangeData,
+  StartEmailChangeErrors,
+  StartEmailChangeResponses,
   StartRegistrationData,
   StartRegistrationErrors,
   StartRegistrationResponses,
@@ -573,6 +579,22 @@ export const updatePassword = <ThrowOnError extends boolean = false>(
     }
   });
 
+export const startEmailChange = <ThrowOnError extends boolean = false>(
+  options: Options<StartEmailChangeData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    StartEmailChangeResponses,
+    StartEmailChangeErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/email_change_start',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
 export const updateAccount = <ThrowOnError extends boolean = false>(
   options: Options<UpdateAccountData, ThrowOnError>
 ) =>
@@ -582,6 +604,22 @@ export const updateAccount = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/user/account/update',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const confirmEmailChange = <ThrowOnError extends boolean = false>(
+  options: Options<ConfirmEmailChangeData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    ConfirmEmailChangeResponses,
+    ConfirmEmailChangeErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/email_change_confirm',
     ...options,
     headers: {
       'Content-Type': 'application/json',

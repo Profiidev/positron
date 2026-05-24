@@ -107,6 +107,7 @@
       if (user) {
         loginSuccess(user);
       } else {
+        totp = true;
       }
     }
   };

@@ -70,4 +70,14 @@ impl<'db> UserExtTable<'db> {
 
     Ok(())
   }
+
+  pub async fn change_email(&self, uuid: Uuid, new_email: String) -> Result<(), DbErr> {
+    let mut user: user::ActiveModel = self.get_user_by_id(uuid).await?.into();
+
+    user.email = Set(new_email.to_lowercase());
+
+    user.update(self.db).await?;
+
+    Ok(())
+  }
 }

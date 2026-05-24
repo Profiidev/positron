@@ -6,7 +6,7 @@
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { getEncrypt } from '$lib/backend/auth.svelte';
   import { changePassword } from '$lib/client';
-  import { Label } from '@profidev/pleiades/components/ui/label';
+  import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
 
   interface Props {
     valid: boolean;
@@ -73,7 +73,7 @@
     trigger={{
       text: 'Change Password',
       variant: 'secondary',
-      class: 'ml-auto',
+      class: 'ml-auto cursor-pointer',
       loadIcon: true
     }}
     onopen={startChange}
@@ -81,25 +81,17 @@
     schema={passwordChange}
   >
     {#snippet children({ props })}
-      <FormInput
+      <FormInputPassword
         {...props}
         label="New Password"
         key="password"
         placeholder="New Password"
-        autocapitalize="none"
-        autocomplete="new-password"
-        autocorrect="off"
-        type="password"
       />
-      <FormInput
+      <FormInputPassword
         {...props}
         label="Confirm New Password"
         key="password_confirm"
         placeholder="Confirm New Password"
-        autocapitalize="none"
-        autocomplete="new-password"
-        autocorrect="off"
-        type="password"
       />
     {/snippet}
   </FormDialog>

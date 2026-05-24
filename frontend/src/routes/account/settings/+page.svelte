@@ -39,7 +39,7 @@
   };
 </script>
 
-<h4 class="mb-2">General Settings</h4>
+<h4 class="mb-2">Settings</h4>
 <BaseForm schema={generalSettings} {onsubmit} bind:this={form}>
   {#snippet children({ props })}
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">

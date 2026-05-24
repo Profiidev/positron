@@ -24,6 +24,7 @@ mod services;
 mod settings;
 mod setup;
 mod storage;
+mod templates;
 mod user;
 mod utils;
 mod well_known;
@@ -65,6 +66,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
     .await
     .expect("Failed to create admin group");
 
+  router = user::state(router);
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;

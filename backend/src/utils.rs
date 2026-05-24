@@ -6,6 +6,7 @@ use centaurus::{
   },
   permission,
 };
+use rand::{RngExt, distr::Uniform};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -28,6 +29,14 @@ pub enum UpdateMessage {
   },
   Passkey,
   Apod,
+}
+
+pub fn gen_code() -> String {
+  rand::rng()
+    .sample_iter(Uniform::new(48, 58).unwrap())
+    .take(6)
+    .map(char::from)
+    .collect()
 }
 
 pub fn permissions() -> Vec<&'static str> {

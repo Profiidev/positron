@@ -162,7 +162,7 @@
     confirm="Create"
     trigger={{
       text: 'Add Passkey',
-      class: 'ml-auto',
+      class: 'ml-auto cursor-pointer',
       loadIcon: true
     }}
     onopen={startCreatePasskey}
@@ -252,7 +252,7 @@
         <Button
           variant="outline"
           size="icon"
-          class="m-2 ml-auto"
+          class="m-2 ml-auto cursor-pointer"
           onclick={() => startEditPasskey(passkey.name)}
         >
           <Pencil />
@@ -260,7 +260,7 @@
         <Button
           variant="destructive"
           size="icon"
-          class="m-2"
+          class="m-2 cursor-pointer"
           onclick={() => startDeletePasskey(passkey.name)}
         >
           <Trash />

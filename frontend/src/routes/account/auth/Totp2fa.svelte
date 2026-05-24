@@ -119,7 +119,7 @@
           trigger={{
             text: 'Remove',
             variant: 'destructive',
-            class: 'm-2 ml-auto',
+            class: 'm-2 ml-auto cursor-pointer',
             loadIcon: true
           }}
           onopen={startRemoveTotp}
@@ -131,7 +131,11 @@
           title="Add TOTP"
           description="Scan the QR-Code below or enter the code manually and enter the TOTP code"
           confirm="Add"
-          trigger={{ text: 'Add', class: 'm-2 ml-auto', loadIcon: true }}
+          trigger={{
+            text: 'Add',
+            class: 'm-2 ml-auto cursor-pointer',
+            loadIcon: true
+          }}
           onopen={startAddTotp}
           onsubmit={addTotp}
           schema={totpAddSchema}
