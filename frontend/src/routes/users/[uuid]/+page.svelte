@@ -13,7 +13,8 @@
     formatData,
     userSettings,
     reformatData,
-    resetPassword
+    resetPassword,
+    changeEmailSchema
   } from './schema.svelte.js';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
@@ -23,6 +24,7 @@
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import {
+    changeUserEmail,
     deleteUser,
     editUser,
     resetUserAvatar,
@@ -33,11 +35,14 @@
   import { getEncrypt } from '$lib/backend/auth.svelte.js';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Input } from '@profidev/pleiades/components/ui/input';
 
   const { data } = $props();
 
   let resetOpen = $state(false);
   let deleteOpen = $state(false);
+  let emailOpen = $state(false);
   let isLoading = $state(false);
   let readonly = $state(true);
   let allowSpecialEdit = $state(false);
@@ -154,6 +159,30 @@
       toast.success(`Password for user ${userInfo.name} reset successfully`);
     }
   };
+
+  const changeEmailSubmit = async (
+    form: FormValue<typeof changeEmailSchema>
+  ) => {
+    if (!userInfo) return;
+    let res = await changeUserEmail({
+      body: {
+        uuid: userInfo.uuid,
+        new_email: form.new_email
+      }
+    });
+
+    if (res.error) {
+      if (res.response?.status === 403) {
+        return { error: 'You do not have permission to change this email' };
+      } else if (res.response?.status === 409) {
+        return { error: 'Email already in use', field: 'new_email' } as const;
+      } else {
+        return { error: 'Failed to change email' };
+      }
+    } else {
+      toast.success(`Email for user ${userInfo.name} changed successfully`);
+    }
+  };
 </script>
 
 <div class="flex h-full w-full flex-col space-y-6 p-4">
@@ -173,6 +202,15 @@
       <Button
         variant="secondary"
         class="mr-2 ml-auto cursor-pointer"
+        onclick={() => (emailOpen = true)}
+        disabled={readonly}
+      >
+        <RotateCcw />
+        Change Email
+      </Button>
+      <Button
+        variant="secondary"
+        class="mr-2 cursor-pointer"
         onclick={() => (resetOpen = true)}
         disabled={readonly}
       >
@@ -234,6 +272,13 @@
                 label="User Name"
                 placeholder="Enter user name"
                 disabled={readonly}
+              />
+              <Label>Email</Label>
+              <Input
+                class="my-2"
+                placeholder="mail@example.com"
+                readonly
+                value={userInfo?.email}
               />
               <FormSelect
                 {...props}
@@ -302,6 +347,25 @@
       key="new_password"
       label="New Password"
       placeholder="Enter new password"
+    />
+  {/snippet}
+</FormDialog>
+<FormDialog
+  title={`Change Email`}
+  description={`Do you really want to change the email for user ${userInfo?.name}?`}
+  confirm="Change"
+  onsubmit={changeEmailSubmit}
+  bind:open={emailOpen}
+  bind:isLoading
+  schema={changeEmailSchema}
+>
+  {#snippet children({ props })}
+    <FormInput
+      {...props}
+      key="new_email"
+      label="New Email"
+      placeholder="mail@example.com"
+      type="email"
     />
   {/snippet}
 </FormDialog>

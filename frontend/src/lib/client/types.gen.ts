@@ -24,6 +24,11 @@ export type AvatarUpdate = {
   avatar: string;
 };
 
+export type ChangeUserEmail = {
+  new_email: string;
+  uuid: string;
+};
+
 export type CreateGroupRequest = {
   name: string;
 };
@@ -1161,6 +1166,46 @@ export type ResetUserPasswordError =
   ResetUserPasswordErrors[keyof ResetUserPasswordErrors];
 
 export type ResetUserPasswordResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ChangeUserEmailData = {
+  body: ChangeUserEmail;
+  path?: never;
+  query?: never;
+  url: '/api/user/management/email';
+};
+
+export type ChangeUserEmailErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ChangeUserEmailError =
+  ChangeUserEmailErrors[keyof ChangeUserEmailErrors];
+
+export type ChangeUserEmailResponses = {
   /**
    * no content
    */

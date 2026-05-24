@@ -1,15 +1,16 @@
 use aide::axum::ApiRouter;
 use axum::Extension;
-use centaurus::backend::{endpoints::user::management, middleware::rate_limiter::RateLimiter};
+use centaurus::backend::middleware::rate_limiter::RateLimiter;
 
-use crate::{user::account::EmailChangeState, utils::UpdateMessage};
+use crate::user::account::EmailChangeState;
 
 mod account;
 mod info;
+mod management;
 
 pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
-    .nest("/management", management::router::<UpdateMessage>())
+    .nest("/management", management::router())
     .nest("/account", account::router(rate_limiter))
     .nest("/info", info::router())
 }

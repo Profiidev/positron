@@ -14,6 +14,9 @@ import type {
   AvatarByIdResponses,
   ChangePasswordData,
   ChangePasswordErrors,
+  ChangeUserEmailData,
+  ChangeUserEmailErrors,
+  ChangeUserEmailResponses,
   CompleteSetupData,
   CompleteSetupErrors,
   ConfirmEmailChangeData,
@@ -540,6 +543,22 @@ export const resetUserPassword = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/user/management/password',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const changeUserEmail = <ThrowOnError extends boolean = false>(
+  options: Options<ChangeUserEmailData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    ChangeUserEmailResponses,
+    ChangeUserEmailErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/management/email',
     ...options,
     headers: {
       'Content-Type': 'application/json',
