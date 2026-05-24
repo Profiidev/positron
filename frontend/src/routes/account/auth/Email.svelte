@@ -6,18 +6,26 @@
   import { confirmEmailChange, startEmailChange } from '$lib/client';
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
+  import { cn } from '@profidev/pleiades/utils';
+  import {
+    Button,
+    buttonVariants
+  } from '@profidev/pleiades/components/ui/button';
 
   interface Props {
     valid: boolean;
     requestAccess: () => Promise<boolean>;
     email: string;
+    mailActive: boolean;
   }
 
-  let { valid, requestAccess, email }: Props = $props();
+  let { valid, requestAccess, email, mailActive }: Props = $props();
 
   let enteringCodes = $state(false);
   let newEmail = $state('');
   let form: FormDialog<typeof emailChangeSchema> | undefined = $state();
+  let formOpen = $state(false);
 
   const startChange = async () => {
     if (!valid) {
@@ -91,20 +99,37 @@
 
 <div class="mt-2 flex items-center">
   <h5>Email:</h5>
+  <Tooltip.Provider>
+    <Tooltip.Root>
+      <Tooltip.Trigger class="ml-auto">
+        <Button
+          variant="secondary"
+          class="cursor-pointer"
+          disabled={!mailActive}
+          onclick={() => (formOpen = true)}
+        >
+          Change Email
+        </Button>
+      </Tooltip.Trigger>
+      {#if !mailActive}
+        <Tooltip.Content side="left">
+          <p>
+            Email can not be changed when mail support is not configured. Please
+            contact your administrator to change your email address.
+          </p>
+        </Tooltip.Content>
+      {/if}
+    </Tooltip.Root>
+  </Tooltip.Provider>
   <FormDialog
     title="Change Email"
     description="Enter your new email below"
     confirm="Change Email"
-    trigger={{
-      text: 'Change Email',
-      variant: 'secondary',
-      class: 'ml-auto cursor-pointer',
-      loadIcon: true
-    }}
     onopen={startChange}
     onsubmit={changeConfirm}
     schema={emailChangeSchema}
     bind:this={form}
+    bind:open={formOpen}
   >
     {#snippet children({ props })}
       {#if !enteringCodes}
