@@ -38,7 +38,7 @@
 
     if (ret.response?.status === 401) {
       toast.error('You are not allowed to access this Application');
-    } else if (ret.response?.status !== 200) {
+    } else if (ret.response?.status !== 200 && allow) {
       toast.error('There was an error while login in');
     }
   };
@@ -61,6 +61,7 @@
 
   onMount(async () => {
     let settings = await data.settings;
+    console.log(settings);
     if (!settings || !settings.o_auth_instant_confirm) return;
     confirm();
   });
@@ -71,7 +72,7 @@
     <Card.Header>
       <Card.Title>Log in to {data.oauthOptions.name}</Card.Title>
       <Card.Description
-        >Do you want to log in to {data.oauthOptions.name} with the account below?</Card.Description
+        >Do you want to log in with the account below?</Card.Description
       >
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
@@ -84,8 +85,11 @@
           <span class="truncate text-lg font-semibold">{user.name}</span>
           <span class="truncate">{user.email}</span>
         </div>
-        <Button variant="link" onclick={change} disabled={isLoading}
-          >Change</Button
+        <Button
+          variant="link"
+          onclick={change}
+          disabled={isLoading}
+          class="cursor-pointer">Change</Button
         >
       {:else}
         <Skeleton class="size-14 rounded-full" />
@@ -97,10 +101,13 @@
     </Card.Content>
     <Card.Footer class="flex flex-col">
       <div class="flex w-full justify-between">
-        <Button variant="secondary" onclick={cancel} disabled={isLoading}
-          >Cancel</Button
+        <Button
+          variant="outline"
+          onclick={cancel}
+          disabled={isLoading}
+          class="cursor-pointer">Cancel</Button
         >
-        <Button onclick={confirm} disabled={isLoading}>
+        <Button onclick={confirm} disabled={isLoading} class="cursor-pointer">
           {#if isLoading}
             <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
           {/if}

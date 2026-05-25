@@ -1,4 +1,4 @@
-import type { OAuthScopeInfo } from '$lib/client';
+import type { OAuthPolicyInfo } from '$lib/client';
 import type { FormValue } from '@profidev/pleiades/components/form/types';
 import { z } from 'zod';
 
@@ -9,7 +9,7 @@ export const policySettings = z.object({
 });
 
 export const formatData = (
-  scope: OAuthScopeInfo
+  policy: OAuthPolicyInfo
 ): FormValue<typeof policySettings> => ({
-  ...scope
+  ...policy
 });

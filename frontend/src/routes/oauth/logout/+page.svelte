@@ -59,8 +59,10 @@
     </Card.Content>
     <Card.Footer class="flex flex-col">
       <div class="flex w-full justify-between">
-        <Button variant="secondary" onclick={cancel}>Cancel</Button>
-        <Button onclick={back}>Back</Button>
+        <Button variant="outline" onclick={cancel} class="cursor-pointer"
+          >To Positron
+        </Button>
+        <Button onclick={back} class="cursor-pointer">Log back in</Button>
       </div>
     </Card.Footer>
   </Card.Root>
