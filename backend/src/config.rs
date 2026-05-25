@@ -5,7 +5,8 @@ use centaurus::{
     config::{BaseConfig, MetricsConfig, SiteConfig},
   },
   db::config::DBConfig,
-  mail::MailSettings, storage::StorageConfig,
+  mail::MailSettings,
+  storage::StorageConfig,
 };
 use figment::{
   Figment,
