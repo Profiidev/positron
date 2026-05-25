@@ -202,15 +202,6 @@
       <Button
         variant="secondary"
         class="mr-2 ml-auto cursor-pointer"
-        onclick={() => (emailOpen = true)}
-        disabled={readonly}
-      >
-        <RotateCcw />
-        Change Email
-      </Button>
-      <Button
-        variant="secondary"
-        class="mr-2 cursor-pointer"
         onclick={() => (resetOpen = true)}
         disabled={readonly}
       >
@@ -274,12 +265,25 @@
                 disabled={readonly}
               />
               <Label>Email</Label>
-              <Input
-                class="my-2"
-                placeholder="mail@example.com"
-                readonly
-                value={userInfo?.email}
-              />
+              <div class="my-2 flex gap-2">
+                <Input
+                  class="grow"
+                  placeholder="mail@example.com"
+                  readonly
+                  value={userInfo?.email}
+                />
+                {#if !mailActive && allowSpecialEdit}
+                  <Button
+                    variant="secondary"
+                    class="cursor-pointer"
+                    onclick={() => (emailOpen = true)}
+                    disabled={readonly}
+                  >
+                    <RotateCcw />
+                    Change Email
+                  </Button>
+                {/if}
+              </div>
               <FormSelect
                 {...props}
                 key="groups"
