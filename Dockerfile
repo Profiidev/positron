@@ -27,7 +27,7 @@ COPY frontend/static ./static
 RUN npm run build
 
 # only tmp when webauthn-rs removes openssl dependency
-FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:34cee96885e1080da4e0a9a8a86dd8db503796bfc140a13b4e1a0f72784644ab AS chef
+FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:15425af80485c6688cca13a291888674946c5fc3af0b8330c106ceff21c5af0b AS chef
 
 RUN apt update
 RUN apt install build-essential pkg-config libssl-dev -y
