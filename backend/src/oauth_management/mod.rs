@@ -4,7 +4,7 @@ use centaurus::db::init::Connection;
 use crate::db::DBTrait;
 
 mod client;
-//mod policy;
+mod policy;
 mod scope;
 
 pub const DEFAULT_SCOPES: [&str; 4] = ["openid", "profile", "email", "image"];
@@ -13,7 +13,7 @@ pub fn router() -> ApiRouter {
   ApiRouter::new()
     .nest("/client", client::router())
     .nest("/scope", scope::router())
-  //.nest("/oauth_policy", policy::router())
+    .nest("/policy", policy::router())
 }
 
 pub async fn init(db: &Connection) {

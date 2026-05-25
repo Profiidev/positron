@@ -1,57 +1,64 @@
-use axum::{
-  extract::FromRequest,
-  routing::{get, post},
-  Json, Router,
+use aide::axum::{
+  ApiRouter,
+  routing::{delete_with, get_with, post_with, put_with},
 };
-use centaurus::{bail, db::init::Connection, error::Result};
-use entity::{o_auth_policy, sea_orm_active_enums::Permission};
-use serde::Deserialize;
-use tracing::instrument;
+use axum::{Json, extract::Path};
+use centaurus::{
+  backend::auth::jwt_auth::JwtAuth,
+  bail,
+  db::{
+    init::Connection,
+    tables::{ConnectionExt, user::SimpleGroupInfo},
+  },
+  error::Result,
+};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtBase, JwtClaims},
-  db::{
-    DBTrait,
-    {oauth::oauth_policy::OAuthPolicyInfo, user::group::BasicGroupInfo},
-  },
-  permission::PermissionTrait,
-  ws::state::{UpdateState, UpdateType},
+  db::{DBTrait, oauth::oauth_policy::OAuthPolicyInfo},
+  utils::{OAuthPolicyEdit, OAuthPolicyView, UpdateMessage, Updater},
 };
 
-pub fn router() -> Router {
-  Router::new()
-    .route("/list", get(list))
-    .route("/create", post(create))
-    .route("/delete", post(delete))
-    .route("/edit", post(edit))
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
+    .api_route("/", get_with(list, |op| op.id("listOAuthPolicies")))
+    .api_route("/", post_with(create, |op| op.id("createOAuthPolicy")))
+    .api_route("/", delete_with(delete, |op| op.id("deleteOAuthPolicy")))
+    .api_route("/", put_with(edit, |op| op.id("editOAuthPolicy")))
+    .api_route("/{uuid}", get_with(info, |op| op.id("infoOAuthPolicy")))
+    .api_route(
+      "/groups",
+      get_with(simple_group_list, |op| op.id("listGroupsOAuthPolicy")),
+    )
 }
 
-#[instrument(skip(db))]
-async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuthPolicyInfo>>> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
-
+async fn list(
+  _auth: JwtAuth<OAuthPolicyView>,
+  db: Connection,
+) -> Result<Json<Vec<OAuthPolicyInfo>>> {
   Ok(Json(db.oauth_policy().list().await?))
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct CreateReq {
   pub name: String,
   pub claim: String,
   pub default: String,
-  pub group: Vec<(BasicGroupInfo, String)>,
 }
 
-#[instrument(skip(db, updater))]
-async fn create(
-  auth: JwtClaims<JwtBase>,
-  db: Connection,
-  updater: UpdateState,
-  req: CreateReq,
-) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
+#[derive(Serialize, JsonSchema)]
+struct CreateRes {
+  pub uuid: Uuid,
+}
 
+async fn create(
+  _auth: JwtAuth<OAuthPolicyEdit>,
+  db: Connection,
+  updater: Updater,
+  Json(req): Json<CreateReq>,
+) -> Result<Json<CreateRes>> {
   if db
     .oauth_policy()
     .policy_exists(req.name.clone(), Uuid::max())
@@ -60,57 +67,40 @@ async fn create(
     bail!(CONFLICT, "policy with the given name already exists");
   }
 
-  let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();
-
-  let groups = db.groups().get_groups_by_info(group).await?;
-
-  let model = o_auth_policy::Model {
-    id: Uuid::new_v4(),
-    name: req.name.clone(),
-    claim: req.claim,
-    default: req.default,
-  };
-
-  db.oauth_policy()
-    .create_policy(model, groups, content)
+  let uuid = db
+    .oauth_policy()
+    .create_policy(req.name, req.claim, req.default)
     .await?;
-  updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  tracing::info!("User {} created oauth_policy {}", auth.sub, req.name);
+  updater.broadcast(UpdateMessage::OAuthPolicy { uuid }).await;
 
-  Ok(())
+  Ok(Json(CreateRes { uuid }))
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct DeleteReq {
   uuid: Uuid,
 }
 
-#[instrument(skip(db, updater))]
 async fn delete(
-  auth: JwtClaims<JwtBase>,
+  _auth: JwtAuth<OAuthPolicyEdit>,
   db: Connection,
-  updater: UpdateState,
-  req: DeleteReq,
+  updater: Updater,
+  Json(req): Json<DeleteReq>,
 ) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
-
   db.oauth_policy().delete_policy(req.uuid).await?;
-  updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  tracing::info!("User {} deleted oauth_policy {}", auth.sub, req.uuid);
+  updater
+    .broadcast(UpdateMessage::OAuthPolicy { uuid: req.uuid })
+    .await;
 
   Ok(())
 }
 
-#[instrument(skip(db, updater))]
 async fn edit(
-  auth: JwtClaims<JwtBase>,
+  _auth: JwtAuth<OAuthPolicyEdit>,
   db: Connection,
-  updater: UpdateState,
-  req: OAuthPolicyInfo,
+  updater: Updater,
+  Json(req): Json<OAuthPolicyInfo>,
 ) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
-
   if db
     .oauth_policy()
     .policy_exists(req.name.clone(), req.uuid)
@@ -119,16 +109,37 @@ async fn edit(
     bail!(CONFLICT, "policy with the given name already exists");
   }
 
-  let (group, content): (Vec<BasicGroupInfo>, Vec<String>) = req.group.clone().into_iter().unzip();
-
-  let groups = db.groups().get_groups_by_info(group).await?;
-
-  let name = req.name.clone();
   db.oauth_policy()
-    .update_policy(req, groups, content)
+    .update_policy(req.uuid, req.name, req.claim, req.default, req.content)
     .await?;
-  updater.broadcast_message(UpdateType::OAuthPolicy).await;
-  tracing::info!("User {} edited oauth_policy {}", auth.sub, name);
+
+  updater
+    .broadcast(UpdateMessage::OAuthPolicy { uuid: req.uuid })
+    .await;
 
   Ok(())
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct OAuthPolicyPath {
+  uuid: Uuid,
+}
+
+async fn info(
+  _auth: JwtAuth<OAuthPolicyView>,
+  db: Connection,
+  Path(OAuthPolicyPath { uuid }): Path<OAuthPolicyPath>,
+) -> Result<Json<OAuthPolicyInfo>> {
+  let Some(policy) = db.oauth_policy().policy_info(uuid).await? else {
+    bail!(NOT_FOUND, "scope not found");
+  };
+  Ok(Json(policy))
+}
+
+async fn simple_group_list(
+  _auth: JwtAuth<OAuthPolicyView>,
+  db: Connection,
+) -> Result<Json<Vec<SimpleGroupInfo>>> {
+  let user = db.group().list_groups_simple().await?;
+  Ok(Json(user))
 }

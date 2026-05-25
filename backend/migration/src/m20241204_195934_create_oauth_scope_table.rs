@@ -26,6 +26,7 @@ impl MigrationTrait for Migration {
           .table(OAuthPolicyContent::Table)
           .if_not_exists()
           .col(pk_uuid(OAuthPolicyContent::Id))
+          .col(integer(OAuthPolicyContent::Index))
           .col(uuid(OAuthPolicyContent::Policy))
           .col(string(OAuthPolicyContent::Content))
           .col(uuid(OAuthPolicyContent::Group))
@@ -73,6 +74,7 @@ pub enum OAuthPolicy {
 enum OAuthPolicyContent {
   Table,
   Id,
+  Index,
   Policy,
   Content,
   Group,

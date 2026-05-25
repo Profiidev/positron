@@ -28,6 +28,9 @@ import type {
   CreateOauthClientData,
   CreateOauthClientErrors,
   CreateOauthClientResponses,
+  CreateOAuthPolicyData,
+  CreateOAuthPolicyErrors,
+  CreateOAuthPolicyResponses,
   CreateOAuthScopeData,
   CreateOAuthScopeErrors,
   CreateOAuthScopeResponses,
@@ -40,6 +43,9 @@ import type {
   DeleteOauthClientData,
   DeleteOauthClientErrors,
   DeleteOauthClientResponses,
+  DeleteOAuthPolicyData,
+  DeleteOAuthPolicyErrors,
+  DeleteOAuthPolicyResponses,
   DeleteOAuthScopeData,
   DeleteOAuthScopeErrors,
   DeleteOAuthScopeResponses,
@@ -52,6 +58,9 @@ import type {
   EditOauthClientData,
   EditOauthClientErrors,
   EditOauthClientResponses,
+  EditOAuthPolicyData,
+  EditOAuthPolicyErrors,
+  EditOAuthPolicyResponses,
   EditOAuthScopeData,
   EditOAuthScopeErrors,
   EditOAuthScopeResponses,
@@ -84,6 +93,9 @@ import type {
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
+  InfoOAuthPolicyData,
+  InfoOAuthPolicyErrors,
+  InfoOAuthPolicyResponses,
   InfoOAuthScopeData,
   InfoOAuthScopeErrors,
   InfoOAuthScopeResponses,
@@ -101,6 +113,9 @@ import type {
   ListGroupsOAuthClientData,
   ListGroupsOAuthClientErrors,
   ListGroupsOAuthClientResponses,
+  ListGroupsOAuthPolicyData,
+  ListGroupsOAuthPolicyErrors,
+  ListGroupsOAuthPolicyResponses,
   ListGroupsResponses,
   ListGroupsSimpleData,
   ListGroupsSimpleErrors,
@@ -108,6 +123,9 @@ import type {
   ListOauthClientsData,
   ListOauthClientsErrors,
   ListOauthClientsResponses,
+  ListOAuthPoliciesData,
+  ListOAuthPoliciesErrors,
+  ListOAuthPoliciesResponses,
   ListOAuthScopesData,
   ListOAuthScopesErrors,
   ListOAuthScopesResponses,
@@ -1121,3 +1139,78 @@ export const listPoliciesOAuthScope = <ThrowOnError extends boolean = false>(
     ListPoliciesOAuthScopeErrors,
     ThrowOnError
   >({ url: '/api/oauth_management/scope/policies', ...options });
+
+export const deleteOAuthPolicy = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteOAuthPolicyData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    DeleteOAuthPolicyResponses,
+    DeleteOAuthPolicyErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/policy',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listOAuthPolicies = <ThrowOnError extends boolean = false>(
+  options?: Options<ListOAuthPoliciesData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListOAuthPoliciesResponses,
+    ListOAuthPoliciesErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/policy', ...options });
+
+export const createOAuthPolicy = <ThrowOnError extends boolean = false>(
+  options: Options<CreateOAuthPolicyData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    CreateOAuthPolicyResponses,
+    CreateOAuthPolicyErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/policy',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const editOAuthPolicy = <ThrowOnError extends boolean = false>(
+  options: Options<EditOAuthPolicyData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    EditOAuthPolicyResponses,
+    EditOAuthPolicyErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/policy',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const infoOAuthPolicy = <ThrowOnError extends boolean = false>(
+  options: Options<InfoOAuthPolicyData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    InfoOAuthPolicyResponses,
+    InfoOAuthPolicyErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/policy/{uuid}', ...options });
+
+export const listGroupsOAuthPolicy = <ThrowOnError extends boolean = false>(
+  options?: Options<ListGroupsOAuthPolicyData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListGroupsOAuthPolicyResponses,
+    ListGroupsOAuthPolicyErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/policy/groups', ...options });

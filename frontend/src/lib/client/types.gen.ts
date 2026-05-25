@@ -51,7 +51,17 @@ export type CreateReq = {
   scope: string;
 };
 
+export type CreateReq2 = {
+  claim: string;
+  default: string;
+  name: string;
+};
+
 export type CreateRes = {
+  uuid: string;
+};
+
+export type CreateRes2 = {
   uuid: string;
 };
 
@@ -74,6 +84,10 @@ export type DeleteGroupRequest = {
 };
 
 export type DeleteReq = {
+  uuid: string;
+};
+
+export type DeleteReq2 = {
   uuid: string;
 };
 
@@ -218,6 +232,25 @@ export type OAuthClientInfo = {
 };
 
 export type OAuthClientPath = {
+  uuid: string;
+};
+
+export type OAuthPolicyContent = {
+  content: string;
+  group_id: string;
+  group_name: string;
+  index: number;
+};
+
+export type OAuthPolicyInfo = {
+  claim: string;
+  content: Array<OAuthPolicyContent>;
+  default: string;
+  name: string;
+  uuid: string;
+};
+
+export type OAuthPolicyPath = {
   uuid: string;
 };
 
@@ -2601,3 +2634,200 @@ export type ListPoliciesOAuthScopeResponses = {
 
 export type ListPoliciesOAuthScopeResponse =
   ListPoliciesOAuthScopeResponses[keyof ListPoliciesOAuthScopeResponses];
+
+export type DeleteOAuthPolicyData = {
+  body: DeleteReq2;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/policy';
+};
+
+export type DeleteOAuthPolicyErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type DeleteOAuthPolicyError =
+  DeleteOAuthPolicyErrors[keyof DeleteOAuthPolicyErrors];
+
+export type DeleteOAuthPolicyResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ListOAuthPoliciesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/policy';
+};
+
+export type ListOAuthPoliciesErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListOAuthPoliciesResponses = {
+  200: Array<OAuthPolicyInfo>;
+};
+
+export type ListOAuthPoliciesResponse =
+  ListOAuthPoliciesResponses[keyof ListOAuthPoliciesResponses];
+
+export type CreateOAuthPolicyData = {
+  body: CreateReq2;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/policy';
+};
+
+export type CreateOAuthPolicyErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type CreateOAuthPolicyError =
+  CreateOAuthPolicyErrors[keyof CreateOAuthPolicyErrors];
+
+export type CreateOAuthPolicyResponses = {
+  200: CreateRes2;
+};
+
+export type CreateOAuthPolicyResponse =
+  CreateOAuthPolicyResponses[keyof CreateOAuthPolicyResponses];
+
+export type EditOAuthPolicyData = {
+  body: OAuthPolicyInfo;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/policy';
+};
+
+export type EditOAuthPolicyErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type EditOAuthPolicyError =
+  EditOAuthPolicyErrors[keyof EditOAuthPolicyErrors];
+
+export type EditOAuthPolicyResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type InfoOAuthPolicyData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/oauth_management/policy/{uuid}';
+};
+
+export type InfoOAuthPolicyErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoOAuthPolicyResponses = {
+  200: OAuthPolicyInfo;
+};
+
+export type InfoOAuthPolicyResponse =
+  InfoOAuthPolicyResponses[keyof InfoOAuthPolicyResponses];
+
+export type ListGroupsOAuthPolicyData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/policy/groups';
+};
+
+export type ListGroupsOAuthPolicyErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListGroupsOAuthPolicyResponses = {
+  200: Array<SimpleGroupInfo>;
+};
+
+export type ListGroupsOAuthPolicyResponse =
+  ListGroupsOAuthPolicyResponses[keyof ListGroupsOAuthPolicyResponses];

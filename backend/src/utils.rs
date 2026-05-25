@@ -38,6 +38,9 @@ pub enum UpdateMessage {
   OAuthScope {
     uuid: Uuid,
   },
+  OAuthPolicy {
+    uuid: Uuid,
+  },
 }
 
 pub fn gen_code() -> String {
@@ -62,6 +65,8 @@ pub fn permissions() -> Vec<&'static str> {
     OAuthClientEdit::name(),
     OAuthScopeView::name(),
     OAuthScopeEdit::name(),
+    OAuthPolicyView::name(),
+    OAuthPolicyEdit::name(),
   ]);
   perms
 }
@@ -75,3 +80,5 @@ permission!(OAuthClientView, "oauth_client:view");
 permission!(OAuthClientEdit, "oauth_client:edit");
 permission!(OAuthScopeView, "oauth_scope:view");
 permission!(OAuthScopeEdit, "oauth_scope:edit");
+permission!(OAuthPolicyView, "oauth_policy:view");
+permission!(OAuthPolicyEdit, "oauth_policy:edit");
