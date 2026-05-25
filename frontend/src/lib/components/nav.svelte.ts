@@ -19,7 +19,7 @@ export const items: NavGroup[] = [
         href: '/oauth-client',
         icon: KeyRound,
         label: 'Clients',
-        requiredPermission: Permission.AOUTH_CLIENT_VIEW
+        requiredPermission: Permission.OAUTH_CLIENT_VIEW
       },
       {
         href: '/oauth-scope',
