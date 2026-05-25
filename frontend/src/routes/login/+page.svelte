@@ -20,8 +20,7 @@
   } from '$lib/client';
   import {
     type AuthenticationResponseJSON,
-    type PublicKeyCredentialRequestOptionsJSON,
-    startAuthentication as webauthnStart
+    type PublicKeyCredentialRequestOptionsJSON
   } from '@simplewebauthn/browser';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
@@ -150,6 +149,8 @@
 
     let passkeyResponse: AuthenticationResponseJSON;
     try {
+      const webauthnStart = (await import('@simplewebauthn/browser'))
+        .startAuthentication;
       passkeyResponse = await webauthnStart({ optionsJSON });
     } catch {
       passkeyError = true;

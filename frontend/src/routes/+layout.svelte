@@ -19,6 +19,7 @@
   let { children, data } = $props();
 
   let user: UserInfo | undefined = $state();
+  let blockRedirect = false;
 
   $effect(() => {
     data.user.then((u) => {
@@ -34,7 +35,7 @@
       };
       // can also be undefined if there was an error
       if (valid === false) {
-        if (!noSidebarPaths.includes(page.url.pathname)) {
+        if (!noSidebarPaths.includes(page.url.pathname) && !blockRedirect) {
           goto('/login');
         }
       } else {
@@ -48,7 +49,9 @@
       if (error) return;
 
       if (!status?.is_setup && page.url.pathname !== '/setup') {
-        goto('/setup');
+        blockRedirect = true;
+        await goto('/setup');
+        blockRedirect = false;
       }
     })();
   });

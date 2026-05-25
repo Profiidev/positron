@@ -1,7 +1,6 @@
 <script lang="ts">
   import LoginOtherOptions from '@profidev/pleiades/components/form/login-other-options.svelte';
   import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
-  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import { interval } from '@profidev/pleiades/util/interval.svelte';
   import * as Dialog from '@profidev/pleiades/components/ui/dialog';
   import { browser } from '$app/environment';
@@ -14,7 +13,6 @@
     startSpecialAccess
   } from '$lib/client';
   import {
-    startAuthentication,
     type AuthenticationResponseJSON,
     type PublicKeyCredentialRequestOptionsJSON
   } from '@simplewebauthn/browser';
@@ -99,6 +97,8 @@
 
     let authRes: AuthenticationResponseJSON;
     try {
+      const startAuthentication = (await import('@simplewebauthn/browser'))
+        .startAuthentication;
       authRes = await startAuthentication({ optionsJSON });
     } catch {
       isLoading = false;

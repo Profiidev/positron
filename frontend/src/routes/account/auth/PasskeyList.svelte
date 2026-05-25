@@ -23,8 +23,7 @@
   } from '$lib/client';
   import {
     type PublicKeyCredentialCreationOptionsJSON,
-    type RegistrationResponseJSON,
-    startRegistration as webauthnStart
+    type RegistrationResponseJSON
   } from '@simplewebauthn/browser';
 
   interface Props {
@@ -63,6 +62,8 @@
 
     let passkeyResponse: RegistrationResponseJSON;
     try {
+      const webauthnStart = (await import('@simplewebauthn/browser'))
+        .startRegistration;
       passkeyResponse = await webauthnStart({ optionsJSON });
     } catch {
       return {
