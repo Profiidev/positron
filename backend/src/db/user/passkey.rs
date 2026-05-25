@@ -1,6 +1,6 @@
 use chrono::Utc;
 use entity::{passkey, prelude::*};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use sea_orm::{ActiveValue::Set, prelude::*};
 
 pub struct PasskeyTable<'db> {
   db: &'db DatabaseConnection,
