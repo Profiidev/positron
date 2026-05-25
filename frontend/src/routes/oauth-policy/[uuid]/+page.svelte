@@ -18,12 +18,14 @@
   import {
     deleteOAuthPolicy,
     editOAuthPolicy,
+    type OAuthPolicyContent,
     type OAuthPolicyInfo,
     type SimpleGroupInfo,
     type UserInfo
   } from '$lib/client';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
-  import { policySettings, formatData } from './schema.svelte.js';
+  import { policySettings } from './schema.svelte.js';
+  import GroupMapping from './GroupMapping.svelte';
 
   const { data } = $props();
 
@@ -32,6 +34,7 @@
   let user: UserInfo | undefined = $state();
   let policy: OAuthPolicyInfo | undefined = $state();
   let form: BaseForm<typeof policySettings> | undefined = $state();
+  let mappings: OAuthPolicyContent[] = $state([]);
 
   let groups: SimpleGroupInfo[] | undefined = $state();
 
@@ -51,7 +54,8 @@
       }
 
       policy = res.data;
-      form?.setValue(formatData(policy));
+      form?.setValue(policy);
+      mappings = policy.content;
     });
   });
 
@@ -91,7 +95,7 @@
       body: {
         ...form,
         uuid: policy.uuid,
-        content: []
+        content: mappings
       }
     });
 
@@ -171,6 +175,7 @@
                 placeholder="Enter default value"
                 disabled={readonly}
               />
+              <GroupMapping {groups} bind:mappings />
             </div>
           </div>
         </ScrollArea>
