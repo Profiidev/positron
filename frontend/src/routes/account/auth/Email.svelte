@@ -125,10 +125,10 @@
     title="Change Email"
     description="Enter your new email below"
     confirm="Change Email"
-    onopen={startChange}
     onsubmit={changeConfirm}
     schema={emailChangeSchema}
     bind:this={form}
+    bind:open={formOpen}
   >
     {#snippet children({ props })}
       {#if !enteringCodes}

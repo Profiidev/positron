@@ -330,11 +330,11 @@
               />
             </div>
             <Separator orientation="vertical" class="hidden lg:block" />
-            <div>
+            <div class="flex min-w-0 flex-col">
               {#each oauthUrls as info}
                 <Label for={info.name}>{info.name}</Label>
                 <CopyButton
-                  class="my-2 h-8 w-full justify-start"
+                  class="my-2 max-h-8 grow justify-start"
                   id={info.name}
                   text={info.value}
                   variant="outline"
