@@ -38,7 +38,7 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:18@sha256:52e6ffd11fddd081ae63880b635b2a61c14008c17fc98cdc7ce5472265516dd0
+    image: postgres:18@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
     restart: unless-stopped
     volumes:
       - ./postgres:/var/lib/postgresql
