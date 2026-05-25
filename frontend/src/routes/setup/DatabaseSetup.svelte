@@ -29,6 +29,7 @@
   {initialValue}
   {footer}
   bind:isLoading
+  bind:this={form}
   schema={databaseSetupSchema}
 >
   {#snippet children({ props })}
