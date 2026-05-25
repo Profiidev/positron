@@ -12,7 +12,7 @@ path = "src/lib.rs"
 centaurus = { version = "0.11.2", default-features = false, features = [
   "avatar",
   "db"
-], rev = "306a524cd5b6023597d49b87142a217cbe1d4eac", git = "https://github.com/profiidev/centaurus.git" }
+], rev = "7301178c5bfe1511c774e4aa0efc5f0466117845", git = "https://github.com/profiidev/centaurus.git" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [dependencies.sea-orm-migration]

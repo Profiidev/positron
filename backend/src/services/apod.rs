@@ -16,6 +16,7 @@ use centaurus::{
   db::{init::Connection, tables::group::SimpleUserInfo},
   error::{ErrorReportStatusExt, Result},
   eyre::Context,
+  storage::FileStorage,
 };
 use chrono::{DateTime, Utc};
 use entity::apod;
@@ -29,7 +30,7 @@ use uuid::Uuid;
 
 use crate::{
   db::DBTrait,
-  storage::FileStorage,
+  storage::StorageExt,
   utils::{ApodList, ApodSelect, UpdateMessage, Updater},
 };
 

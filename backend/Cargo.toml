@@ -29,8 +29,9 @@ base64 = "0.22.1"
 centaurus = { version = "0.11.2", features = [
   "fix-migrations",
   "uuid",
-  "webauthn"
-], rev = "b1d7747cabd5904d4a30de169873c8403cdcf127", git = "https://github.com/profiidev/centaurus.git" }
+  "webauthn",
+  "storage"
+], rev = "4db7e2cc9f0a48026b0f93b2b43bced8e012c462", git = "https://github.com/profiidev/centaurus.git" }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"

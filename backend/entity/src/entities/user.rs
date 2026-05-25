@@ -12,6 +12,7 @@ pub struct Model {
   pub email: String,
   pub password: String,
   pub salt: String,
+  pub oidc_user: bool,
   pub totp: Option<String>,
 }
 

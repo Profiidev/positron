@@ -53,7 +53,6 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       "/finish_special_access",
       post_with(finish_special_access, |op| op.id("finishSpecialAccess")),
     )
-    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
     .api_route(
       "/start_registration",
       get_with(start_registration, |op| op.id("startRegistration")),
@@ -66,6 +65,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       "/start_special_access",
       get_with(start_special_access, |op| op.id("startSpecialAccess")),
     )
+    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
     .api_route("/list", get_with(list, |op| op.id("listPasskeys")))
     .api_route("/remove", post_with(remove, |op| op.id("removePasskey")))
     .api_route(

@@ -2,7 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::{
   backend::{
-    endpoints::{group, mail, websocket},
+    endpoints::{self, group, mail, setup, websocket},
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -23,9 +23,7 @@ mod oauth;
 mod oauth_management;
 mod services;
 mod settings;
-mod setup;
 mod storage;
-mod templates;
 mod user;
 mod utils;
 mod well_known;
@@ -69,7 +67,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
     .expect("Failed to create admin group");
   oauth_management::init(&db).await;
 
-  router = user::state(router);
+  router = endpoints::user::state(router);
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;

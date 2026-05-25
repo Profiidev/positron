@@ -887,7 +887,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.22.1",
- "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127)",
+ "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
  "chrono",
  "dashmap",
  "dotenvy",
@@ -1155,36 +1155,18 @@ dependencies = [
 [[package]]
 name = "centaurus"
 version = "0.11.2"
-source = "git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac#306a524cd5b6023597d49b87142a217cbe1d4eac"
-dependencies = [
- "base64 0.22.1",
- "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac)",
- "chrono",
- "eyre",
- "image",
- "md5",
- "reqwest",
- "sea-orm",
- "sea-orm-migration",
- "serde",
- "serde_json",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "centaurus"
-version = "0.11.2"
-source = "git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127#b1d7747cabd5904d4a30de169873c8403cdcf127"
+source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
 dependencies = [
  "addr",
  "aide",
  "argon2",
  "async-trait",
+ "aws-config",
+ "aws-sdk-s3",
  "axum",
  "axum-extra",
  "base64 0.22.1",
- "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127)",
+ "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
  "chrono",
  "color-eyre",
  "dashmap",
@@ -1209,6 +1191,7 @@ dependencies = [
  "serde_json",
  "time",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
@@ -1222,11 +1205,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "centaurus"
+version = "0.11.2"
+source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
+dependencies = [
+ "base64 0.22.1",
+ "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
+ "chrono",
+ "eyre",
+ "image",
+ "md5",
+ "reqwest",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "centaurus-derive"
 version = "0.1.3"
-source = "git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac#306a524cd5b6023597d49b87142a217cbe1d4eac"
+source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
 dependencies = [
- "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac)",
+ "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
  "quote",
  "syn 2.0.117",
 ]
@@ -1234,9 +1237,9 @@ dependencies = [
 [[package]]
 name = "centaurus-derive"
 version = "0.1.3"
-source = "git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127#b1d7747cabd5904d4a30de169873c8403cdcf127"
+source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
 dependencies = [
- "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127)",
+ "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
  "quote",
  "syn 2.0.117",
 ]
@@ -1244,7 +1247,7 @@ dependencies = [
 [[package]]
 name = "centaurus-macro-utils"
 version = "0.1.1"
-source = "git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac#306a524cd5b6023597d49b87142a217cbe1d4eac"
+source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
 dependencies = [
  "syn 2.0.117",
  "toml_edit",
@@ -1253,7 +1256,7 @@ dependencies = [
 [[package]]
 name = "centaurus-macro-utils"
 version = "0.1.1"
-source = "git+https://github.com/profiidev/centaurus.git?rev=b1d7747cabd5904d4a30de169873c8403cdcf127#b1d7747cabd5904d4a30de169873c8403cdcf127"
+source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
 dependencies = [
  "syn 2.0.117",
  "toml_edit",
@@ -3257,7 +3260,7 @@ dependencies = [
 name = "migration"
 version = "0.1.0"
 dependencies = [
- "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=306a524cd5b6023597d49b87142a217cbe1d4eac)",
+ "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
  "sea-orm-migration",
  "tokio",
 ]

@@ -6,10 +6,7 @@ use centaurus::{
   },
   permission,
 };
-use rand::{
-  RngExt,
-  distr::{Alphanumeric, Uniform},
-};
+use rand::{RngExt, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -41,15 +38,6 @@ pub enum UpdateMessage {
   OAuthPolicy {
     uuid: Uuid,
   },
-}
-
-pub fn gen_code() -> String {
-  // unwrap is safe because the range is valid
-  rand::rng()
-    .sample_iter(Uniform::new(48, 58).unwrap())
-    .take(6)
-    .map(char::from)
-    .collect()
 }
 
 pub fn generate_secret() -> String {
