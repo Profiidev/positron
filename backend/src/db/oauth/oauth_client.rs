@@ -1,6 +1,7 @@
 use centaurus::db::tables::{group::SimpleUserInfo, user::SimpleGroupInfo};
 use entity::{
-  group, group_user, o_auth_client, o_auth_client_group, o_auth_client_user, prelude::*, user,
+  group, group_user, o_auth_client, o_auth_client_additional_redirect_uri, o_auth_client_group,
+  o_auth_client_user, prelude::*, user,
 };
 use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, IntoActiveModel, prelude::*};
@@ -81,19 +82,22 @@ impl<'db> OauthClientTable<'db> {
     let user_client = clients
       .load_many_to_many(user::Entity, o_auth_client_user::Entity, self.db)
       .await?;
+    let additional_redirect_uris = clients
+      .load_many(o_auth_client_additional_redirect_uri::Entity, self.db)
+      .await?;
 
     let result = clients
       .into_iter()
       .zip(group_client)
       .zip(user_client)
-      .map(|((client, group), user)| OAuthClientInfo {
+      .zip(additional_redirect_uris)
+      .map(|(((client, group), user), uris)| OAuthClientInfo {
         name: client.name,
         client_id: client.id,
         redirect_uri: client.redirect_uri.parse().unwrap(),
-        additional_redirect_uris: client
-          .additional_redirect_uris
+        additional_redirect_uris: uris
           .into_iter()
-          .flat_map(|u| u.parse())
+          .flat_map(|u| u.redirect_uri.parse())
           .collect(),
         default_scope: client.default_scope.parse().unwrap(),
         group_access: group
@@ -153,6 +157,18 @@ impl<'db> OauthClientTable<'db> {
     Ok(users)
   }
 
+  pub async fn client_additional_redirect_uris(&self, client_id: Uuid) -> Result<Vec<Url>, DbErr> {
+    let uris = o_auth_client_additional_redirect_uri::Entity::find()
+      .filter(o_auth_client_additional_redirect_uri::Column::Client.eq(client_id))
+      .all(self.db)
+      .await?
+      .into_iter()
+      .filter_map(|u| u.redirect_uri.parse().ok())
+      .collect();
+
+    Ok(uris)
+  }
+
   pub async fn client_info(&self, client_id: Uuid) -> Result<Option<OAuthClientInfo>, DbErr> {
     let Some(client) = OAuthClient::find_by_id(client_id).one(self.db).await? else {
       return Ok(None);
@@ -160,16 +176,13 @@ impl<'db> OauthClientTable<'db> {
 
     let group_access = self.client_groups(client_id).await?;
     let user_access = self.client_users(client_id).await?;
+    let additional_redirect_uris = self.client_additional_redirect_uris(client_id).await?;
 
     Ok(Some(OAuthClientInfo {
       name: client.name,
       client_id: client.id,
       redirect_uri: client.redirect_uri.parse().unwrap(),
-      additional_redirect_uris: client
-        .additional_redirect_uris
-        .into_iter()
-        .flat_map(|u| u.parse())
-        .collect(),
+      additional_redirect_uris,
       default_scope: client.default_scope.parse().unwrap(),
       group_access,
       user_access,
@@ -229,6 +242,33 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
+  async fn add_additional_redirect_uris(
+    &self,
+    client_id: Uuid,
+    uris: Vec<String>,
+  ) -> Result<(), DbErr> {
+    let mut models = Vec::new();
+
+    for uri in uris {
+      let model = o_auth_client_additional_redirect_uri::Model {
+        client: client_id,
+        redirect_uri: uri,
+      }
+      .into_active_model();
+      models.push(model);
+    }
+
+    if models.is_empty() {
+      return Ok(());
+    }
+
+    o_auth_client_additional_redirect_uri::Entity::insert_many(models)
+      .exec(self.db)
+      .await?;
+
+    Ok(())
+  }
+
   #[allow(clippy::too_many_arguments)]
   pub async fn edit_client(
     &self,
@@ -244,7 +284,6 @@ impl<'db> OauthClientTable<'db> {
 
     client.name = Set(name);
     client.redirect_uri = Set(redirect_uri);
-    client.additional_redirect_uris = Set(additional_redirect_uris);
     client.default_scope = Set(default_scope);
 
     client.update(self.db).await?;
@@ -259,8 +298,16 @@ impl<'db> OauthClientTable<'db> {
       .exec(self.db)
       .await?;
 
+    o_auth_client_additional_redirect_uri::Entity::delete_many()
+      .filter(o_auth_client_additional_redirect_uri::Column::Client.eq(client_id))
+      .exec(self.db)
+      .await?;
+
     self.add_users_to_client(client_id, users_mapped).await?;
     self.add_groups_to_client(client_id, groups_mapped).await?;
+    self
+      .add_additional_redirect_uris(client_id, additional_redirect_uris)
+      .await?;
 
     Ok(())
   }

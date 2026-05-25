@@ -143,7 +143,6 @@ async fn create(
       name: req.name.clone(),
       id: client_id,
       redirect_uri: req.redirect_uri.to_string(),
-      additional_redirect_uris: vec![],
       default_scope: req.scope.to_string(),
       client_secret,
       salt,

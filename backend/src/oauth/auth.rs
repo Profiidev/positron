@@ -127,7 +127,12 @@ async fn authorize_confirm(
   drop(lock);
 
   let initial_redirect_uri = req.redirect_uri.clone();
-  if let Err((error_response, error)) = validate_req(&mut req, &client) {
+  let additional_redirect_uris = db
+    .oauth_client()
+    .client_additional_redirect_uris(client_id)
+    .await?;
+
+  if let Err((error_response, error)) = validate_req(&mut req, &client, additional_redirect_uris) {
     tracing::warn!("Authorization request validation failed: {:?}", error);
     return Ok(Json(AuthRes {
       location: format!("{}?error={}", client.redirect_uri, error_response),
@@ -164,16 +169,17 @@ async fn authorize_confirm(
 fn validate_req(
   req: &mut AuthReq,
   client: &o_auth_client::Model,
+  additional_redirect_uris: Vec<Url>,
 ) -> std::result::Result<(), (&'static str, ErrorReport)> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
       return Err(("invalid_request", anyhow!("invalid redirect_uri format")));
     };
 
-    let mut possibilities =
-      std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
+    let redirect_url = Url::from_str(&client.redirect_uri.to_string()).unwrap();
+    let mut possibilities = std::iter::once(redirect_url).chain(additional_redirect_uris);
 
-    if !possibilities.any(|reg_url| reg_url.parse::<Url>().unwrap() == url) {
+    if !possibilities.any(|reg_url| reg_url == url) {
       return Err((
         "invalid_request",
         anyhow!("redirect_uri {} is not allowed", url),

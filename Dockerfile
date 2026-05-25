@@ -62,7 +62,6 @@ RUN \
   cargo chef cook --release --target $TARGET
 
 COPY backend/Cargo.toml backend/
-COPY backend/build.rs backend/
 COPY backend/src backend/src
 COPY backend/entity/Cargo.toml backend/entity/
 COPY backend/entity/src backend/entity/src
@@ -81,6 +80,8 @@ FROM node:24-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40
 ENV DB_URL="sqlite:/data/positron.db?mode=rwc"
 ENV STORAGE_PATH="/data/storage"
 ENV SITE_URL="http://localhost:8000"
+
+RUN mkdir -p /data/storage
 
 COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 

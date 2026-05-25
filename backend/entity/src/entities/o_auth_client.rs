@@ -9,7 +9,6 @@ pub struct Model {
   pub id: Uuid,
   pub name: String,
   pub redirect_uri: String,
-  pub additional_redirect_uris: Vec<String>,
   pub default_scope: String,
   pub client_secret: String,
   pub salt: String,
@@ -18,10 +17,18 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+  #[sea_orm(has_many = "super::o_auth_client_additional_redirect_uri::Entity")]
+  OAuthClientAdditionalRedirectUri,
   #[sea_orm(has_many = "super::o_auth_client_group::Entity")]
   OAuthClientGroup,
   #[sea_orm(has_many = "super::o_auth_client_user::Entity")]
   OAuthClientUser,
+}
+
+impl Related<super::o_auth_client_additional_redirect_uri::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::OAuthClientAdditionalRedirectUri.def()
+  }
 }
 
 impl Related<super::o_auth_client_group::Entity> for Entity {

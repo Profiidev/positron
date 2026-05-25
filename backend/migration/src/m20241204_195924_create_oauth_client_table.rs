@@ -15,13 +15,36 @@ impl MigrationTrait for Migration {
           .col(pk_uuid(OAuthClient::Id))
           .col(string(OAuthClient::Name))
           .col(string(OAuthClient::RedirectUri))
-          .col(array(
-            OAuthClient::AdditionalRedirectUris,
-            ColumnType::string(None),
-          ))
           .col(string(OAuthClient::DefaultScope))
           .col(string(OAuthClient::ClientSecret))
           .col(string(OAuthClient::Salt))
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(OAuthClientAdditionalRedirectUri::Table)
+          .if_not_exists()
+          .primary_key(
+            Index::create()
+              .table(OAuthClientAdditionalRedirectUri::Table)
+              .col(OAuthClientAdditionalRedirectUri::Client)
+              .col(OAuthClientAdditionalRedirectUri::RedirectUri),
+          )
+          .col(uuid(OAuthClientAdditionalRedirectUri::Client))
+          .col(string(OAuthClientAdditionalRedirectUri::RedirectUri))
+          .foreign_key(
+            ForeignKey::create()
+              .from(
+                OAuthClientAdditionalRedirectUri::Table,
+                OAuthClientAdditionalRedirectUri::Client,
+              )
+              .to(OAuthClient::Table, OAuthClient::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
           .to_owned(),
       )
       .await?;
@@ -94,6 +117,7 @@ impl MigrationTrait for Migration {
       .drop_table(
         Table::drop()
           .table(OAuthClient::Table)
+          .table(OAuthClientAdditionalRedirectUri::Table)
           .table(OAuthClientUser::Table)
           .table(OAuthClientGroup::Table)
           .to_owned(),
@@ -108,10 +132,16 @@ pub enum OAuthClient {
   Id,
   Name,
   RedirectUri,
-  AdditionalRedirectUris,
   DefaultScope,
   ClientSecret,
   Salt,
+}
+
+#[derive(DeriveIden)]
+pub enum OAuthClientAdditionalRedirectUri {
+  Table,
+  Client,
+  RedirectUri,
 }
 
 #[derive(DeriveIden)]
