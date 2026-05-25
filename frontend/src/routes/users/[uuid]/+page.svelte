@@ -55,9 +55,9 @@
     Promise.all([data.user, data.userInfoPromise]).then(([user, res]) => {
       if (!res.data) {
         if (res.response?.status === 404) {
-          goto('/users?error=user_not_found');
+          goto('/users?error=not_found');
         } else {
-          goto('/users?error=user_other');
+          goto('/users?error=other');
         }
         return;
       }

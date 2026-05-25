@@ -29,6 +29,9 @@ pub enum UpdateMessage {
   },
   Passkey,
   Apod,
+  OAuthClient {
+    uuid: Uuid,
+  },
 }
 
 pub fn gen_code() -> String {
@@ -41,10 +44,19 @@ pub fn gen_code() -> String {
 
 pub fn permissions() -> Vec<&'static str> {
   let mut perms = permission::permissions();
-  perms.extend_from_slice(&[ApodList::name(), ApodSelect::name()]);
+  perms.extend_from_slice(&[
+    ApodList::name(),
+    ApodSelect::name(),
+    OauthClientView::name(),
+    OauthClientEdit::name(),
+  ]);
   perms
 }
 
 // Apod
 permission!(ApodList, "apod:list");
 permission!(ApodSelect, "apod:select");
+
+// Oauth client
+permission!(OauthClientView, "oauth_client:view");
+permission!(OauthClientEdit, "oauth_client:edit");

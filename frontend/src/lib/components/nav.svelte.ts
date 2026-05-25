@@ -3,12 +3,24 @@ import House from '@lucide/svelte/icons/house';
 import { Permission } from '$lib/permissions.svelte';
 import Users from '@lucide/svelte/icons/users';
 import User from '@lucide/svelte/icons/user';
+import KeyRound from '@lucide/svelte/icons/key-round';
 import type { NavGroup } from '@profidev/pleiades/components/nav/sidebar/types';
 
 export const items: NavGroup[] = [
   {
     items: [{ href: '/', icon: House, label: 'Overview' }],
     label: 'Overview'
+  },
+  {
+    items: [
+      {
+        href: '/oauth-client',
+        icon: KeyRound,
+        label: 'Clients',
+        requiredPermission: Permission.AOUTH_CLIENT_VIEW
+      }
+    ],
+    label: 'OAuth / Oidc'
   },
   {
     items: [

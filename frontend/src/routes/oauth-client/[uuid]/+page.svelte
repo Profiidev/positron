@@ -10,49 +10,54 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import { goto } from '$app/navigation';
   import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
-  import { formatData, groupSettings, reformatData } from './schema.svelte.js';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import Save from '@lucide/svelte/icons/save';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import FormSelect from '@profidev/pleiades/components/form/form-select.svelte';
-  import Permissions from './Permissions.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import {
-    deleteGroup,
-    editGroup,
-    type GroupInfo,
+    deleteOauthClient,
+    editOauthClient,
+    type OAuthClientInfo,
+    type SimpleGroupInfo,
+    type SimpleOAuthScopeInfo,
     type SimpleUserInfo,
     type UserInfo
   } from '$lib/client';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
+  import { clientSettings, formatData } from './schema.svelte.js';
+  import FormTags from '$lib/components/FormTags.svelte';
 
   const { data } = $props();
 
   let deleteOpen = $state(false);
   let isLoading = $state(false);
   let user: UserInfo | undefined = $state();
-  let adminGroup: string | undefined = $state();
-  let group: GroupInfo | undefined = $state();
-  let form: BaseForm<typeof groupSettings> | undefined = $state();
-  let users: SimpleUserInfo[] | undefined = $state();
+  let client: OAuthClientInfo | undefined = $state();
+  let form: BaseForm<typeof clientSettings> | undefined = $state();
 
-  let readonly = $derived(!user?.permissions.includes(Permission.GROUP_EDIT));
+  let users: SimpleUserInfo[] | undefined = $state();
+  let groups: SimpleGroupInfo[] | undefined = $state();
+  let scopes: SimpleOAuthScopeInfo[] | undefined = $state();
+
+  let readonly = $derived(
+    !user?.permissions.includes(Permission.OAUTH_CLIENT_EDIT)
+  );
 
   $effect(() => {
-    data.groupRes.then((res) => {
+    data.clientRes.then((res) => {
       if (!res.data) {
         if (res.response?.status === 404) {
-          goto('/groups?error=not_found');
+          goto('/oauth-client?error=not_found');
         } else {
-          goto('/groups?error=other');
+          goto('/oauth-client?error=other');
         }
         return;
       }
 
-      group = res.data.group;
-      adminGroup = res.data.admin_group;
-      form?.setValue(formatData(group));
+      client = res.data;
+      form?.setValue(formatData(client));
     });
   });
 
@@ -63,51 +68,61 @@
   });
 
   $effect(() => {
-    data.usersPromise.then(({ data }) => {
-      users = data;
+    data.usersPromise.then((d) => {
+      users = d;
+    });
+  });
+
+  $effect(() => {
+    data.groupsPromise.then((d) => {
+      groups = d;
+    });
+  });
+
+  $effect(() => {
+    data.scopesPromise.then((d) => {
+      scopes = d;
     });
   });
 
   const deleteItemConfirm = async () => {
-    if (!group) return;
+    if (!client) return;
     isLoading = true;
-    let ret = await deleteGroup({ body: { uuid: group.id } });
+    let ret = await deleteOauthClient({
+      body: { client_id: client.client_id }
+    });
     isLoading = false;
 
     if (ret.error) {
-      return { error: 'Failed to delete group' };
+      return { error: 'Failed to delete client' };
     } else {
-      toast.success(`Group ${group.name} deleted successfully`);
+      toast.success(`Client ${client.name} deleted successfully`);
       setTimeout(() => {
-        goto('/groups');
+        goto('/oauth-client');
       });
     }
   };
 
-  const onsubmit = async (form: FormValue<typeof groupSettings>) => {
-    if (!group) return;
-    let groupData = reformatData(form, group.id);
-    if (group.id === adminGroup) {
-      groupData.permissions = group.permissions;
-    }
-    let res = await editGroup({ body: groupData });
+  const onsubmit = async (form: FormValue<typeof clientSettings>) => {
+    if (!client) return;
+    let res = await editOauthClient({
+      body: {
+        ...form,
+        client_id: client.client_id
+      }
+    });
 
     if (res.error) {
       if (res.response?.status === 409) {
         return {
-          error: 'This group name is already in use',
+          error: 'This client name is already in use',
           field: 'name'
         } as const;
-      } else if (res.response?.status === 406) {
-        return {
-          error: 'Admin group must have at least 1 user',
-          field: 'users'
-        } as const;
       } else {
-        return { error: 'Failed to update group' };
+        return { error: 'Failed to update client' };
       }
     } else {
-      toast.success(`Group ${group.name} updated successfully`);
+      toast.success(`Client ${client.name} updated successfully`);
       // do not trigger form reset
       return { error: '' };
     }
@@ -116,22 +131,22 @@
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
   <div class="mt-1! mb-0 ml-7 flex items-center md:m-0">
-    <Button size="icon" variant="ghost" href="/groups" class="mr-2">
+    <Button size="icon" variant="ghost" href="/oauth-client" class="mr-2">
       <ArrowLeft class="size-5" />
     </Button>
     <h3 class="flex text-xl font-medium">
       User:
-      {#if !group}
+      {#if !client}
         <Skeleton class="ml-2 h-7 w-20" />
       {:else}
-        {group.name}
+        {client.name}
       {/if}
     </h3>
     <Button
       class="ml-auto cursor-pointer"
       onclick={() => (deleteOpen = true)}
       variant="destructive"
-      disabled={readonly || group?.id === adminGroup}
+      disabled={readonly}
     >
       <Trash />
       Delete
@@ -142,7 +157,7 @@
     <h4 class="mb-2">Settings</h4>
     <BaseForm
       class="flex min-h-0 grow flex-col"
-      schema={groupSettings}
+      schema={clientSettings}
       {onsubmit}
       bind:this={form}
     >
@@ -155,26 +170,58 @@
               <FormInput
                 {...props}
                 key="name"
-                label="Group Name"
-                placeholder="Enter group name"
+                label="Client Name"
+                placeholder="Enter client name"
+                disabled={readonly}
+              />
+              <FormInput
+                {...props}
+                key="redirect_uri"
+                label="Default Redirect URI"
+                placeholder="https://example.com/callback"
+                disabled={readonly}
+              />
+              <FormTags
+                {...props}
+                key="additional_redirect_uris"
+                label="Additional Redirect URIs"
+                validate={(val) => {
+                  let res = z.url().safeParse(val);
+                  if (!res.success) return undefined;
+                  return val;
+                }}
                 disabled={readonly}
               />
               <FormSelect
                 {...props}
-                key="users"
-                label="Group Members"
+                key="scope"
+                label="Scopes"
+                data={scopes?.map((scopes) => ({
+                  label: scopes.name,
+                  value: scopes.uuid
+                })) ?? []}
+                disabled={readonly}
+              />
+              <FormSelect
+                {...props}
+                key="user_access"
+                label="User Access"
                 data={users?.map((user) => ({
                   label: user.name,
                   value: user.id
                 })) || []}
+                disabled={readonly}
               />
-              {#if group?.id !== adminGroup}
-                <Permissions
-                  {user}
-                  readonly={readonly || adminGroup === group?.id}
-                  {...props}
-                />
-              {/if}
+              <FormSelect
+                {...props}
+                key="group_access"
+                label="Group Access"
+                data={groups?.map((group) => ({
+                  label: group.name,
+                  value: group.uuid
+                })) || []}
+                disabled={readonly}
+              />
             </div>
           </div>
         </ScrollArea>
@@ -208,8 +255,8 @@
   </div>
 </div>
 <FormDialog
-  title={`Delete Group`}
-  description={`Do you really want to delete the group ${group?.name}?`}
+  title={`Delete Client`}
+  description={`Do you really want to delete the client ${client?.name}?`}
   confirm="Delete"
   confirmVariant="destructive"
   onsubmit={deleteItemConfirm}

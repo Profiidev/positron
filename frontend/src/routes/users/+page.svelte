@@ -25,9 +25,9 @@
 
   $effect(() => {
     if (data.error) {
-      if (data.error === 'user_not_found') {
+      if (data.error === 'not_found') {
         toast.error('User not found');
-      } else if (data.error === 'user_other') {
+      } else if (data.error === 'other') {
         toast.error('Failed to load user');
       }
 

@@ -29,6 +29,18 @@ export type ChangeUserEmail = {
   uuid: string;
 };
 
+export type ClientCreate = {
+  confidential: boolean;
+  name: string;
+  redirect_uri: string;
+  scope: Scope;
+};
+
+export type ClientCreateRes = {
+  client_id: string;
+  client_secret: string;
+};
+
 export type CreateGroupRequest = {
   name: string;
 };
@@ -41,6 +53,10 @@ export type CreateUser = {
 
 export type CreateUserResponse = {
   uuid: string;
+};
+
+export type DeleteClientRequest = {
+  client_id: string;
 };
 
 export type DeleteGroupRequest = {
@@ -166,6 +182,31 @@ export type MailSettingsResponse = {
   settings: MailSettings;
 };
 
+export type OAuthClientEdit = {
+  additional_redirect_uris: Array<string>;
+  client_id: string;
+  group_access: Array<string>;
+  name: string;
+  redirect_uri: string;
+  scope: Scope;
+  user_access: Array<string>;
+};
+
+export type OAuthClientInfo = {
+  additional_redirect_uris: Array<string>;
+  client_id: string;
+  confidential: boolean;
+  default_scope: Scope;
+  group_access: Array<SimpleGroupInfo>;
+  name: string;
+  redirect_uri: string;
+  user_access: Array<SimpleUserInfo>;
+};
+
+export type OAuthClientPath = {
+  uuid: string;
+};
+
 export type PasskeyEdit = {
   name: string;
   old_name: string;
@@ -209,6 +250,8 @@ export type ResetUserPassword = {
   uuid: string;
 };
 
+export type Scope = Array<string>;
+
 export type SetGoodReq = {
   date: Date;
   good: boolean;
@@ -225,6 +268,11 @@ export type SetupPayload = {
 };
 
 export type SimpleGroupInfo = {
+  name: string;
+  uuid: string;
+};
+
+export type SimpleOAuthScopeInfo = {
   name: string;
   uuid: string;
 };
@@ -2013,3 +2061,250 @@ export type GetApodImageResponses = {
 
 export type GetApodImageResponse =
   GetApodImageResponses[keyof GetApodImageResponses];
+
+export type DeleteOauthClientData = {
+  body: DeleteClientRequest;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client';
+};
+
+export type DeleteOauthClientErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type DeleteOauthClientError =
+  DeleteOauthClientErrors[keyof DeleteOauthClientErrors];
+
+export type DeleteOauthClientResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ListOauthClientsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client';
+};
+
+export type ListOauthClientsErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListOauthClientsResponses = {
+  200: Array<OAuthClientInfo>;
+};
+
+export type ListOauthClientsResponse =
+  ListOauthClientsResponses[keyof ListOauthClientsResponses];
+
+export type CreateOauthClientData = {
+  body: ClientCreate;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client';
+};
+
+export type CreateOauthClientErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type CreateOauthClientError =
+  CreateOauthClientErrors[keyof CreateOauthClientErrors];
+
+export type CreateOauthClientResponses = {
+  200: ClientCreateRes;
+};
+
+export type CreateOauthClientResponse =
+  CreateOauthClientResponses[keyof CreateOauthClientResponses];
+
+export type EditOauthClientData = {
+  body: OAuthClientEdit;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client';
+};
+
+export type EditOauthClientErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type EditOauthClientError =
+  EditOauthClientErrors[keyof EditOauthClientErrors];
+
+export type EditOauthClientResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ListGroupsOAuthClientData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client/groups';
+};
+
+export type ListGroupsOAuthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListGroupsOAuthClientResponses = {
+  200: Array<SimpleGroupInfo>;
+};
+
+export type ListGroupsOAuthClientResponse =
+  ListGroupsOAuthClientResponses[keyof ListGroupsOAuthClientResponses];
+
+export type ListUsersOAuthClientData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client/users';
+};
+
+export type ListUsersOAuthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListUsersOAuthClientResponses = {
+  200: Array<SimpleUserInfo>;
+};
+
+export type ListUsersOAuthClientResponse =
+  ListUsersOAuthClientResponses[keyof ListUsersOAuthClientResponses];
+
+export type ListScopesOAuthClientData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client/scopes';
+};
+
+export type ListScopesOAuthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListScopesOAuthClientResponses = {
+  200: Array<SimpleOAuthScopeInfo>;
+};
+
+export type ListScopesOAuthClientResponse =
+  ListScopesOAuthClientResponses[keyof ListScopesOAuthClientResponses];
+
+export type InfoOauthClientData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/oauth_management/client/{uuid}';
+};
+
+export type InfoOauthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoOauthClientResponses = {
+  200: OAuthClientInfo;
+};
+
+export type InfoOauthClientResponse =
+  InfoOauthClientResponses[keyof InfoOauthClientResponses];

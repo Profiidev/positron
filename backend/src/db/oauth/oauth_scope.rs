@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use axum::{Json, extract::FromRequest};
 use centaurus::db::tables::user::SimpleGroupInfo;
-use entity::{group, o_auth_scope, o_auth_scope_o_auth_policy, prelude::*};
+use entity::{o_auth_scope, o_auth_scope_o_auth_policy, prelude::*};
+use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -10,13 +10,18 @@ use crate::db::util::update_relations;
 
 use super::oauth_policy::BasicOAuthPolicyInfo;
 
-#[derive(Serialize, Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OAuthScopeInfo {
   pub uuid: Uuid,
   pub name: String,
   pub scope: String,
   pub policy: Vec<BasicOAuthPolicyInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct SimpleOAuthScopeInfo {
+  pub uuid: Uuid,
+  pub name: String,
 }
 
 pub struct OAuthScopeTable<'db> {
@@ -108,6 +113,20 @@ impl<'db> OAuthScopeTable<'db> {
               uuid: p.id,
             })
             .collect(),
+        })
+        .collect(),
+    )
+  }
+
+  pub async fn list_simple(&self) -> Result<Vec<SimpleOAuthScopeInfo>, DbErr> {
+    let res = OAuthScope::find().all(self.db).await?;
+
+    Ok(
+      res
+        .into_iter()
+        .map(|s| SimpleOAuthScopeInfo {
+          name: s.name,
+          uuid: s.id,
         })
         .collect(),
     )

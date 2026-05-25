@@ -25,18 +25,27 @@ import type {
   CreateGroupData,
   CreateGroupErrors,
   CreateGroupResponses,
+  CreateOauthClientData,
+  CreateOauthClientErrors,
+  CreateOauthClientResponses,
   CreateUserData,
   CreateUserErrors,
   CreateUserResponses,
   DeleteGroupData,
   DeleteGroupErrors,
   DeleteGroupResponses,
+  DeleteOauthClientData,
+  DeleteOauthClientErrors,
+  DeleteOauthClientResponses,
   DeleteUserData,
   DeleteUserErrors,
   DeleteUserResponses,
   EditGroupData,
   EditGroupErrors,
   EditGroupResponses,
+  EditOauthClientData,
+  EditOauthClientErrors,
+  EditOauthClientResponses,
   EditPasskeyNameData,
   EditPasskeyNameErrors,
   EditPasskeyNameResponses,
@@ -63,6 +72,9 @@ import type {
   GroupInfoResponses,
   InfoData,
   InfoErrors,
+  InfoOauthClientData,
+  InfoOauthClientErrors,
+  InfoOauthClientResponses,
   InfoResponses,
   IsSetupData,
   IsSetupErrors,
@@ -74,15 +86,27 @@ import type {
   ListApodResponses,
   ListGroupsData,
   ListGroupsErrors,
+  ListGroupsOAuthClientData,
+  ListGroupsOAuthClientErrors,
+  ListGroupsOAuthClientResponses,
   ListGroupsResponses,
   ListGroupsSimpleData,
   ListGroupsSimpleErrors,
   ListGroupsSimpleResponses,
+  ListOauthClientsData,
+  ListOauthClientsErrors,
+  ListOauthClientsResponses,
   ListPasskeysData,
   ListPasskeysErrors,
   ListPasskeysResponses,
+  ListScopesOAuthClientData,
+  ListScopesOAuthClientErrors,
+  ListScopesOAuthClientResponses,
   ListUsersData,
   ListUsersErrors,
+  ListUsersOAuthClientData,
+  ListUsersOAuthClientErrors,
+  ListUsersOAuthClientResponses,
   ListUsersResponses,
   ListUsersSimpleData,
   ListUsersSimpleErrors,
@@ -885,3 +909,96 @@ export const getApodImage = <ThrowOnError extends boolean = false>(
       ...options.headers
     }
   });
+
+export const deleteOauthClient = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    DeleteOauthClientResponses,
+    DeleteOauthClientErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/client',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listOauthClients = <ThrowOnError extends boolean = false>(
+  options?: Options<ListOauthClientsData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListOauthClientsResponses,
+    ListOauthClientsErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client', ...options });
+
+export const createOauthClient = <ThrowOnError extends boolean = false>(
+  options: Options<CreateOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    CreateOauthClientResponses,
+    CreateOauthClientErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/client',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const editOauthClient = <ThrowOnError extends boolean = false>(
+  options: Options<EditOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    EditOauthClientResponses,
+    EditOauthClientErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/client',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listGroupsOAuthClient = <ThrowOnError extends boolean = false>(
+  options?: Options<ListGroupsOAuthClientData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListGroupsOAuthClientResponses,
+    ListGroupsOAuthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/groups', ...options });
+
+export const listUsersOAuthClient = <ThrowOnError extends boolean = false>(
+  options?: Options<ListUsersOAuthClientData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListUsersOAuthClientResponses,
+    ListUsersOAuthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/users', ...options });
+
+export const listScopesOAuthClient = <ThrowOnError extends boolean = false>(
+  options?: Options<ListScopesOAuthClientData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListScopesOAuthClientResponses,
+    ListScopesOAuthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/scopes', ...options });
+
+export const infoOauthClient = <ThrowOnError extends boolean = false>(
+  options: Options<InfoOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    InfoOauthClientResponses,
+    InfoOauthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/{uuid}', ...options });

@@ -52,7 +52,7 @@
         case 'oidc_not_configured':
           error = 'SSO login failed: OIDC is not configured.';
           break;
-        case 'user_not_found':
+        case 'not_found':
           error = 'User not found.';
           break;
         default:

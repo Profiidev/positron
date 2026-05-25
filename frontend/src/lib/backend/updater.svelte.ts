@@ -8,12 +8,13 @@ export enum UpdateType {
   Settings = 'Settings',
   User = 'User',
   UserPermissions = 'UserPermissions',
-  Group = 'Group'
+  Group = 'Group',
+  OAuthClient = 'OAuthClient'
 }
 
 export type UpdateMessage =
   | {
-      type: UpdateType.User | UpdateType.Group;
+      type: UpdateType.User | UpdateType.Group | UpdateType.OAuthClient;
       uuid: string;
     }
   | {
@@ -33,6 +34,7 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate('/api/user/management').catch(() => {});
       invalidate(`/api/user/management/${msg.uuid}`).catch(() => {});
       invalidate('/api/group/users').catch(() => {});
+      invalidate('/api/oauth_management/client/users').catch(() => {});
       invalidate(`/api/user/info/avatar/${msg.uuid}`).catch(() => {});
       // Same as current user
       if (msg.uuid === user) {
@@ -48,7 +50,12 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate('/api/group').catch(() => {});
       invalidate(`/api/group/${msg.uuid}`).catch(() => {});
       invalidate('/api/user/management/groups').catch(() => {});
+      invalidate('/api/oauth_management/client/groups').catch(() => {});
       break;
+    }
+    case UpdateType.OAuthClient: {
+      invalidate('/api/oauth_management/client').catch(() => {});
+      invalidate(`/api/oauth_management/client/${msg.uuid}`).catch(() => {});
     }
     default: {
       break;
