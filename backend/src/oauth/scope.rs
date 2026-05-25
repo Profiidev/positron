@@ -3,8 +3,6 @@ use std::{cmp::Ordering, convert::Infallible, fmt::Display, str::FromStr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::oauth_management::DEFAULT_SCOPES;
-
 #[derive(Default, Clone, Debug, JsonSchema)]
 pub struct Scope(Vec<String>);
 
@@ -23,15 +21,6 @@ impl Scope {
         .cloned()
         .collect(),
     )
-  }
-
-  pub fn non_default(&self) -> Vec<String> {
-    self
-      .0
-      .iter()
-      .filter(|s| !DEFAULT_SCOPES.contains(&s.as_str()))
-      .cloned()
-      .collect()
   }
 
   #[inline]
@@ -62,6 +51,11 @@ impl Scope {
   #[inline]
   pub fn contains(&self, scope: &str) -> bool {
     self.0.iter().any(|s| s == scope)
+  }
+
+  #[inline]
+  pub fn inner(&self) -> &[String] {
+    &self.0
   }
 }
 

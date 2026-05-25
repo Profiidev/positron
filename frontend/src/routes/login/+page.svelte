@@ -72,7 +72,13 @@
     setTimeout(async () => {
       connectWebsocket(user);
       await invalidate('/api/user/info');
-      await goto('/');
+      if (data.oauthOptions.code && data.oauthOptions.name) {
+        await goto(
+          `/oauth?code=${data.oauthOptions.code}&name=${data.oauthOptions.name}`
+        );
+      } else {
+        await goto('/');
+      }
     });
   };
 

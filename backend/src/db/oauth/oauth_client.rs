@@ -4,7 +4,7 @@ use entity::{
   o_auth_client_user, prelude::*, user,
 };
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, IntoActiveModel, prelude::*};
+use sea_orm::{ActiveValue::Set, Condition, IntoActiveModel, JoinType, QuerySelect, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
@@ -47,31 +47,24 @@ impl<'db> OauthClientTable<'db> {
   }
 
   pub async fn has_user_access(&self, user: Uuid, client_id: Uuid) -> Result<bool, DbErr> {
-    let client = self.get_client(client_id).await?;
-
-    let groups = OAuthClientGroup::find()
-      .filter(o_auth_client_group::Column::Client.eq(client.id))
-      .all(self.db)
-      .await?;
-    let users = OAuthClientUser::find()
-      .filter(o_auth_client_user::Column::Client.eq(client.id))
-      .all(self.db)
-      .await?;
-
-    let user_groups = GroupUser::find()
-      .filter(group_user::Column::UserId.eq(user))
-      .all(self.db)
-      .await?;
-
-    if users.iter().any(|u| u.user == user) {
-      Ok(true)
-    } else {
-      Ok(
-        groups
-          .iter()
-          .any(|g| user_groups.iter().any(|ug| ug.group_id == g.group)),
+    let count = o_auth_client::Entity::find()
+      .filter(o_auth_client::Column::Id.eq(client_id))
+      .left_join(o_auth_client_user::Entity)
+      .left_join(o_auth_client_group::Entity)
+      .join(
+        JoinType::LeftJoin,
+        o_auth_client_group::Relation::Group.def(),
       )
-    }
+      .join(JoinType::LeftJoin, group::Relation::GroupUser.def())
+      .filter(
+        Condition::any()
+          .add(o_auth_client_user::Column::User.eq(user))
+          .add(group_user::Column::UserId.eq(user)),
+      )
+      .count(self.db)
+      .await?;
+
+    Ok(count > 0)
   }
 
   pub async fn list_client(&self) -> Result<Vec<OAuthClientInfo>, DbErr> {
@@ -94,11 +87,14 @@ impl<'db> OauthClientTable<'db> {
       .map(|(((client, group), user), uris)| OAuthClientInfo {
         name: client.name,
         client_id: client.id,
+        // was validated as url before inset into db, so unwrap is safe
         redirect_uri: client.redirect_uri.parse().unwrap(),
+        // was validated as url before inset into db, so unwrap is safe
         additional_redirect_uris: uris
           .into_iter()
           .flat_map(|u| u.redirect_uri.parse())
           .collect(),
+        // was validated as scope before inset into db, so unwrap is safe
         default_scope: client.default_scope.parse().unwrap(),
         group_access: group
           .into_iter()
@@ -181,8 +177,10 @@ impl<'db> OauthClientTable<'db> {
     Ok(Some(OAuthClientInfo {
       name: client.name,
       client_id: client.id,
+      // was validated as url before inset into db, so unwrap is safe
       redirect_uri: client.redirect_uri.parse().unwrap(),
       additional_redirect_uris,
+      // was validated as scope before inset into db, so unwrap is safe
       default_scope: client.default_scope.parse().unwrap(),
       group_access,
       user_access,

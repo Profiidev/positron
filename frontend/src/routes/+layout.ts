@@ -1,7 +1,7 @@
 import type { LayoutLoad } from './$types';
 import { type UserInfo, info, isSetup } from '$lib/client';
 
-export const load: LayoutLoad = ({ fetch }) => {
+export const load: LayoutLoad = ({ fetch, url }) => {
   const setupStatus = isSetup({ fetch });
   const user: Promise<UserInfo> = info({ fetch }).then(
     ({ data }) =>
@@ -14,7 +14,14 @@ export const load: LayoutLoad = ({ fetch }) => {
       }
   );
 
+  const code = url.searchParams.get('code');
+  const name = url.searchParams.get('name');
+
   return {
+    oauthOptions: {
+      code,
+      name
+    },
     setupStatus,
     user
   };

@@ -12,6 +12,15 @@ export type AuthConfig = {
   mail_enabled: boolean;
 };
 
+export type AuthConfirmQuery = {
+  allow?: boolean | null;
+  code: string;
+};
+
+export type AuthRes = {
+  location: string;
+};
+
 export type AuthStartRes = {
   id: string;
 };
@@ -2139,6 +2148,34 @@ export type GetApodImageResponses = {
 
 export type GetApodImageResponse =
   GetApodImageResponses[keyof GetApodImageResponses];
+
+export type AuthorizeConfirmData = {
+  body?: never;
+  path?: never;
+  query: {
+    allow?: boolean;
+    code: string;
+  };
+  url: '/api/oauth/authorize_confirm';
+};
+
+export type AuthorizeConfirmErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type AuthorizeConfirmResponses = {
+  200: AuthRes;
+};
+
+export type AuthorizeConfirmResponse =
+  AuthorizeConfirmResponses[keyof AuthorizeConfirmResponses];
 
 export type DeleteOauthClientData = {
   body: DeleteClientRequest;

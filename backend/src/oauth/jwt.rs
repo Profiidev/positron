@@ -33,6 +33,8 @@ pub struct OAuthClaims {
   pub name: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub preferred_username: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub picture: Option<String>,
   pub groups: Vec<String>,
   #[serde(flatten)]
   pub rest: HashMap<String, String>,

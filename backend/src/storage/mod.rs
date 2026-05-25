@@ -61,13 +61,16 @@ impl FileStorage {
     }
 
     let credentials = Credentials::new(
+      // unwrap is safe here because the presence of these fields is already checked in config.use_s3()
       config.s3_access_key.as_ref().unwrap(),
+      // unwrap is safe here because the presence of these fields is already checked in config.use_s3()
       config.s3_secret_key.as_ref().unwrap(),
       None,
       None,
       "file_storage",
     );
 
+    // unwrap is safe here because the presence of these fields is already checked in config.use_s3()
     let mut builder = aws_sdk_s3::Config::builder()
       .region(Some(Region::new(config.s3_region.clone().unwrap())))
       .endpoint_url(config.s3_host.clone().unwrap())
@@ -77,6 +80,7 @@ impl FileStorage {
       builder = builder.force_path_style(true);
     }
 
+    // unwrap is safe here because the presence of these fields is already checked in config.use_s3()
     let bucket = config.s3_bucket.clone().unwrap();
     let config = builder.build();
     let client = aws_sdk_s3::Client::from_conf(config);

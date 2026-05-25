@@ -36,7 +36,16 @@
       // can also be undefined if there was an error
       if (valid === false) {
         if (!noSidebarPaths.includes(page.url.pathname) && !blockRedirect) {
-          goto('/login');
+          if (data.oauthOptions.code && data.oauthOptions.name) {
+            goto(
+              '/login?code=' +
+                data.oauthOptions.code +
+                '&name=' +
+                data.oauthOptions.name
+            );
+          } else {
+            goto('/login');
+          }
         }
       } else {
         let user = await data.user;

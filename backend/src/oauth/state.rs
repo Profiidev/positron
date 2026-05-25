@@ -1,10 +1,12 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc, time::Instant};
 
+use aide::OperationIo;
 use axum::{Extension, extract::FromRequestParts};
 use centaurus::serde::empty_string_as_none;
 use chrono::{Duration, Utc};
+use dashmap::DashMap;
 use serde::Deserialize;
-use tokio::sync::Mutex;
+use tokio::spawn;
 use url::Url;
 use uuid::Uuid;
 
@@ -12,10 +14,10 @@ use crate::config::Config;
 
 use super::scope::Scope;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct AuthReq {
   pub response_type: String,
-  pub client_id: String,
+  pub client_id: Uuid,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -31,16 +33,15 @@ pub struct CodeReq {
   pub redirect_uri: Option<String>,
   pub scope: Scope,
   pub user: Uuid,
-  pub exp: i64,
   pub nonce: Option<String>,
 }
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct AuthorizeState {
   pub frontend_url: Url,
-  pub auth_pending: Arc<Mutex<HashMap<Uuid, (i64, AuthReq)>>>,
-  pub auth_codes: Arc<Mutex<HashMap<Uuid, CodeReq>>>,
+  pub auth_pending: Arc<DashMap<Uuid, (Instant, AuthReq)>>,
+  pub auth_codes: Arc<DashMap<Uuid, (Instant, CodeReq)>>,
 }
 
 #[derive(Clone, FromRequestParts)]
@@ -68,15 +69,33 @@ impl ConfigurationState {
 
 impl AuthorizeState {
   pub fn init(config: &Config) -> Self {
+    let auth_pending = Arc::new(DashMap::new());
+    let auth_codes = Arc::new(DashMap::new());
+
+    spawn({
+      let auth_pending = Arc::clone(&auth_pending);
+      let auth_codes = Arc::clone(&auth_codes);
+
+      async move {
+        loop {
+          let now = Instant::now();
+          auth_pending.retain(|_, (timestamp, _)| now.duration_since(*timestamp).as_secs() < 600);
+          auth_codes.retain(|_, (timestamp, _)| now.duration_since(*timestamp).as_secs() < 600);
+          tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        }
+      }
+    });
+
     Self {
       frontend_url: config.site.site_url.clone(),
-      auth_pending: Default::default(),
-      auth_codes: Default::default(),
+      auth_pending,
+      auth_codes,
     }
   }
 }
 
 pub fn get_timestamp_10_min() -> i64 {
+  // unwrap is safe because the addition of a fixed duration to the current time will not overflow
   Utc::now()
     .checked_add_signed(Duration::seconds(600))
     .unwrap()

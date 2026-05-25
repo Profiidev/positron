@@ -9,6 +9,9 @@ import type {
   AuthConfigData,
   AuthConfigErrors,
   AuthConfigResponses,
+  AuthorizeConfirmData,
+  AuthorizeConfirmErrors,
+  AuthorizeConfirmResponses,
   AvatarByIdData,
   AvatarByIdErrors,
   AvatarByIdResponses,
@@ -951,6 +954,15 @@ export const getApodImage = <ThrowOnError extends boolean = false>(
       ...options.headers
     }
   });
+
+export const authorizeConfirm = <ThrowOnError extends boolean = false>(
+  options: Options<AuthorizeConfirmData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    AuthorizeConfirmResponses,
+    AuthorizeConfirmErrors,
+    ThrowOnError
+  >({ url: '/api/oauth/authorize_confirm', ...options });
 
 export const deleteOauthClient = <ThrowOnError extends boolean = false>(
   options: Options<DeleteOauthClientData, ThrowOnError>

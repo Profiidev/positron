@@ -1,4 +1,4 @@
-use entity::{prelude::*, user};
+use entity::{prelude::*, user, user_avatar};
 use sea_orm::{ActiveValue::Set, prelude::*};
 use uuid::Uuid;
 
@@ -54,5 +54,14 @@ impl<'db> UserExtTable<'db> {
     user.update(self.db).await?;
 
     Ok(())
+  }
+
+  pub async fn has_avatar(&self, uuid: Uuid) -> Result<bool, DbErr> {
+    let count = user_avatar::Entity::find()
+      .filter(user_avatar::Column::UserId.eq(uuid))
+      .count(self.db)
+      .await?;
+
+    Ok(count > 0)
   }
 }

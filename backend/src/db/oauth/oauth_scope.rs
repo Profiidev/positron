@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use centaurus::db::tables::user::SimpleGroupInfo;
 use entity::{o_auth_policy, o_auth_scope, o_auth_scope_o_auth_policy, prelude::*};
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, prelude::*};
+use sea_orm::{ActiveValue::Set, JoinType, QuerySelect, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use super::oauth_policy::SimpleOAuthPolicyInfo;
@@ -31,6 +30,44 @@ impl<'db> OAuthScopeTable<'db> {
     Self { db }
   }
 
+  pub async fn get_values_for_user(
+    &self,
+    scope: &[String],
+    groups: &[Uuid],
+  ) -> Result<HashMap<String, String>, DbErr> {
+    let scope_ids: Vec<Uuid> = OAuthScope::find()
+      .filter(o_auth_scope::Column::Scope.is_in(scope))
+      .select_only()
+      .column(o_auth_scope::Column::Id)
+      .into_tuple()
+      .all(self.db)
+      .await?;
+
+    let policies = o_auth_policy::Entity::find()
+      .join(
+        JoinType::InnerJoin,
+        o_auth_policy::Relation::OAuthScopeOAuthPolicy.def(),
+      )
+      .filter(o_auth_scope_o_auth_policy::Column::Scope.is_in(scope_ids))
+      .find_with_related(OAuthPolicyContent)
+      .all(self.db)
+      .await?;
+
+    let mut data = HashMap::new();
+
+    for (policy, contents) in policies {
+      let content = contents
+        .into_iter()
+        .filter(|content| groups.contains(&content.group))
+        .min_by_key(|content| content.index);
+
+      let content = content.map(|c| c.content).unwrap_or(policy.default);
+      data.insert(policy.claim, content);
+    }
+
+    Ok(data)
+  }
+
   pub async fn get_scope_by_scope(
     &self,
     scope: String,
@@ -40,51 +77,6 @@ impl<'db> OAuthScopeTable<'db> {
       .one(self.db)
       .await?;
     Ok(res)
-  }
-
-  pub async fn get_policy_ids(&self, id: Uuid) -> Result<Vec<Uuid>, DbErr> {
-    let res = OAuthScopeOAuthPolicy::find()
-      .filter(o_auth_scope_o_auth_policy::Column::Scope.eq(id))
-      .all(self.db)
-      .await?;
-
-    Ok(res.iter().map(|r| r.policy).collect())
-  }
-
-  pub async fn get_values_for_user(
-    &self,
-    scope: String,
-    groups: &[SimpleGroupInfo],
-  ) -> Result<HashMap<String, String>, DbErr> {
-    let scope = self.get_scope_by_scope(scope).await?.unwrap();
-    let policies = self.get_policy_ids(scope.id).await?;
-
-    let mut data = HashMap::new();
-
-    for policy in policies {
-      let mut contents = OAuthPolicy::find_by_id(policy)
-        .find_with_related(OAuthPolicyContent)
-        .all(self.db)
-        .await?;
-
-      assert!(contents.len() == 1);
-      let (policy, contents) = contents.remove(0);
-
-      let content = contents
-        .into_iter()
-        .filter_map(|content| {
-          groups
-            .iter()
-            .find(|group| content.group == group.uuid)
-            .map(|group| (0 /*group.access_level*/, content.content))
-        })
-        .max_by_key(|(a, _)| *a);
-
-      let content = content.map(|(_, c)| c).unwrap_or(policy.default);
-      data.insert(policy.claim, content);
-    }
-
-    Ok(data)
   }
 
   pub async fn get_scope_names(&self) -> Result<Vec<String>, DbErr> {

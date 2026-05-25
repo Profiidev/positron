@@ -27,6 +27,7 @@ pub async fn init(db: &Connection) {
     {
       tracing::info!("Creating default scope: {}", scope);
 
+      // unwrap is safe here because scope is guaranteed to be non-empty
       let name = scope
         .to_string()
         .chars()

@@ -44,6 +44,7 @@ pub enum UpdateMessage {
 }
 
 pub fn gen_code() -> String {
+  // unwrap is safe because the range is valid
   rand::rng()
     .sample_iter(Uniform::new(48, 58).unwrap())
     .take(6)

@@ -38,7 +38,7 @@ pub struct Error {
 pub struct TokenReq {
   pub grant_type: String,
   #[serde(default, deserialize_with = "empty_string_as_none")]
-  pub code: Option<String>,
+  pub code: Option<Uuid>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -78,7 +78,7 @@ impl TokenReq {
 #[derive(Deserialize, Debug)]
 pub struct TokenIssueReq {
   pub grant_type: String,
-  pub code: String,
+  pub code: Uuid,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
 }

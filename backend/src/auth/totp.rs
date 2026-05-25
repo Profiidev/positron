@@ -71,11 +71,13 @@ async fn start_setup(
   let Ok(totp) = TOTP::from_rfc6238(
     Rfc6238::new(
       6,
-      Secret::generate_secret().to_bytes().unwrap(),
+      Secret::generate_secret()
+        .to_bytes()
+        .context("Failed to generate totop secret")?,
       Some(state.issuer.clone()),
       user.email,
     )
-    .unwrap(),
+    .context("Failed to create Rfc6238 instance")?,
   ) else {
     bail!(INTERNAL_SERVER_ERROR, "failed to create TOTP instance");
   };
@@ -139,12 +141,20 @@ async fn confirm(
   let user = db.user_ext().get_user_by_id(auth.user_id).await?;
 
   let Ok(totp) = TOTP::from_rfc6238(
-    Rfc6238::with_defaults(Secret::Encoded(user.totp.unwrap()).to_bytes().unwrap()).unwrap(),
+    Rfc6238::with_defaults(
+      Secret::Encoded(user.totp.context("no totop")?)
+        .to_bytes()
+        .context("Failed to decode totp secret")?,
+    )
+    .context("Failed to create Rfc6238 instance")?,
   ) else {
     bail!(INTERNAL_SERVER_ERROR, "failed to create TOTP instance");
   };
 
-  if !totp.check_current(&req.code).unwrap() {
+  if !totp
+    .check_current(&req.code)
+    .context("Failed to check code")?
+  {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
     let cookie = jwt.create_token(auth.user_id)?;

@@ -3,7 +3,7 @@ use centaurus::{db::init::Connection, error::Result};
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::{db::DBTrait, oauth_management::DEFAULT_SCOPES};
+use crate::db::DBTrait;
 
 use super::state::ConfigurationState;
 
@@ -31,14 +31,7 @@ struct Configuration {
 
 #[instrument(skip(state, db))]
 async fn config(state: ConfigurationState, db: Connection) -> Result<Json<Configuration>> {
-  let mut scopes_supported = db.oauth_scope().get_scope_names().await?;
-  scopes_supported.extend_from_slice(
-    &DEFAULT_SCOPES
-      .iter()
-      .map(|p| p.to_string())
-      .collect::<Vec<String>>(),
-  );
-
+  let scopes_supported = db.oauth_scope().get_scope_names().await?;
   let backend_url = state.issuer.clone().to_string();
 
   Ok(Json(Configuration {
