@@ -35,6 +35,9 @@ pub enum UpdateMessage {
   OAuthClient {
     uuid: Uuid,
   },
+  OAuthScope {
+    uuid: Uuid,
+  },
 }
 
 pub fn gen_code() -> String {
@@ -55,8 +58,10 @@ pub fn permissions() -> Vec<&'static str> {
   perms.extend_from_slice(&[
     ApodList::name(),
     ApodSelect::name(),
-    OauthClientView::name(),
-    OauthClientEdit::name(),
+    OAuthClientView::name(),
+    OAuthClientEdit::name(),
+    OAuthScopeView::name(),
+    OAuthScopeEdit::name(),
   ]);
   perms
 }
@@ -65,6 +70,8 @@ pub fn permissions() -> Vec<&'static str> {
 permission!(ApodList, "apod:list");
 permission!(ApodSelect, "apod:select");
 
-// Oauth client
-permission!(OauthClientView, "oauth_client:view");
-permission!(OauthClientEdit, "oauth_client:edit");
+// Oauth
+permission!(OAuthClientView, "oauth_client:view");
+permission!(OAuthClientEdit, "oauth_client:edit");
+permission!(OAuthScopeView, "oauth_scope:view");
+permission!(OAuthScopeEdit, "oauth_scope:edit");

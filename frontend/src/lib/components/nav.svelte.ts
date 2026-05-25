@@ -18,6 +18,12 @@ export const items: NavGroup[] = [
         icon: KeyRound,
         label: 'Clients',
         requiredPermission: Permission.AOUTH_CLIENT_VIEW
+      },
+      {
+        href: '/oauth-scope',
+        icon: KeyRound,
+        label: 'Scopes',
+        requiredPermission: Permission.OAUTH_SCOPE_VIEW
       }
     ],
     label: 'OAuth / Oidc'

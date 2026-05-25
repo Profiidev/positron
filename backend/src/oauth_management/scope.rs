@@ -1,56 +1,60 @@
-use axum::{
-  extract::FromRequest,
-  routing::{get, post},
-  Json, Router,
+use aide::axum::{
+  ApiRouter,
+  routing::{delete_with, get_with, post_with, put_with},
 };
-use centaurus::{bail, db::init::Connection, error::Result};
-use entity::{o_auth_scope, sea_orm_active_enums::Permission};
-use serde::Deserialize;
-use tracing::instrument;
+use axum::{Json, extract::Path};
+use centaurus::{backend::auth::jwt_auth::JwtAuth, bail, db::init::Connection, error::Result};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtBase, JwtClaims},
   db::{
-    oauth::{oauth_policy::BasicOAuthPolicyInfo, oauth_scope::OAuthScopeInfo},
     DBTrait,
+    oauth::{oauth_policy::SimpleOAuthPolicyInfo, oauth_scope::OAuthScopeInfo},
   },
-  permission::PermissionTrait,
-  ws::state::{UpdateState, UpdateType},
+  utils::{
+    OAuthScopeEdit, OAuthScopeView,
+    UpdateMessage::{self, OAuthScope},
+    Updater,
+  },
 };
 
-pub fn router() -> Router {
-  Router::new()
-    .route("/list", get(list))
-    .route("/create", post(create))
-    .route("/delete", post(delete))
-    .route("/edit", post(edit))
-    .route("/policy_list", get(policy_list))
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
+    .api_route("/", get_with(list, |op| op.id("listOAuthScopes")))
+    .api_route("/", post_with(create, |op| op.id("createOAuthScope")))
+    .api_route("/", delete_with(delete, |op| op.id("deleteOAuthScope")))
+    .api_route("/", put_with(edit, |op| op.id("editOAuthScope")))
+    .api_route("/{uuid}", get_with(info, |op| op.id("infoOAuthScope")))
+    .api_route(
+      "/policies",
+      get_with(simple_policy_list, |op| op.id("listPoliciesOAuthScope")),
+    )
 }
 
-async fn list(db: Connection, auth: JwtClaims<JwtBase>) -> Result<Json<Vec<OAuthScopeInfo>>> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
-
+async fn list(_auth: JwtAuth<OAuthScopeView>, db: Connection) -> Result<Json<Vec<OAuthScopeInfo>>> {
   Ok(Json(db.oauth_scope().list().await?))
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct CreateReq {
   pub name: String,
   pub scope: String,
-  pub policy: Vec<BasicOAuthPolicyInfo>,
+  pub policies: Vec<Uuid>,
 }
 
-#[instrument(skip(db, updater))]
-async fn create(
-  auth: JwtClaims<JwtBase>,
-  db: Connection,
-  updater: UpdateState,
-  req: CreateReq,
-) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientCreate).await?;
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct CreateRes {
+  uuid: Uuid,
+}
 
+async fn create(
+  _auth: JwtAuth<OAuthScopeEdit>,
+  db: Connection,
+  updater: Updater,
+  Json(req): Json<CreateReq>,
+) -> Result<Json<CreateRes>> {
   if db
     .oauth_scope()
     .scope_exists(req.name.clone(), Uuid::max())
@@ -59,55 +63,56 @@ async fn create(
     bail!(CONFLICT, "scope with the given name already exists");
   }
 
-  let policy = db
-    .oauth_policy()
-    .get_policy_by_info(req.policy.clone())
+  if db
+    .oauth_scope()
+    .scope_exists_by_scope(req.scope.clone(), Uuid::max())
+    .await?
+  {
+    bail!(NOT_ACCEPTABLE, "scope with the given scope already exists");
+  }
+
+  let uuid = db
+    .oauth_scope()
+    .create_scope(req.name, req.scope, req.policies)
     .await?;
+  updater.broadcast(UpdateMessage::OAuthScope { uuid }).await;
 
-  let model = o_auth_scope::Model {
-    id: Uuid::new_v4(),
-    name: req.name.clone(),
-    scope: req.scope,
-  };
-
-  db.oauth_scope().create_scope(model, policy).await?;
-  updater.broadcast_message(UpdateType::OAuthScope).await;
-  tracing::info!("User {} created oauth_scope {}", auth.sub, req.name);
-
-  Ok(())
+  Ok(Json(CreateRes { uuid }))
 }
 
-#[derive(Deserialize, Debug, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct DeleteReq {
   uuid: Uuid,
 }
 
-#[instrument(skip(db, updater))]
 async fn delete(
-  auth: JwtClaims<JwtBase>,
+  _auth: JwtAuth<OAuthScopeEdit>,
   db: Connection,
-  updater: UpdateState,
-  req: DeleteReq,
+  updater: Updater,
+  Json(req): Json<DeleteReq>,
 ) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientDelete).await?;
-
   db.oauth_scope().delete_scope(req.uuid).await?;
-  updater.broadcast_message(UpdateType::OAuthScope).await;
-  tracing::info!("User {} deleted oauth_scope {}", auth.sub, req.uuid);
+  updater
+    .broadcast(UpdateMessage::OAuthScope { uuid: req.uuid })
+    .await;
 
   Ok(())
 }
 
-#[instrument(skip(db, updater))]
-async fn edit(
-  auth: JwtClaims<JwtBase>,
-  db: Connection,
-  updater: UpdateState,
-  req: OAuthScopeInfo,
-) -> Result<()> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientEdit).await?;
+#[derive(Deserialize, Debug, JsonSchema)]
+struct OAuthScopeEditReq {
+  uuid: Uuid,
+  name: String,
+  scope: String,
+  policies: Vec<Uuid>,
+}
 
+async fn edit(
+  _auth: JwtAuth<OAuthScopeEdit>,
+  db: Connection,
+  updater: Updater,
+  Json(req): Json<OAuthScopeEditReq>,
+) -> Result<()> {
   if db
     .oauth_scope()
     .scope_exists(req.name.clone(), req.uuid)
@@ -116,26 +121,44 @@ async fn edit(
     bail!(CONFLICT, "scope with the given name already exists");
   }
 
-  let policy = db
-    .oauth_policy()
-    .get_policy_by_info(req.policy.clone())
-    .await?;
+  if db
+    .oauth_scope()
+    .scope_exists_by_scope(req.scope.clone(), req.uuid)
+    .await?
+  {
+    bail!(NOT_ACCEPTABLE, "scope with the given scope already exists");
+  }
 
-  let name = req.name.clone();
-  db.oauth_scope().edit_scope(req, policy).await?;
-  updater.broadcast_message(UpdateType::OAuthScope).await;
-  tracing::info!("User {} edited oauth_scope {}", auth.sub, name);
+  db.oauth_scope()
+    .edit_scope(req.uuid, req.name, req.scope, req.policies)
+    .await?;
+  updater
+    .broadcast(UpdateMessage::OAuthScope { uuid: req.uuid })
+    .await;
 
   Ok(())
 }
 
-#[instrument(skip(db))]
-async fn policy_list(
-  auth: JwtClaims<JwtBase>,
-  db: Connection,
-) -> Result<Json<Vec<BasicOAuthPolicyInfo>>> {
-  Permission::check(&db, auth.sub, Permission::OAuthClientList).await?;
-  let user = db.oauth_policy().basic_policy_list().await?;
+#[derive(Deserialize, JsonSchema)]
+struct OAuthScopePath {
+  uuid: Uuid,
+}
 
+async fn info(
+  _auth: JwtAuth<OAuthScopeView>,
+  db: Connection,
+  Path(OAuthScopePath { uuid }): Path<OAuthScopePath>,
+) -> Result<Json<OAuthScopeInfo>> {
+  let Some(scope) = db.oauth_scope().scope_info(uuid).await? else {
+    bail!(NOT_FOUND, "scope not found");
+  };
+  Ok(Json(scope))
+}
+
+async fn simple_policy_list(
+  _auth: JwtAuth<OAuthScopeView>,
+  db: Connection,
+) -> Result<Json<Vec<SimpleOAuthPolicyInfo>>> {
+  let user = db.oauth_policy().simple_list().await?;
   Ok(Json(user))
 }

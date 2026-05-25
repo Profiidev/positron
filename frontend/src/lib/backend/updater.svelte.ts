@@ -9,12 +9,17 @@ export enum UpdateType {
   User = 'User',
   UserPermissions = 'UserPermissions',
   Group = 'Group',
-  OAuthClient = 'OAuthClient'
+  OAuthClient = 'OAuthClient',
+  OAuthScope = 'OAuthScope'
 }
 
 export type UpdateMessage =
   | {
-      type: UpdateType.User | UpdateType.Group | UpdateType.OAuthClient;
+      type:
+        | UpdateType.User
+        | UpdateType.Group
+        | UpdateType.OAuthClient
+        | UpdateType.OAuthScope;
       uuid: string;
     }
   | {
@@ -56,6 +61,11 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     case UpdateType.OAuthClient: {
       invalidate('/api/oauth_management/client').catch(() => {});
       invalidate(`/api/oauth_management/client/${msg.uuid}`).catch(() => {});
+    }
+    case UpdateType.OAuthScope: {
+      invalidate('/api/oauth_management/scope').catch(() => {});
+      invalidate(`/api/oauth_management/scope/${msg.uuid}`).catch(() => {});
+      invalidate('/api/oauth_management/client/scopes').catch(() => {});
     }
     default: {
       break;

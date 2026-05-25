@@ -45,6 +45,16 @@ export type CreateGroupRequest = {
   name: string;
 };
 
+export type CreateReq = {
+  name: string;
+  policies: Array<string>;
+  scope: string;
+};
+
+export type CreateRes = {
+  uuid: string;
+};
+
 export type CreateUser = {
   email: string;
   name: string;
@@ -60,6 +70,10 @@ export type DeleteClientRequest = {
 };
 
 export type DeleteGroupRequest = {
+  uuid: string;
+};
+
+export type DeleteReq = {
   uuid: string;
 };
 
@@ -182,7 +196,7 @@ export type MailSettingsResponse = {
   settings: MailSettings;
 };
 
-export type OAuthClientEdit = {
+export type OAuthClientEditReq = {
   additional_redirect_uris: Array<string>;
   client_id: string;
   group_access: Array<string>;
@@ -209,6 +223,24 @@ export type OAuthClientPath = {
 
 export type OAuthRegenerateResponse = {
   secret: string;
+};
+
+export type OAuthScopeEditReq = {
+  name: string;
+  policies: Array<string>;
+  scope: string;
+  uuid: string;
+};
+
+export type OAuthScopeInfo = {
+  name: string;
+  policies: Array<SimpleOAuthPolicyInfo>;
+  scope: string;
+  uuid: string;
+};
+
+export type OAuthScopePath = {
+  uuid: string;
 };
 
 export type PasskeyEdit = {
@@ -272,6 +304,11 @@ export type SetupPayload = {
 };
 
 export type SimpleGroupInfo = {
+  name: string;
+  uuid: string;
+};
+
+export type SimpleOAuthPolicyInfo = {
   name: string;
   uuid: string;
 };
@@ -2176,7 +2213,7 @@ export type CreateOauthClientResponse =
   CreateOauthClientResponses[keyof CreateOauthClientResponses];
 
 export type EditOauthClientData = {
-  body: OAuthClientEdit;
+  body: OAuthClientEditReq;
   path?: never;
   query?: never;
   url: '/api/oauth_management/client';
@@ -2367,3 +2404,200 @@ export type ListScopesOAuthClientResponses = {
 
 export type ListScopesOAuthClientResponse =
   ListScopesOAuthClientResponses[keyof ListScopesOAuthClientResponses];
+
+export type DeleteOAuthScopeData = {
+  body: DeleteReq;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/scope';
+};
+
+export type DeleteOAuthScopeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type DeleteOAuthScopeError =
+  DeleteOAuthScopeErrors[keyof DeleteOAuthScopeErrors];
+
+export type DeleteOAuthScopeResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ListOAuthScopesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/scope';
+};
+
+export type ListOAuthScopesErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListOAuthScopesResponses = {
+  200: Array<OAuthScopeInfo>;
+};
+
+export type ListOAuthScopesResponse =
+  ListOAuthScopesResponses[keyof ListOAuthScopesResponses];
+
+export type CreateOAuthScopeData = {
+  body: CreateReq;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/scope';
+};
+
+export type CreateOAuthScopeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type CreateOAuthScopeError =
+  CreateOAuthScopeErrors[keyof CreateOAuthScopeErrors];
+
+export type CreateOAuthScopeResponses = {
+  200: CreateRes;
+};
+
+export type CreateOAuthScopeResponse =
+  CreateOAuthScopeResponses[keyof CreateOAuthScopeResponses];
+
+export type EditOAuthScopeData = {
+  body: OAuthScopeEditReq;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/scope';
+};
+
+export type EditOAuthScopeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type EditOAuthScopeError =
+  EditOAuthScopeErrors[keyof EditOAuthScopeErrors];
+
+export type EditOAuthScopeResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type InfoOAuthScopeData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/oauth_management/scope/{uuid}';
+};
+
+export type InfoOAuthScopeErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoOAuthScopeResponses = {
+  200: OAuthScopeInfo;
+};
+
+export type InfoOAuthScopeResponse =
+  InfoOAuthScopeResponses[keyof InfoOAuthScopeResponses];
+
+export type ListPoliciesOAuthScopeData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/scope/policies';
+};
+
+export type ListPoliciesOAuthScopeErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListPoliciesOAuthScopeResponses = {
+  200: Array<SimpleOAuthPolicyInfo>;
+};
+
+export type ListPoliciesOAuthScopeResponse =
+  ListPoliciesOAuthScopeResponses[keyof ListPoliciesOAuthScopeResponses];

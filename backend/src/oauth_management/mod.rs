@@ -2,10 +2,11 @@ use aide::axum::ApiRouter;
 
 mod client;
 //mod policy;
-//mod scope;
+mod scope;
 
 pub fn router() -> ApiRouter {
-  ApiRouter::new().nest("/client", client::router())
+  ApiRouter::new()
+    .nest("/client", client::router())
+    .nest("/scope", scope::router())
   //.nest("/oauth_policy", policy::router())
-  //.nest("/oauth_scope", scope::router())
 }

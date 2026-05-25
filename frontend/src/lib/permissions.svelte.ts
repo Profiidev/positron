@@ -6,7 +6,9 @@ export enum Permission {
   USER_VIEW = 'user:view',
   USER_EDIT = 'user:edit',
   AOUTH_CLIENT_VIEW = 'oauth_client:view',
-  OAUTH_CLIENT_EDIT = 'oauth_client:edit'
+  OAUTH_CLIENT_EDIT = 'oauth_client:edit',
+  OAUTH_SCOPE_VIEW = 'oauth_scope:view',
+  OAUTH_SCOPE_EDIT = 'oauth_scope:edit'
 }
 
 export const avatarUrl = '/api/user/info/avatar';

@@ -29,7 +29,7 @@ use crate::{
     oauth::{oauth_client::OAuthClientInfo, oauth_scope::SimpleOAuthScopeInfo},
   },
   oauth::scope::Scope,
-  utils::{OauthClientEdit, OauthClientView, UpdateMessage, Updater, generate_secret},
+  utils::{OAuthClientEdit, OAuthClientView, UpdateMessage, Updater, generate_secret},
 };
 
 pub fn router() -> ApiRouter {
@@ -59,14 +59,14 @@ pub fn router() -> ApiRouter {
 }
 
 async fn list(
-  _auth: JwtAuth<OauthClientView>,
+  _auth: JwtAuth<OAuthClientView>,
   db: Connection,
 ) -> Result<Json<Vec<OAuthClientInfo>>> {
   Ok(Json(db.oauth_client().list_client().await?))
 }
 
 async fn simple_group_list(
-  _auth: JwtAuth<OauthClientView>,
+  _auth: JwtAuth<OAuthClientView>,
   db: Connection,
 ) -> Result<Json<Vec<SimpleGroupInfo>>> {
   let groups = db.group().list_groups_simple().await?;
@@ -74,7 +74,7 @@ async fn simple_group_list(
 }
 
 async fn simple_user_list(
-  _auth: JwtAuth<OauthClientView>,
+  _auth: JwtAuth<OAuthClientView>,
   db: Connection,
 ) -> Result<Json<Vec<SimpleUserInfo>>> {
   let users = db.user().list_users_simple().await?;
@@ -82,7 +82,7 @@ async fn simple_user_list(
 }
 
 async fn simple_scope_list(
-  _auth: JwtAuth<OauthClientView>,
+  _auth: JwtAuth<OAuthClientView>,
   db: Connection,
 ) -> Result<Json<Vec<SimpleOAuthScopeInfo>>> {
   let scopes = db.oauth_scope().list_simple().await?;
@@ -95,7 +95,7 @@ struct DeleteClientRequest {
 }
 
 async fn delete(
-  _auth: JwtAuth<OauthClientEdit>,
+  _auth: JwtAuth<OAuthClientEdit>,
   db: Connection,
   Json(req): Json<DeleteClientRequest>,
 ) -> Result<()> {
@@ -118,7 +118,7 @@ struct ClientCreateRes {
 }
 
 async fn create(
-  _auth: JwtAuth<OauthClientEdit>,
+  _auth: JwtAuth<OAuthClientEdit>,
   db: Connection,
   updater: Updater,
   pw_state: PasswordState,
@@ -167,7 +167,7 @@ struct OAuthClientPath {
 }
 
 async fn info(
-  _auth: JwtAuth<OauthClientView>,
+  _auth: JwtAuth<OAuthClientView>,
   db: Connection,
   Path(OAuthClientPath { uuid }): Path<OAuthClientPath>,
 ) -> Result<Json<OAuthClientInfo>> {
@@ -178,7 +178,7 @@ async fn info(
 }
 
 #[derive(Deserialize, JsonSchema)]
-struct OAuthClientEdit {
+struct OAuthClientEditReq {
   client_id: Uuid,
   name: String,
   redirect_uri: Url,
@@ -189,10 +189,10 @@ struct OAuthClientEdit {
 }
 
 async fn edit(
-  _auth: JwtAuth<OauthClientEdit>,
+  _auth: JwtAuth<OAuthClientEdit>,
   db: Connection,
   updater: Updater,
-  Json(req): Json<OAuthClientEdit>,
+  Json(req): Json<OAuthClientEditReq>,
 ) -> Result<()> {
   if db
     .oauth_client()
@@ -233,7 +233,7 @@ struct OAuthRegenerateResponse {
 }
 
 async fn secret_regenerate(
-  _auth: JwtAuth<OauthClientEdit>,
+  _auth: JwtAuth<OAuthClientEdit>,
   db: Connection,
   pw: PasswordState,
   Path(path): Path<OAuthClientPath>,

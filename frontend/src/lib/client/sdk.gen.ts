@@ -28,6 +28,9 @@ import type {
   CreateOauthClientData,
   CreateOauthClientErrors,
   CreateOauthClientResponses,
+  CreateOAuthScopeData,
+  CreateOAuthScopeErrors,
+  CreateOAuthScopeResponses,
   CreateUserData,
   CreateUserErrors,
   CreateUserResponses,
@@ -37,6 +40,9 @@ import type {
   DeleteOauthClientData,
   DeleteOauthClientErrors,
   DeleteOauthClientResponses,
+  DeleteOAuthScopeData,
+  DeleteOAuthScopeErrors,
+  DeleteOAuthScopeResponses,
   DeleteUserData,
   DeleteUserErrors,
   DeleteUserResponses,
@@ -46,6 +52,9 @@ import type {
   EditOauthClientData,
   EditOauthClientErrors,
   EditOauthClientResponses,
+  EditOAuthScopeData,
+  EditOAuthScopeErrors,
+  EditOAuthScopeResponses,
   EditPasskeyNameData,
   EditPasskeyNameErrors,
   EditPasskeyNameResponses,
@@ -75,6 +84,9 @@ import type {
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
+  InfoOAuthScopeData,
+  InfoOAuthScopeErrors,
+  InfoOAuthScopeResponses,
   InfoResponses,
   IsSetupData,
   IsSetupErrors,
@@ -96,9 +108,15 @@ import type {
   ListOauthClientsData,
   ListOauthClientsErrors,
   ListOauthClientsResponses,
+  ListOAuthScopesData,
+  ListOAuthScopesErrors,
+  ListOAuthScopesResponses,
   ListPasskeysData,
   ListPasskeysErrors,
   ListPasskeysResponses,
+  ListPoliciesOAuthScopeData,
+  ListPoliciesOAuthScopeErrors,
+  ListPoliciesOAuthScopeResponses,
   ListScopesOAuthClientData,
   ListScopesOAuthClientErrors,
   ListScopesOAuthClientResponses,
@@ -1028,3 +1046,78 @@ export const listScopesOAuthClient = <ThrowOnError extends boolean = false>(
     ListScopesOAuthClientErrors,
     ThrowOnError
   >({ url: '/api/oauth_management/client/scopes', ...options });
+
+export const deleteOAuthScope = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteOAuthScopeData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    DeleteOAuthScopeResponses,
+    DeleteOAuthScopeErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/scope',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listOAuthScopes = <ThrowOnError extends boolean = false>(
+  options?: Options<ListOAuthScopesData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListOAuthScopesResponses,
+    ListOAuthScopesErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/scope', ...options });
+
+export const createOAuthScope = <ThrowOnError extends boolean = false>(
+  options: Options<CreateOAuthScopeData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    CreateOAuthScopeResponses,
+    CreateOAuthScopeErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/scope',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const editOAuthScope = <ThrowOnError extends boolean = false>(
+  options: Options<EditOAuthScopeData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    EditOAuthScopeResponses,
+    EditOAuthScopeErrors,
+    ThrowOnError
+  >({
+    url: '/api/oauth_management/scope',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const infoOAuthScope = <ThrowOnError extends boolean = false>(
+  options: Options<InfoOAuthScopeData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    InfoOAuthScopeResponses,
+    InfoOAuthScopeErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/scope/{uuid}', ...options });
+
+export const listPoliciesOAuthScope = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPoliciesOAuthScopeData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListPoliciesOAuthScopeResponses,
+    ListPoliciesOAuthScopeErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/scope/policies', ...options });

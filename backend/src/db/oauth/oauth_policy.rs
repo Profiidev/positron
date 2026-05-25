@@ -1,6 +1,7 @@
 use axum::{Json, extract::FromRequest};
 use centaurus::db::tables::user::SimpleGroupInfo;
 use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
+use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -14,8 +15,8 @@ pub struct OAuthPolicyInfo {
   pub group: Vec<(SimpleGroupInfo, String)>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct BasicOAuthPolicyInfo {
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct SimpleOAuthPolicyInfo {
   pub uuid: Uuid,
   pub name: String,
 }
@@ -162,7 +163,7 @@ impl<'db> OAuthPolicyTable<'db> {
 
   pub async fn get_policy_by_info(
     &self,
-    policy: Vec<BasicOAuthPolicyInfo>,
+    policy: Vec<SimpleOAuthPolicyInfo>,
   ) -> Result<Vec<Uuid>, DbErr> {
     let uuids: Vec<Uuid> = policy.iter().map(|g| g.uuid).collect();
 
@@ -174,13 +175,13 @@ impl<'db> OAuthPolicyTable<'db> {
     Ok(res.iter().map(|g| g.id).collect())
   }
 
-  pub async fn basic_policy_list(&self) -> Result<Vec<BasicOAuthPolicyInfo>, DbErr> {
+  pub async fn simple_list(&self) -> Result<Vec<SimpleOAuthPolicyInfo>, DbErr> {
     let res = OAuthPolicy::find().all(self.db).await?;
 
     Ok(
       res
         .into_iter()
-        .map(|u| BasicOAuthPolicyInfo {
+        .map(|u| SimpleOAuthPolicyInfo {
           name: u.name,
           uuid: u.id,
         })
