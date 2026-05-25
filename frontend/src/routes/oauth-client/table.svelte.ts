@@ -5,6 +5,7 @@ import { Permission } from '$lib/permissions.svelte';
 import type {
   OAuthClientInfo,
   SimpleGroupInfo,
+  SimpleOAuthScopeInfo,
   SimpleUserInfo,
   UserInfo
 } from '$lib/client';
@@ -28,7 +29,8 @@ export const columns = ({
   createColumn(
     'default_scope',
     'Default Scope',
-    (s: string) => s || 'No Scopes'
+    (s: SimpleOAuthScopeInfo[]) =>
+      s.map((d) => d.name).join(', ') || 'No Scopes'
   ),
   createColumn(
     'group_access',

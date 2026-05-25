@@ -123,7 +123,7 @@
       <ArrowLeft class="size-5" />
     </Button>
     <h3 class="flex text-xl font-medium">
-      User:
+      Scope:
       {#if !scope}
         <Skeleton class="ml-2 h-7 w-20" />
       {:else}
