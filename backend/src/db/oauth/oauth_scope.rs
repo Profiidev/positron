@@ -18,6 +18,7 @@ pub struct OAuthScopeInfo {
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct SimpleOAuthScopeInfo {
   pub uuid: Uuid,
+  pub scope: String,
   pub name: String,
 }
 
@@ -30,18 +31,24 @@ impl<'db> OAuthScopeTable<'db> {
     Self { db }
   }
 
-  pub async fn get_values_for_user(
-    &self,
-    scope: &[String],
-    groups: &[Uuid],
-  ) -> Result<HashMap<String, String>, DbErr> {
-    let scope_ids: Vec<Uuid> = OAuthScope::find()
-      .filter(o_auth_scope::Column::Scope.is_in(scope))
+  async fn scope_ids(&self, scopes: &[String]) -> Result<Vec<Uuid>, DbErr> {
+    let res = OAuthScope::find()
+      .filter(o_auth_scope::Column::Scope.is_in(scopes))
       .select_only()
       .column(o_auth_scope::Column::Id)
       .into_tuple()
       .all(self.db)
       .await?;
+
+    Ok(res)
+  }
+
+  pub async fn get_values_for_user(
+    &self,
+    scope: &[String],
+    groups: &[Uuid],
+  ) -> Result<HashMap<String, String>, DbErr> {
+    let scope_ids: Vec<Uuid> = self.scope_ids(scope).await?;
 
     let policies = o_auth_policy::Entity::find()
       .join(
@@ -155,6 +162,7 @@ impl<'db> OAuthScopeTable<'db> {
         .into_iter()
         .map(|s| SimpleOAuthScopeInfo {
           name: s.name,
+          scope: s.scope,
           uuid: s.id,
         })
         .collect(),

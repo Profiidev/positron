@@ -13,6 +13,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
+use url::Url;
 
 #[derive(Deserialize, Serialize, Clone, Config)]
 pub struct Config {
@@ -42,6 +43,8 @@ pub struct Config {
   pub assetlinks: String,
 
   //auth
+  pub webauthn_id: Option<String>,
+  pub webauthn_rp_origin: Option<Url>,
   pub webauthn_name: String,
   pub webauthn_additional_origins: String,
 
@@ -59,6 +62,8 @@ impl Default for Config {
       db: DBConfig::default(),
       db_url: "".to_string(),
       assetlinks: "{}".to_string(),
+      webauthn_id: None,
+      webauthn_rp_origin: None,
       webauthn_name: "Positron".to_string(),
       webauthn_additional_origins: "".to_string(),
       oidc_refresh_exp: 604800,

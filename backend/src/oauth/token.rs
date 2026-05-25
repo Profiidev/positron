@@ -114,6 +114,7 @@ async fn issue_token(
     }
   }
 
+  drop(auth_code);
   // unwrap is safe because we checked that the code exists with get before
   let (_, (_, code_info)) = state.auth_codes.remove(&uuid).unwrap();
 
@@ -256,6 +257,8 @@ async fn create_access_token(
   } else {
     None
   };
+
+  dbg!(&rest);
 
   let time = Utc::now().timestamp();
   let claims = OAuthClaims {

@@ -11,6 +11,7 @@ pub mod key;
 pub mod o_auth_client;
 pub mod o_auth_client_additional_redirect_uri;
 pub mod o_auth_client_group;
+pub mod o_auth_client_o_auth_scope;
 pub mod o_auth_client_user;
 pub mod o_auth_policy;
 pub mod o_auth_policy_content;

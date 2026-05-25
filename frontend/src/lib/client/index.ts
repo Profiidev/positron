@@ -391,7 +391,6 @@ export type {
   SaveMailSettingsError,
   SaveMailSettingsErrors,
   SaveMailSettingsResponses,
-  Scope,
   SendResetLinkData,
   SendResetLinkError,
   SendResetLinkErrors,

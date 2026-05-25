@@ -9,7 +9,6 @@ pub struct Model {
   pub id: Uuid,
   pub name: String,
   pub redirect_uri: String,
-  pub default_scope: String,
   pub client_secret: String,
   pub salt: String,
   pub confidential: bool,
@@ -21,6 +20,8 @@ pub enum Relation {
   OAuthClientAdditionalRedirectUri,
   #[sea_orm(has_many = "super::o_auth_client_group::Entity")]
   OAuthClientGroup,
+  #[sea_orm(has_many = "super::o_auth_client_o_auth_scope::Entity")]
+  OAuthClientOAuthScope,
   #[sea_orm(has_many = "super::o_auth_client_user::Entity")]
   OAuthClientUser,
 }
@@ -37,6 +38,12 @@ impl Related<super::o_auth_client_group::Entity> for Entity {
   }
 }
 
+impl Related<super::o_auth_client_o_auth_scope::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::OAuthClientOAuthScope.def()
+  }
+}
+
 impl Related<super::o_auth_client_user::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::OAuthClientUser.def()
@@ -50,6 +57,19 @@ impl Related<super::group::Entity> for Entity {
   fn via() -> Option<RelationDef> {
     Some(
       super::o_auth_client_group::Relation::OAuthClient
+        .def()
+        .rev(),
+    )
+  }
+}
+
+impl Related<super::o_auth_scope::Entity> for Entity {
+  fn to() -> RelationDef {
+    super::o_auth_client_o_auth_scope::Relation::OAuthScope.def()
+  }
+  fn via() -> Option<RelationDef> {
+    Some(
+      super::o_auth_client_o_auth_scope::Relation::OAuthClient
         .def()
         .rev(),
     )

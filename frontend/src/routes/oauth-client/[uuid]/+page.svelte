@@ -56,31 +56,31 @@
   let oauthUrls = $derived([
     {
       name: 'Authorization URL',
-      value: `${siteUrl}/api/oauth/authorize`
+      value: `${siteUrl}api/oauth/authorize`
     },
     {
       name: 'Token URL',
-      value: `${siteUrl}/api/oauth/token`
+      value: `${siteUrl}api/oauth/token`
     },
     {
       name: 'Userinfo URL',
-      value: `${siteUrl}/api/oauth/user`
+      value: `${siteUrl}api/oauth/user`
     },
     {
       name: 'Logout URL',
-      value: `${siteUrl}/api/oauth/logout/${client?.client_id}`
+      value: `${siteUrl}api/oauth/logout/${client?.client_id}`
     },
     {
       name: 'Revoke URL',
-      value: `${siteUrl}/api/oauth/revoke`
+      value: `${siteUrl}api/oauth/revoke`
     },
     {
       name: 'JWKs URL',
-      value: `${siteUrl}/api/oauth/jwks`
+      value: `${siteUrl}api/oauth/jwks`
     },
     {
       name: 'OIDC Configuration URL',
-      value: `${siteUrl}/api/oauth/.well-known/openid-configuration`
+      value: `${siteUrl}api/oauth/.well-known/openid-configuration`
     }
   ]);
 
@@ -235,9 +235,15 @@
           <div
             class="grid min-h-0 grow grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr]"
           >
-            <div>
+            <div class="flex flex-col">
               <Label>Client ID</Label>
-              <Input class="my-2" readonly value={client?.client_id} />
+              <CopyButton
+                class="my-2 h-8 grow justify-start"
+                text={client?.client_id || ''}
+                variant="outline"
+              >
+                <span class="truncate">{client?.client_id}</span>
+              </CopyButton>
               {#if client?.confidential}
                 <Label
                   >Client Secret

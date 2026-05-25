@@ -13,14 +13,9 @@ export const clientSettings = z.object({
 
 export const formatData = (
   client: OAuthClientInfo
-): FormValue<typeof clientSettings> => {
-  // oxlint-disable-next-line no-unsafe-type-assertion
-  const scope = client.default_scope as unknown as string;
-  return {
-    ...client,
-    group_access: client.group_access.map((group) => group.uuid),
-    // oxlint-disable-next-line no-unsafe-type-assertion
-    scope: scope ? scope.split(' ') : [],
-    user_access: client.user_access.map((user) => user.id)
-  };
-};
+): FormValue<typeof clientSettings> => ({
+  ...client,
+  group_access: client.group_access.map((group) => group.uuid),
+  scope: client.default_scope.map((scope) => scope.uuid),
+  user_access: client.user_access.map((user) => user.id)
+});

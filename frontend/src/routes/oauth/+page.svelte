@@ -40,6 +40,8 @@
       toast.error('You are not allowed to access this Application');
     } else if (ret.response?.status !== 200 && allow) {
       toast.error('There was an error while login in');
+    } else if (ret.data && ret.data.location !== '') {
+      window.location.href = ret.data.location;
     }
   };
 
@@ -61,7 +63,6 @@
 
   onMount(async () => {
     let settings = await data.settings;
-    console.log(settings);
     if (!settings || !settings.o_auth_instant_confirm) return;
     confirm();
   });

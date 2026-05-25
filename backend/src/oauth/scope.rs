@@ -59,6 +59,12 @@ impl Scope {
   }
 }
 
+impl From<Vec<String>> for Scope {
+  fn from(value: Vec<String>) -> Self {
+    Self(value)
+  }
+}
+
 impl FromStr for Scope {
   type Err = Infallible;
   fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -67,7 +67,7 @@ async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) ->
   // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
   Ok(Redirect::found(
     Url::from_str(&format!(
-      "{}/login?code={}&name={}",
+      "{}login?code={}&name={}",
       state.frontend_url, uuid, client.name,
     ))
     .unwrap()
@@ -124,8 +124,18 @@ async fn authorize_confirm(
     .oauth_client()
     .client_additional_redirect_uris(client_id)
     .await?;
+  let scopes = db
+    .oauth_client()
+    .client_default_scope(client_id)
+    .await?
+    .into_iter()
+    .map(|s| s.scope)
+    .collect::<Vec<_>>();
+  let default_scope = Scope::from(scopes);
 
-  if let Err((error_response, error)) = validate_req(&mut data, &client, additional_redirect_uris) {
+  if let Err((error_response, error)) =
+    validate_req(&mut data, &client, additional_redirect_uris, default_scope)
+  {
     tracing::warn!("Authorization request validation failed: {:?}", error);
     return Ok(Json(AuthRes {
       location: format!("{}?error={}", client.redirect_uri, error_response),
@@ -167,6 +177,7 @@ fn validate_req(
   req: &mut AuthReq,
   client: &o_auth_client::Model,
   additional_redirect_uris: Vec<Url>,
+  default_scope: Scope,
 ) -> std::result::Result<(), (&'static str, ErrorReport)> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
@@ -199,17 +210,12 @@ fn validate_req(
       Scope::from_str(scope).map_err(|_| ("invalid_scope", anyhow!("invalid scope format")))?;
 
     // unwrap is safe because the default_scope in the database is guaranteed to be a valid scope string
-    *scope = client
-      .default_scope
-      .parse::<Scope>()
-      .unwrap()
-      .intersect(&parsed_scope)
-      .to_string();
+    *scope = default_scope.intersect(&parsed_scope).to_string();
     if scope.is_empty() {
       return Err(("invalid_scope", anyhow!("invalid scope")));
     }
   } else {
-    req.scope = Some(client.default_scope.clone().to_string());
+    req.scope = Some(default_scope.to_string());
   }
 
   Ok(())
@@ -226,7 +232,7 @@ async fn logout(
   // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
   Ok(Redirect::found(
     Url::parse_with_params(
-      &format!("{}/oauth/logout", state.frontend_url),
+      &format!("{}oauth/logout", state.frontend_url),
       &[
         ("name", client.name),
         ("url", client.redirect_uri.to_string()),

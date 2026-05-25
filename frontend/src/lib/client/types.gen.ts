@@ -42,7 +42,7 @@ export type ClientCreate = {
   confidential: boolean;
   name: string;
   redirect_uri: string;
-  scope: Scope;
+  scope: Array<string>;
 };
 
 export type ClientCreateRes = {
@@ -225,7 +225,7 @@ export type OAuthClientEditReq = {
   group_access: Array<string>;
   name: string;
   redirect_uri: string;
-  scope: Scope;
+  scope: Array<string>;
   user_access: Array<string>;
 };
 
@@ -233,7 +233,7 @@ export type OAuthClientInfo = {
   additional_redirect_uris: Array<string>;
   client_id: string;
   confidential: boolean;
-  default_scope: Scope;
+  default_scope: Array<SimpleOAuthScopeInfo>;
   group_access: Array<SimpleGroupInfo>;
   name: string;
   redirect_uri: string;
@@ -328,8 +328,6 @@ export type ResetUserPassword = {
   uuid: string;
 };
 
-export type Scope = Array<string>;
-
 export type SetGoodReq = {
   date: Date;
   good: boolean;
@@ -357,6 +355,7 @@ export type SimpleOAuthPolicyInfo = {
 
 export type SimpleOAuthScopeInfo = {
   name: string;
+  scope: string;
   uuid: string;
 };
 

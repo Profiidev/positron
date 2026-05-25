@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
           .col(pk_uuid(OAuthClient::Id))
           .col(string(OAuthClient::Name))
           .col(string(OAuthClient::RedirectUri))
-          .col(string(OAuthClient::DefaultScope))
           .col(string(OAuthClient::ClientSecret))
           .col(string(OAuthClient::Salt))
           .to_owned(),
@@ -132,7 +131,6 @@ pub enum OAuthClient {
   Id,
   Name,
   RedirectUri,
-  DefaultScope,
   ClientSecret,
   Salt,
 }

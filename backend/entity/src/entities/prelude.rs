@@ -9,6 +9,7 @@ pub use super::key::Entity as Key;
 pub use super::o_auth_client::Entity as OAuthClient;
 pub use super::o_auth_client_additional_redirect_uri::Entity as OAuthClientAdditionalRedirectUri;
 pub use super::o_auth_client_group::Entity as OAuthClientGroup;
+pub use super::o_auth_client_o_auth_scope::Entity as OAuthClientOAuthScope;
 pub use super::o_auth_client_user::Entity as OAuthClientUser;
 pub use super::o_auth_policy::Entity as OAuthPolicy;
 pub use super::o_auth_policy_content::Entity as OAuthPolicyContent;

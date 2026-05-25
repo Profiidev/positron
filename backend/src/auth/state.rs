@@ -48,13 +48,18 @@ impl WebauthnState {
       .filter_map(|s| Url::parse(s).ok())
       .collect::<Vec<_>>();
 
-    let webauthn_id = config
-      .site
-      .site_url
-      .host_str()
-      .expect("Failed to get host from site_url");
+    let rp_origin = config
+      .webauthn_rp_origin
+      .clone()
+      .unwrap_or(config.site.site_url.clone());
+    let webauthn_id = config.webauthn_id.clone().unwrap_or_else(|| {
+      rp_origin
+        .host_str()
+        .expect("Failed to get host from site_url")
+        .to_string()
+    });
 
-    let mut webauthn = WebauthnBuilder::new(webauthn_id, &config.site.site_url)
+    let mut webauthn = WebauthnBuilder::new(&webauthn_id, &rp_origin)
       .expect("Failed creating WebauthnBuilder")
       .rp_name(&config.webauthn_name);
 

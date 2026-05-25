@@ -13,13 +13,34 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+  #[sea_orm(has_many = "super::o_auth_client_o_auth_scope::Entity")]
+  OAuthClientOAuthScope,
   #[sea_orm(has_many = "super::o_auth_scope_o_auth_policy::Entity")]
   OAuthScopeOAuthPolicy,
+}
+
+impl Related<super::o_auth_client_o_auth_scope::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::OAuthClientOAuthScope.def()
+  }
 }
 
 impl Related<super::o_auth_scope_o_auth_policy::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::OAuthScopeOAuthPolicy.def()
+  }
+}
+
+impl Related<super::o_auth_client::Entity> for Entity {
+  fn to() -> RelationDef {
+    super::o_auth_client_o_auth_scope::Relation::OAuthClient.def()
+  }
+  fn via() -> Option<RelationDef> {
+    Some(
+      super::o_auth_client_o_auth_scope::Relation::OAuthScope
+        .def()
+        .rev(),
+    )
   }
 }
 

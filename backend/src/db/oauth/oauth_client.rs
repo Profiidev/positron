@@ -1,7 +1,7 @@
 use centaurus::db::tables::{group::SimpleUserInfo, user::SimpleGroupInfo};
 use entity::{
   group, group_user, o_auth_client, o_auth_client_additional_redirect_uri, o_auth_client_group,
-  o_auth_client_user, prelude::*, user,
+  o_auth_client_o_auth_scope, o_auth_client_user, o_auth_scope, prelude::*, user,
 };
 use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, Condition, IntoActiveModel, JoinType, QuerySelect, prelude::*};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::oauth::scope::Scope;
+use crate::db::oauth::oauth_scope::SimpleOAuthScopeInfo;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct OAuthClientInfo {
@@ -17,7 +17,7 @@ pub struct OAuthClientInfo {
   pub client_id: Uuid,
   pub redirect_uri: Url,
   pub additional_redirect_uris: Vec<Url>,
-  pub default_scope: Scope,
+  pub default_scope: Vec<SimpleOAuthScopeInfo>,
   pub group_access: Vec<SimpleGroupInfo>,
   pub user_access: Vec<SimpleUserInfo>,
   pub confidential: bool,
@@ -78,40 +78,56 @@ impl<'db> OauthClientTable<'db> {
     let additional_redirect_uris = clients
       .load_many(o_auth_client_additional_redirect_uri::Entity, self.db)
       .await?;
+    let default_scope = clients
+      .load_many_to_many(
+        o_auth_scope::Entity,
+        o_auth_client_o_auth_scope::Entity,
+        self.db,
+      )
+      .await?;
 
     let result = clients
       .into_iter()
       .zip(group_client)
       .zip(user_client)
       .zip(additional_redirect_uris)
-      .map(|(((client, group), user), uris)| OAuthClientInfo {
-        name: client.name,
-        client_id: client.id,
-        // was validated as url before inset into db, so unwrap is safe
-        redirect_uri: client.redirect_uri.parse().unwrap(),
-        // was validated as url before inset into db, so unwrap is safe
-        additional_redirect_uris: uris
-          .into_iter()
-          .flat_map(|u| u.redirect_uri.parse())
-          .collect(),
-        // was validated as scope before inset into db, so unwrap is safe
-        default_scope: client.default_scope.parse().unwrap(),
-        group_access: group
-          .into_iter()
-          .map(|g| SimpleGroupInfo {
-            name: g.name,
-            uuid: g.id,
-          })
-          .collect(),
-        user_access: user
-          .into_iter()
-          .map(|u| SimpleUserInfo {
-            name: u.name,
-            id: u.id,
-          })
-          .collect(),
-        confidential: client.confidential,
-      })
+      .zip(default_scope)
+      .map(
+        |((((client, group), user), uris), scopes)| OAuthClientInfo {
+          name: client.name,
+          client_id: client.id,
+          // was validated as url before inset into db, so unwrap is safe
+          redirect_uri: client.redirect_uri.parse().unwrap(),
+          // was validated as url before inset into db, so unwrap is safe
+          additional_redirect_uris: uris
+            .into_iter()
+            .flat_map(|u| u.redirect_uri.parse())
+            .collect(),
+          default_scope: scopes
+            .into_iter()
+            .map(|s| SimpleOAuthScopeInfo {
+              name: s.name,
+              scope: s.scope,
+              uuid: s.id,
+            })
+            .collect(),
+          group_access: group
+            .into_iter()
+            .map(|g| SimpleGroupInfo {
+              name: g.name,
+              uuid: g.id,
+            })
+            .collect(),
+          user_access: user
+            .into_iter()
+            .map(|u| SimpleUserInfo {
+              name: u.name,
+              id: u.id,
+            })
+            .collect(),
+          confidential: client.confidential,
+        },
+      )
       .collect();
 
     Ok(result)
@@ -165,6 +181,28 @@ impl<'db> OauthClientTable<'db> {
     Ok(uris)
   }
 
+  pub async fn client_default_scope(
+    &self,
+    client_id: Uuid,
+  ) -> Result<Vec<SimpleOAuthScopeInfo>, DbErr> {
+    let scopes = o_auth_client_o_auth_scope::Entity::find()
+      .filter(o_auth_client_o_auth_scope::Column::Client.eq(client_id))
+      .find_also_related(o_auth_scope::Entity)
+      .all(self.db)
+      .await?
+      .into_iter()
+      .filter_map(|(_, scope)| {
+        scope.map(|s| SimpleOAuthScopeInfo {
+          name: s.name,
+          scope: s.scope,
+          uuid: s.id,
+        })
+      })
+      .collect();
+
+    Ok(scopes)
+  }
+
   pub async fn client_info(&self, client_id: Uuid) -> Result<Option<OAuthClientInfo>, DbErr> {
     let Some(client) = OAuthClient::find_by_id(client_id).one(self.db).await? else {
       return Ok(None);
@@ -173,6 +211,7 @@ impl<'db> OauthClientTable<'db> {
     let group_access = self.client_groups(client_id).await?;
     let user_access = self.client_users(client_id).await?;
     let additional_redirect_uris = self.client_additional_redirect_uris(client_id).await?;
+    let default_scope = self.client_default_scope(client_id).await?;
 
     Ok(Some(OAuthClientInfo {
       name: client.name,
@@ -180,8 +219,7 @@ impl<'db> OauthClientTable<'db> {
       // was validated as url before inset into db, so unwrap is safe
       redirect_uri: client.redirect_uri.parse().unwrap(),
       additional_redirect_uris,
-      // was validated as scope before inset into db, so unwrap is safe
-      default_scope: client.default_scope.parse().unwrap(),
+      default_scope,
       group_access,
       user_access,
       confidential: client.confidential,
@@ -267,6 +305,29 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
+  pub async fn add_default_scope(&self, client_id: Uuid, scopes: Vec<Uuid>) -> Result<(), DbErr> {
+    let mut models = Vec::new();
+
+    for scope_id in scopes {
+      let model = o_auth_client_o_auth_scope::Model {
+        client: client_id,
+        scope: scope_id,
+      }
+      .into_active_model();
+      models.push(model);
+    }
+
+    if models.is_empty() {
+      return Ok(());
+    }
+
+    o_auth_client_o_auth_scope::Entity::insert_many(models)
+      .exec(self.db)
+      .await?;
+
+    Ok(())
+  }
+
   #[allow(clippy::too_many_arguments)]
   pub async fn edit_client(
     &self,
@@ -274,7 +335,7 @@ impl<'db> OauthClientTable<'db> {
     name: String,
     redirect_uri: String,
     additional_redirect_uris: Vec<String>,
-    default_scope: String,
+    default_scope: Vec<Uuid>,
     users_mapped: Vec<Uuid>,
     groups_mapped: Vec<Uuid>,
   ) -> Result<(), DbErr> {
@@ -282,7 +343,6 @@ impl<'db> OauthClientTable<'db> {
 
     client.name = Set(name);
     client.redirect_uri = Set(redirect_uri);
-    client.default_scope = Set(default_scope);
 
     client.update(self.db).await?;
 
@@ -301,11 +361,17 @@ impl<'db> OauthClientTable<'db> {
       .exec(self.db)
       .await?;
 
+    o_auth_client_o_auth_scope::Entity::delete_many()
+      .filter(o_auth_client_o_auth_scope::Column::Client.eq(client_id))
+      .exec(self.db)
+      .await?;
+
     self.add_users_to_client(client_id, users_mapped).await?;
     self.add_groups_to_client(client_id, groups_mapped).await?;
     self
       .add_additional_redirect_uris(client_id, additional_redirect_uris)
       .await?;
+    self.add_default_scope(client_id, default_scope).await?;
 
     Ok(())
   }

@@ -28,7 +28,6 @@ use crate::{
     DBTrait,
     oauth::{oauth_client::OAuthClientInfo, oauth_scope::SimpleOAuthScopeInfo},
   },
-  oauth::scope::Scope,
   utils::{OAuthClientEdit, OAuthClientView, UpdateMessage, Updater, generate_secret},
 };
 
@@ -107,7 +106,7 @@ async fn delete(
 struct ClientCreate {
   name: String,
   redirect_uri: Url,
-  scope: Scope,
+  scope: Vec<Uuid>,
   confidential: bool,
 }
 
@@ -143,11 +142,14 @@ async fn create(
       name: req.name.clone(),
       id: client_id,
       redirect_uri: req.redirect_uri.to_string(),
-      default_scope: req.scope.to_string(),
       client_secret,
       salt,
       confidential: req.confidential,
     })
+    .await?;
+
+  db.oauth_client()
+    .add_default_scope(client_id, req.scope)
     .await?;
 
   updater
@@ -182,7 +184,7 @@ struct OAuthClientEditReq {
   name: String,
   redirect_uri: Url,
   additional_redirect_uris: Vec<Url>,
-  scope: Scope,
+  scope: Vec<Uuid>,
   user_access: Vec<Uuid>,
   group_access: Vec<Uuid>,
 }
@@ -211,7 +213,7 @@ async fn edit(
         .iter()
         .map(|u| u.to_string())
         .collect(),
-      req.scope.to_string(),
+      req.scope,
       req.user_access,
       req.group_access,
     )
