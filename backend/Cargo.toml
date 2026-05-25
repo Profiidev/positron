@@ -20,9 +20,6 @@ aide = { version = "0.16.0-alpha.4", features = [
   "macros"
 ] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
-aws-config = { version = "1.8.15", features = ["behavior-version-latest"] }
-aws-sdk-s3 = { version = "1.129.0", features = ["behavior-version-latest"] }
-async-nats = "0.48.0"
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.22.1"
@@ -36,30 +33,21 @@ chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"
 ] }
-dashmap = "6.1.0"
+dashmap = "6.2.1"
 dotenvy = "0.15.7"
 entity = { path = "entity" }
 figment = { version = "0.10.19", features = ["env"] }
-futures = "0.3.32"
 http = "1.4.0"
 image = { version = "0.25.10", default-features = false, features = [
   "jpeg",
   "png",
   "webp"
 ] }
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
-lettre = { version = "0.11.21", default-features = false, features = [
-  "builder",
-  "ring",
-  "rustls",
-  "rustls-native-certs",
-  "smtp-transport"
-] }
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 migration = { path = "migration" }
-openssl = { version = "0.10.79", features = ["vendored"] }
-tokio-util = { version = "0.7.18", features = ["io"] }
+openssl = { version = "0.10.80", features = ["vendored"] }
 rand = { version = "0.10.1", default-features = false, features = ["std"] }
-reqwest = { version = "0.13.3", features = ["form", "json"] }
+reqwest = { version = "0.13.4", features = ["form", "json"] }
 rsa = "0.9.10"
 schemars = { version = "1.2.1", features = ["uuid1", "chrono04"] }
 sea-orm = { version = "1.1.20", features = [
@@ -68,14 +56,10 @@ sea-orm = { version = "1.1.20", features = [
   "sqlx-sqlite"
 ] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-serde_urlencoded = "0.7.1"
-thiserror = "2.0.18"
+serde_json = "1.0.150"
 time = "0.3.47"
-tokio = { version = "1.52.2", features = ["signal"] }
+tokio = { version = "1.52.3", features = ["signal"] }
 totp-rs = { version = "5.7.1", features = ["gen_secret", "otpauth", "qr"] }
-tower = "0.5.3"
-tower-http = { version = "0.6.10", features = ["cors", "trace"] }
 tower_governor = { version = "0.8.0", features = ["axum"] }
 tracing = "0.1.44"
 url = { version = "2.5.8", features = ["serde"] }
