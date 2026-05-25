@@ -297,6 +297,7 @@
                   return val;
                 }}
                 disabled={readonly}
+                placeholder="https://example.com/callback"
               />
               <FormSelect
                 {...props}

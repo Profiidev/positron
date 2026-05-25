@@ -12,6 +12,7 @@
     suggestions?: string[];
     validate?: (val: string, tags: string[]) => string | undefined;
     onValueChange?: (selected: string[]) => void;
+    placeholder?: string;
   }
 
   let {
@@ -21,7 +22,8 @@
     disabled,
     onValueChange,
     suggestions,
-    validate
+    validate,
+    placeholder
   }: Props = $props();
 
   let formData = $derived(form.form);
@@ -33,7 +35,7 @@
       <Form.Label>{label}</Form.Label>
       {/* @ts-ignore */ null}
       <TagsInput
-        placeholder="Add a downstream cache"
+        {placeholder}
         bind:value={$formData[key]}
         {suggestions}
         {validate}

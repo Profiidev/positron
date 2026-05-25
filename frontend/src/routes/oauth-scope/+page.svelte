@@ -72,7 +72,7 @@
 
 <div class="p-4">
   <div class="ml-7 flex items-center md:m-0">
-    <h3 class="text-xl font-medium">Scopes</h3>
+    <h3 class="text-xl font-medium">OAuth / Oidc Scopes</h3>
     <Button
       class="ml-auto cursor-pointer"
       href="/oauth-scope/create"
