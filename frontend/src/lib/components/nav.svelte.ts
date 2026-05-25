@@ -5,6 +5,7 @@ import Users from '@lucide/svelte/icons/users';
 import User from '@lucide/svelte/icons/user';
 import KeyRound from '@lucide/svelte/icons/key-round';
 import Goal from '@lucide/svelte/icons/goal';
+import UserKey from '@lucide/svelte/icons/user-key';
 import type { NavGroup } from '@profidev/pleiades/components/nav/sidebar/types';
 
 export const items: NavGroup[] = [
@@ -25,6 +26,12 @@ export const items: NavGroup[] = [
         icon: Goal,
         label: 'Scopes',
         requiredPermission: Permission.OAUTH_SCOPE_VIEW
+      },
+      {
+        href: '/oauth-policy',
+        icon: UserKey,
+        label: 'Policies',
+        requiredPermission: Permission.OAUTH_POLICY_VIEW
       }
     ],
     label: 'OAuth / Oidc'

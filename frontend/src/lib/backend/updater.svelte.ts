@@ -10,7 +10,8 @@ export enum UpdateType {
   UserPermissions = 'UserPermissions',
   Group = 'Group',
   OAuthClient = 'OAuthClient',
-  OAuthScope = 'OAuthScope'
+  OAuthScope = 'OAuthScope',
+  OAuthPolicy = 'OAuthPolicy'
 }
 
 export type UpdateMessage =
@@ -19,7 +20,8 @@ export type UpdateMessage =
         | UpdateType.User
         | UpdateType.Group
         | UpdateType.OAuthClient
-        | UpdateType.OAuthScope;
+        | UpdateType.OAuthScope
+        | UpdateType.OAuthPolicy;
       uuid: string;
     }
   | {
@@ -32,7 +34,9 @@ export const disconnectWebsocket = () => disconnect();
 const handleMessage = (msg: UpdateMessage, user: string) => {
   switch (msg.type) {
     case UpdateType.Settings: {
-      invalidate((url) => url.pathname.startsWith('/api/settings')).catch(() => {});
+      invalidate((url) => url.pathname.startsWith('/api/settings')).catch(
+        () => {}
+      );
       break;
     }
     case UpdateType.User: {
@@ -56,6 +60,7 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate(`/api/group/${msg.uuid}`).catch(() => {});
       invalidate('/api/user/management/groups').catch(() => {});
       invalidate('/api/oauth_management/client/groups').catch(() => {});
+      invalidate(`/api/oauth_management/policy/groups`).catch(() => {});
       break;
     }
     case UpdateType.OAuthClient: {
@@ -66,6 +71,12 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate('/api/oauth_management/scope').catch(() => {});
       invalidate(`/api/oauth_management/scope/${msg.uuid}`).catch(() => {});
       invalidate('/api/oauth_management/client/scopes').catch(() => {});
+    }
+    case UpdateType.OAuthPolicy: {
+      invalidate('/api/oauth_management/policy').catch(() => {});
+      invalidate(`/api/oauth_management/policy/${msg.uuid}`).catch(() => {});
+      invalidate(`/api/oauth_management/scope/policies`).catch(() => {});
+      break;
     }
     default: {
       break;
