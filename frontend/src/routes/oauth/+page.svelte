@@ -1,44 +1,47 @@
 <script lang="ts">
-  import { Button } from 'positron-components/components/ui/button';
-  import * as Card from 'positron-components/components/ui/card';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
-  import { RequestError } from 'positron-components/backend';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import * as Card from '@profidev/pleiades/components/ui/card';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import { logout, oauth_auth } from '$lib/backend/auth/other.svelte';
-  import type { PageServerData } from './$types';
-  import { userData } from '$lib/backend/account/info.svelte';
   import { onMount } from 'svelte';
-  import { user_settings_get } from '$lib/backend/account/settings.svelte';
   import { LoaderCircle } from '@lucide/svelte';
+  import { authorizeConfirm, logout, type UserInfo } from '$lib/client';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+  import { avatarUrl } from '$lib/permissions.svelte.js';
 
-  interface Props {
-    data: PageServerData;
-  }
-
-  let { data }: Props = $props();
-  let oauth_params = $derived(data.oauth_params);
+  let { data } = $props();
 
   let isLoading = $state(false);
-  let error = $state('');
-  let infoData = $derived(userData.value?.[1]);
+  let user: UserInfo | undefined = $state();
+
+  $effect(() => {
+    data.user.then((u) => {
+      user = u;
+    });
+  });
 
   const login = async (allow: boolean) => {
-    if (!oauth_params) {
-      error = 'There was an error while login in';
+    if (!data.oauthOptions.code || !data.oauthOptions.name) {
+      toast.error('There was an error while login in');
       return;
     }
 
-    error = '';
     isLoading = true;
-
-    let ret = await oauth_auth(oauth_params, allow);
-
+    let ret = await authorizeConfirm({
+      query: {
+        code: data.oauthOptions.code,
+        allow
+      }
+    });
     isLoading = false;
-    if (ret === RequestError.Other) {
-      error = 'There was an error while login in';
-    } else if (ret === RequestError.Unauthorized) {
-      error = 'You are not allowed to access this Application';
+
+    if (ret.response?.status === 401) {
+      toast.error('You are not allowed to access this Application');
+    } else if (ret.response?.status !== 200 && allow) {
+      toast.error('There was an error while login in');
+    } else if (ret.data && ret.data.location !== '') {
+      window.location.href = ret.data.location;
     }
   };
 
@@ -53,11 +56,13 @@
 
   const change = async () => {
     await logout();
-    goto(`/login?code=${oauth_params?.code}&name=${oauth_params?.name}`);
+    goto(
+      `/login?code=${data.oauthOptions.code}&name=${data.oauthOptions.name}`
+    );
   };
 
   onMount(async () => {
-    let settings = await user_settings_get();
+    let settings = await data.settings;
     if (!settings || !settings.o_auth_instant_confirm) return;
     confirm();
   });
@@ -66,20 +71,26 @@
 <div class="flex h-full items-center justify-center">
   <Card.Root>
     <Card.Header>
-      <Card.Title>Log in to {oauth_params?.name}</Card.Title>
+      <Card.Title>Log in to {data.oauthOptions.name}</Card.Title>
       <Card.Description
-        >Do you want to log in to {oauth_params?.name} with the account below?</Card.Description
+        >Do you want to log in with the account below?</Card.Description
       >
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
-      {#if infoData}
-        <SimpleAvatar src={infoData.image} class="size-14" />
+      {#if user}
+        <SimpleAvatar
+          src={user ? `${avatarUrl}/${user.uuid}` : ''}
+          class="size-14"
+        />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
-          <span class="truncate text-lg font-semibold">{infoData.name}</span>
-          <span class="truncate">{infoData.email}</span>
+          <span class="truncate text-lg font-semibold">{user.name}</span>
+          <span class="truncate">{user.email}</span>
         </div>
-        <Button variant="link" onclick={change} disabled={isLoading}
-          >Change</Button
+        <Button
+          variant="link"
+          onclick={change}
+          disabled={isLoading}
+          class="cursor-pointer">Change</Button
         >
       {:else}
         <Skeleton class="size-14 rounded-full" />
@@ -90,12 +101,14 @@
       {/if}
     </Card.Content>
     <Card.Footer class="flex flex-col">
-      <span class="text-destructive mb-4 truncate text-sm">{error}</span>
       <div class="flex w-full justify-between">
-        <Button variant="secondary" onclick={cancel} disabled={isLoading}
-          >Cancel</Button
+        <Button
+          variant="outline"
+          onclick={cancel}
+          disabled={isLoading}
+          class="cursor-pointer">Cancel</Button
         >
-        <Button onclick={confirm} disabled={isLoading}>
+        <Button onclick={confirm} disabled={isLoading} class="cursor-pointer">
           {#if isLoading}
             <LoaderCircle class="mr-2 h-4 w-4 animate-spin" />
           {/if}

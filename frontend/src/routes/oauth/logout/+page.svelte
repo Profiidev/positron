@@ -1,27 +1,28 @@
 <script lang="ts">
-  import { Button } from 'positron-components/components/ui/button';
-  import * as Card from 'positron-components/components/ui/card';
-  import { Skeleton } from 'positron-components/components/ui/skeleton';
-  import SimpleAvatar from 'positron-components/components/util/simple-avatar.svelte';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import * as Card from '@profidev/pleiades/components/ui/card';
+  import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import type { PageServerData } from './$types';
-  import { userData } from '$lib/backend/account/info.svelte';
+  import type { UserInfo } from '$lib/client';
+  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+  import { avatarUrl } from '$lib/permissions.svelte.js';
+  import { toast } from '@profidev/pleiades/components/util/general';
 
-  interface Props {
-    data: PageServerData;
-  }
+  let { data } = $props();
 
-  let { data }: Props = $props();
-  let oauth_logout = $derived(data.oauth_logout);
+  let user: UserInfo | undefined = $state();
 
-  let error = $state('');
-  let infoData = $derived(userData.value?.[1]);
+  $effect(() => {
+    data.user.then((u) => {
+      user = u;
+    });
+  });
 
   const back = async () => {
-    if (!oauth_logout) {
-      error = 'There was an error';
+    if (!data.oauthLogout) {
+      toast.error('There was an error');
     } else {
-      window.location.href = oauth_logout.url;
+      window.location.href = data.oauthLogout.url;
     }
   };
 
@@ -33,17 +34,20 @@
 <div class="flex h-full items-center justify-center">
   <Card.Root>
     <Card.Header>
-      <Card.Title>Logged out of {oauth_logout?.name}</Card.Title>
+      <Card.Title>Logged out of {data.oauthLogout?.name}</Card.Title>
       <Card.Description
-        >Do you want to got back to {oauth_logout?.name} or to Positron?</Card.Description
+        >Do you want to got back to {data.oauthLogout?.name} or to Positron?</Card.Description
       >
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
-      {#if infoData}
-        <SimpleAvatar src={infoData.image} class="size-14" />
+      {#if user}
+        <SimpleAvatar
+          src={user ? `${avatarUrl}/${user.uuid}` : ''}
+          class="size-14"
+        />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
-          <span class="truncate text-lg font-semibold">{infoData.name}</span>
-          <span class="truncate">{infoData.email}</span>
+          <span class="truncate text-lg font-semibold">{user.name}</span>
+          <span class="truncate">{user.email}</span>
         </div>
       {:else}
         <Skeleton class="size-14 rounded-full" />
@@ -54,10 +58,11 @@
       {/if}
     </Card.Content>
     <Card.Footer class="flex flex-col">
-      <span class="text-destructive truncate text-sm">{error}</span>
       <div class="flex w-full justify-between">
-        <Button variant="secondary" onclick={cancel}>Cancel</Button>
-        <Button onclick={back}>Back</Button>
+        <Button variant="outline" onclick={cancel} class="cursor-pointer"
+          >To Positron
+        </Button>
+        <Button onclick={back} class="cursor-pointer">Log back in</Button>
       </div>
     </Card.Footer>
   </Card.Root>

@@ -1,25 +1,23 @@
+use aide::axum::ApiRouter;
 use axum::{
+  Extension, Json,
   extract::{FromRequestParts, Query},
   routing::get,
-  Extension, Json, Router,
 };
-use centaurus::router_extension;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{config::Config, oauth::ConfigurationState};
 
-pub fn router() -> Router {
-  Router::new()
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
     .route("/assetlinks.json", get(assetlinks))
     .route("/webfinger", get(webfinger))
 }
 
-router_extension!(
-  async fn well_known(self, config: &Config) -> Self {
-    self.layer(Extension(StaticFiles::init(config)))
-  }
-);
+pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+  router.layer(Extension(StaticFiles::init(config)))
+}
 
 #[derive(Clone, FromRequestParts)]
 #[from_request(via(Extension))]
@@ -62,7 +60,7 @@ async fn webfinger(resource: Resource, state: ConfigurationState) -> Json<WebFin
     subject: resource.resource,
     links: vec![Link {
       rel: "http://openid.net/specs/connect/1.0/issuer".to_string(),
-      href: state.issuer,
+      href: state.issuer.to_string(),
     }],
   })
 }

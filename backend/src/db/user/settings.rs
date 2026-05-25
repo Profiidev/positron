@@ -1,11 +1,10 @@
-use axum::{extract::FromRequest, Json};
-use entity::{prelude::*, settings};
-use sea_orm::{prelude::*, ActiveValue::Set, DatabaseConnection, DbErr};
+use entity::{prelude::*, user_settings};
+use schemars::JsonSchema;
+use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, FromRequest)]
-#[from_request(via(Json))]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct SettingsInfo {
   o_auth_instant_confirm: bool,
 }
@@ -19,16 +18,15 @@ impl<'db> SettingsTable<'db> {
     Self { db }
   }
 
-  async fn get_by_user(&self, user: Uuid) -> Result<settings::Model, DbErr> {
-    let res = Settings::find()
-      .find_also_related(User)
-      .filter(settings::Column::User.eq(user))
-      .all(self.db)
+  async fn get_by_user(&self, user: Uuid) -> Result<user_settings::Model, DbErr> {
+    let res = UserSettings::find()
+      .filter(user_settings::Column::User.eq(user))
+      .one(self.db)
       .await?;
-    if let Some(res) = res.into_iter().next() {
-      Ok(res.0)
+    if let Some(res) = res {
+      Ok(res)
     } else {
-      let settings = settings::ActiveModel {
+      let settings = user_settings::ActiveModel {
         id: Set(Uuid::new_v4()),
         user: Set(user),
         o_auth_instant_confirm: Set(false),
@@ -47,7 +45,7 @@ impl<'db> SettingsTable<'db> {
   }
 
   pub async fn set(&self, user: Uuid, settings_info: SettingsInfo) -> Result<(), DbErr> {
-    let mut settings: settings::ActiveModel = self.get_by_user(user).await?.into();
+    let mut settings: user_settings::ActiveModel = self.get_by_user(user).await?.into();
 
     settings.o_auth_instant_confirm = Set(settings_info.o_auth_instant_confirm);
 

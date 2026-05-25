@@ -3,8 +3,10 @@
     "frontend"
   ],
   "devDependencies": {
-    "prettier": "^3.8.3",
-    "prettier-plugin-svelte": "^3.5.1",
+    "oxfmt": "0.51.0",
+    "oxlint": "^1.66.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "prettier-plugin-svelte": "^3.5.2",
     "prettier-plugin-tailwindcss": "^0.8.0"
   }
 }

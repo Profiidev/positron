@@ -1,0 +1,53 @@
+name: Create Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release-tag:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'release-version') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3
+        id: app-token
+        with:
+          client-id: ${{ secrets.COMMIT_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.COMMIT_BOT_PRIVATE_KEY }}
+      - name: Checkout code
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Create tag
+        run: |
+          VERSION=${{ github.event.pull_request.head.ref }}
+          VERSION=${VERSION#chore/release-version-}
+          echo "Creating tag for version $VERSION"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+  create-release:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3
+        id: app-token
+        with:
+          client-id: ${{ secrets.COMMIT_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.COMMIT_BOT_PRIVATE_KEY }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          token: ${{ steps.app-token.outputs.token }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Release version ${{ github.ref_name }} has been created.
+          generate_release_notes: true

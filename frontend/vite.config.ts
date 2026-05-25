@@ -3,9 +3,10 @@ import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
 
-// https://vitejs.dev/config/
-// @ts-ignore
 export default defineConfig(() => ({
+  define: {
+    __version__: JSON.stringify(process.env.npm_package_version)
+  },
   plugins: [enhancedImages(), tailwindcss(), sveltekit()],
   server: {
     hmr: {

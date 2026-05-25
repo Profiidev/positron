@@ -1,48 +1,92 @@
 <script lang="ts">
-  import { Toaster } from 'positron-components/components/ui/sonner';
-  import { ModeWatcher } from 'positron-components/components/util/general';
-  import * as Sidebar from 'positron-components/components/ui/sidebar';
+  import { ModeWatcher } from '@profidev/pleiades/components/util/general';
+  import { Toaster } from '@profidev/pleiades/components/ui/sonner';
   import '../app.css';
-  import { page } from '$app/state';
-  import SidebarApp from '$lib/components/nav/sidebar-app/sidebar-app.svelte';
-  import { connect_updater } from '$lib/backend/ws/updater.svelte';
-  import { test_token } from '$lib/backend/auth/other.svelte';
-  import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
+  import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { items, noSidebarPaths } from '$lib/components/nav.svelte';
+  import { setMode } from 'mode-watcher';
+  import { logout, testToken, type UserInfo } from '$lib/client';
+  import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
+  import Atom from '@lucide/svelte/icons/atom';
+  import { avatarUrl } from '$lib/permissions.svelte';
 
-  interface Props {
-    children?: import('svelte').Snippet;
-  }
+  // @ts-ignore this is injected at build time via Vite's define option
+  let version = __version__;
 
-  let { children }: Props = $props();
+  let { children, data } = $props();
 
-  const noLayout = ['/login', '/oauth', '/oauth/logout'];
+  let user: UserInfo | undefined = $state();
+  let blockRedirect = false;
 
-  connect_updater();
+  $effect(() => {
+    data.user.then((u) => {
+      user = u;
+    });
+  });
+
   onMount(() => {
-    test_token().then((valid) => {
-      if (!valid && browser) {
-        let url = page.url.pathname;
-        if (url !== '/login') {
-          goto('/login');
+    setMode('dark');
+    testToken().then(async ({ data: dataRaw }) => {
+      let { valid } = (dataRaw as { valid: boolean } | undefined) ?? {
+        valid: false
+      };
+      // can also be undefined if there was an error
+      if (valid === false) {
+        if (!noSidebarPaths.includes(page.url.pathname) && !blockRedirect) {
+          if (data.oauthOptions.code && data.oauthOptions.name) {
+            goto(
+              '/login?code=' +
+                data.oauthOptions.code +
+                '&name=' +
+                data.oauthOptions.name
+            );
+          } else {
+            goto('/login');
+          }
         }
+      } else {
+        let user = await data.user;
+        connectWebsocket(user.uuid);
       }
     });
+
+    (async () => {
+      let { data: status, error } = await data.setupStatus;
+      if (error) return;
+
+      if (!status?.is_setup && page.url.pathname !== '/setup') {
+        blockRedirect = true;
+        await goto('/setup');
+        blockRedirect = false;
+      }
+    })();
   });
 </script>
 
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-{#if !noLayout.includes(page.url.pathname)}
-  <Sidebar.Provider class="h-full">
-    <SidebarApp />
-    <Sidebar.Trigger class="absolute top-3 left-3 flex md:hidden" />
-    <main class="flex h-full w-full">
-      {@render children?.()}
-    </main>
-  </Sidebar.Provider>
+{#if noSidebarPaths.includes(page.url.pathname)}
+  {@render children()}
 {:else}
-  {@render children?.()}
+  <Sidebar
+    {user}
+    app_name="Positron"
+    app_icon={Atom}
+    iconClass="text-[#000057]"
+    avatar={user ? `${avatarUrl}/${user.uuid}` : undefined}
+    {version}
+    {items}
+    logout={async () => {
+      let res = await logout();
+      return {
+        error: res.error ? 'err' : undefined
+      };
+    }}
+  >
+    {@render children()}
+  </Sidebar>
 {/if}

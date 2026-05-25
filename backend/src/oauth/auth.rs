@@ -1,39 +1,41 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Instant};
 
+use aide::axum::{ApiRouter, routing::post_with};
 use axum::{
-  extract::{FromRequestParts, Path, Query},
+  Form, Json,
+  extract::{Path, Query},
   routing::{get, post},
-  Form, Json, Router,
 };
 use centaurus::{
-  anyhow, bail,
-  db::init::Connection,
+  anyhow,
+  backend::{auth::jwt_auth::JwtAuth, request::redirect::Redirect},
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
   error::{ErrorReport, Result},
-  req::redirect::Redirect,
   serde::empty_string_as_none,
 };
-use chrono::Utc;
 use entity::o_auth_client;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::{
-  auth::jwt::{JwtBase, JwtClaims},
-  db::DBTrait,
-};
+use crate::db::DBTrait;
 
 use super::{
   scope::Scope,
-  state::{get_timestamp_10_min, AuthReq, AuthorizeState, CodeReq},
+  state::{AuthReq, AuthorizeState, CodeReq},
 };
 
-pub fn router() -> Router {
-  Router::new()
+pub fn router() -> ApiRouter {
+  ApiRouter::new()
     .route("/authorize", get(authorize_get))
     .route("/authorize", post(authorize_post))
-    .route("/authorize_confirm", post(authorize_confirm))
+    .api_route(
+      "/authorize_confirm",
+      post_with(authorize_confirm, |op| op.id("authorizeConfirm")),
+    )
     .route("/logout/{client_id}", get(logout))
 }
 
@@ -56,19 +58,16 @@ async fn authorize_post(
 #[instrument(skip(state, db))]
 async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
-  let client_id = req.client_id.parse()?;
+  let client_id = req.client_id;
 
   let client = db.oauth_client().get_client(client_id).await?;
 
-  state
-    .auth_pending
-    .lock()
-    .await
-    .insert(uuid, (get_timestamp_10_min(), req));
+  state.auth_pending.insert(uuid, (Instant::now(), req));
 
+  // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
   Ok(Redirect::found(
     Url::from_str(&format!(
-      "{}/login?code={}&name={}",
+      "{}login?code={}&name={}",
       state.frontend_url, uuid, client.name,
     ))
     .unwrap()
@@ -76,47 +75,39 @@ async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) ->
   ))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 struct AuthRes {
   location: String,
 }
 
-#[derive(Deserialize, Debug, FromRequestParts)]
-#[from_request(via(Query))]
+#[derive(Deserialize, Debug, JsonSchema)]
 struct AuthConfirmQuery {
-  code: String,
+  code: Uuid,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   allow: Option<bool>,
 }
 
-#[instrument(skip(state, db))]
 async fn authorize_confirm(
-  auth: JwtClaims<JwtBase>,
+  auth: JwtAuth,
   state: AuthorizeState,
   db: Connection,
-  query: AuthConfirmQuery,
+  Query(query): Query<AuthConfirmQuery>,
 ) -> Result<Json<AuthRes>> {
-  let mut lock = state.auth_pending.lock().await;
-  let code = Uuid::from_str(&query.code)?;
-
   let allow = query.allow.unwrap_or(false);
   if !allow {
-    lock.remove(&code);
+    state.auth_pending.remove(&query.code);
     return Ok(Json(AuthRes {
       location: "".into(),
     }));
   }
 
-  let Some((exp, req)) = lock.get(&code) else {
+  let Some(mut data) = state.auth_pending.get(&query.code).map(|d| d.1.clone()) else {
     bail!("authorization request not found")
   };
-  if *exp < Utc::now().timestamp() {
-    bail!("authorization request expired")
-  }
 
-  let client_id = req.client_id.parse()?;
+  let client_id = data.client_id;
   let client = db.oauth_client().get_client(client_id).await?;
-  let user = db.user().get_user(auth.sub).await?;
+  let user = db.user().get_user_by_id(auth.user_id).await?;
 
   if !db
     .oauth_client()
@@ -126,11 +117,25 @@ async fn authorize_confirm(
     bail!(UNAUTHORIZED, "user does not have access to the client");
   }
 
-  let (_, mut req) = lock.remove(&code).unwrap();
-  drop(lock);
+  state.auth_pending.remove(&query.code);
 
-  let initial_redirect_uri = req.redirect_uri.clone();
-  if let Err((error_response, error)) = validate_req(&mut req, &client) {
+  let initial_redirect_uri = data.redirect_uri.clone();
+  let additional_redirect_uris = db
+    .oauth_client()
+    .client_additional_redirect_uris(client_id)
+    .await?;
+  let scopes = db
+    .oauth_client()
+    .client_default_scope(client_id)
+    .await?
+    .into_iter()
+    .map(|s| s.scope)
+    .collect::<Vec<_>>();
+  let default_scope = Scope::from(scopes);
+
+  if let Err((error_response, error)) =
+    validate_req(&mut data, &client, additional_redirect_uris, default_scope)
+  {
     tracing::warn!("Authorization request validation failed: {:?}", error);
     return Ok(Json(AuthRes {
       location: format!("{}?error={}", client.redirect_uri, error_response),
@@ -138,26 +143,30 @@ async fn authorize_confirm(
   }
 
   let auth_code = Uuid::new_v4();
-  state.auth_codes.lock().await.insert(
+  state.auth_codes.insert(
     auth_code,
-    CodeReq {
-      client_id: client.id,
-      redirect_uri: initial_redirect_uri,
-      scope: req.scope.unwrap().parse().unwrap(),
-      user: auth.sub,
-      exp: get_timestamp_10_min(),
-      nonce: req.nonce,
-    },
+    (
+      Instant::now(),
+      CodeReq {
+        client_id: client.id,
+        redirect_uri: initial_redirect_uri,
+        // has been filled in by validate_req, so unwrap is safe
+        scope: data.scope.unwrap().parse().unwrap(),
+        user: auth.user_id,
+        nonce: data.nonce,
+      },
+    ),
   );
 
   let mut query = vec![("code", auth_code.to_string())];
-  if let Some(state) = req.state.as_ref() {
+  if let Some(state) = data.state.as_ref() {
     query.push(("state", state.clone()));
   }
 
-  let url = Url::parse_with_params(req.redirect_uri.as_ref().unwrap(), query).unwrap();
+  // redirect_uri is guaranteed to be Some after validate_req, so unwrap is safe
+  let url = Url::parse_with_params(data.redirect_uri.as_ref().unwrap(), query).unwrap();
 
-  tracing::info!("User {} logged in to {}", auth.sub, client.name);
+  tracing::info!("User {} logged in to {}", auth.user_id, client.name);
   Ok(Json(AuthRes {
     location: url.to_string(),
   }))
@@ -167,16 +176,19 @@ async fn authorize_confirm(
 fn validate_req(
   req: &mut AuthReq,
   client: &o_auth_client::Model,
+  additional_redirect_uris: Vec<Url>,
+  default_scope: Scope,
 ) -> std::result::Result<(), (&'static str, ErrorReport)> {
   if let Some(url) = &req.redirect_uri {
     let Ok(url) = Url::from_str(url) else {
       return Err(("invalid_request", anyhow!("invalid redirect_uri format")));
     };
 
-    let mut possibilities =
-      std::iter::once(&client.redirect_uri).chain(&client.additional_redirect_uris);
+    // unwrap is safe because the redirect_uri in the database is guaranteed to be a valid URL
+    let redirect_url = Url::from_str(&client.redirect_uri).unwrap();
+    let mut possibilities = std::iter::once(redirect_url).chain(additional_redirect_uris);
 
-    if !possibilities.any(|reg_url| reg_url.parse::<Url>().unwrap() == url) {
+    if !possibilities.any(|reg_url| reg_url == url) {
       return Err((
         "invalid_request",
         anyhow!("redirect_uri {} is not allowed", url),
@@ -194,17 +206,16 @@ fn validate_req(
   }
 
   if let Some(scope) = &mut req.scope {
-    *scope = client
-      .default_scope
-      .parse::<Scope>()
-      .unwrap()
-      .intersect(&scope.parse().unwrap())
-      .to_string();
+    let parsed_scope =
+      Scope::from_str(scope).map_err(|_| ("invalid_scope", anyhow!("invalid scope format")))?;
+
+    // unwrap is safe because the default_scope in the database is guaranteed to be a valid scope string
+    *scope = default_scope.intersect(&parsed_scope).to_string();
     if scope.is_empty() {
       return Err(("invalid_scope", anyhow!("invalid scope")));
     }
   } else {
-    req.scope = Some(client.default_scope.clone().to_string());
+    req.scope = Some(default_scope.to_string());
   }
 
   Ok(())
@@ -218,9 +229,10 @@ async fn logout(
 ) -> Result<Redirect> {
   let client = db.oauth_client().get_client(client_id).await?;
 
+  // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
   Ok(Redirect::found(
     Url::parse_with_params(
-      &format!("{}/oauth/logout", state.frontend_url),
+      &format!("{}oauth/logout", state.frontend_url),
       &[
         ("name", client.name),
         ("url", client.redirect_uri.to_string()),

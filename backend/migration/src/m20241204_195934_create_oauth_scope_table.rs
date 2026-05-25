@@ -1,6 +1,5 @@
+use centaurus::db::migrations::m4_groups::Group;
 use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20241204_191716_create_group_table::Group;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -27,6 +26,7 @@ impl MigrationTrait for Migration {
           .table(OAuthPolicyContent::Table)
           .if_not_exists()
           .col(pk_uuid(OAuthPolicyContent::Id))
+          .col(integer(OAuthPolicyContent::Index))
           .col(uuid(OAuthPolicyContent::Policy))
           .col(string(OAuthPolicyContent::Content))
           .col(uuid(OAuthPolicyContent::Group))
@@ -74,6 +74,7 @@ pub enum OAuthPolicy {
 enum OAuthPolicyContent {
   Table,
   Id,
+  Index,
   Policy,
   Content,
   Group,

@@ -1,6 +1,5 @@
+use centaurus::db::migrations::m3_user::User;
 use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20241204_191705_create_user_table::User;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;

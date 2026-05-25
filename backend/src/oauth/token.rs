@@ -1,14 +1,18 @@
-use std::{collections::HashMap, str::FromStr};
-
-use axum::{extract::Query, routing::post, Form, Json, Router};
-use centaurus::{bail, db::init::Connection, serde::empty_string_as_none};
+use axum::{Form, Json, Router, extract::Query, routing::post};
+use centaurus::{
+  backend::auth::jwt_state::JwtInvalidState,
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
+  eyre::ContextCompat,
+  serde::empty_string_as_none,
+};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtInvalidState, JwtState},
+  auth::jwt::JwtStateOther,
   db::DBTrait,
   oauth::{
     client_auth::{TokenIssueReq, TokenRefreshReq},
@@ -20,7 +24,7 @@ use super::{
   client_auth::{ClientAuth, Error},
   jwt::OAuthClaims,
   scope::Scope,
-  state::{get_timestamp_10_min, AuthorizeState, ConfigurationState},
+  state::{AuthorizeState, ConfigurationState, get_timestamp_10_min},
 };
 
 pub fn router() -> Router {
@@ -43,7 +47,7 @@ struct TokenRes {
 #[instrument(skip(state, jwt, db, config))]
 async fn token(
   state: AuthorizeState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   auth: ClientAuth,
@@ -61,24 +65,20 @@ async fn token(
 #[instrument(skip(state, jwt, db, config))]
 async fn issue_token(
   state: AuthorizeState,
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   body: TokenIssueReq,
   client_id: Uuid,
 ) -> Result<Json<TokenRes>, Error> {
-  let uuid = Uuid::from_str(&body.code).unwrap_or_default();
+  let uuid = body.code;
 
-  let mut lock = state.auth_codes.lock().await;
-  let Some(code_info) = lock.get(&uuid) else {
+  let Some(auth_code) = state.auth_codes.get(&uuid) else {
     tracing::warn!("authorization code not found: {}", uuid);
     return Err(Error::from_str("invalid_grant"));
   };
+  let code_info = &auth_code.value().1;
 
-  if code_info.exp < Utc::now().timestamp() {
-    tracing::warn!("authorization code expired: {}", uuid);
-    return Err(Error::from_str("invalid_grant"));
-  }
   if &body.grant_type != "authorization_code" {
     tracing::warn!("unsupported grant type: {}", body.grant_type);
     return Err(Error::from_str("unsupported_grant_type"));
@@ -114,8 +114,9 @@ async fn issue_token(
     }
   }
 
-  let code_info = lock.remove(&uuid).unwrap();
-  drop(lock);
+  drop(auth_code);
+  // unwrap is safe because we checked that the code exists with get before
+  let (_, (_, code_info)) = state.auth_codes.remove(&uuid).unwrap();
 
   let exp = Utc::now()
     .checked_add_signed(Duration::seconds(config.refresh_exp))
@@ -128,7 +129,7 @@ async fn issue_token(
     scope: code_info.scope,
     nonce: code_info.nonce,
     exp,
-    iss: config.issuer.clone(),
+    iss: config.issuer.clone().to_string(),
   };
 
   let token = create_access_token(&db, &jwt, &code_info, &config, client_id).await?;
@@ -156,7 +157,7 @@ async fn issue_token(
 
 #[instrument(skip(jwt, db, config))]
 async fn refresh_token(
-  jwt: JwtState,
+  jwt: JwtStateOther,
   db: Connection,
   config: ConfigurationState,
   body: TokenRefreshReq,
@@ -211,29 +212,29 @@ async fn refresh_token(
 
 async fn create_access_token(
   db: &Connection,
-  jwt: &JwtState,
+  jwt: &JwtStateOther,
   code_info: &RefreshTokenClaims,
   config: &ConfigurationState,
   client_id: Uuid,
 ) -> Result<String, Error> {
-  let Ok(user) = db.user().get_user(code_info.sub).await else {
+  let Ok(user) = db.user().get_user_by_id(code_info.sub).await else {
     tracing::warn!("user not found: {}", code_info.sub);
     return Err(Error::from_str("unauthorized_client"));
   };
-  let Ok(groups) = db.groups().get_groups_for_user(user.id).await else {
+  let Ok(groups) = db.user().get_user_groups(user.id).await else {
     tracing::warn!("failed to get groups for user: {}", user.id);
     return Err(Error::from_str("unauthorized_client"));
   };
 
-  let mut rest = HashMap::new();
-  for scope in code_info.scope.non_default() {
-    let Ok(rest_part) = db.oauth_scope().get_values_for_user(scope, &groups).await else {
-      tracing::warn!("failed to get scope values for user: {}", user.id);
-      return Err(Error::from_str("unauthorized_client"));
-    };
-
-    rest = rest.into_iter().chain(rest_part).collect();
-  }
+  let group_ids: Vec<Uuid> = groups.iter().map(|g| g.uuid).collect();
+  let Ok(rest) = db
+    .oauth_scope()
+    .get_values_for_user(code_info.scope.inner(), &group_ids)
+    .await
+  else {
+    tracing::warn!("failed to get scope values for user: {}", user.id);
+    return Err(Error::from_str("unauthorized_client"));
+  };
 
   let groups = groups.into_iter().map(|group| group.name).collect();
 
@@ -247,12 +248,23 @@ async fn create_access_token(
   } else {
     None
   };
+  let picture = if code_info.scope.contains("image")
+    && db.user_ext().has_avatar(code_info.sub).await.map_err(|_| {
+      tracing::warn!("failed to check avatar for user: {}", code_info.sub);
+      Error::from_str("unauthorized_client")
+    })? {
+    Some(format!("{}/picture/{}", config.issuer, code_info.sub))
+  } else {
+    None
+  };
+
+  dbg!(&rest);
 
   let time = Utc::now().timestamp();
   let claims = OAuthClaims {
     sub: code_info.sub,
     exp: get_timestamp_10_min(),
-    iss: config.issuer.clone(),
+    iss: config.issuer.clone().to_string(),
     aud: code_info.aud,
     iat: time,
     auth_time: time,
@@ -260,6 +272,7 @@ async fn create_access_token(
     scope: code_info.scope.clone(),
     email,
     preferred_username: name.clone(),
+    picture,
     name,
     groups,
     rest,
@@ -296,7 +309,7 @@ struct RevokeReq {
 async fn revoke(
   Query(req_p): Query<RevokeReqOption>,
   db: Connection,
-  state: JwtState,
+  state: JwtStateOther,
   invalidate: JwtInvalidState,
   Form(req_b): Form<RevokeReqOption>,
 ) -> centaurus::error::Result<()> {
@@ -309,12 +322,10 @@ async fn revoke(
   };
 
   let claims = state.validate_token::<OAuthClaims>(&req.token)?;
-  let exp = DateTime::from_timestamp(claims.exp, 0).unwrap();
-
-  let mut lock = invalidate.count.lock().await;
+  let exp = DateTime::from_timestamp(claims.exp, 0).context("Invalid timestamp")?;
 
   db.invalid_jwt()
-    .invalidate_jwt(req.token, exp, &mut lock)
+    .invalidate_jwt(req.token, exp, invalidate.count.clone())
     .await?;
 
   Ok(())

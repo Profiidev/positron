@@ -1,17 +1,18 @@
 use std::str::FromStr;
 
 use axum::{
+  Form, Json, RequestPartsExt,
   extract::{FromRequest, OptionalFromRequest, Request},
   response::{IntoResponse, Response},
-  Form, Json, RequestPartsExt,
 };
 use axum_extra::{
-  headers::{authorization::Basic, Authorization},
   TypedHeader,
+  headers::{Authorization, authorization::Basic},
 };
 use centaurus::{
-  auth::pw::hash_secret, db::init::Connection, serde::empty_string_as_none,
-  state::extract::StateExtractExt,
+  backend::{auth::pw_state::hash_secret, request::extract::StateExtractExt},
+  db::init::Connection,
+  serde::empty_string_as_none,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -37,7 +38,7 @@ pub struct Error {
 pub struct TokenReq {
   pub grant_type: String,
   #[serde(default, deserialize_with = "empty_string_as_none")]
-  pub code: Option<String>,
+  pub code: Option<Uuid>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -77,7 +78,7 @@ impl TokenReq {
 #[derive(Deserialize, Debug)]
 pub struct TokenIssueReq {
   pub grant_type: String,
-  pub code: String,
+  pub code: Uuid,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
 }

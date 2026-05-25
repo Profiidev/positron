@@ -1,34 +1,34 @@
-use std::{convert::Infallible, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, marker::PhantomData};
 
-use axum::{
-  body::Body,
-  extract::{FromRequestParts, OptionalFromRequestParts},
-  response::{IntoResponse, Response},
-  Extension,
-};
+use aide::OperationIo;
+use axum::{Extension, extract::FromRequestParts};
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use centaurus::{anyhow, db::init::Connection};
+use centaurus::{
+  backend::{
+    auth::{jwt::jwt_from_request, settings::AuthConfig},
+    request::extract::StateExtractExt,
+  },
+  bail,
+  db::{init::Connection, tables::ConnectionExt},
+  error::{ErrorReport, Result},
+  eyre::ContextCompat,
+};
 use chrono::{Duration, Utc};
-use http::{
-  header::{CACHE_CONTROL, CONTENT_TYPE, PRAGMA},
-  request::Parts,
-};
-use jsonwebtoken::{
-  decode, encode,
-  errors::{Error, ErrorKind},
-  Algorithm, DecodingKey, EncodingKey, Header, Validation,
-};
+use http::request::Parts;
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rsa::{
-  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
-  pkcs8::LineEnding,
-  rand_core::OsRng,
   RsaPrivateKey, RsaPublicKey,
+  pkcs1::{DecodeRsaPrivateKey, EncodeRsaPublicKey},
+  pkcs8::LineEnding,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tokio::sync::Mutex;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
-use crate::{config::Config, db::DBTrait, utils::jwt_from_request};
+#[derive(Debug, OperationIo)]
+pub struct JwtAuthOther<T: JwtType> {
+  pub user_id: Uuid,
+  _marker: PhantomData<T>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct JwtClaims<T: JwtType> {
@@ -39,29 +39,39 @@ pub struct JwtClaims<T: JwtType> {
   pub type_: T,
 }
 
-#[derive(Default)]
-pub struct TokenRes<T: Serialize = ()> {
-  pub body: T,
+impl<S: Sync, T: JwtType + DeserializeOwned> FromRequestParts<S> for JwtAuthOther<T> {
+  type Rejection = ErrorReport;
+
+  async fn from_request_parts(
+    parts: &mut Parts,
+    _state: &S,
+  ) -> std::result::Result<Self, Self::Rejection> {
+    let token = jwt_from_request(parts, T::cookie_name()).await?;
+    let claims = check_jwt::<T>(parts, token).await?;
+
+    Ok(JwtAuthOther {
+      user_id: claims.sub,
+      _marker: PhantomData,
+    })
+  }
+}
+
+pub async fn check_jwt<T: JwtType + DeserializeOwned>(
+  parts: &mut Parts,
+  token: String,
+) -> Result<JwtClaims<T>> {
+  let state = parts.extract_state::<JwtStateOther>().await;
+
+  let Ok(claims) = state.validate_token(&token) else {
+    tracing::error!("invalid token claims for token: {}", token);
+    bail!(UNAUTHORIZED, "invalid token");
+  };
+
+  Ok(claims)
 }
 
 pub trait JwtType: Default + Clone + Debug {
-  fn duration(long: i64, short: i64) -> i64;
   fn cookie_name() -> &'static str;
-}
-
-#[derive(Default, Deserialize, Serialize, Clone, Debug)]
-pub enum JwtBase {
-  #[default]
-  Base,
-}
-impl JwtType for JwtBase {
-  fn duration(long: i64, _: i64) -> i64 {
-    long
-  }
-
-  fn cookie_name() -> &'static str {
-    "token"
-  }
 }
 
 #[derive(Default, Deserialize, Serialize, Clone, Debug)]
@@ -70,10 +80,6 @@ pub enum JwtSpecial {
   Special,
 }
 impl JwtType for JwtSpecial {
-  fn duration(_: i64, short: i64) -> i64 {
-    short
-  }
-
   fn cookie_name() -> &'static str {
     "special"
   }
@@ -85,52 +91,38 @@ pub enum JwtTotpRequired {
   TotpRequired,
 }
 impl JwtType for JwtTotpRequired {
-  fn duration(_: i64, short: i64) -> i64 {
-    short
-  }
-
   fn cookie_name() -> &'static str {
     "totp_required"
   }
 }
 
-#[derive(Default, Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
-pub struct JwtInvalidState {
-  pub count: Arc<Mutex<i32>>,
-}
-
-impl JwtInvalidState {
-  pub fn init() -> Self {
-    Self::default()
-  }
-}
-
-#[derive(Clone, FromRequestParts)]
-#[from_request(via(Extension))]
-pub struct JwtState {
+pub struct JwtStateOther {
   header: Header,
   encoding_key: EncodingKey,
   decoding_key: DecodingKey,
   validation: Validation,
   pub iss: String,
-  exp: i64,
-  short_exp: i64,
-  pub kid: String,
+  pub exp: i64,
   pub public_key: RsaPublicKey,
+  pub kid: String,
 }
 
-impl JwtState {
-  pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String, Error> {
-    encode(&self.header, claims, &self.encoding_key)
+impl JwtStateOther {
+  pub fn create_generic_token<C: Serialize>(&self, claims: &C) -> Result<String> {
+    Ok(encode(&self.header, claims, &self.encoding_key)?)
   }
 
-  pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>, Error> {
-    let duration = T::duration(self.exp, self.short_exp);
+  pub fn create_token<'c, T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<Cookie<'c>> {
+    let token = self.create_raw_token::<T>(uuid)?;
+    Ok(self.create_cookie(T::cookie_name(), token, true))
+  }
 
+  fn create_raw_token<T: JwtType + Serialize>(&self, uuid: Uuid) -> Result<String> {
     let exp = Utc::now()
-      .checked_add_signed(Duration::seconds(duration))
-      .ok_or(Error::from(ErrorKind::ExpiredSignature))?
+      .checked_add_signed(Duration::seconds(self.exp))
+      .context("Invalid duration")?
       .timestamp();
 
     let claims = JwtClaims {
@@ -140,53 +132,36 @@ impl JwtState {
       type_: T::default(),
     };
 
-    let token = encode(&self.header, &claims, &self.encoding_key)?;
-
-    Ok(self.create_cookie::<T>(T::cookie_name(), token, true))
+    Ok(encode(&self.header, &claims, &self.encoding_key)?)
   }
 
-  pub fn create_cookie<'c, T: JwtType>(
+  pub fn create_cookie<'c>(
     &self,
     name: &'static str,
     value: String,
-    http: bool,
+    http_only: bool,
   ) -> Cookie<'c> {
     Cookie::build((name, value))
-      .http_only(http)
-      .max_age(time::Duration::seconds(T::duration(
-        self.exp,
-        self.short_exp,
-      )))
+      .http_only(http_only)
+      .max_age(time::Duration::seconds(self.exp))
       .same_site(SameSite::Lax)
       .secure(true)
       .path("/")
       .build()
   }
 
-  pub fn validate_token<C: DeserializeOwned + Clone>(&self, token: &str) -> Result<C, Error> {
-    Ok(decode::<C>(token, &self.decoding_key, &self.validation)?.claims)
+  pub fn validate_token<T: DeserializeOwned>(&self, token: &str) -> Result<T> {
+    Ok(decode::<T>(token, &self.decoding_key, &self.validation)?.claims)
   }
 
-  pub async fn init(config: &Config, db: &Connection) -> Self {
-    let (key, kid) = if let Ok(key) = db.key().get_key_by_name("jwt".into()).await {
-      (key.private_key, key.id.to_string())
-    } else {
-      let mut rng = OsRng {};
-      let private_key = RsaPrivateKey::new(&mut rng, 4096).expect("Failed to create Rsa key");
-      let key = private_key
-        .to_pkcs1_pem(LineEnding::CRLF)
-        .expect("Failed to export private key")
-        .to_string();
-
-      let uuid = Uuid::new_v4();
-
-      db.key()
-        .create_key("jwt".into(), key.clone(), uuid)
-        .await
-        .expect("Failed to save key");
-
-      (key, uuid.to_string())
-    };
+  pub async fn init(config: &AuthConfig, db: &Connection) -> Self {
+    let key = db
+      .key()
+      .get_key_by_name("jwt".into())
+      .await
+      .expect("Failed to load key JwtState not initialized");
+    let kid = key.id.to_string();
+    let key = key.private_key;
 
     let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
     let public_key = RsaPublicKey::from(private_key);
@@ -210,50 +185,9 @@ impl JwtState {
       decoding_key,
       validation,
       iss: config.auth_issuer.clone(),
-      exp: config.auth_jwt_expiration,
-      short_exp: config.auth_jwt_expiration_short,
-      kid,
+      exp: 300,
       public_key,
+      kid,
     }
-  }
-}
-
-impl<S: Sync, T> FromRequestParts<S> for JwtClaims<T>
-where
-  for<'de> T: JwtType + Deserialize<'de>,
-{
-  type Rejection = centaurus::error::ErrorReport;
-
-  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-    jwt_from_request::<JwtClaims<T>, T>(parts).await
-  }
-}
-
-impl<S: Sync, T> OptionalFromRequestParts<S> for JwtClaims<T>
-where
-  for<'de> T: JwtType + Deserialize<'de>,
-{
-  type Rejection = Infallible;
-
-  async fn from_request_parts(
-    parts: &mut Parts,
-    _state: &S,
-  ) -> Result<Option<Self>, Self::Rejection> {
-    Ok(jwt_from_request::<JwtClaims<T>, T>(parts).await.ok())
-  }
-}
-
-impl<T: Serialize> IntoResponse for TokenRes<T> {
-  fn into_response(self) -> Response {
-    let Ok(body) = serde_json::to_string(&self.body) else {
-      return anyhow!("Failed to serialize token response body").into_response();
-    };
-
-    Response::builder()
-      .header(CACHE_CONTROL, "no-store")
-      .header(PRAGMA, "no-cache")
-      .header(CONTENT_TYPE, "application/json")
-      .body(Body::new(body))
-      .unwrap()
   }
 }

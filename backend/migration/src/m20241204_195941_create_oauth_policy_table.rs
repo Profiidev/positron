@@ -1,6 +1,9 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use crate::m20241204_195934_create_oauth_scope_table::OAuthPolicy;
+use crate::{
+  m20241204_195924_create_oauth_client_table::OAuthClient,
+  m20241204_195934_create_oauth_scope_table::OAuthPolicy,
+};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -49,6 +52,37 @@ impl MigrationTrait for Migration {
           )
           .to_owned(),
       )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(OAuthClientOAuthScope::Table)
+          .if_not_exists()
+          .primary_key(
+            Index::create()
+              .table(OAuthClientOAuthScope::Table)
+              .col(OAuthClientOAuthScope::Client)
+              .col(OAuthClientOAuthScope::Scope),
+          )
+          .col(uuid(OAuthClientOAuthScope::Client))
+          .col(uuid(OAuthClientOAuthScope::Scope))
+          .foreign_key(
+            ForeignKey::create()
+              .from(OAuthClientOAuthScope::Table, OAuthClientOAuthScope::Client)
+              .to(OAuthClient::Table, OAuthClient::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .from(OAuthClientOAuthScope::Table, OAuthClientOAuthScope::Scope)
+              .to(OAuthScope::Table, OAuthScope::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
       .await
   }
 
@@ -77,4 +111,11 @@ enum OAuthScopeOAuthPolicy {
   Table,
   Scope,
   Policy,
+}
+
+#[derive(DeriveIden)]
+enum OAuthClientOAuthScope {
+  Table,
+  Client,
+  Scope,
 }

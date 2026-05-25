@@ -1,10 +1,9 @@
-use std::{cmp::Ordering, fmt::Display, str::FromStr};
+use std::{cmp::Ordering, convert::Infallible, fmt::Display, str::FromStr};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_SCOPES: [&str; 4] = ["openid", "email", "profile", "image"];
-
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, JsonSchema)]
 pub struct Scope(Vec<String>);
 
 impl Scope {
@@ -22,15 +21,6 @@ impl Scope {
         .cloned()
         .collect(),
     )
-  }
-
-  pub fn non_default(&self) -> Vec<String> {
-    self
-      .0
-      .iter()
-      .filter(|s| !DEFAULT_SCOPES.contains(&s.as_str()))
-      .cloned()
-      .collect()
   }
 
   #[inline]
@@ -62,10 +52,21 @@ impl Scope {
   pub fn contains(&self, scope: &str) -> bool {
     self.0.iter().any(|s| s == scope)
   }
+
+  #[inline]
+  pub fn inner(&self) -> &[String] {
+    &self.0
+  }
+}
+
+impl From<Vec<String>> for Scope {
+  fn from(value: Vec<String>) -> Self {
+    Self(value)
+  }
 }
 
 impl FromStr for Scope {
-  type Err = ();
+  type Err = Infallible;
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     Ok(Self::from_str_internal(s))
   }
@@ -91,8 +92,20 @@ impl<'de> Deserialize<'de> for Scope {
   where
     D: serde::Deserializer<'de>,
   {
-    let s = String::deserialize(deserializer)?;
-    Ok(s.parse().unwrap())
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+      String(String),
+      Vec(Vec<String>),
+    }
+
+    match StringOrVec::deserialize(deserializer)? {
+      StringOrVec::String(s) => {
+        let Ok(scope) = s.parse::<Scope>();
+        Ok(scope)
+      }
+      StringOrVec::Vec(v) => Ok(Scope(v)),
+    }
   }
 }
 

@@ -1,5 +1,5 @@
-use axum::{Extension, Router};
-use centaurus::router_extension;
+use aide::axum::ApiRouter;
+use axum::Extension;
 use state::ApodState;
 
 use crate::config::Config;
@@ -7,12 +7,10 @@ use crate::config::Config;
 mod apod;
 mod state;
 
-pub fn router() -> Router {
-  Router::new().nest("/apod", apod::router())
+pub fn router() -> ApiRouter {
+  ApiRouter::new().nest("/apod", apod::router())
 }
 
-router_extension!(
-  async fn services(self, config: &Config) -> Self {
-    self.layer(Extension(ApodState::init(config)))
-  }
-);
+pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+  router.layer(Extension(ApodState::init(config)))
+}

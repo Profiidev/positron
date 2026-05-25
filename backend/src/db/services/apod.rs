@@ -1,13 +1,12 @@
+use centaurus::db::tables::group::SimpleUserInfo;
 use entity::{apod, prelude::*};
-use sea_orm::{prelude::*, ActiveValue::Set};
+use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::Serialize;
-
-use crate::db::user::user::BasicUserInfo;
 
 #[derive(Serialize)]
 pub struct ApodInfo {
   pub title: String,
-  pub user: BasicUserInfo,
+  pub user: SimpleUserInfo,
   pub date: Date,
 }
 
@@ -29,7 +28,7 @@ impl<'db> ApodTable<'db> {
   pub async fn get_for_date(
     &self,
     date: Date,
-  ) -> Result<Option<(apod::Model, Option<BasicUserInfo>)>, DbErr> {
+  ) -> Result<Option<(apod::Model, Option<SimpleUserInfo>)>, DbErr> {
     let res = Apod::find()
       .filter(apod::Column::Date.eq(date))
       .find_with_related(User)
@@ -42,9 +41,9 @@ impl<'db> ApodTable<'db> {
 
     Ok(Some((
       res[0].0.clone(),
-      res[0].1.first().map(|user| BasicUserInfo {
+      res[0].1.first().map(|user| SimpleUserInfo {
         name: user.name.clone(),
-        uuid: user.id,
+        id: user.id,
       }),
     )))
   }
@@ -80,9 +79,9 @@ impl<'db> ApodTable<'db> {
           ApodInfo {
             title: apod.title,
             date: apod.date,
-            user: BasicUserInfo {
+            user: SimpleUserInfo {
               name: users[0].name.clone(),
-              uuid: users[0].id,
+              id: users[0].id,
             },
           }
         })
