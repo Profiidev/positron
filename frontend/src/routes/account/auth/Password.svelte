@@ -1,6 +1,5 @@
 <script lang="ts">
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
-  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { passwordChange } from './schema.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';

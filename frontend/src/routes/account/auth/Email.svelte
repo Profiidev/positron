@@ -7,11 +7,7 @@
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
-  import { cn } from '@profidev/pleiades/utils';
-  import {
-    Button,
-    buttonVariants
-  } from '@profidev/pleiades/components/ui/button';
+  import { Button } from '@profidev/pleiades/components/ui/button';
 
   interface Props {
     valid: boolean;
@@ -106,7 +102,11 @@
           variant="secondary"
           class="cursor-pointer"
           disabled={!mailActive}
-          onclick={() => (formOpen = true)}
+          onclick={async () => {
+            if (await startChange()) {
+              formOpen = true;
+            }
+          }}
         >
           Change Email
         </Button>
@@ -129,7 +129,6 @@
     onsubmit={changeConfirm}
     schema={emailChangeSchema}
     bind:this={form}
-    bind:open={formOpen}
   >
     {#snippet children({ props })}
       {#if !enteringCodes}

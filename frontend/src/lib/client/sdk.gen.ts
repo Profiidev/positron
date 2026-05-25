@@ -120,6 +120,9 @@ import type {
   PasswordAuthenticateErrors,
   PasswordSpecialAccessData,
   PasswordSpecialAccessErrors,
+  RegenerateSecretOauthClientData,
+  RegenerateSecretOauthClientErrors,
+  RegenerateSecretOauthClientResponses,
   RemovePasskeyData,
   RemovePasskeyErrors,
   RemovePasskeyResponses,
@@ -144,6 +147,9 @@ import type {
   SetGoodApodData,
   SetGoodApodErrors,
   SetGoodApodResponses,
+  SiteUrlData,
+  SiteUrlErrors,
+  SiteUrlResponses,
   StartAuthenticationData,
   StartAuthenticationErrors,
   StartAuthenticationResponses,
@@ -967,6 +973,35 @@ export const editOauthClient = <ThrowOnError extends boolean = false>(
     }
   });
 
+export const infoOauthClient = <ThrowOnError extends boolean = false>(
+  options: Options<InfoOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    InfoOauthClientResponses,
+    InfoOauthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/{uuid}', ...options });
+
+export const regenerateSecretOauthClient = <
+  ThrowOnError extends boolean = false
+>(
+  options: Options<RegenerateSecretOauthClientData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    RegenerateSecretOauthClientResponses,
+    RegenerateSecretOauthClientErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/{uuid}', ...options });
+
+export const siteUrl = <ThrowOnError extends boolean = false>(
+  options?: Options<SiteUrlData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    SiteUrlResponses,
+    SiteUrlErrors,
+    ThrowOnError
+  >({ url: '/api/oauth_management/client/site_url', ...options });
+
 export const listGroupsOAuthClient = <ThrowOnError extends boolean = false>(
   options?: Options<ListGroupsOAuthClientData, ThrowOnError>
 ) =>
@@ -993,12 +1028,3 @@ export const listScopesOAuthClient = <ThrowOnError extends boolean = false>(
     ListScopesOAuthClientErrors,
     ThrowOnError
   >({ url: '/api/oauth_management/client/scopes', ...options });
-
-export const infoOauthClient = <ThrowOnError extends boolean = false>(
-  options: Options<InfoOauthClientData, ThrowOnError>
-) =>
-  (options.client ?? client).get<
-    InfoOauthClientResponses,
-    InfoOauthClientErrors,
-    ThrowOnError
-  >({ url: '/api/oauth_management/client/{uuid}', ...options });

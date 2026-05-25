@@ -6,7 +6,10 @@ use centaurus::{
   },
   permission,
 };
-use rand::{RngExt, distr::Uniform};
+use rand::{
+  RngExt,
+  distr::{Alphanumeric, Uniform},
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -40,6 +43,11 @@ pub fn gen_code() -> String {
     .take(6)
     .map(char::from)
     .collect()
+}
+
+pub fn generate_secret() -> String {
+  let mut rng = rand::rng();
+  (0..32).map(|_| rng.sample(Alphanumeric) as char).collect()
 }
 
 pub fn permissions() -> Vec<&'static str> {

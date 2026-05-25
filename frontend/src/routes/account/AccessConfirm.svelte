@@ -19,6 +19,7 @@
     type PublicKeyCredentialRequestOptionsJSON
   } from '@simplewebauthn/browser';
   import { toast } from '@profidev/pleiades/components/util/general';
+  import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
 
   interface Props {
     specialAccessValid: boolean;
@@ -146,15 +147,11 @@
       submitText="Confirm Access"
     >
       {#snippet children({ props })}
-        <FormInput
+        <FormInputPassword
           {...props}
           label="Password"
           key="password"
           placeholder="Password"
-          autocapitalize="none"
-          autocomplete="current-password"
-          autocorrect="off"
-          type="password"
         />
       {/snippet}
     </BaseForm>

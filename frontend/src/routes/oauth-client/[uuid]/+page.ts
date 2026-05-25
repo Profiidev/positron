@@ -3,7 +3,8 @@ import {
   infoOauthClient,
   listGroupsOAuthClient,
   listScopesOAuthClient,
-  listUsersOAuthClient
+  listUsersOAuthClient,
+  siteUrl
 } from '$lib/client';
 
 export const load: PageLoad = ({ params, fetch }) => {
@@ -19,11 +20,13 @@ export const load: PageLoad = ({ params, fetch }) => {
   const scopesPromise = listScopesOAuthClient({ fetch }).then(
     ({ data }) => data
   );
+  const sitePromise = siteUrl({ fetch }).then(({ data }) => data);
 
   return {
     clientRes: resPromise,
     groupsPromise,
     scopesPromise,
+    sitePromise,
     usersPromise,
     uuid: params.uuid
   };

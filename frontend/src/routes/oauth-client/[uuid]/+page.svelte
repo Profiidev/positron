@@ -19,6 +19,7 @@
   import {
     deleteOauthClient,
     editOauthClient,
+    regenerateSecretOauthClient,
     type OAuthClientInfo,
     type SimpleGroupInfo,
     type SimpleOAuthScopeInfo,
@@ -28,11 +29,18 @@
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { clientSettings, formatData } from './schema.svelte.js';
   import FormTags from '$lib/components/FormTags.svelte';
+  import { Label } from '@profidev/pleiades/components/ui/label';
+  import { Input } from '@profidev/pleiades/components/ui/input';
+  import { onMount } from 'svelte';
+  import { CopyButton } from '@profidev/pleiades/components/ui-extra/copy-button';
 
   const { data } = $props();
 
   let deleteOpen = $state(false);
   let isLoading = $state(false);
+  let regenerateOpen = $state(false);
+  let siteUrl: string | undefined = $state();
+  let secret: string | undefined = $state();
   let user: UserInfo | undefined = $state();
   let client: OAuthClientInfo | undefined = $state();
   let form: BaseForm<typeof clientSettings> | undefined = $state();
@@ -44,6 +52,45 @@
   let readonly = $derived(
     !user?.permissions.includes(Permission.OAUTH_CLIENT_EDIT)
   );
+
+  let oauthUrls = $derived([
+    {
+      name: 'Authorization URL',
+      value: `${siteUrl}/api/oauth/authorize`
+    },
+    {
+      name: 'Token URL',
+      value: `${siteUrl}/api/oauth/token`
+    },
+    {
+      name: 'Userinfo URL',
+      value: `${siteUrl}/api/oauth/user`
+    },
+    {
+      name: 'Logout URL',
+      value: `${siteUrl}/api/oauth/logout/${client?.client_id}`
+    },
+    {
+      name: 'Revoke URL',
+      value: `${siteUrl}/api/oauth/revoke`
+    },
+    {
+      name: 'JWKs URL',
+      value: `${siteUrl}/api/oauth/jwks`
+    },
+    {
+      name: 'OIDC Configuration URL',
+      value: `${siteUrl}/api/oauth/.well-known/openid-configuration`
+    }
+  ]);
+
+  onMount(() => {
+    let newSecret = sessionStorage.getItem('newSecret');
+    if (newSecret) {
+      secret = newSecret;
+      sessionStorage.removeItem('newSecret');
+    }
+  });
 
   $effect(() => {
     data.clientRes.then((res) => {
@@ -85,6 +132,12 @@
     });
   });
 
+  $effect(() => {
+    data.sitePromise.then((d) => {
+      siteUrl = d?.url;
+    });
+  });
+
   const deleteItemConfirm = async () => {
     if (!client) return;
     isLoading = true;
@@ -100,6 +153,22 @@
       setTimeout(() => {
         goto('/oauth-client');
       });
+    }
+  };
+
+  const regenerateConfirm = async () => {
+    if (!client) return;
+    isLoading = true;
+    let res = await regenerateSecretOauthClient({
+      path: { uuid: client.client_id }
+    });
+    isLoading = false;
+
+    if (!res.data) {
+      return { error: 'Failed to regenerate client secret' };
+    } else {
+      toast.success(`Client Secret ${client.name} regenerated successfully`);
+      secret = res.data.secret;
     }
   };
 
@@ -167,6 +236,43 @@
             class="grid min-h-0 grow grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr]"
           >
             <div>
+              <Label>Client ID</Label>
+              <Input class="my-2" readonly value={client?.client_id} />
+              {#if client?.confidential}
+                <Label
+                  >Client Secret
+                  {#if secret}
+                    <span class="text-destructive">
+                      (Can not be viewed again!)
+                    </span>
+                  {/if}
+                </Label>
+                <div class="my-2 flex gap-2">
+                  {#if secret}
+                    <CopyButton
+                      text={secret}
+                      variant="outline"
+                      class="h-8 grow justify-start"
+                    >
+                      <span class="truncate">{secret}</span>
+                    </CopyButton>
+                  {:else}
+                    <Input
+                      value="Can not be viewed."
+                      readonly
+                      class="text-destructive"
+                    />
+                  {/if}
+                  <Button
+                    variant="destructive"
+                    class="cursor-pointer"
+                    onclick={() => (regenerateOpen = true)}
+                  >
+                    <RotateCcw />
+                    Regenerate
+                  </Button>
+                </div>
+              {/if}
               <FormInput
                 {...props}
                 key="name"
@@ -223,6 +329,20 @@
                 disabled={readonly}
               />
             </div>
+            <Separator orientation="vertical" class="hidden lg:block" />
+            <div>
+              {#each oauthUrls as info}
+                <Label for={info.name}>{info.name}</Label>
+                <CopyButton
+                  class="my-2 h-8 w-full justify-start"
+                  id={info.name}
+                  text={info.value}
+                  variant="outline"
+                >
+                  <span class="truncate">{info.value}</span>
+                </CopyButton>
+              {/each}
+            </div>
           </div>
         </ScrollArea>
       {/snippet}
@@ -261,6 +381,16 @@
   confirmVariant="destructive"
   onsubmit={deleteItemConfirm}
   bind:open={deleteOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
+<FormDialog
+  title={`Regenerate Client Secret`}
+  description={`Do you really want to regenerate the client secret for ${client?.name}?`}
+  confirm="Regenerate"
+  confirmVariant="destructive"
+  onsubmit={regenerateConfirm}
+  bind:open={regenerateOpen}
   bind:isLoading
   schema={z.object({})}
 />

@@ -207,6 +207,10 @@ export type OAuthClientPath = {
   uuid: string;
 };
 
+export type OAuthRegenerateResponse = {
+  secret: string;
+};
+
 export type PasskeyEdit = {
   name: string;
   old_name: string;
@@ -280,6 +284,10 @@ export type SimpleOAuthScopeInfo = {
 export type SimpleUserInfo = {
   id: string;
   name: string;
+};
+
+export type SiteUrlResponse = {
+  url: string;
 };
 
 export type SpecialAccess = {
@@ -2207,6 +2215,84 @@ export type EditOauthClientResponses = {
   200: unknown;
 };
 
+export type InfoOauthClientData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/oauth_management/client/{uuid}';
+};
+
+export type InfoOauthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoOauthClientResponses = {
+  200: OAuthClientInfo;
+};
+
+export type InfoOauthClientResponse =
+  InfoOauthClientResponses[keyof InfoOauthClientResponses];
+
+export type RegenerateSecretOauthClientData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/oauth_management/client/{uuid}';
+};
+
+export type RegenerateSecretOauthClientErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RegenerateSecretOauthClientResponses = {
+  200: OAuthRegenerateResponse;
+};
+
+export type RegenerateSecretOauthClientResponse =
+  RegenerateSecretOauthClientResponses[keyof RegenerateSecretOauthClientResponses];
+
+export type SiteUrlData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/oauth_management/client/site_url';
+};
+
+export type SiteUrlErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type SiteUrlResponses = {
+  200: SiteUrlResponse;
+};
+
+export type SiteUrlResponse2 = SiteUrlResponses[keyof SiteUrlResponses];
+
 export type ListGroupsOAuthClientData = {
   body?: never;
   path?: never;
@@ -2281,30 +2367,3 @@ export type ListScopesOAuthClientResponses = {
 
 export type ListScopesOAuthClientResponse =
   ListScopesOAuthClientResponses[keyof ListScopesOAuthClientResponses];
-
-export type InfoOauthClientData = {
-  body?: never;
-  path: {
-    uuid: string;
-  };
-  query?: never;
-  url: '/api/oauth_management/client/{uuid}';
-};
-
-export type InfoOauthClientErrors = {
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type InfoOauthClientResponses = {
-  200: OAuthClientInfo;
-};
-
-export type InfoOauthClientResponse =
-  InfoOauthClientResponses[keyof InfoOauthClientResponses];

@@ -5,7 +5,10 @@ use aide::axum::{
 use argon2::password_hash::SaltString;
 use axum::{Json, extract::Path};
 use centaurus::{
-  backend::auth::{jwt_auth::JwtAuth, pw_state::PasswordState},
+  backend::{
+    auth::{jwt_auth::JwtAuth, pw_state::PasswordState},
+    config::SiteConfig,
+  },
   bail,
   db::{
     init::Connection,
@@ -14,7 +17,6 @@ use centaurus::{
   error::Result,
 };
 use entity::o_auth_client;
-use rand::{RngExt, distr::Alphanumeric};
 use rsa::rand_core::OsRng;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -27,7 +29,7 @@ use crate::{
     oauth::{oauth_client::OAuthClientInfo, oauth_scope::SimpleOAuthScopeInfo},
   },
   oauth::scope::Scope,
-  utils::{OauthClientEdit, OauthClientView, UpdateMessage, Updater},
+  utils::{OauthClientEdit, OauthClientView, UpdateMessage, Updater, generate_secret},
 };
 
 pub fn router() -> ApiRouter {
@@ -37,6 +39,11 @@ pub fn router() -> ApiRouter {
     .api_route("/", post_with(create, |op| op.id("createOauthClient")))
     .api_route("/", put_with(edit, |op| op.id("editOauthClient")))
     .api_route("/{uuid}", get_with(info, |op| op.id("infoOauthClient")))
+    .api_route(
+      "/{uuid}",
+      post_with(secret_regenerate, |op| op.id("regenerateSecretOauthClient")),
+    )
+    .api_route("/site_url", get_with(site_url, |op| op.id("siteUrl")))
     .api_route(
       "/groups",
       get_with(simple_group_list, |op| op.id("listGroupsOAuthClient")),
@@ -49,9 +56,6 @@ pub fn router() -> ApiRouter {
       "/scopes",
       get_with(simple_scope_list, |op| op.id("listScopesOAuthClient")),
     )
-  //.route("/frontend_url", get(frontend_url))
-  //.route("/start_create", post(start_create))
-  //.route("/reset", post(reset))
 }
 
 async fn list(
@@ -128,10 +132,7 @@ async fn create(
     bail!(CONFLICT, "client with the given name already exists");
   }
 
-  let secret: String = {
-    let mut rng = rand::rng();
-    (0..32).map(|_| rng.sample(Alphanumeric) as char).collect()
-  };
+  let secret = generate_secret();
   let client_id = Uuid::new_v4();
 
   let salt = SaltString::generate(OsRng {}).to_string();
@@ -224,4 +225,35 @@ async fn edit(
     .await;
 
   Ok(())
+}
+
+#[derive(Serialize, JsonSchema)]
+struct OAuthRegenerateResponse {
+  secret: String,
+}
+
+async fn secret_regenerate(
+  _auth: JwtAuth<OauthClientEdit>,
+  db: Connection,
+  pw: PasswordState,
+  Path(path): Path<OAuthClientPath>,
+) -> Result<Json<OAuthRegenerateResponse>> {
+  let secret = generate_secret();
+  let client = db.oauth_client().get_client(path.uuid).await?;
+
+  let hash = pw.pw_hash_raw(&client.salt, &secret)?;
+  db.oauth_client().set_secret_hash(path.uuid, hash).await?;
+
+  Ok(Json(OAuthRegenerateResponse { secret }))
+}
+
+#[derive(Serialize, JsonSchema)]
+struct SiteUrlResponse {
+  url: Url,
+}
+
+async fn site_url(_auth: JwtAuth, config: SiteConfig) -> Result<Json<SiteUrlResponse>> {
+  Ok(Json(SiteUrlResponse {
+    url: config.site_url,
+  }))
 }
