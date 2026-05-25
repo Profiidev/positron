@@ -26,12 +26,12 @@ async-nats = "0.48.0"
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.22.1"
-centaurus = { version = "0.11.2", features = [
+centaurus = { version = "0.12.0", features = [
   "fix-migrations",
   "uuid",
   "webauthn",
   "storage"
-], rev = "4db7e2cc9f0a48026b0f93b2b43bced8e012c462", git = "https://github.com/profiidev/centaurus.git" }
+] }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"

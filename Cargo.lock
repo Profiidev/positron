@@ -887,7 +887,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.22.1",
- "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
+ "centaurus",
  "chrono",
  "dashmap",
  "dotenvy",
@@ -1154,8 +1154,9 @@ dependencies = [
 
 [[package]]
 name = "centaurus"
-version = "0.11.2"
-source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63a6a0aff1a841def00e3ef061e1888cc1f012ff9b2ca1759d632055aeeba15a"
 dependencies = [
  "addr",
  "aide",
@@ -1166,7 +1167,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.22.1",
- "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
+ "centaurus-derive",
  "chrono",
  "color-eyre",
  "dashmap",
@@ -1205,41 +1206,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "centaurus"
-version = "0.11.2"
-source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
-dependencies = [
- "base64 0.22.1",
- "centaurus-derive 0.1.3 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
- "chrono",
- "eyre",
- "image",
- "md5",
- "reqwest",
- "sea-orm",
- "sea-orm-migration",
- "serde",
- "serde_json",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "centaurus-derive"
-version = "0.1.3"
-source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ffac57a5a93f92106e261ea55a863e306b47e6abe7c6fb3c83f2e804b02cc2"
 dependencies = [
- "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462)",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "centaurus-derive"
-version = "0.1.3"
-source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
-dependencies = [
- "centaurus-macro-utils 0.1.1 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
+ "centaurus-macro-utils",
  "quote",
  "syn 2.0.117",
 ]
@@ -1247,16 +1219,8 @@ dependencies = [
 [[package]]
 name = "centaurus-macro-utils"
 version = "0.1.1"
-source = "git+https://github.com/profiidev/centaurus.git?rev=4db7e2cc9f0a48026b0f93b2b43bced8e012c462#4db7e2cc9f0a48026b0f93b2b43bced8e012c462"
-dependencies = [
- "syn 2.0.117",
- "toml_edit",
-]
-
-[[package]]
-name = "centaurus-macro-utils"
-version = "0.1.1"
-source = "git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845#7301178c5bfe1511c774e4aa0efc5f0466117845"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e71a82280f24a3b90dcadaef97f5ba40b91a45806b978f588fa6f5ff3e857cf"
 dependencies = [
  "syn 2.0.117",
  "toml_edit",
@@ -3260,7 +3224,7 @@ dependencies = [
 name = "migration"
 version = "0.1.0"
 dependencies = [
- "centaurus 0.11.2 (git+https://github.com/profiidev/centaurus.git?rev=7301178c5bfe1511c774e4aa0efc5f0466117845)",
+ "centaurus",
  "sea-orm-migration",
  "tokio",
 ]
