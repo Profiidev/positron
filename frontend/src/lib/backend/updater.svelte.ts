@@ -11,7 +11,8 @@ export enum UpdateType {
   Group = 'Group',
   OAuthClient = 'OAuthClient',
   OAuthScope = 'OAuthScope',
-  OAuthPolicy = 'OAuthPolicy'
+  OAuthPolicy = 'OAuthPolicy',
+  Passkey = 'Passkey'
 }
 
 export type UpdateMessage =
@@ -25,7 +26,10 @@ export type UpdateMessage =
       uuid: string;
     }
   | {
-      type: UpdateType.Settings | UpdateType.UserPermissions;
+      type:
+        | UpdateType.Settings
+        | UpdateType.UserPermissions
+        | UpdateType.Passkey;
     };
 
 export const connectWebsocket = (user: string) => connect(user, handleMessage);
@@ -77,6 +81,9 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate(`/api/oauth_management/policy/${msg.uuid}`).catch(() => {});
       invalidate(`/api/oauth_management/scope/policies`).catch(() => {});
       break;
+    }
+    case UpdateType.Passkey: {
+      invalidate('/api/auth/passkey/list').catch(() => {});
     }
     default: {
       break;
