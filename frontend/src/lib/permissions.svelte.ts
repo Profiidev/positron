@@ -12,3 +12,5 @@ export enum Permission {
 }
 
 export const avatarUrl = '/api/user/info/avatar';
+
+export const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'image'];

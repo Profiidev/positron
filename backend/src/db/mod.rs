@@ -10,7 +10,6 @@ use crate::db::user::user_ext::UserExtTable;
 pub mod oauth;
 pub mod services;
 pub mod user;
-mod util;
 
 pub trait DBTrait {
   fn user_ext(&self) -> UserExtTable<'_>;

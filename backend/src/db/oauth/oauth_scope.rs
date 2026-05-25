@@ -31,13 +31,15 @@ impl<'db> OAuthScopeTable<'db> {
     Self { db }
   }
 
-  pub async fn get_scope_by_name(&self, scope: String) -> Result<o_auth_scope::Model, DbErr> {
+  pub async fn get_scope_by_scope(
+    &self,
+    scope: String,
+  ) -> Result<Option<o_auth_scope::Model>, DbErr> {
     let res = OAuthScope::find()
       .filter(o_auth_scope::Column::Scope.eq(scope))
       .one(self.db)
       .await?;
-
-    res.ok_or(DbErr::RecordNotFound("Not Found".into()))
+    Ok(res)
   }
 
   pub async fn get_policy_ids(&self, id: Uuid) -> Result<Vec<Uuid>, DbErr> {
@@ -54,7 +56,7 @@ impl<'db> OAuthScopeTable<'db> {
     scope: String,
     groups: &[SimpleGroupInfo],
   ) -> Result<HashMap<String, String>, DbErr> {
-    let scope = self.get_scope_by_name(scope).await?;
+    let scope = self.get_scope_by_scope(scope).await?.unwrap();
     let policies = self.get_policy_ids(scope.id).await?;
 
     let mut data = HashMap::new();

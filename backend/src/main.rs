@@ -67,6 +67,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   centaurus::backend::endpoints::setup::create_admin_group(&db, utils::permissions())
     .await
     .expect("Failed to create admin group");
+  oauth_management::init(&db).await;
 
   router = user::state(router);
   router = auth::state(router, &config, &db).await;

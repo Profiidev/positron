@@ -13,11 +13,8 @@ use crate::{
     DBTrait,
     oauth::{oauth_policy::SimpleOAuthPolicyInfo, oauth_scope::OAuthScopeInfo},
   },
-  utils::{
-    OAuthScopeEdit, OAuthScopeView,
-    UpdateMessage::{self, OAuthScope},
-    Updater,
-  },
+  oauth_management::DEFAULT_SCOPES,
+  utils::{OAuthScopeEdit, OAuthScopeView, UpdateMessage, Updater},
 };
 
 pub fn router() -> ApiRouter {
@@ -91,6 +88,14 @@ async fn delete(
   updater: Updater,
   Json(req): Json<DeleteReq>,
 ) -> Result<()> {
+  let Some(scope) = db.oauth_scope().scope_info(req.uuid).await? else {
+    bail!(NOT_FOUND, "scope not found");
+  };
+
+  if DEFAULT_SCOPES.contains(&scope.scope.as_str()) {
+    bail!(FORBIDDEN, "default scopes cannot be deleted");
+  }
+
   db.oauth_scope().delete_scope(req.uuid).await?;
   updater
     .broadcast(UpdateMessage::OAuthScope { uuid: req.uuid })
@@ -127,6 +132,14 @@ async fn edit(
     .await?
   {
     bail!(NOT_ACCEPTABLE, "scope with the given scope already exists");
+  }
+
+  let Some(scope) = db.oauth_scope().scope_info(req.uuid).await? else {
+    bail!(NOT_FOUND, "scope not found");
+  };
+
+  if DEFAULT_SCOPES.contains(&scope.scope.as_str()) && req.scope != scope.scope {
+    bail!(FORBIDDEN, "default scopes cannot be edited");
   }
 
   db.oauth_scope()

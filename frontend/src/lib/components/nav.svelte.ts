@@ -4,6 +4,7 @@ import { Permission } from '$lib/permissions.svelte';
 import Users from '@lucide/svelte/icons/users';
 import User from '@lucide/svelte/icons/user';
 import KeyRound from '@lucide/svelte/icons/key-round';
+import Goal from '@lucide/svelte/icons/goal';
 import type { NavGroup } from '@profidev/pleiades/components/nav/sidebar/types';
 
 export const items: NavGroup[] = [
@@ -21,7 +22,7 @@ export const items: NavGroup[] = [
       },
       {
         href: '/oauth-scope',
-        icon: KeyRound,
+        icon: Goal,
         label: 'Scopes',
         requiredPermission: Permission.OAUTH_SCOPE_VIEW
       }

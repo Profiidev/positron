@@ -3,9 +3,9 @@ use centaurus::{db::init::Connection, error::Result};
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::db::DBTrait;
+use crate::{db::DBTrait, oauth_management::DEFAULT_SCOPES};
 
-use super::{scope::DEFAULT_SCOPES, state::ConfigurationState};
+use super::state::ConfigurationState;
 
 pub fn router() -> Router {
   Router::new().route("/.well-known/openid-configuration", get(config))

@@ -277,30 +277,6 @@ impl FileStorage {
       }
     }
   }
-
-  pub async fn delete_file(&self, name: &str) -> Result<()> {
-    if !self.exists(name).await? {
-      return Ok(());
-    }
-
-    match self {
-      Self::Local(path) => {
-        let file_path = path.join(name);
-        fs::remove_file(file_path).await?;
-      }
-      Self::S3 { client, bucket } => {
-        client
-          .delete_object()
-          .bucket(bucket)
-          .key(name)
-          .send()
-          .await
-          .context("Failed to delete file from S3 Bucket")?;
-      }
-    }
-
-    Ok(())
-  }
 }
 
 pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {

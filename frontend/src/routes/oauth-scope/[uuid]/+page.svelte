@@ -4,7 +4,7 @@
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
-  import { Permission } from '$lib/permissions.svelte';
+  import { DEFAULT_SCOPES, Permission } from '$lib/permissions.svelte';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
@@ -134,7 +134,7 @@
       class="ml-auto cursor-pointer"
       onclick={() => (deleteOpen = true)}
       variant="destructive"
-      disabled={readonly}
+      disabled={readonly || DEFAULT_SCOPES.includes(scope?.scope ?? '')}
     >
       <Trash />
       Delete
@@ -167,7 +167,8 @@
                 key="scope"
                 label="Scope"
                 placeholder="Enter scope"
-                disabled={readonly}
+                disabled={readonly ||
+                  DEFAULT_SCOPES.includes(scope?.scope ?? '')}
               />
               <FormSelect
                 {...props}

@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/table-core';
 import * as DataTable from '@profidev/pleiades/components/ui/data-table';
 import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
-import { Permission } from '$lib/permissions.svelte';
+import { DEFAULT_SCOPES, Permission } from '$lib/permissions.svelte';
 import type {
   OAuthScopeInfo,
   SimpleOAuthPolicyInfo,
@@ -33,7 +33,8 @@ export const columns = ({
         : !user?.permissions.includes(Permission.OAUTH_SCOPE_EDIT);
 
       return DataTable.renderComponent(Actions, {
-        delete_disabled: disabled,
+        delete_disabled:
+          disabled || DEFAULT_SCOPES.includes(row.original.scope),
         edit: `/oauth-scope/${row.original.uuid}`,
         edit_disabled: disabled,
         remove: () => deleteScope(row.original)

@@ -3,7 +3,7 @@ use std::{cmp::Ordering, convert::Infallible, fmt::Display, str::FromStr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_SCOPES: [&str; 4] = ["openid", "email", "profile", "image"];
+use crate::oauth_management::DEFAULT_SCOPES;
 
 #[derive(Default, Clone, Debug, JsonSchema)]
 pub struct Scope(Vec<String>);
