@@ -10,8 +10,6 @@ use centaurus::{
   db::init::init_db,
   logging::init_logging,
 };
-#[cfg(debug_assertions)]
-use dotenvy::dotenv;
 use tracing::info;
 
 use crate::{config::Config, utils::UpdateMessage};
@@ -32,9 +30,6 @@ mod utils;
 mod well_known;
 
 async fn serve() {
-  #[cfg(debug_assertions)]
-  dotenv().ok();
-
   let config = Config::parse();
   init_logging(config.base.log_level);
 

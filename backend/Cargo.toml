@@ -28,7 +28,7 @@ centaurus = { version = "0.12.0", features = [
   "uuid",
   "webauthn",
   "storage"
-] }
+], rev = "d56c745271639e4aa29bba02b922421880b0060e", git = "https://github.com/profiidev/centaurus.git" }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"
