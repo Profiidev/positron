@@ -12,7 +12,8 @@ export enum UpdateType {
   OAuthClient = 'OAuthClient',
   OAuthScope = 'OAuthScope',
   OAuthPolicy = 'OAuthPolicy',
-  Passkey = 'Passkey'
+  Passkey = 'Passkey',
+  Apod = 'Apod'
 }
 
 export type UpdateMessage =
@@ -29,7 +30,8 @@ export type UpdateMessage =
       type:
         | UpdateType.Settings
         | UpdateType.UserPermissions
-        | UpdateType.Passkey;
+        | UpdateType.Passkey
+        | UpdateType.Apod;
     };
 
 export const connectWebsocket = (user: string) => connect(user, handleMessage);
@@ -84,6 +86,10 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     }
     case UpdateType.Passkey: {
       invalidate('/api/auth/passkey/list').catch(() => {});
+    }
+    case UpdateType.Apod: {
+      invalidate('/api/services/apod').catch(() => {});
+      invalidate('/api/services/apod/get_image_info').catch(() => {});
     }
     default: {
       break;

@@ -132,17 +132,18 @@ export type FinishAuthPath = {
   auth_id: string;
 };
 
-export type GetInfoRes = {
-  title: string;
-  user?: SimpleUserInfo | null;
+export type GetImageReq = {
+  date: Date;
+  preview: boolean;
 };
 
-export type GetReq = {
+export type GetInfoReq = {
   date: Date;
 };
 
-export type GetRes = {
-  image: string;
+export type GetInfoRes = {
+  title: string;
+  user?: SimpleUserInfo | null;
 };
 
 export type GroupCreateResponse = {
@@ -189,7 +190,6 @@ export type ListGroupResponse = {
 
 export type ListRes = {
   date: Date;
-  image: string;
   title: string;
   user: SimpleUserInfo;
 };
@@ -1346,45 +1346,6 @@ export type ChangeUserEmailResponses = {
   200: unknown;
 };
 
-export type UpdateAvatarData = {
-  body: AvatarUpdate;
-  path?: never;
-  query?: never;
-  url: '/api/user/account/avatar';
-};
-
-export type UpdateAvatarErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
-  /**
-   * An error occurred
-   */
-  '4XX': unknown;
-  /**
-   * An error occurred
-   */
-  '5XX': unknown;
-};
-
-export type UpdateAvatarError = UpdateAvatarErrors[keyof UpdateAvatarErrors];
-
-export type UpdateAvatarResponses = {
-  /**
-   * no content
-   */
-  200: unknown;
-};
-
 export type UpdatePasswordData = {
   body: PasswordUpdate;
   path?: never;
@@ -1538,6 +1499,45 @@ export type ConfirmEmailChangeError =
   ConfirmEmailChangeErrors[keyof ConfirmEmailChangeErrors];
 
 export type ConfirmEmailChangeResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type UpdateAvatarData = {
+  body: AvatarUpdate;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/avatar';
+};
+
+export type UpdateAvatarErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type UpdateAvatarError = UpdateAvatarErrors[keyof UpdateAvatarErrors];
+
+export type UpdateAvatarResponses = {
   /**
    * no content
    */
@@ -2070,7 +2070,7 @@ export type SetGoodApodResponses = {
 };
 
 export type GetApodImageInfoData = {
-  body: GetReq;
+  body: GetInfoReq;
   path?: never;
   query?: never;
   url: '/api/services/apod/get_image_info';
@@ -2110,7 +2110,7 @@ export type GetApodImageInfoResponse =
   GetApodImageInfoResponses[keyof GetApodImageInfoResponses];
 
 export type GetApodImageData = {
-  body: GetReq;
+  body: GetImageReq;
   path?: never;
   query?: never;
   url: '/api/services/apod/get_image';
@@ -2140,13 +2140,6 @@ export type GetApodImageErrors = {
 };
 
 export type GetApodImageError = GetApodImageErrors[keyof GetApodImageErrors];
-
-export type GetApodImageResponses = {
-  200: GetRes;
-};
-
-export type GetApodImageResponse =
-  GetApodImageResponses[keyof GetApodImageResponses];
 
 export type AuthorizeConfirmData = {
   body?: never;

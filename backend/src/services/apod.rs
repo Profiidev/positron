@@ -4,7 +4,7 @@ use aide::axum::{
   ApiRouter,
   routing::{get_with, post_with},
 };
-use axum::{Json, body::Body, response::Response, routing::get};
+use axum::{Json, body::Body, extract::Query, response::Response, routing::get};
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
@@ -13,7 +13,7 @@ use centaurus::{
   eyre::Context,
   storage::FileStorage,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use entity::apod;
 use http::StatusCode;
 use image::{ImageFormat, imageops::FilterType};
@@ -41,7 +41,7 @@ pub fn router() -> ApiRouter {
     )
     .api_route(
       "/get_image",
-      post_with(get_image, |op| op.id("getApodImage")),
+      get_with(get_image, |op| op.id("getApodImage")),
     )
     .route("/random", get(random))
 }
@@ -173,17 +173,17 @@ async fn get_image_info(
 
 #[derive(Deserialize, Debug, JsonSchema)]
 struct GetImageReq {
-  date: DateTime<Utc>,
-  preview: bool,
+  date: NaiveDate,
+  preview: Option<bool>,
 }
 
 async fn get_image(
   _auth: JwtAuth<ApodList>,
   s3: FileStorage,
-  Json(req): Json<GetImageReq>,
+  Query(req): Query<GetImageReq>,
 ) -> Result<Response> {
-  let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-  let file_name = if req.preview {
+  let file_name = req.date.format("%Y-%m-%d").to_string();
+  let file_name = if req.preview.unwrap_or(false) {
     format!("{}_preview.webp", file_name)
   } else {
     format!("{}.webp", file_name)
