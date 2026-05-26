@@ -850,6 +850,7 @@ dependencies = [
  "base64 0.22.1",
  "centaurus",
  "chrono",
+ "clap",
  "dashmap",
  "dotenvy",
  "entity",

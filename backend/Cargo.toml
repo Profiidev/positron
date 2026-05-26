@@ -33,6 +33,7 @@ chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"
 ] }
+clap = { version = "4.6.1", features = ["derive"] }
 dashmap = "6.2.1"
 dotenvy = "0.15.7"
 entity = { path = "entity" }

@@ -32,7 +32,7 @@ services:
     ports:
       - '5175:8000'
     entrypoint: ['tini', '--']
-    command: ['cargo', 'watch', '-x', 'run']
+    command: ['cargo', 'watch', '-x', 'run serve']
     depends_on:
       postgres:
         condition: service_healthy

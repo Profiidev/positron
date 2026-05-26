@@ -1,4 +1,7 @@
+use backend::Cli;
+use clap::Parser;
+
 #[tokio::main]
 async fn main() {
-  backend::serve().await;
+  Cli::parse().run().await;
 }

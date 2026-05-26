@@ -16,7 +16,10 @@ use tracing::info;
 
 use crate::{config::Config, utils::UpdateMessage};
 
+pub use cli::Cli;
+
 mod auth;
+mod cli;
 mod config;
 mod db;
 mod oauth;
@@ -28,7 +31,7 @@ mod user;
 mod utils;
 mod well_known;
 
-pub async fn serve() {
+async fn serve() {
   #[cfg(debug_assertions)]
   dotenv().ok();
 
