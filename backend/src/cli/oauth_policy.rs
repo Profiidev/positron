@@ -3,6 +3,7 @@ use centaurus::{
   db::{init::Connection, tables::ConnectionExt},
   error::Result,
 };
+use tracing::info;
 use uuid::Uuid;
 
 use crate::db::DBTrait;
@@ -65,9 +66,11 @@ impl OAuthPolicyCommands {
             .await?;
         }
 
+        info!("Policy created with UUID: {}", uuid);
         println!("{}", uuid);
       }
       OAuthPolicyCommands::Delete { uuid } => {
+        info!("Deleting policy with UUID: {}", uuid);
         db.oauth_policy().delete_policy(*uuid).await?;
       }
     }
