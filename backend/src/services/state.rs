@@ -1,9 +1,9 @@
 use aide::OperationIo;
 use axum::{Extension, extract::FromRequestParts};
+use centaurus::error::Result;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::instrument;
 
 use crate::config::Config;
 
@@ -36,8 +36,7 @@ impl ApodState {
 }
 
 impl ApodState {
-  #[instrument(skip(self))]
-  pub async fn get_image(&self, date: DateTime<Utc>) -> Result<Option<Image>, reqwest::Error> {
+  pub async fn get_image(&self, date: DateTime<Utc>) -> Result<Option<Image>> {
     tracing::debug!("Loading new Apod from {}", date);
     let formatted_date = date.date_naive().format("%Y-%m-%d").to_string();
 
@@ -56,13 +55,11 @@ impl ApodState {
       return Ok(None);
     }
 
-    let image_res = self
-      .client
-      .get(res.hdurl.unwrap())
-      .send()
-      .await?
-      .bytes()
-      .await?;
+    let Some(image) = res.hdurl else {
+      return Ok(None);
+    };
+
+    let image_res = self.client.get(image).send().await?.bytes().await?;
 
     Ok(Some(Image {
       image: image_res.to_vec(),
