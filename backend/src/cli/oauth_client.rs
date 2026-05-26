@@ -47,7 +47,6 @@ impl OAuthClientCommands {
         {
           bail!("Client with name {} already exists", name);
         }
-        println!("Creating OAuth client {:?}...", groups);
 
         let auth_pepper = auth_pepper
           .clone()
