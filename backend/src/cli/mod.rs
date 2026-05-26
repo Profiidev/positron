@@ -2,7 +2,10 @@ use centaurus::{db::init::connect_db, error::Result, logging::init_logging_stder
 use clap::{Parser, Subcommand};
 use tracing::{error, level_filters::LevelFilter};
 
-use crate::cli::{group::GroupCommands, oauth_client::OAuthClientCommands};
+use crate::{
+  cli::{group::GroupCommands, oauth_client::OAuthClientCommands},
+  config::Config,
+};
 
 mod group;
 mod oauth_client;
@@ -12,7 +15,7 @@ pub struct Cli {
   #[clap(long, env)]
   db_url: String,
   #[clap(long, env)]
-  log_level: LevelFilter,
+  log_level: Option<LevelFilter>,
 
   #[command(subcommand)]
   command: Commands,
@@ -44,7 +47,8 @@ impl Cli {
   }
 
   async fn cli(&self) -> Result<()> {
-    init_logging_stderr(self.log_level);
+    let log_level = self.log_level.unwrap_or(Config::default().base.log_level);
+    init_logging_stderr(log_level);
 
     let db = connect_db(&Default::default(), &self.db_url).await;
 
