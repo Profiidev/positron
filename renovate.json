@@ -14,13 +14,6 @@
     }
   ],
   "osvVulnerabilityAlerts": true,
-  "ignoreDeps": [
-    "tracing-subscriber",
-    "tracing-indicatif",
-    "harmonia-store-remote",
-    "harmonia-store-core",
-    "harmonia-protocol"
-  ],
   "vulnerabilityAlerts": {
     "enabled": true,
     "vulnerabilityFixStrategy": "highest",

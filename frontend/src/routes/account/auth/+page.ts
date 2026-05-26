@@ -1,7 +1,7 @@
 import { listPasskeys, mailActive } from '$lib/client';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ fetch }) => {
+export const load: PageLoad = ({ fetch }) => {
   const passkeyPromise = listPasskeys({ fetch }).then(({ data }) => data);
   const mailPromise = mailActive({ fetch }).then(
     (res) => res.data?.active ?? false
