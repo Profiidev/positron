@@ -2,9 +2,10 @@ use centaurus::{db::init::connect_db, error::Result, logging::init_logging_stder
 use clap::{Parser, Subcommand};
 use tracing::{error, level_filters::LevelFilter};
 
-use crate::cli::group::GroupCommands;
+use crate::cli::{group::GroupCommands, oauth_client::OAuthClientCommands};
 
 mod group;
+mod oauth_client;
 
 #[derive(Parser)]
 pub struct Cli {
@@ -23,6 +24,10 @@ enum Commands {
   Group {
     #[command(subcommand)]
     command: GroupCommands,
+  },
+  OauthClient {
+    #[command(subcommand)]
+    command: OAuthClientCommands,
   },
 }
 
@@ -49,6 +54,7 @@ impl Cli {
 
     match &self.command {
       Commands::Group { command } => command.run(db).await?,
+      Commands::OauthClient { command } => command.run(db).await?,
       Commands::Serve => unreachable!(),
     }
 
