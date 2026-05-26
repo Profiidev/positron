@@ -28,11 +28,36 @@
     <Collapsible.Trigger>
       {#snippet child({ props })}
         <button {...props} class="flex w-full cursor-pointer">
+          <span>Services</span>
+          {#if props['data-state'] === 'closed'}
+            <ChevronDown class="text-muted-foreground ml-auto" />
+          {:else}
+            <ChevronUp class="text-muted-foreground ml-auto" />
+          {/if}
+        </button>
+      {/snippet}
+    </Collapsible.Trigger>
+    <Collapsible.Content>
+      {@render permission({
+        header: 'APOD',
+        read: Permission.APOD_LIST,
+        read_key: 'apod$list',
+        read_label: 'List APODs',
+        write: Permission.APOD_SELECT,
+        write_key: 'apod$select',
+        write_label: 'Select APODs'
+      })}
+    </Collapsible.Content>
+  </Collapsible.Root>
+  <Collapsible.Root class="my-1 w-full" open={true}>
+    <Collapsible.Trigger>
+      {#snippet child({ props })}
+        <button {...props} class="flex w-full cursor-pointer">
           <span>OAuth / Oidc</span>
           {#if props['data-state'] === 'closed'}
-            <ChevronDown class="ml-auto" />
+            <ChevronDown class="text-muted-foreground ml-auto" />
           {:else}
-            <ChevronUp class="ml-auto" />
+            <ChevronUp class="text-muted-foreground ml-auto" />
           {/if}
         </button>
       {/snippet}
@@ -73,9 +98,9 @@
         <button {...props} class="flex w-full cursor-pointer">
           <span>Administration</span>
           {#if props['data-state'] === 'closed'}
-            <ChevronDown class="ml-auto" />
+            <ChevronDown class="text-muted-foreground ml-auto" />
           {:else}
-            <ChevronUp class="ml-auto" />
+            <ChevronUp class="text-muted-foreground ml-auto" />
           {/if}
         </button>
       {/snippet}
@@ -136,9 +161,9 @@
           <button {...props} class="flex w-full cursor-pointer">
             <span class="text-sm">{header}</span>
             {#if props['data-state'] === 'closed'}
-              <ChevronDown class="ml-auto" />
+              <ChevronDown class="text-muted-foreground ml-auto" />
             {:else}
-              <ChevronUp class="ml-auto" />
+              <ChevronUp class="text-muted-foreground ml-auto" />
             {/if}
           </button>
         {/snippet}
