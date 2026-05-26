@@ -62,7 +62,7 @@
   };
 </script>
 
-<div class="p-4">
+<div class="flex max-h-screen flex-col p-4">
   <div class="ml-7 flex items-center md:m-0">
     <h3 class="text-xl font-medium">Users</h3>
     <Button
@@ -77,7 +77,7 @@
   <Table
     data={data.users}
     {columns}
-    class="mt-4"
+    class="mt-4 min-h-0 grow"
     columnData={{
       deleteUser: startDeleteUser,
       canEdit
