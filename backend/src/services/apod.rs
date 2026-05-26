@@ -47,18 +47,18 @@ pub fn router() -> ApiRouter {
 }
 
 #[derive(Serialize, JsonSchema)]
-struct ListRes {
+struct ApodInfo {
   title: String,
   date: DateTime<Utc>,
   user: SimpleUserInfo,
 }
 
-async fn list(_auth: JwtAuth<ApodList>, db: Connection) -> Result<Json<Vec<ListRes>>> {
+async fn list(_auth: JwtAuth<ApodList>, db: Connection) -> Result<Json<Vec<ApodInfo>>> {
   let apods = db.apod().list().await?;
   let mut apod_infos = apods
     .into_iter()
     .filter_map(|apod| {
-      Some(ListRes {
+      Some(ApodInfo {
         title: apod.title,
         date: apod.date.and_hms_micro_opt(0, 0, 0, 0)?.and_utc(),
         user: apod.user,

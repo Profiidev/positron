@@ -35,10 +35,16 @@
   });
 
   $effect(() => {
-    if (date !== parseDate(data.date)) {
+    const current = date.toDate('UTC').toISOString().split('T')[0];
+    const dataDate = parseDate(data.date)
+      .toDate('UTC')
+      .toISOString()
+      .split('T')[0];
+
+    if (current !== dataDate) {
       info = undefined;
       imageLoaded = false;
-      goto(`/apod/${date.toDate('UTC').toISOString().split('T')[0]}`);
+      goto(`/apod/${current}`);
     }
   });
 
@@ -58,7 +64,13 @@
   };
 </script>
 
-<Tabs.Root value="today" class="max-h-screen grow p-4">
+<Tabs.Root
+  value="today"
+  class="max-h-screen grow p-4"
+  onValueChange={() => {
+    goto('/apod/list');
+  }}
+>
   <Tabs.List class="ml-10 w-fit md:ml-0">
     <Tabs.Trigger value="today">Today</Tabs.Trigger>
     <Tabs.Trigger value="library">Library</Tabs.Trigger>

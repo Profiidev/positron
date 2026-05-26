@@ -941,13 +941,9 @@ export const getApodImageInfo = <ThrowOnError extends boolean = false>(
 export const getApodImage = <ThrowOnError extends boolean = false>(
   options: Options<GetApodImageData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<unknown, GetApodImageErrors, ThrowOnError>({
+  (options.client ?? client).get<unknown, GetApodImageErrors, ThrowOnError>({
     url: '/api/services/apod/get_image',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    ...options
   });
 
 export const authorizeConfirm = <ThrowOnError extends boolean = false>(

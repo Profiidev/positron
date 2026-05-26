@@ -8,6 +8,12 @@ export type AccountUpdate = {
   username: string;
 };
 
+export type ApodInfo = {
+  date: Date;
+  title: string;
+  user: SimpleUserInfo;
+};
+
 export type AuthConfig = {
   mail_enabled: boolean;
 };
@@ -134,7 +140,7 @@ export type FinishAuthPath = {
 
 export type GetImageReq = {
   date: Date;
-  preview: boolean;
+  preview?: boolean | null;
 };
 
 export type GetInfoReq = {
@@ -186,12 +192,6 @@ export type KeyRes = {
 export type ListGroupResponse = {
   admin_group?: string | null;
   groups: Array<GroupInfo>;
-};
-
-export type ListRes = {
-  date: Date;
-  title: string;
-  user: SimpleUserInfo;
 };
 
 export type LoginReq = {
@@ -2025,7 +2025,7 @@ export type ListApodErrors = {
 };
 
 export type ListApodResponses = {
-  200: Array<ListRes>;
+  200: Array<ApodInfo>;
 };
 
 export type ListApodResponse = ListApodResponses[keyof ListApodResponses];
@@ -2110,25 +2110,16 @@ export type GetApodImageInfoResponse =
   GetApodImageInfoResponses[keyof GetApodImageInfoResponses];
 
 export type GetApodImageData = {
-  body: GetImageReq;
+  body?: never;
   path?: never;
-  query?: never;
+  query: {
+    date: Date;
+    preview?: boolean;
+  };
   url: '/api/services/apod/get_image';
 };
 
 export type GetApodImageErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
   /**
    * An error occurred
    */
@@ -2138,8 +2129,6 @@ export type GetApodImageErrors = {
    */
   '5XX': unknown;
 };
-
-export type GetApodImageError = GetApodImageErrors[keyof GetApodImageErrors];
 
 export type AuthorizeConfirmData = {
   body?: never;
