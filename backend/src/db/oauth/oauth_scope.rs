@@ -31,7 +31,7 @@ impl<'db> OAuthScopeTable<'db> {
     Self { db }
   }
 
-  async fn scope_ids(&self, scopes: &[String]) -> Result<Vec<Uuid>, DbErr> {
+  pub async fn scope_ids(&self, scopes: &[String]) -> Result<Vec<Uuid>, DbErr> {
     let res = OAuthScope::find()
       .filter(o_auth_scope::Column::Scope.is_in(scopes))
       .select_only()

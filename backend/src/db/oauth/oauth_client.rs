@@ -255,7 +255,11 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
-  async fn add_groups_to_client(&self, client_id: Uuid, groups: Vec<Uuid>) -> Result<(), DbErr> {
+  pub async fn add_groups_to_client(
+    &self,
+    client_id: Uuid,
+    groups: Vec<Uuid>,
+  ) -> Result<(), DbErr> {
     let mut models = Vec::new();
 
     for group_id in groups {

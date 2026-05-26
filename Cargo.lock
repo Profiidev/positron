@@ -850,6 +850,7 @@ dependencies = [
  "base64 0.22.1",
  "centaurus",
  "chrono",
+ "clap",
  "dashmap",
  "dotenvy",
  "entity",
@@ -1105,9 +1106,9 @@ dependencies = [
 
 [[package]]
 name = "centaurus"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63a6a0aff1a841def00e3ef061e1888cc1f012ff9b2ca1759d632055aeeba15a"
+checksum = "1f885b4ff14eabc3ef36618a7568da676756bdfd42e76e470fdffac9dac763c9"
 dependencies = [
  "addr",
  "aide",
