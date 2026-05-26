@@ -25,7 +25,7 @@
 
 <Tabs.Root
   value="library"
-  class="flex h-full w-full flex-col overflow-hidden p-4"
+  class="flex max-h-screen grow p-4"
   onValueChange={() => {
     goto(`/apod/${new Date().toISOString().split('T')[0]}`);
   }}
@@ -35,7 +35,7 @@
     <Tabs.Trigger value="library">Library</Tabs.Trigger>
   </Tabs.List>
   <Tabs.Content value="library" class="min-h-0 flex-1">
-    <ScrollArea.ScrollArea orientation={'vertical'}>
+    <ScrollArea.ScrollArea orientation={'vertical'} class="h-full">
       <div
         class="grid w-full grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-3"
       >
