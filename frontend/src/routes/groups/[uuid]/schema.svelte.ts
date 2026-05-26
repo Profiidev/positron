@@ -3,6 +3,8 @@ import type { FormValue } from '@profidev/pleiades/components/form/types';
 import { z } from 'zod';
 
 export const groupSettings = z.object({
+  apod$list: z.boolean().default(false),
+  apod$select: z.boolean().default(false),
   group$edit: z.boolean().default(false),
   group$view: z.boolean().default(false),
   name: z.string().min(1, 'Group name is required'),
