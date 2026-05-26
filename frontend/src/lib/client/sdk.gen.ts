@@ -84,7 +84,6 @@ import type {
   GetApodImageInfoData,
   GetApodImageInfoErrors,
   GetApodImageInfoResponses,
-  GetApodImageResponses,
   GetMailSettingsData,
   GetMailSettingsErrors,
   GetMailSettingsResponses,
@@ -635,22 +634,6 @@ export const changeUserEmail = <ThrowOnError extends boolean = false>(
     }
   });
 
-export const updateAvatar = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateAvatarData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    UpdateAvatarResponses,
-    UpdateAvatarErrors,
-    ThrowOnError
-  >({
-    url: '/api/user/account/avatar',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
 export const updatePassword = <ThrowOnError extends boolean = false>(
   options: Options<UpdatePasswordData, ThrowOnError>
 ) =>
@@ -708,6 +691,22 @@ export const confirmEmailChange = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/user/account/email_change_confirm',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const updateAvatar = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateAvatarData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    UpdateAvatarResponses,
+    UpdateAvatarErrors,
+    ThrowOnError
+  >({
+    url: '/api/user/account/avatar',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -942,17 +941,9 @@ export const getApodImageInfo = <ThrowOnError extends boolean = false>(
 export const getApodImage = <ThrowOnError extends boolean = false>(
   options: Options<GetApodImageData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<
-    GetApodImageResponses,
-    GetApodImageErrors,
-    ThrowOnError
-  >({
+  (options.client ?? client).get<unknown, GetApodImageErrors, ThrowOnError>({
     url: '/api/services/apod/get_image',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    ...options
   });
 
 export const authorizeConfirm = <ThrowOnError extends boolean = false>(

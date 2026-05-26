@@ -4,12 +4,7 @@ use aide::axum::{
   ApiRouter,
   routing::{get_with, post_with},
 };
-use axum::{
-  Json,
-  body::{Body, to_bytes},
-  routing::get,
-};
-use base64::prelude::*;
+use axum::{Json, body::Body, extract::Query, response::Response, routing::get};
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
@@ -18,7 +13,7 @@ use centaurus::{
   eyre::Context,
   storage::FileStorage,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use entity::apod;
 use http::StatusCode;
 use image::{ImageFormat, imageops::FilterType};
@@ -46,45 +41,30 @@ pub fn router() -> ApiRouter {
     )
     .api_route(
       "/get_image",
-      post_with(get_image, |op| op.id("getApodImage")),
+      get_with(get_image, |op| op.id("getApodImage")),
     )
     .route("/random", get(random))
 }
 
 #[derive(Serialize, JsonSchema)]
-struct ListRes {
-  image: String,
+struct ApodInfo {
   title: String,
   date: DateTime<Utc>,
   user: SimpleUserInfo,
 }
 
-async fn list(
-  _auth: JwtAuth<ApodList>,
-  db: Connection,
-  s3: FileStorage,
-) -> Result<Json<Vec<ListRes>>> {
+async fn list(_auth: JwtAuth<ApodList>, db: Connection) -> Result<Json<Vec<ApodInfo>>> {
   let apods = db.apod().list().await?;
-  let mut apod_infos = Vec::new();
-
-  for apod in apods {
-    let file_name = apod.date.format("%Y-%m-%d").to_string();
-    let image = s3
-      .apod()
-      .download(&format!("{file_name}_preview.webp"))
-      .await?;
-
-    apod_infos.push(ListRes {
-      image: BASE64_STANDARD.encode(
-        to_bytes(image, 10 * 1024 * 1024)
-          .await
-          .context("Failed to read image")?,
-      ),
-      title: apod.title,
-      date: apod.date.and_hms_micro_opt(0, 0, 0, 0).unwrap().and_utc(),
-      user: apod.user,
-    });
-  }
+  let mut apod_infos = apods
+    .into_iter()
+    .filter_map(|apod| {
+      Some(ApodInfo {
+        title: apod.title,
+        date: apod.date.and_hms_micro_opt(0, 0, 0, 0)?.and_utc(),
+        user: apod.user,
+      })
+    })
+    .collect::<Vec<_>>();
 
   apod_infos.sort_unstable_by_key(|apod| apod.date);
   apod_infos.reverse();
@@ -120,7 +100,7 @@ async fn set_good(
 }
 
 #[derive(Deserialize, Debug, JsonSchema)]
-struct GetReq {
+struct GetInfoReq {
   date: DateTime<Utc>,
 }
 
@@ -135,7 +115,7 @@ async fn get_image_info(
   db: Connection,
   state: ApodState,
   s3: FileStorage,
-  Json(req): Json<GetReq>,
+  Json(req): Json<GetInfoReq>,
 ) -> Result<Json<GetInfoRes>> {
   let res = if let Some((apod, user)) = db.apod().get_for_date(req.date.date_naive()).await? {
     GetInfoRes {
@@ -146,12 +126,17 @@ async fn get_image_info(
     let image_data = state.get_image(req.date).await?.status(StatusCode::GONE)?;
 
     let image = image::load_from_memory(&image_data.image)?;
+    drop(image_data.image);
+
     let scaled = image.resize(256, 256, FilterType::Lanczos3);
 
     let mut cursor = Cursor::new(Vec::new());
     image.write_to(&mut cursor, ImageFormat::WebP)?;
+    drop(image);
+
     let mut scaled_cursor = Cursor::new(Vec::new());
     scaled.write_to(&mut scaled_cursor, ImageFormat::WebP)?;
+    drop(scaled);
 
     let image = cursor.into_inner();
     let image_scaled = scaled_cursor.into_inner();
@@ -160,6 +145,7 @@ async fn get_image_info(
     s3.apod()
       .upload(&format!("{file_name}.webp"), &mut Cursor::new(image))
       .await?;
+
     s3.apod()
       .upload(
         &format!("{file_name}_preview.webp"),
@@ -185,25 +171,32 @@ async fn get_image_info(
   Ok(Json(res))
 }
 
-#[derive(Serialize, JsonSchema)]
-struct GetRes {
-  image: String,
+#[derive(Deserialize, Debug, JsonSchema)]
+struct GetImageReq {
+  date: NaiveDate,
+  preview: Option<bool>,
 }
 
 async fn get_image(
   _auth: JwtAuth<ApodList>,
   s3: FileStorage,
-  Json(req): Json<GetReq>,
-) -> Result<Json<GetRes>> {
-  let file_name = req.date.date_naive().format("%Y-%m-%d").to_string();
-  let image = s3.apod().download(&format!("{file_name}.webp")).await?;
-  Ok(Json(GetRes {
-    image: BASE64_STANDARD.encode(
-      to_bytes(image, 10 * 1024 * 1024)
-        .await
-        .context("Failed to read image")?,
-    ),
-  }))
+  Query(req): Query<GetImageReq>,
+) -> Result<Response> {
+  let file_name = req.date.format("%Y-%m-%d").to_string();
+  let file_name = if req.preview.unwrap_or(false) {
+    format!("{}_preview.webp", file_name)
+  } else {
+    format!("{}.webp", file_name)
+  };
+
+  let image = s3.apod().download(&file_name).await?;
+
+  Ok(
+    Response::builder()
+      .header("Content-Type", "image/webp")
+      .body(image)
+      .context("Failed to create reponse")?,
+  )
 }
 
 #[instrument(skip(s3, db))]

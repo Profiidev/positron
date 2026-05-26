@@ -69,7 +69,7 @@ impl Default for Config {
       webauthn_additional_origins: "".to_string(),
       oidc_refresh_exp: 604800,
       storage: StorageConfig::default(),
-      apod_api_key: "".to_string(),
+      apod_api_key: "DEMO_KEY".to_string(),
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
       auth: AuthConfig::default(),
@@ -85,10 +85,14 @@ impl Config {
       .merge(Serialized::defaults(Self::default()))
       .merge(Env::raw().global());
 
-    let config: Self = config.extract().expect("Failed to parse configuration");
+    let mut config: Self = config.extract().expect("Failed to parse configuration");
 
     if config.db_url.is_empty() {
       panic!("Database URL (DB_URL) must be set");
+    }
+
+    if config.db_url.starts_with("sqlite") {
+      config.db.validate_sqlite();
     }
 
     config.storage.validate();

@@ -15,7 +15,7 @@ export const listPasskeysResponseTransformer = async (
   return data;
 };
 
-const listResSchemaResponseTransformer = (data: any) => {
+const apodInfoSchemaResponseTransformer = (data: any) => {
   data.date = new Date(data.date);
   return data;
 };
@@ -23,6 +23,6 @@ const listResSchemaResponseTransformer = (data: any) => {
 export const listApodResponseTransformer = async (
   data: any
 ): Promise<ListApodResponse> => {
-  data = data.map((item: any) => listResSchemaResponseTransformer(item));
+  data = data.map((item: any) => apodInfoSchemaResponseTransformer(item));
   return data;
 };

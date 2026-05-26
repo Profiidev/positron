@@ -10,9 +10,12 @@ export enum Permission {
   OAUTH_SCOPE_VIEW = 'oauth_scope:view',
   OAUTH_SCOPE_EDIT = 'oauth_scope:edit',
   OAUTH_POLICY_VIEW = 'oauth_policy:view',
-  OAUTH_POLICY_EDIT = 'oauth_policy:edit'
+  OAUTH_POLICY_EDIT = 'oauth_policy:edit',
+  APOD_LIST = 'apod:list',
+  APOD_SELECT = 'apod:select'
 }
 
 export const avatarUrl = '/api/user/info/avatar';
+export const apodImageUrl = '/api/services/apod/get_image';
 
 export const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'image'];

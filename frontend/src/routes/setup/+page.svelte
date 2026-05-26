@@ -6,7 +6,7 @@
   import CheckIcon from '@lucide/svelte/icons/check';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import type { adminUser } from './schema.svelte';
-  import { goto } from '$app/navigation';
+  import { goto, invalidate } from '$app/navigation';
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { completeSetup } from '$lib/client';
   import { getEncrypt } from '$lib/backend/auth.svelte';
@@ -53,11 +53,10 @@
       }
     } else {
       setTimeout(async () => {
-        let user = (
-          (await ret.response?.json()) as { user?: string } | undefined
-        )?.user;
+        let user = ((await ret.data) as { user?: string } | undefined)?.user;
         connectWebsocket(user || '');
-        goto('/');
+        await invalidate('/api/user/info');
+        await goto('/');
       });
     }
   };
