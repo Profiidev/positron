@@ -3,12 +3,17 @@ use clap::{Parser, Subcommand};
 use tracing::{error, level_filters::LevelFilter};
 
 use crate::{
-  cli::{group::GroupCommands, oauth_client::OAuthClientCommands},
+  cli::{
+    group::GroupCommands, oauth_client::OAuthClientCommands, oauth_policy::OAuthPolicyCommands,
+    oauth_scope::OAuthScopeCommands,
+  },
   config::Config,
 };
 
 mod group;
 mod oauth_client;
+mod oauth_policy;
+mod oauth_scope;
 
 #[derive(Parser)]
 pub struct Cli {
@@ -31,6 +36,14 @@ enum Commands {
   OauthClient {
     #[command(subcommand)]
     command: OAuthClientCommands,
+  },
+  OauthPolicy {
+    #[command(subcommand)]
+    command: OAuthPolicyCommands,
+  },
+  OauthScope {
+    #[command(subcommand)]
+    command: OAuthScopeCommands,
   },
 }
 
@@ -59,6 +72,8 @@ impl Cli {
     match &self.command {
       Commands::Group { command } => command.run(db).await?,
       Commands::OauthClient { command } => command.run(db).await?,
+      Commands::OauthPolicy { command } => command.run(db).await?,
+      Commands::OauthScope { command } => command.run(db).await?,
       Commands::Serve => unreachable!(),
     }
 

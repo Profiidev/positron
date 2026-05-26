@@ -70,7 +70,7 @@
   };
 </script>
 
-<div class="p-4">
+<div class="flex max-h-screen flex-col p-4">
   <div class="ml-7 flex items-center md:m-0">
     <h3 class="text-xl font-medium">OAuth / Oidc Clients</h3>
     <Button
@@ -85,7 +85,7 @@
   <Table
     data={data.clients}
     {columns}
-    class="mt-4"
+    class="mt-4 min-h-0 grow"
     columnData={{
       deleteClient: startDeleteClient,
       user

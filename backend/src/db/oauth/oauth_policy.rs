@@ -170,6 +170,29 @@ impl<'db> OAuthPolicyTable<'db> {
     Ok(())
   }
 
+  pub async fn add_content(
+    &self,
+    policy_id: Uuid,
+    group_id: Uuid,
+    content: String,
+  ) -> Result<(), DbErr> {
+    let count = o_auth_policy_content::Entity::find()
+      .filter(o_auth_policy_content::Column::Policy.eq(policy_id))
+      .count(self.db)
+      .await?;
+
+    let new_content = o_auth_policy_content::ActiveModel {
+      id: Set(Uuid::new_v4()),
+      policy: Set(policy_id),
+      group: Set(group_id),
+      content: Set(content),
+      index: Set(count as i32),
+    };
+
+    new_content.insert(self.db).await?;
+    Ok(())
+  }
+
   pub async fn delete_policy(&self, uuid: Uuid) -> Result<(), DbErr> {
     o_auth_policy::Entity::delete_by_id(uuid)
       .exec(self.db)
