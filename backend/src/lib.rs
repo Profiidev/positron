@@ -9,6 +9,7 @@ use centaurus::{
   },
   db::init::init_db,
   logging::init_logging,
+  version_header,
 };
 use tracing::info;
 
@@ -34,7 +35,8 @@ async fn serve() {
   init_logging(config.base.log_level);
 
   let listener = listener_setup(config.base.port).await;
-  let app = build_router(api_router, state, config).await;
+  let mut app = build_router(api_router, state, config).await;
+  version_header!(app);
 
   info!("Starting application...");
   run_app_connect_info(listener, app).await;

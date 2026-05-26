@@ -1,7 +1,7 @@
 import { getApodImageInfo } from '$lib/client';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ fetch, params }) => {
+export const load: PageLoad = ({ fetch, params }) => {
   const res = getApodImageInfo({
     body: {
       date: new Date(params.date)
