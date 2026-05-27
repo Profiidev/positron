@@ -234,6 +234,14 @@ impl<'db> OAuthScopeTable<'db> {
     res.ok_or(DbErr::RecordNotFound("Not Found".into()))
   }
 
+  pub async fn by_name(&self, name: &str) -> Result<Option<Uuid>, DbErr> {
+    let res = OAuthScope::find()
+      .filter(o_auth_scope::Column::Name.eq(name))
+      .one(self.db)
+      .await?;
+    Ok(res.map(|s| s.id))
+  }
+
   pub async fn delete_scope(&self, uuid: Uuid) -> Result<(), DbErr> {
     let scope: o_auth_scope::ActiveModel = self.get_scope(uuid).await?.into();
     scope.delete(self.db).await?;

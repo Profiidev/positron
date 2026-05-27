@@ -17,7 +17,7 @@ pub enum OAuthPolicyCommands {
     mappings: Vec<String>,
   },
   Delete {
-    uuid: Uuid,
+    name: String,
   },
 }
 
@@ -69,9 +69,13 @@ impl OAuthPolicyCommands {
         info!("Policy created with UUID: {}", uuid);
         println!("{}", uuid);
       }
-      OAuthPolicyCommands::Delete { uuid } => {
-        info!("Deleting policy with UUID: {}", uuid);
-        db.oauth_policy().delete_policy(*uuid).await?;
+      OAuthPolicyCommands::Delete { name } => {
+        let Some(policy) = db.oauth_policy().by_name(name).await? else {
+          bail!("Policy with name {} does not exist", name);
+        };
+
+        db.oauth_policy().delete_policy(policy).await?;
+        info!("Policy with name {} deleted", name);
       }
     }
 

@@ -12,7 +12,7 @@ pub enum OAuthScopeCommands {
     policies: Vec<Uuid>,
   },
   Delete {
-    uuid: Uuid,
+    name: String,
   },
 }
 
@@ -46,9 +46,13 @@ impl OAuthScopeCommands {
         info!("Scope created with UUID: {}", uuid);
         println!("{}", uuid);
       }
-      OAuthScopeCommands::Delete { uuid } => {
-        info!("Deleting scope with UUID: {}", uuid);
-        db.oauth_scope().delete_scope(*uuid).await?;
+      OAuthScopeCommands::Delete { name } => {
+        let Some(scope) = db.oauth_scope().by_name(name).await? else {
+          bail!("Scope with name {} does not exist", name);
+        };
+
+        db.oauth_scope().delete_scope(scope).await?;
+        info!("Scope with name {} deleted", name);
       }
     }
 

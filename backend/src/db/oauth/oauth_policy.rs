@@ -193,6 +193,14 @@ impl<'db> OAuthPolicyTable<'db> {
     Ok(())
   }
 
+  pub async fn by_name(&self, name: &str) -> Result<Option<Uuid>, DbErr> {
+    let res = OAuthPolicy::find()
+      .filter(o_auth_policy::Column::Name.eq(name))
+      .one(self.db)
+      .await?;
+    Ok(res.map(|p| p.id))
+  }
+
   pub async fn delete_policy(&self, uuid: Uuid) -> Result<(), DbErr> {
     o_auth_policy::Entity::delete_by_id(uuid)
       .exec(self.db)

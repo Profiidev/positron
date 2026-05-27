@@ -20,7 +20,7 @@ pub enum OAuthClientCommands {
     auth_pepper: Option<String>,
   },
   Delete {
-    client_id: Uuid,
+    name: String,
   },
 }
 
@@ -93,10 +93,12 @@ impl OAuthClientCommands {
         let print = CreatePrint { id, secret };
         println!("{}", serde_json::to_string(&print)?);
       }
-      OAuthClientCommands::Delete { client_id } => {
-        db.oauth_client().remove_client(*client_id).await?;
-
-        info!("OAuth client with ID {} deleted", client_id);
+      OAuthClientCommands::Delete { name } => {
+        let Some(client) = db.oauth_client().by_name(name).await? else {
+          bail!("Client with name {} does not exist", name);
+        };
+        db.oauth_client().remove_client(client).await?;
+        info!("OAuth client {} deleted", name);
       }
     }
 

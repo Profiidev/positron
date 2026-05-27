@@ -39,6 +39,15 @@ impl<'db> OauthClientTable<'db> {
     Ok(())
   }
 
+  pub async fn by_name(&self, name: &str) -> Result<Option<Uuid>, DbErr> {
+    let res = OAuthClient::find()
+      .filter(o_auth_client::Column::Name.eq(name))
+      .one(self.db)
+      .await?;
+
+    Ok(res.map(|c| c.id))
+  }
+
   pub async fn remove_client(&self, client_id: Uuid) -> Result<(), DbErr> {
     o_auth_client::Entity::delete_by_id(client_id)
       .exec(self.db)
