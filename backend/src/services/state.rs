@@ -5,8 +5,6 @@ use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::config::Config;
-
 #[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct ApodState {
@@ -27,9 +25,9 @@ pub struct Image {
 }
 
 impl ApodState {
-  pub fn init(config: &Config) -> Self {
+  pub fn init(apod_api_key: String) -> Self {
     Self {
-      api_key: config.apod_api_key.clone(),
+      api_key: apod_api_key,
       client: Client::new(),
     }
   }

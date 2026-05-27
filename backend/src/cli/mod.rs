@@ -4,12 +4,13 @@ use tracing::{error, level_filters::LevelFilter};
 
 use crate::{
   cli::{
-    group::GroupCommands, oauth_client::OAuthClientCommands, oauth_policy::OAuthPolicyCommands,
-    oauth_scope::OAuthScopeCommands,
+    apod::ApodCommands, group::GroupCommands, oauth_client::OAuthClientCommands,
+    oauth_policy::OAuthPolicyCommands, oauth_scope::OAuthScopeCommands,
   },
   config::Config,
 };
 
+mod apod;
 mod group;
 mod oauth_client;
 mod oauth_policy;
@@ -45,6 +46,10 @@ enum Commands {
     #[command(subcommand)]
     command: OAuthScopeCommands,
   },
+  Apod {
+    #[command(subcommand)]
+    command: ApodCommands,
+  },
 }
 
 impl Cli {
@@ -74,6 +79,7 @@ impl Cli {
       Commands::OauthClient { command } => command.run(db).await?,
       Commands::OauthPolicy { command } => command.run(db).await?,
       Commands::OauthScope { command } => command.run(db).await?,
+      Commands::Apod { command } => command.run(db).await?,
       Commands::Serve => unreachable!(),
     }
 
