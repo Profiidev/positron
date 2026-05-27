@@ -63,6 +63,10 @@ impl<'db> ApodTable<'db> {
     Ok(())
   }
 
+  pub async fn list_all(&self) -> Result<Vec<apod::Model>, DbErr> {
+    Apod::find().all(self.db).await
+  }
+
   pub async fn list(&self) -> Result<Vec<ApodInfo>, DbErr> {
     let res = Apod::find()
       .filter(apod::Column::Selector.is_not_null())

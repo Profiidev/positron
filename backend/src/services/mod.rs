@@ -5,12 +5,12 @@ use state::ApodState;
 use crate::config::Config;
 
 mod apod;
-mod state;
+pub mod state;
 
 pub fn router() -> ApiRouter {
   ApiRouter::new().nest("/apod", apod::router())
 }
 
 pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
-  router.layer(Extension(ApodState::init(config)))
+  router.layer(Extension(ApodState::init(config.apod_api_key.clone())))
 }

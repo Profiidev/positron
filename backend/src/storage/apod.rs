@@ -23,4 +23,8 @@ impl<'b> ApodFolder<'b> {
   pub async fn download(&self, path: &str) -> Result<Body> {
     self.storage.get_file(&format!("apod/{path}"), None).await
   }
+
+  pub async fn exists(&self, path: &str) -> Result<bool> {
+    self.storage.exists(&format!("apod/{path}")).await
+  }
 }
