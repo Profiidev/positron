@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "positron",
-  "version": "0.0.1",
+  "productName": "Positron",
+  "version": "0.0.4",
   "identifier": "io.profidev.positron",
   "build": {
     "beforeDevCommand": "npm run dev",

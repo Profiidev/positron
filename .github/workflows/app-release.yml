@@ -61,6 +61,7 @@ jobs:
       - name: Build app
         if: github.event_name == 'pull_request'
         uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -73,6 +74,7 @@ jobs:
       - name: Build and release app
         if: github.event_name != 'pull_request'
         uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -84,3 +86,12 @@ jobs:
           uploadWorkflowArtifacts: true
           args: --aab
           mobile: 'android'
+
+      - name: Upload Android app to Play Store
+        #if: github.event_name != 'pull_request'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          releaseFiles: ${{ steps.build.artifactPaths.join(',') }}
+          serviceAccountJson: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: 'io.profidev.positron'
+          tracks: alpha
