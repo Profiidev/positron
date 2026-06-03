@@ -61,7 +61,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   router = router.nest("/.well-known", well_known::router());
 
   let db = init_db::<migration::Migrator>(&config.db, &config.db_url).await;
-  centaurus::backend::endpoints::setup::create_admin_group(&db, utils::permissions())
+  centaurus::backend::endpoints::setup::create_admin_group(&db, utils::permissions(), None)
     .await
     .expect("Failed to create admin group");
   oauth_management::init(&db).await;
