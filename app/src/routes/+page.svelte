@@ -13,5 +13,9 @@
   }
 </script>
 
-<Label>{greetMsg}</Label>
-<Button onclick={greet}>Greet</Button>
+<div class="grid h-full place-items-center">
+  <div>
+    <Label>{greetMsg}</Label>
+    <Button onclick={greet}>Greet</Button>
+  </div>
+</div>

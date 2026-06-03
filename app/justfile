@@ -1,0 +1,3 @@
+image:
+  magick -density 4096 -background none static/positron.svg -resize 4096x4096 -bordercolor none -border 1500 static/positron.png
+  npm run tauri icon static/positron.png
