@@ -1,6 +1,7 @@
 {
   "workspaces": [
-    "frontend"
+    "frontend",
+    "app"
   ],
   "devDependencies": {
     "oxfmt": "0.51.0",
