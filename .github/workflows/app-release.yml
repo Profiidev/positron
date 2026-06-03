@@ -66,7 +66,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           projectPath: 'app'
-          args: --aab
+          args: -- --aab
           mobile: 'android'
 
       - name: Build and release app
@@ -80,5 +80,5 @@ jobs:
           releaseId: ${{ github.event.release.id }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          args: --aab
+          args: -- --aab
           mobile: 'android'
