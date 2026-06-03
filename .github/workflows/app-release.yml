@@ -91,7 +91,7 @@ jobs:
         #if: github.event_name != 'pull_request'
         uses: r0adkll/upload-google-play@v1
         with:
-          releaseFiles: ${{ steps.build.artifactPaths.join(',') }}
+          releaseFiles: ${{ join(steps.build.outputs.artifactPaths, ',') }}
           serviceAccountJson: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: 'io.profidev.positron'
           tracks: alpha
