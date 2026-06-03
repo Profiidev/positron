@@ -60,18 +60,18 @@ jobs:
 
       - name: Build app
         if: github.event_name == 'pull_request'
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           projectPath: 'app'
-          args: -- --aab
+          args: --aab
           mobile: 'android'
 
       - name: Build and release app
         if: github.event_name != 'pull_request'
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -80,5 +80,5 @@ jobs:
           releaseId: ${{ github.event.release.id }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          args: -- --aab
+          args: --aab
           mobile: 'android'
