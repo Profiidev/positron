@@ -14,14 +14,14 @@
     "api": "openapi-ts"
   },
   "dependencies": {
-    "@profidev/pleiades": "^1.9.4",
+    "@profidev/pleiades": "^1.9.6",
     "@simplewebauthn/browser": "^13.3.0",
     "@sveltejs/enhanced-img": "0.10.4",
     "jsencrypt": "3.5.4",
     "valibot": "^1.2.0"
   },
   "devDependencies": {
-    "@fontsource-variable/inter": "5.2.8",
+    "@fontsource-variable/geist": "5.2.9",
     "@hey-api/openapi-ts": "0.97.2",
     "@lucide/svelte": "1.16.0",
     "@sveltejs/adapter-node": "5.5.4",
