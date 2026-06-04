@@ -10,6 +10,7 @@ jobs:
   release-app:
     permissions:
       contents: write
+      id-token: write
 
     runs-on: ubuntu-latest
     steps:
@@ -38,6 +39,19 @@ jobs:
         with:
           cache-on-failure: true
           shared-key: 'app_release_cache'
+
+      - name: Cache android build files
+        id: android_cache
+        uses: actions/cache@v5
+        with:
+          key: app_release_android_cache
+          restore-keys: app_release_android_cache
+          path: |
+            app/src-tauri/gen/android/.gradle
+            app/src-tauri/gen/android/app/build
+            app/src-tauri/gen/android/build
+            app/src-tauri/gen/android/buildSrc/.gradle
+            app/src-tauri/gen/android/buildSrc/build
 
       - name: Merge tauri config
         if: github.event_name != 'pull_request'
@@ -87,6 +101,7 @@ jobs:
         #if: github.event_name != 'pull_request'
         run: |
           cp app/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab .
+          ls -la *.aab
 
       - id: auth
         uses: google-github-actions/auth@v2
