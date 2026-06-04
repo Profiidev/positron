@@ -6,6 +6,11 @@
     ":automergeMinor",
     "schedule:monthly"
   ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "app/src-tauri/gen/**"
+  ],
   "packageRules": [
     {
       "abandonmentThreshold": "5 years",
