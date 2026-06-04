@@ -98,7 +98,7 @@ jobs:
           mobile: 'android'
 
       - name: Copy Android artifacts
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         run: |
           cp app/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab .
           ls -la *.aab
@@ -110,7 +110,7 @@ jobs:
           service_account: play-console-publisher@positron-498320.iam.gserviceaccount.com
 
       - name: Upload Android app to Play Store
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: r0adkll/upload-google-play@v1
         with:
           releaseFiles: '*.aab'
