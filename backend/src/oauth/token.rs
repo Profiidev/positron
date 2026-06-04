@@ -258,8 +258,6 @@ async fn create_access_token(
     None
   };
 
-  dbg!(&rest);
-
   let time = Utc::now().timestamp();
   let claims = OAuthClaims {
     sub: code_info.sub,
