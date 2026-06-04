@@ -17,7 +17,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: setup node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -45,7 +45,7 @@ jobs:
 
       - name: Cache android build files
         id: android_cache
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           key: app_release_android_cache
           restore-keys: app_release_android_cache
@@ -107,14 +107,14 @@ jobs:
           ls -la *.aab
 
       - id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: projects/337294226521/locations/global/workloadIdentityPools/github/providers/positron
           service_account: play-console-publisher@positron-498320.iam.gserviceaccount.com
 
       - name: Upload Android app to Play Store
         if: github.event_name != 'pull_request'
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1
         with:
           releaseFiles: '*.aab'
           serviceAccountJson: ${{ steps.auth.outputs.credentials_file_path }}
