@@ -8,7 +8,7 @@ ARG FRONTEND_DIR=/app/frontend
 ARG FRONTEND_URL="http://localhost:3000/"
 ARG BACKEND_URL="http://localhost:8000"
 
-FROM node:26-slim@sha256:1e738cb88890a15c71880323fbc35a739b7bbc703d72e8bfd1613128f8182f78 AS frontend-builder
+FROM node:26-slim@sha256:aa27a5fbf5acb298116a38133794f080406c6f8dfe52e2e2836bb55dc7cae8f0 AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -79,7 +79,7 @@ RUN \
   cd backend && cargo build --release --target $TARGET \
   && mv ../target/$TARGET/release/backend ../app
 
-FROM node:26-slim@sha256:1e738cb88890a15c71880323fbc35a739b7bbc703d72e8bfd1613128f8182f78
+FROM node:26-slim@sha256:aa27a5fbf5acb298116a38133794f080406c6f8dfe52e2e2836bb55dc7cae8f0
 
 ENV DB_URL="sqlite:/data/positron.db?mode=rwc"
 ENV STORAGE_PATH="/data/storage"
