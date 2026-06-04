@@ -1,0 +1,119 @@
+name: 'App Build and Release'
+
+on:
+  pull_request:
+  release:
+    types:
+      - published
+
+jobs:
+  release-app:
+    permissions:
+      contents: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: install dependencies (ubuntu only)
+        uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
+      - name: install frontend dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Cache cargo and rust files
+        id: rust_cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+          shared-key: 'app_release_cache'
+
+      - name: Cache android build files
+        id: android_cache
+        uses: actions/cache@v5
+        with:
+          key: app_release_android_cache
+          restore-keys: app_release_android_cache
+          path: |
+            app/src-tauri/gen/android/.gradle
+            app/src-tauri/gen/android/app/build
+            app/src-tauri/gen/android/build
+            app/src-tauri/gen/android/buildSrc/.gradle
+            app/src-tauri/gen/android/buildSrc/build
+
+      - name: Merge tauri config
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          JSON_FILE="app/src-tauri/tauri.conf.json"
+          jq -s 'reduce .[] as $item ({}; . * $item)' "$JSON_FILE" "$JSON_FILE.release" > "$JSON_FILE.result"
+          mv "$JSON_FILE.result" "$JSON_FILE"
+          cat "$JSON_FILE"
+
+      - name: setup Android signing
+        run: |
+          cd app/src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+
+      - name: Build app
+        if: github.event_name == 'pull_request'
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        with:
+          uploadWorkflowArtifacts: true
+          projectPath: 'app'
+          args: --aab
+          mobile: 'android'
+
+      - name: Build and release app
+        if: github.event_name != 'pull_request'
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        with:
+          projectPath: 'app'
+          releaseId: ${{ github.event.release.id }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          uploadWorkflowArtifacts: true
+          args: --aab
+          mobile: 'android'
+
+      - name: Copy Android artifacts
+        if: github.event_name != 'pull_request'
+        run: |
+          cp app/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab .
+          ls -la *.aab
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/337294226521/locations/global/workloadIdentityPools/github/providers/positron
+          service_account: play-console-publisher@positron-498320.iam.gserviceaccount.com
+
+      - name: Upload Android app to Play Store
+        if: github.event_name != 'pull_request'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          releaseFiles: '*.aab'
+          serviceAccountJson: ${{ steps.auth.outputs.credentials_file_path }}
+          packageName: 'io.profidev.positron'
+          tracks: alpha

@@ -1,12 +1,13 @@
 {
   "workspaces": [
-    "frontend"
+    "frontend",
+    "app"
   ],
   "devDependencies": {
-    "oxfmt": "0.51.0",
-    "oxlint": "1.66.0",
+    "oxfmt": "0.53.0",
+    "oxlint": "1.68.0",
     "oxlint-tsgolint": "0.23.0",
-    "prettier-plugin-svelte": "4.0.1",
+    "prettier-plugin-svelte": "4.1.0",
     "prettier-plugin-tailwindcss": "0.8.0"
   }
 }

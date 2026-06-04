@@ -20,6 +20,11 @@ jobs:
         with:
           components: clippy,rustfmt
 
+      - uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
       - name: Cache cargo and rust files
         id: rust_cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
@@ -31,7 +36,8 @@ jobs:
       - name: Generate svelte data
         run: |
           echo "BACKEND_URL=http://localhost:8000" > frontend/.env
-          cd frontend && npm run sync
+          cd frontend && npm run sync && cd ..
+          cd app && npm run sync && cd ..
 
       - name: Run linters
         uses: profiidev/rust-lint-action@ec3bf81f84ae2a9834fce8967d0eabe852227ff9 # v4

@@ -1,0 +1,18 @@
+image:
+  magick -density 4096 -background none static/positron.svg -resize 4096x4096 -bordercolor none -border 1500 static/positron.png
+  npm run tauri icon static/positron.png
+
+gcp-id-pool PID:
+  gcloud iam workload-identity-pools create "github" --project="{{PID}}" --location="global" --display-name="GitHub Actions Pool"
+
+gcp-id-pool-show PID:
+  gcloud iam workload-identity-pools describe "github" --project="{{PID}}" --location="global" --format="value(name)"
+
+gcp-id-oidc PID:
+  gcloud iam workload-identity-pools providers create-oidc "positron" --project="{{PID}}" --location="global" --workload-identity-pool="github" --display-name="Positron Actions Provider" --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" --attribute-condition="assertion.repository_owner == 'Profiidev'" --issuer-uri="https://token.actions.githubusercontent.com"
+
+gcp-id-oidc-show PID:
+  gcloud iam workload-identity-pools providers describe "positron" --location="global" --workload-identity-pool="github" --format="value(name)" --project="{{PID}}"
+
+gcp-bind-service-account PID:
+  gcloud iam service-accounts add-iam-policy-binding play-console-publisher@positron-498320.iam.gserviceaccount.com --project="{{PID}}" --role="roles/iam.workloadIdentityUser" --member="principalSet://iam.googleapis.com/projects/337294226521/locations/global/workloadIdentityPools/github/attribute.repository/Profiidev/positron"

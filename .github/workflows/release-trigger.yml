@@ -25,10 +25,14 @@ jobs:
       - name: Update version
         id: update_version
         run: |
+          JSON_FILE="app/src-tauri/tauri.conf.json"
           RAW_TAG=${{ github.event.inputs.version }}
           NEW_VERSION="${RAW_TAG#v}"
           echo "Bumping version to $NEW_VERSION"
           sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" backend/Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" app/src-tauri/Cargo.toml
+          jq ".version = \"$NEW_VERSION\"" "$JSON_FILE" > $JSON_FILE.temp && mv $JSON_FILE.temp "$JSON_FILE"
+          cat "$JSON_FILE"
           cargo metadata -q > /dev/null
           cd frontend && npm version $NEW_VERSION --no-git-tag-version
           cd .. && npx -y oxfmt
