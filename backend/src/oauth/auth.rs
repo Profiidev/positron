@@ -233,7 +233,7 @@ fn validate_req(
     ));
   }
 
-  if client.require_pkce && req.code_challenge.is_none() {
+  if (!client.confidential || client.require_pkce) && req.code_challenge.is_none() {
     return Err((
       "invalid_request",
       anyhow!("code_challenge is required for PKCE"),

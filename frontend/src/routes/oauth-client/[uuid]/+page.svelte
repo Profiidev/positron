@@ -306,12 +306,14 @@
                 disabled={readonly}
                 placeholder="https://example.com/callback"
               />
-              <FormSwitch
-                {...props}
-                key="require_pkce"
-                label="Require PKCE"
-                disabled={readonly}
-              />
+              {#if client?.confidential}
+                <FormSwitch
+                  {...props}
+                  key="require_pkce"
+                  label="Require PKCE"
+                  disabled={readonly}
+                />
+              {/if}
               <FormSelect
                 {...props}
                 key="scope"
