@@ -21,7 +21,10 @@ use tracing::instrument;
 use uuid::Uuid;
 use webauthn_rs::prelude::Url;
 
-use crate::db::DBTrait;
+use crate::{
+  db::DBTrait,
+  oauth::state::{CodeChallenge, CodeChallengeMethod},
+};
 
 use super::{
   scope::Scope,
@@ -154,6 +157,19 @@ async fn authorize_confirm(
         scope: data.scope.unwrap().parse().unwrap(),
         user: auth.user_id,
         nonce: data.nonce,
+        code_challenge: data.code_challenge.map(|c| CodeChallenge {
+          challenge: c,
+          method: data
+            .code_challenge_method
+            .map(|m| {
+              if m == "plain" {
+                CodeChallengeMethod::Plain
+              } else {
+                CodeChallengeMethod::S256
+              }
+            })
+            .unwrap_or(CodeChallengeMethod::Plain),
+        }),
       },
     ),
   );
@@ -202,6 +218,13 @@ fn validate_req(
     return Err((
       "unsupported_response_type",
       anyhow!("response_type must be 'code'"),
+    ));
+  }
+
+  if client.require_pkce && req.code_challenge.is_none() {
+    return Err((
+      "invalid_request",
+      anyhow!("code_challenge is required for PKCE"),
     ));
   }
 

@@ -47,6 +47,8 @@ pub struct TokenReq {
   pub client_secret: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub refresh_token: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub code_verifier: Option<String>,
 }
 
 impl TokenReq {
@@ -61,6 +63,7 @@ impl TokenReq {
       grant_type: self.grant_type,
       code,
       redirect_uri: self.redirect_uri,
+      code_verifier: self.code_verifier,
     })
   }
 
@@ -81,6 +84,8 @@ pub struct TokenIssueReq {
   pub code: Uuid,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub redirect_uri: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub code_verifier: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

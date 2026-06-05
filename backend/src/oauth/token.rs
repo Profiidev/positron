@@ -1,4 +1,5 @@
 use axum::{Form, Json, Router, extract::Query, routing::post};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use centaurus::{
   backend::auth::jwt_state::JwtInvalidState,
   bail,
@@ -7,6 +8,7 @@ use centaurus::{
   serde::empty_string_as_none,
 };
 use chrono::{DateTime, Duration, Utc};
+use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
@@ -17,6 +19,7 @@ use crate::{
   oauth::{
     client_auth::{TokenIssueReq, TokenRefreshReq},
     jwt::RefreshTokenClaims,
+    state::CodeChallengeMethod,
   },
 };
 
@@ -110,6 +113,25 @@ async fn issue_token(
         uuid,
         uri
       );
+      return Err(Error::from_str("invalid_request"));
+    }
+  }
+
+  if let Some(code_challenge) = &code_info.code_challenge {
+    if let Some(code_verifier) = &body.code_verifier {
+      let expected_challenge = match code_challenge.method {
+        CodeChallengeMethod::Plain => code_verifier.clone(),
+        CodeChallengeMethod::S256 => {
+          let ascii_bytes = code_verifier.as_bytes();
+          let mut hasher = Sha256::new();
+          hasher.update(ascii_bytes);
+          BASE64_URL_SAFE_NO_PAD.encode(hasher.finish())
+        }
+      };
+      if code_challenge.challenge != expected_challenge {
+        return Err(Error::from_str("invalid_grant"));
+      }
+    } else {
       return Err(Error::from_str("invalid_request"));
     }
   }
