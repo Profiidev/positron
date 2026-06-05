@@ -26,6 +26,10 @@ pub struct AuthReq {
   pub state: Option<String>,
   #[serde(default, deserialize_with = "empty_string_as_none")]
   pub nonce: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub code_challenge: Option<String>,
+  #[serde(default, deserialize_with = "empty_string_as_none")]
+  pub code_challenge_method: Option<String>,
 }
 
 pub struct CodeReq {
@@ -34,6 +38,17 @@ pub struct CodeReq {
   pub scope: Scope,
   pub user: Uuid,
   pub nonce: Option<String>,
+  pub code_challenge: Option<CodeChallenge>,
+}
+
+pub struct CodeChallenge {
+  pub challenge: String,
+  pub method: CodeChallengeMethod,
+}
+
+pub enum CodeChallengeMethod {
+  Plain,
+  S256,
 }
 
 #[derive(Clone, FromRequestParts, OperationIo)]

@@ -16,6 +16,8 @@ pub enum OAuthClientCommands {
     redirect_uri: Url,
     scope: String,
     groups: Vec<Uuid>,
+    #[clap(long)]
+    require_pkce: bool,
     #[clap(long, env)]
     auth_pepper: Option<String>,
   },
@@ -39,6 +41,7 @@ impl OAuthClientCommands {
         scope,
         groups,
         auth_pepper,
+        require_pkce,
       } => {
         if db
           .oauth_client()
@@ -76,6 +79,7 @@ impl OAuthClientCommands {
             name: name.into(),
             redirect_uri: redirect_uri.to_string(),
             confidential: true,
+            require_pkce: *require_pkce,
             salt,
             client_secret,
           })

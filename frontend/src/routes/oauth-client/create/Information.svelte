@@ -19,6 +19,8 @@
 
   let form: BaseForm<typeof information> | undefined = $state();
 
+  let confidential = $derived(initialValue?.confidential ?? true);
+
   export const getValue = () => {
     return form?.getValue();
   };
@@ -54,6 +56,16 @@
         value: scopes.uuid
       })) ?? []}
     />
-    <FormSwitch {...props} key="confidential" label="Confidential Client" />
+    <FormSwitch
+      {...props}
+      key="confidential"
+      label="Confidential Client"
+      onCheckedChange={(e) => (confidential = e)}
+    />
+    {#if confidential}
+      <FormSwitch {...props} key="require_pkce" label="Require PKCE" />
+    {:else}
+      <p class="my-[0.45rem]">Public clients require PKCE.</p>
+    {/if}
   {/snippet}
 </BaseForm>

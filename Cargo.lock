@@ -1038,6 +1038,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "time",
  "tokio",
  "totp-rs",
@@ -1420,9 +1421,9 @@ dependencies = [
 
 [[package]]
 name = "centaurus"
-version = "0.13.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "296e9ca6bf410e2746c79daa9d251fd556f9b996f5454663fa5d6949e7bce27b"
+checksum = "2c1c12344678a40518c69f1679d84bf403cffc555aa3cf4c965e0e3cd977a153"
 dependencies = [
  "addr",
  "aide",
@@ -1456,6 +1457,7 @@ dependencies = [
  "sea-orm-migration",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "time",
  "tokio",
  "tokio-util",

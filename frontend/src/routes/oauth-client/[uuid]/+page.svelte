@@ -33,6 +33,7 @@
   import { Input } from '@profidev/pleiades/components/ui/input';
   import { onMount } from 'svelte';
   import { CopyButton } from '@profidev/pleiades/components/ui-extra/copy-button';
+  import FormSwitch from '@profidev/pleiades/components/form/form-switch.svelte';
 
   const { data } = $props();
 
@@ -305,6 +306,14 @@
                 disabled={readonly}
                 placeholder="https://example.com/callback"
               />
+              {#if client?.confidential}
+                <FormSwitch
+                  {...props}
+                  key="require_pkce"
+                  label="Require PKCE"
+                  disabled={readonly}
+                />
+              {/if}
               <FormSelect
                 {...props}
                 key="scope"

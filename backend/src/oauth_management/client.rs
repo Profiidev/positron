@@ -108,6 +108,7 @@ struct ClientCreate {
   redirect_uri: Url,
   scope: Vec<Uuid>,
   confidential: bool,
+  require_pkce: bool,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -145,6 +146,7 @@ async fn create(
       client_secret,
       salt,
       confidential: req.confidential,
+      require_pkce: req.require_pkce,
     })
     .await?;
 
@@ -182,6 +184,7 @@ async fn info(
 struct OAuthClientEditReq {
   client_id: Uuid,
   name: String,
+  require_pkce: bool,
   redirect_uri: Url,
   additional_redirect_uris: Vec<Url>,
   scope: Vec<Uuid>,
@@ -207,6 +210,7 @@ async fn edit(
     .edit_client(
       req.client_id,
       req.name,
+      req.require_pkce,
       req.redirect_uri.to_string(),
       req
         .additional_redirect_uris
