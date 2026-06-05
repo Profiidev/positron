@@ -8,7 +8,10 @@ use axum::{
 };
 use centaurus::{
   anyhow,
-  backend::{auth::jwt_auth::JwtAuth, request::redirect::Redirect},
+  backend::{
+    auth::{jwt_auth::JwtAuth, oidc::URL_SAFE_CHARS},
+    request::redirect::Redirect,
+  },
   bail,
   db::{init::Connection, tables::ConnectionExt},
   error::{ErrorReport, Result},
@@ -62,6 +65,15 @@ async fn authorize_post(
 async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
   let client_id = req.client_id;
+
+  if let Some(challenge) = &req.code_challenge
+    && (!(43..=128).contains(&challenge.len())
+      || challenge
+        .chars()
+        .any(|c| !URL_SAFE_CHARS.contains(&(c as u8))))
+  {
+    bail!("Invalid code challenge length: {}", challenge.len());
+  }
 
   let client = db.oauth_client().get_client(client_id).await?;
 
@@ -225,6 +237,15 @@ fn validate_req(
     return Err((
       "invalid_request",
       anyhow!("code_challenge is required for PKCE"),
+    ));
+  }
+
+  if let Some(challenge_method) = &req.code_challenge_method
+    && !["plain", "S256"].contains(&challenge_method.as_str())
+  {
+    return Err((
+      "invalid_request",
+      anyhow!("code_challenge_method must be 'plain' or 'S256'"),
     ));
   }
 
