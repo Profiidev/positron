@@ -346,6 +346,7 @@ impl<'db> OauthClientTable<'db> {
     &self,
     client_id: Uuid,
     name: String,
+    require_pkce: bool,
     redirect_uri: String,
     additional_redirect_uris: Vec<String>,
     default_scope: Vec<Uuid>,
@@ -356,6 +357,7 @@ impl<'db> OauthClientTable<'db> {
 
     client.name = Set(name);
     client.redirect_uri = Set(redirect_uri);
+    client.require_pkce = Set(require_pkce);
 
     client.update(self.db).await?;
 
