@@ -21,6 +21,7 @@ pub struct OAuthClientInfo {
   pub group_access: Vec<SimpleGroupInfo>,
   pub user_access: Vec<SimpleUserInfo>,
   pub confidential: bool,
+  pub require_pkce: bool,
 }
 
 pub struct OauthClientTable<'db> {
@@ -135,6 +136,7 @@ impl<'db> OauthClientTable<'db> {
             })
             .collect(),
           confidential: client.confidential,
+          require_pkce: client.require_pkce,
         },
       )
       .collect();
@@ -232,6 +234,7 @@ impl<'db> OauthClientTable<'db> {
       group_access,
       user_access,
       confidential: client.confidential,
+      require_pkce: client.require_pkce,
     }))
   }
 

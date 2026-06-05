@@ -55,5 +55,6 @@
       })) ?? []}
     />
     <FormSwitch {...props} key="confidential" label="Confidential Client" />
+    <FormSwitch {...props} key="require_pkce" label="Require PKCE" />
   {/snippet}
 </BaseForm>

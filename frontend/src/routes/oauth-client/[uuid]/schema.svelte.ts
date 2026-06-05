@@ -7,6 +7,7 @@ export const clientSettings = z.object({
   group_access: z.array(z.string()).default([]),
   name: z.string().min(1, 'Name is required').default(''),
   redirect_uri: z.url().default(''),
+  require_pkce: z.boolean().default(false),
   scope: z.array(z.string()).default([]),
   user_access: z.array(z.string()).default([])
 });
