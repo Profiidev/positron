@@ -4,15 +4,26 @@
   import { Input } from '@profidev/pleiades/components/ui/input';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import { isConnected } from '$lib/updater.svelte';
+  import { Badge } from '@profidev/pleiades/components/ui/badge';
+  import { Spinner } from '@profidev/pleiades/components/ui/spinner';
+  import { openUrl } from '@tauri-apps/plugin-opener';
 
-  type CliAuthStatus =
-    | 'Requesting'
-    | 'Error'
-    | 'Success'
-    | 'Finished'
-    | 'SendError';
+  type AuthStatus = 'Start' | 'Error' | 'Success' | 'Finished' | 'SendError';
 
-  let status = $state('Requesting' as CliAuthStatus);
+  const { data } = $props();
+
+  let status: AuthStatus = $state('Start');
+  let isLoading = $state(false);
+
+  const startAuth = async () => {
+    isLoading = true;
+    const url = new URL(data.url!);
+    url.pathname = '/auth/app';
+    await openUrl(url);
+    isLoading = false;
+  };
+
   let error = $state(false);
   let code = $state('');
 
@@ -24,11 +35,22 @@
 <div class="grid h-full place-items-center">
   <Card.Root class="mx-auto w-full max-w-sm">
     <Card.Header>
-      <Card.Title>Login</Card.Title>
+      <Card.Title class="flex"
+        >Login
+        {#if !isConnected()}
+          <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
+        {/if}
+      </Card.Title>
     </Card.Header>
-    <Card.Content>
-      {#if status === 'Requesting'}
-        <p>Requesting new CLI auth code...</p>
+    <Card.Content class="flex items-center">
+      {#if status === 'Start'}
+        <p>Start the authentication process</p>
+        <Button class="ml-auto" onclick={startAuth} disabled={isLoading}>
+          {#if isLoading}
+            <Spinner />
+          {/if}
+          Login</Button
+        >
       {:else if status === 'Error'}
         <p class="text-red-500">Failed to get CLI auth code</p>
       {:else if status === 'Success'}

@@ -22,5 +22,5 @@ export const load: LayoutLoad = async ({ url }) => {
     redirect(302, '/auth');
   }
 
-  return { isSetup: Boolean(status?.url) };
+  return { isSetup: Boolean(status?.url), url: status?.url };
 };

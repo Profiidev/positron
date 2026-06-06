@@ -1,5 +1,6 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
+import { toast } from '@profidev/pleiades/components/util/general';
 import { Channel, invoke } from '@tauri-apps/api/core';
 
 export enum UpdateMessageType {
@@ -31,6 +32,9 @@ export const startListener = async () => {
   };
 };
 
+let connected = $state(true);
+export const isConnected = () => connected;
+
 const handleMessage = (message: UpdateMessage) => {
   switch (message.type) {
     case UpdateMessageType.TokenInvalid: {
@@ -40,9 +44,17 @@ const handleMessage = (message: UpdateMessage) => {
       break;
     }
     case UpdateMessageType.Disconnected: {
+      if (connected) {
+        toast.warning('Failed to connect to server');
+      }
+      connected = false;
       break;
     }
     case UpdateMessageType.Connected: {
+      if (!connected) {
+        toast.success('Connection restored');
+      }
+      connected = true;
       break;
     }
     default: {

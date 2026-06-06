@@ -31,7 +31,9 @@ impl super::Client {
 
   pub async fn test_connection(&self) -> Result<bool> {
     let req = self.builder(Method::GET, "/api/health").await?;
-    let res = self.send(req).await?;
+    let Ok(res) = self.send(req).await else {
+      return Ok(false);
+    };
 
     Ok(res.headers().get("X-Api-Version").is_some())
   }
