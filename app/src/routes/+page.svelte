@@ -8,6 +8,8 @@
   let greetMsg = $state('');
   let urls: string[] = $state([]);
 
+  const { data } = $props();
+
   async function greet(event: Event) {
     event.preventDefault();
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -27,4 +29,6 @@
   {#each urls as url}
     <p>{url}</p>
   {/each}
+  <p>{JSON.stringify(data.isSetup)}</p>
+  <a href="/auth">Auth</a>
 </div>

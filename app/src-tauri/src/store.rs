@@ -16,6 +16,7 @@ pub struct Store {
 impl Store {
   pub fn init(handle: &AppHandle) -> Result<()> {
     let store = handle.store(STORE_PATH)?;
+    store.set(INSTANCE_URL_KEY, "");
     let instance_url = store
       .get(INSTANCE_URL_KEY)
       .and_then(|val| val.as_str().map(|s| s.to_string()))
