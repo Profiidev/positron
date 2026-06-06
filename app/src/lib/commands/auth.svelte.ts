@@ -7,3 +7,11 @@ export const authStatus = async () => {
     return undefined;
   }
 };
+
+export const startAuth = async () => {
+  try {
+    return await invoke<string>('start_auth');
+  } catch {
+    return undefined;
+  }
+};

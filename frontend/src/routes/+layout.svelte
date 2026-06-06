@@ -35,13 +35,20 @@
       };
       // can also be undefined if there was an error
       if (valid === false) {
-        if (!noSidebarPaths.includes(page.url.pathname) && !blockRedirect) {
+        if (!blockRedirect) {
           if (data.oauthOptions.code && data.oauthOptions.name) {
             goto(
               '/login?code=' +
                 data.oauthOptions.code +
                 '&name=' +
                 data.oauthOptions.name
+            );
+          } else if (page.url.pathname.startsWith('/auth/')) {
+            const challenge = data.auth.challenge
+              ? `&challenge=${data.auth.challenge}`
+              : '';
+            goto(
+              `/login?auth=${page.url.pathname.replace('/auth/', '')}${challenge}`
             );
           } else {
             goto('/login');

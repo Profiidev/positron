@@ -76,6 +76,11 @@
         await goto(
           `/oauth?code=${data.oauthOptions.code}&name=${data.oauthOptions.name}`
         );
+      } else if (data.auth.authType) {
+        const challenge = data.auth.challenge
+          ? `?challenge=${data.auth.challenge}`
+          : '';
+        await goto(`/auth/${data.auth.authType}${challenge}`);
       } else {
         await goto('/');
       }

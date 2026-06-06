@@ -1,35 +1,39 @@
 <script lang="ts">
   import * as Card from '@profidev/pleiades/components/ui/card';
-  import { onMount } from 'svelte';
-  import { Input } from '@profidev/pleiades/components/ui/input';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { isConnected } from '$lib/updater.svelte';
   import { Badge } from '@profidev/pleiades/components/ui/badge';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import { startAuth } from '$lib/commands/auth.svelte.js';
+  import { toast } from '@profidev/pleiades/components/util/general';
 
-  type AuthStatus = 'Start' | 'Error' | 'Success' | 'Finished' | 'SendError';
+  type AuthStatus = 'Start' | 'Error';
 
   const { data } = $props();
 
   let status: AuthStatus = $state('Start');
   let isLoading = $state(false);
 
-  const startAuth = async () => {
+  const startAuth_ = async () => {
     isLoading = true;
+    const challenge = await startAuth();
+    if (!challenge) {
+      status = 'Error';
+      isLoading = false;
+      toast.error('Failed to get auth challenge');
+      return;
+    }
+
     const url = new URL(data.url!);
     url.pathname = '/auth/app';
+    url.searchParams.set('challenge', challenge);
     await openUrl(url);
+
+    status = 'Start';
     isLoading = false;
   };
-
-  let error = $state(false);
-  let code = $state('');
-
-  const authCli = async () => {};
-
-  onMount(authCli);
 </script>
 
 <div class="grid h-full place-items-center">
@@ -43,32 +47,20 @@
       </Card.Title>
     </Card.Header>
     <Card.Content class="flex items-center">
-      {#if status === 'Start'}
-        <p>Start the authentication process</p>
-        <Button class="ml-auto" onclick={startAuth} disabled={isLoading}>
-          {#if isLoading}
-            <Spinner />
-          {/if}
-          Login</Button
-        >
-      {:else if status === 'Error'}
-        <p class="text-red-500">Failed to get CLI auth code</p>
-      {:else if status === 'Success'}
-        <p>Trying to authenticate CLI with code:</p>
-        <Input value={code} readonly class="my-2 w-full" />
-        <p>If it is not working try to paste the code into the CLI manually.</p>
-      {:else if status === 'SendError'}
-        <p>Failed to send code. Please enter it manually:</p>
-        <Input value={code} readonly class="my-2 w-full" />
-      {:else if status === 'Finished'}
-        <p>CLI authenticated successfully! You can now close this window.</p>
-      {/if}
-      {#if error}
-        <Button variant="outline" class="mt-4 w-full" onclick={authCli}>
-          <RotateCcw class="mr-2" />
-          Try Again
-        </Button>
-      {/if}
+      <p>Start the authentication process</p>
+      <Button
+        class="ml-auto"
+        onclick={startAuth_}
+        disabled={isLoading}
+        variant={status === 'Error' ? 'destructive' : 'default'}
+      >
+        {#if isLoading}
+          <Spinner />
+        {:else if status === 'Error'}
+          <RotateCcw />
+        {/if}
+        Login</Button
+      >
     </Card.Content>
   </Card.Root>
 </div>

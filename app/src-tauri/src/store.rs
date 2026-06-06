@@ -8,9 +8,11 @@ use tokio::sync::Mutex;
 const STORE_PATH: &str = "store.json";
 const INSTANCE_URL_KEY: &str = "instance_url";
 const TOKEN_KEY: &str = "token";
+const AUTH_VERIFIER_KEY: &str = "auth_verifier";
 
 pub struct Store {
   store: Arc<tauri_plugin_store::Store<Wry>>,
+  auth_verifier: Mutex<Option<String>>,
   pub instance_url: Arc<Mutex<Option<Url>>>,
   pub token: Arc<Mutex<Option<String>>>,
 }
@@ -28,14 +30,30 @@ impl Store {
       .get(TOKEN_KEY)
       .and_then(|val| val.as_str().map(|s| s.to_string()));
 
+    let auth_verifier = store
+      .get(AUTH_VERIFIER_KEY)
+      .and_then(|val| val.as_str().map(|s| s.to_string()));
+
     let store = Self {
       store,
+      auth_verifier: Mutex::new(auth_verifier),
       instance_url: Arc::new(Mutex::new(instance_url)),
       token: Arc::new(Mutex::new(token)),
     };
 
     handle.manage(store);
 
+    Ok(())
+  }
+
+  pub async fn auth_verifier(&self) -> Option<String> {
+    self.auth_verifier.lock().await.clone()
+  }
+
+  pub async fn set_auth_verifier(&self, verifier: String) -> Result<()> {
+    self.store.set(AUTH_VERIFIER_KEY, verifier.as_str());
+    *self.auth_verifier.lock().await = Some(verifier);
+    self.store.save()?;
     Ok(())
   }
 
