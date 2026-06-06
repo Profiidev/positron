@@ -80,5 +80,6 @@ export const noSidebarPaths = [
   '/password/forgot',
   '/password/reset',
   '/oauth',
-  '/oauth/logout'
+  '/oauth/logout',
+  '/auth/app'
 ];

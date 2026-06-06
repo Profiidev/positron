@@ -14,10 +14,11 @@ use centaurus::{
 use state::{PasskeyState, TotpState};
 
 use crate::{
-  auth::{jwt::JwtStateOther, state::WebauthnState},
+  auth::{app::AppState, jwt::JwtStateOther, state::WebauthnState},
   config::Config,
 };
 
+mod app;
 mod config;
 pub mod jwt;
 mod passkey;
@@ -33,6 +34,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/password", password::router(rate_limiter))
     .nest("/totp", totp::router(rate_limiter))
     .nest("/config", config::router())
+    .nest("/app", app::router(rate_limiter))
 }
 
 pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
@@ -44,4 +46,5 @@ pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRo
     .layer(Extension(PasskeyState::init()))
     .layer(Extension(TotpState::init(config)))
     .layer(Extension(WebauthnState::init(config)))
+    .layer(Extension(AppState::init()))
 }

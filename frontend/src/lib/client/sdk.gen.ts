@@ -81,6 +81,8 @@ import type {
   EditUserData,
   EditUserErrors,
   EditUserResponses,
+  ExchangeAppCodeData,
+  ExchangeAppCodeErrors,
   FinishAuthenticationData,
   FinishAuthenticationErrors,
   FinishRegistrationData,
@@ -178,6 +180,9 @@ import type {
   RemovePasskeyData,
   RemovePasskeyErrors,
   RemovePasskeyResponses,
+  RequestAppCodeData,
+  RequestAppCodeErrors,
+  RequestAppCodeResponses,
   ResetPasswordData,
   ResetPasswordErrors,
   ResetPasswordResponses,
@@ -560,6 +565,36 @@ export const authConfig = <ThrowOnError extends boolean = false>(
     AuthConfigErrors,
     ThrowOnError
   >({ url: '/api/auth/config', ...options });
+
+export const requestAppCode = <ThrowOnError extends boolean = false>(
+  options: Options<RequestAppCodeData, ThrowOnError>
+): RequestResult<RequestAppCodeResponses, RequestAppCodeErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    RequestAppCodeResponses,
+    RequestAppCodeErrors,
+    ThrowOnError
+  >({
+    url: '/api/auth/app/code',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const exchangeAppCode = <ThrowOnError extends boolean = false>(
+  options: Options<ExchangeAppCodeData, ThrowOnError>
+): RequestResult<unknown, ExchangeAppCodeErrors, ThrowOnError> =>
+  (options.client ?? client).post<unknown, ExchangeAppCodeErrors, ThrowOnError>(
+    {
+      url: '/api/auth/app/exchange',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    }
+  );
 
 export const resetUserAvatar = <ThrowOnError extends boolean = false>(
   options: Options<ResetUserAvatarData, ThrowOnError>

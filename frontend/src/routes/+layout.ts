@@ -16,8 +16,18 @@ export const load: LayoutLoad = ({ fetch, url }) => {
 
   const code = url.searchParams.get('code');
   const name = url.searchParams.get('name');
+  const challenge = url.searchParams.get('challenge');
+  let auth = url.searchParams.get('auth');
+
+  if (!auth && url.pathname.startsWith('/auth/')) {
+    auth = url.pathname.replace('/auth/', '');
+  }
 
   return {
+    auth: {
+      authType: auth,
+      challenge
+    },
     oauthOptions: {
       code,
       name

@@ -57,6 +57,14 @@ export type ClientCreateRes = {
   client_secret: string;
 };
 
+export type CodeReq = {
+  challenge: string;
+};
+
+export type CodeRes = {
+  code: string;
+};
+
 export type CreateGroupRequest = {
   name: string;
 };
@@ -134,6 +142,11 @@ export type EmailChange = {
 export type EmailChangeConfirm = {
   new_code: string;
   old_code: string;
+};
+
+export type ExchangeCodeReq = {
+  code: string;
+  verifier: string;
 };
 
 export type FinishAuthPath = {
@@ -424,6 +437,7 @@ export type UserSettings = {
   oidc_group_sync?: boolean | null;
   oidc_image_sync?: boolean | null;
   oidc_issuer?: string | null;
+  oidc_pkce?: boolean | null;
   oidc_scopes?: string | null;
   sso_create_user?: boolean | null;
   sso_instant_redirect?: boolean | null;
@@ -1095,6 +1109,79 @@ export type AuthConfigResponses = {
 };
 
 export type AuthConfigResponse = AuthConfigResponses[keyof AuthConfigResponses];
+
+export type RequestAppCodeData = {
+  body: CodeReq;
+  path?: never;
+  query?: never;
+  url: '/api/auth/app/code';
+};
+
+export type RequestAppCodeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RequestAppCodeError =
+  RequestAppCodeErrors[keyof RequestAppCodeErrors];
+
+export type RequestAppCodeResponses = {
+  200: CodeRes;
+};
+
+export type RequestAppCodeResponse =
+  RequestAppCodeResponses[keyof RequestAppCodeResponses];
+
+export type ExchangeAppCodeData = {
+  body: ExchangeCodeReq;
+  path?: never;
+  query?: never;
+  url: '/api/auth/app/exchange';
+};
+
+export type ExchangeAppCodeErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ExchangeAppCodeError =
+  ExchangeAppCodeErrors[keyof ExchangeAppCodeErrors];
 
 export type ResetUserAvatarData = {
   body: UserAvatarResetRequest;

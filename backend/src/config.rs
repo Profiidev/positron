@@ -13,7 +13,7 @@ use figment::{
   providers::{Env, Serialized},
 };
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, warn};
+use tracing::instrument;
 use url::Url;
 
 #[derive(Deserialize, Serialize, Clone, Config)]
@@ -78,6 +78,8 @@ impl Default for Config {
   }
 }
 
+const REQUIRED_ORIGINS: &[&str] = &["http://tauri.localhost"];
+
 impl Config {
   #[instrument]
   pub fn parse() -> Self {
@@ -96,6 +98,22 @@ impl Config {
     }
 
     config.storage.validate();
+
+    let mut origins: Vec<String> = config
+      .base
+      .allowed_origins
+      .split(",")
+      .map(|origin| origin.trim().to_string())
+      .filter(|origin| !origin.is_empty())
+      .collect();
+
+    for required_origin in REQUIRED_ORIGINS {
+      if !origins.iter().any(|origin| origin == *required_origin) {
+        origins.push(required_origin.to_string());
+      }
+    }
+
+    config.base.allowed_origins = origins.join(",");
 
     config
   }
