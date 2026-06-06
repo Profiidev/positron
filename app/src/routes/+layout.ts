@@ -18,7 +18,12 @@ export const load: LayoutLoad = async ({ url }) => {
   }
 
   const auth = await authStatus();
-  if (auth !== undefined && !auth && url.pathname !== '/auth') {
+  if (
+    auth !== undefined &&
+    !auth &&
+    url.pathname !== '/auth' &&
+    url.pathname !== '/setup'
+  ) {
     redirect(302, '/auth');
   }
 

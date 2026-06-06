@@ -21,7 +21,11 @@
   });
 
   const confirm = async () => {
-    if (!data.auth.authType || data.auth.authType !== 'app' || !data.auth.challenge) {
+    if (
+      !data.auth.authType ||
+      data.auth.authType !== 'app' ||
+      !data.auth.challenge
+    ) {
       toast.error('There was an error while login in');
       return;
     }
@@ -37,6 +41,7 @@
 
     if (ret.data && ret.response?.status === 200) {
       window.location.href = `positron://auth?code=${ret.data.code}`;
+      window.close();
     } else {
       toast.error('There was an error while login in');
     }

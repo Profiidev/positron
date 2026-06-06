@@ -18,6 +18,10 @@ pub enum UpdateMessage {
   TokenInvalid,
   Disconnected,
   Connected,
+  CodeExchangeFailed,
+  CodeExchangeMissingCode,
+  CodeExchangeMissingVerifier,
+  AuthSuccess,
 }
 
 #[tauri::command]

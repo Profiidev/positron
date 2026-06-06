@@ -45,7 +45,7 @@
       };
     }
 
-    toast.success('Positron setup successfully.');
+    toast.success('Positron setup successful.');
     setTimeout(() => {
       goto('/auth');
     });

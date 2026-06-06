@@ -1,8 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
-use anyhow::Result;
-use reqwest::Method;
+use anyhow::{Result, bail};
+use cookie::Cookie;
+use reqwest::{Method, header::SET_COOKIE};
 use serde::Deserialize;
+use serde_json::json;
 use tauri::{AppHandle, Manager, async_runtime::spawn};
 use tokio::{sync::Notify, time::sleep};
 
@@ -17,6 +19,35 @@ struct TestTokenResponse {
 }
 
 impl super::Client {
+  pub async fn exchange_code(&self, code: String, verifier: String) -> Result<()> {
+    let req = self
+      .builder(Method::POST, "/api/auth/app/exchange")
+      .await?
+      .json(&json!({
+        "code": code,
+        "verifier": verifier
+      }));
+
+    let res = self.send(req).await?;
+    let token = res
+      .headers()
+      .get_all(SET_COOKIE)
+      .iter()
+      .filter_map(|h| h.to_str().ok())
+      .filter_map(|h| Cookie::parse(h).ok())
+      .find(|c| c.name() == "centaurus_jwt")
+      .map(|c| c.value().to_string());
+
+    if token.is_none() {
+      bail!("no token found");
+    }
+
+    let store = self.handle.state::<Store>();
+    store.set_token(token).await?;
+
+    Ok(())
+  }
+
   pub async fn test_token(&self) -> Result<bool> {
     if self.token.lock().await.is_none() {
       return Ok(false);

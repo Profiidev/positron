@@ -6,14 +6,24 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 export enum UpdateMessageType {
   TokenInvalid = 'TokenInvalid',
   Disconnected = 'Disconnected',
-  Connected = 'Connected'
+  Connected = 'Connected',
+  CodeExchangeFailed = 'CodeExchangeFailed',
+  CodeExchangeMissingCode = 'CodeExchangeMissingCode',
+  CodeExchangeMissingVerifier = 'CodeExchangeMissingVerifier',
+  AuthSuccess = 'AuthSuccess',
+  DeepLink = 'DeepLink'
 }
 
+// oxlint-disable-next-line consistent-type-definitions
 export type UpdateMessage = {
   type:
     | UpdateMessageType.Disconnected
     | UpdateMessageType.TokenInvalid
-    | UpdateMessageType.Connected;
+    | UpdateMessageType.Connected
+    | UpdateMessageType.CodeExchangeFailed
+    | UpdateMessageType.CodeExchangeMissingCode
+    | UpdateMessageType.CodeExchangeMissingVerifier
+    | UpdateMessageType.AuthSuccess;
 };
 
 export const startListener = async () => {
@@ -55,6 +65,26 @@ const handleMessage = (message: UpdateMessage) => {
         toast.success('Connection restored');
       }
       connected = true;
+      break;
+    }
+    case UpdateMessageType.CodeExchangeFailed: {
+      toast.error('Failed to exchange code');
+      goto('/auth').catch(() => {});
+      break;
+    }
+    case UpdateMessageType.CodeExchangeMissingCode: {
+      toast.error('Code exchange missing code');
+      goto('/auth').catch(() => {});
+      break;
+    }
+    case UpdateMessageType.CodeExchangeMissingVerifier: {
+      toast.error('Code exchange missing verifier');
+      goto('/auth').catch(() => {});
+      break;
+    }
+    case UpdateMessageType.AuthSuccess: {
+      toast.success('Authenticated successfully');
+      goto('/').catch(() => {});
       break;
     }
     default: {
