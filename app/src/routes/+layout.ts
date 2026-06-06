@@ -5,6 +5,7 @@
 import { redirect } from '@sveltejs/kit';
 import { setupStatus } from '../lib/commands/setup.svelte';
 import type { LayoutLoad } from './$types';
+import { authStatus } from '$lib/commands/auth.svelte';
 
 // See: https://v2.tauri.app/start/frontend/sveltekit/ for more info
 export const ssr = false;
@@ -12,9 +13,14 @@ export const ssr = false;
 export const load: LayoutLoad = async ({ url }) => {
   const status = await setupStatus();
 
-  if ((!status || !status.url_set) && url.pathname !== '/setup') {
+  if ((!status || !status.url) && url.pathname !== '/setup') {
     redirect(302, '/setup');
   }
 
-  return { isSetup: status?.url_set ?? false };
+  const auth = await authStatus();
+  if (auth !== undefined && !auth && url.pathname !== '/auth') {
+    redirect(302, '/auth');
+  }
+
+  return { isSetup: Boolean(status?.url) };
 };

@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 export const setup = async (url: string) => {
   try {
-    await invoke('setup', { payload: { url } });
+    await invoke('setup', { url });
     return true;
   } catch {
     return false;
@@ -10,14 +10,12 @@ export const setup = async (url: string) => {
 };
 
 export interface SetupStatus {
-  url_set: boolean;
+  url?: string;
 }
 
 export const setupStatus = async () => {
   try {
-    const result = await invoke('setup_status');
-    // oxlint-disable-next-line no-unsafe-type-assertion
-    return result as SetupStatus;
+    return await invoke<SetupStatus>('setup_status');
   } catch {
     return undefined;
   }
