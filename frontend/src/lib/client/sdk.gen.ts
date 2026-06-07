@@ -192,6 +192,8 @@ import type {
   ResetUserPasswordData,
   ResetUserPasswordErrors,
   ResetUserPasswordResponses,
+  RetrieveAppTokenData,
+  RetrieveAppTokenErrors,
   SaveAccountSettingsData,
   SaveAccountSettingsErrors,
   SaveAccountSettingsResponses,
@@ -595,6 +597,22 @@ export const exchangeAppCode = <ThrowOnError extends boolean = false>(
       }
     }
   );
+
+export const retrieveAppToken = <ThrowOnError extends boolean = false>(
+  options: Options<RetrieveAppTokenData, ThrowOnError>
+): RequestResult<unknown, RetrieveAppTokenErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    unknown,
+    RetrieveAppTokenErrors,
+    ThrowOnError
+  >({
+    url: '/api/auth/app/retrieve_token',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
 
 export const resetUserAvatar = <ThrowOnError extends boolean = false>(
   options: Options<ResetUserAvatarData, ThrowOnError>

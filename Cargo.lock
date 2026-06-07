@@ -1026,6 +1026,7 @@ dependencies = [
  "dotenvy",
  "entity",
  "figment",
+ "futures-util",
  "http 1.4.1",
  "image",
  "jsonwebtoken",
