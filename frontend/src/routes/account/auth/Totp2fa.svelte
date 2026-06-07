@@ -4,7 +4,7 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import Totp_6 from '@profidev/pleiades/components/form/totp-6.svelte';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
-  import { Clock9 } from '@lucide/svelte';
+  import Clock9 from '@lucide/svelte/icons/clock-9';
   import {
     totpAdd as totpAddSchema,
     totpRemove as totpRemoveSchema

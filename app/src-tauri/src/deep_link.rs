@@ -40,7 +40,6 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
     }
 
     let path = link.host_str().map(|s| s.to_string()).unwrap_or_default();
-    #[allow(clippy::single_match)]
     match path.as_str() {
       "auth" => {
         let code = link
@@ -75,6 +74,23 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
         } else {
           updater.send(UpdateMessage::AuthSuccess).await;
         }
+      }
+      "login" => {
+        let code = link
+          .query_pairs()
+          .into_iter()
+          .find(|(k, _)| k == "code")
+          .map(|(_, v)| v.to_string());
+
+        let updater = handle.state::<Updater>();
+
+        let Some(code) = code else {
+          updater.send(UpdateMessage::ConfirmAuthMissingCode).await;
+          println!("Missing code query parameter");
+          continue;
+        };
+
+        updater.send(UpdateMessage::ConfirmAuth { code }).await;
       }
       _ => {}
     }

@@ -4,7 +4,7 @@
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { LoaderCircle } from '@lucide/svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import { authorizeConfirm, logout, type UserInfo } from '$lib/client';
   import { toast } from '@profidev/pleiades/components/util/general';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';

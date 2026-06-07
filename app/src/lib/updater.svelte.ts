@@ -11,20 +11,27 @@ export enum UpdateMessageType {
   CodeExchangeMissingCode = 'CodeExchangeMissingCode',
   CodeExchangeMissingVerifier = 'CodeExchangeMissingVerifier',
   AuthSuccess = 'AuthSuccess',
-  DeepLink = 'DeepLink'
+  ConfirmAuth = 'ConfirmAuth',
+  ConfirmAuthMissingCode = 'ConfirmAuthMissingCode'
 }
 
 // oxlint-disable-next-line consistent-type-definitions
-export type UpdateMessage = {
-  type:
-    | UpdateMessageType.Disconnected
-    | UpdateMessageType.TokenInvalid
-    | UpdateMessageType.Connected
-    | UpdateMessageType.CodeExchangeFailed
-    | UpdateMessageType.CodeExchangeMissingCode
-    | UpdateMessageType.CodeExchangeMissingVerifier
-    | UpdateMessageType.AuthSuccess;
-};
+export type UpdateMessage =
+  | {
+      type:
+        | UpdateMessageType.Disconnected
+        | UpdateMessageType.TokenInvalid
+        | UpdateMessageType.Connected
+        | UpdateMessageType.CodeExchangeFailed
+        | UpdateMessageType.CodeExchangeMissingCode
+        | UpdateMessageType.CodeExchangeMissingVerifier
+        | UpdateMessageType.AuthSuccess
+        | UpdateMessageType.ConfirmAuthMissingCode;
+    }
+  | {
+      type: UpdateMessageType.ConfirmAuth;
+      code: string;
+    };
 
 export const startListener = async () => {
   const channel = new Channel<UpdateMessage>();
@@ -84,6 +91,15 @@ const handleMessage = (message: UpdateMessage) => {
     }
     case UpdateMessageType.AuthSuccess: {
       toast.success('Authenticated successfully');
+      goto('/').catch(() => {});
+      break;
+    }
+    case UpdateMessageType.ConfirmAuth: {
+      goto(`/login?code=${message.code}`).catch(() => {});
+      break;
+    }
+    case UpdateMessageType.ConfirmAuthMissingCode: {
+      toast.error('Code missing for confirmation');
       goto('/').catch(() => {});
       break;
     }

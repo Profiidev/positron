@@ -5,7 +5,9 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
-  import { KeyRound, Pencil, Trash } from '@lucide/svelte';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Trash from '@lucide/svelte/icons/trash';
   import { type SvelteComponent } from 'svelte';
   import { DateTime } from '@profidev/pleiades/util/time.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';

@@ -1,50 +1,36 @@
 <script lang="ts">
-  import { Button } from '@profidev/pleiades/components/ui/button';
   import * as Card from '@profidev/pleiades/components/ui/card';
+  import { Button } from '@profidev/pleiades/components/ui/button';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { logout, requestAppCode, type UserInfo } from '$lib/client';
-  import { toast } from '@profidev/pleiades/components/util/general';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
-  import { avatarUrl } from '$lib/permissions.svelte.js';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import { confirmCode } from '$lib/commands/auth.svelte';
+  import { toast } from '@profidev/pleiades/components/util/general';
 
-  let { data } = $props();
+  interface UserInfo {
+    uuid: string;
+    name: string;
+    email: string;
+  }
+
+  const { data } = $props();
 
   let isLoading = $state(false);
   let user: UserInfo | undefined = $state();
-
-  $effect(() => {
-    data.user.then((u) => {
-      user = u;
-    });
-  });
+  const avatarUrl = '';
 
   const confirm = async () => {
-    if (
-      !data.auth.authType ||
-      data.auth.authType !== 'app' ||
-      !data.auth.challenge
-    ) {
-      toast.error('There was an error while login in');
-      return;
-    }
-
+    if (!data.code) return;
     isLoading = true;
-
-    let ret = await requestAppCode({
-      body: {
-        challenge: data.auth.challenge
-      }
-    });
-    isLoading = false;
-
-    if (ret.data && ret.response?.status === 200) {
-      window.location.href = `positron://auth?code=${ret.data.code}`;
-      window.close();
+    const result = await confirmCode(data.code);
+    if (result) {
+      toast.success('Login confirmed successfully.');
+      goto('/');
     } else {
-      toast.error('There was an error while login in');
+      toast.error('Failed to confirm login.');
     }
+    isLoading = false;
   };
 
   const cancel = () => {
@@ -52,11 +38,8 @@
   };
 
   const change = async () => {
-    await logout();
-    const challenge = data.auth.challenge
-      ? `?challenge=${data.auth.challenge}`
-      : '';
-    goto(`/login?auth=${data.auth.authType}${challenge}`);
+    //await logout();
+    goto(`/login?code=${data.code}`);
   };
 </script>
 

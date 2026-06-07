@@ -15,3 +15,12 @@ export const startAuth = async () => {
     return undefined;
   }
 };
+
+export const confirmCode = async (code: string) => {
+  try {
+    await invoke('confirm_code', { code });
+    return true;
+  } catch {
+    return undefined;
+  }
+};

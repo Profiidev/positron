@@ -10,7 +10,7 @@
     parseDate,
     type DateValue
   } from '@profidev/pleiades/util/time.svelte';
-  import { LoaderCircle } from '@lucide/svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import type { GetInfoRes } from '$lib/client/types.gen.js';
   import { apodImageUrl } from '$lib/permissions.svelte.js';
   import { setGoodApod } from '$lib/client';
