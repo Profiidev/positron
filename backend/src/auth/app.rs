@@ -23,6 +23,7 @@ use centaurus::{
   backend::{
     auth::{jwt_auth::JwtAuth, jwt_state::JwtState},
     middleware::rate_limiter::RateLimiter,
+    request::response::TokenRes,
   },
   bail,
   error::Result,
@@ -130,7 +131,7 @@ async fn exchange_code(
   jwt: JwtState,
   mut cookies: CookieJar,
   Json(req): Json<ExchangeCodeReq>,
-) -> Result<CookieJar> {
+) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let Some(code_entry) = state.codes.get(&req.code) else {
     bail!("Invalid code");
   };
@@ -144,13 +145,14 @@ async fn exchange_code(
     bail!("Invalid verifier");
   }
 
-  let cookie = jwt.create_token(code_entry.0)?;
+  let user = code_entry.0;
+  let cookie = jwt.create_token(user)?;
   cookies = cookies.add(cookie);
 
   drop(code_entry);
   state.codes.remove(&req.code);
 
-  Ok(cookies)
+  Ok((cookies, TokenRes(AuthRes { user })))
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -243,12 +245,17 @@ struct RetrieveTokenReq {
   verifier: String,
 }
 
+#[derive(Serialize, JsonSchema, Debug)]
+struct AuthRes {
+  user: Uuid,
+}
+
 async fn retrieve_token(
   state: AppState,
   jwt: JwtState,
   mut cookies: CookieJar,
   Json(req): Json<RetrieveTokenReq>,
-) -> Result<CookieJar> {
+) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let Some(value) = state.approved_codes.get(&req.auth_code) else {
     bail!("Auth code not found");
   };
@@ -274,5 +281,5 @@ async fn retrieve_token(
 
   state.approved_codes.remove(&req.auth_code);
 
-  Ok(cookies)
+  Ok((cookies, TokenRes(AuthRes { user: user_id })))
 }

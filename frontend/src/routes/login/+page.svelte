@@ -21,6 +21,7 @@
   import {
     finishAuthentication,
     passwordAuthenticate,
+    retrieveAppToken,
     startAuthentication,
     totpConfirm
   } from '$lib/client';
@@ -219,6 +220,17 @@
             scale: 10
           });
         } else {
+          const { data, response } = await retrieveAppToken({
+            body: { auth_code: code, verifier }
+          });
+
+          if (response?.status !== 200 || !data) {
+            appError = true;
+            toast.error('There was an error while signing in.');
+          } else {
+            appError = false;
+            loginSuccess((data as { user: string }).user);
+          }
           isLoading = false;
         }
       },
