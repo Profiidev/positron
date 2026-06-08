@@ -8,6 +8,8 @@
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { startAuth } from '$lib/commands/auth.svelte.js';
   import { toast } from '@profidev/pleiades/components/util/general';
+  import { resetSetup } from '$lib/commands/setup.svelte.js';
+  import { goto } from '$app/navigation';
 
   type AuthStatus = 'Start' | 'Error';
 
@@ -34,6 +36,15 @@
     status = 'Start';
     isLoading = false;
   };
+
+  const resetSetup_ = async () => {
+    const success = await resetSetup();
+    if (!success) {
+      toast.error('Failed to reset setup');
+    } else {
+      goto('/setup');
+    }
+  };
 </script>
 
 <div class="grid h-full place-items-center">
@@ -46,21 +57,36 @@
         {/if}
       </Card.Title>
     </Card.Header>
-    <Card.Content class="flex items-center">
-      <p>Start the authentication process</p>
-      <Button
-        class="ml-auto"
-        onclick={startAuth_}
-        disabled={isLoading}
-        variant={status === 'Error' ? 'destructive' : 'default'}
-      >
-        {#if isLoading}
-          <Spinner />
-        {:else if status === 'Error'}
-          <RotateCcw />
-        {/if}
-        Login</Button
-      >
+    <Card.Content class="flex flex-col">
+      <div class="mb-2 flex items-center">
+        <p>
+          URL: {data.url}
+        </p>
+        <Button
+          class="ml-auto cursor-pointer"
+          variant="link"
+          onclick={resetSetup_}
+          disabled={isLoading}
+        >
+          Change</Button
+        >
+      </div>
+      <div class="flex items-center">
+        <p>Start the authentication process</p>
+        <Button
+          class="mr-2 ml-auto cursor-pointer"
+          onclick={startAuth_}
+          disabled={isLoading}
+          variant={status === 'Error' ? 'destructive' : 'default'}
+        >
+          {#if isLoading}
+            <Spinner />
+          {:else if status === 'Error'}
+            <RotateCcw />
+          {/if}
+          Login</Button
+        >
+      </div>
     </Card.Content>
   </Card.Root>
 </div>

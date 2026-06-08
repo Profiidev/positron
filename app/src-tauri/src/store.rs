@@ -61,9 +61,13 @@ impl Store {
     self.instance_url.lock().await.clone()
   }
 
-  pub async fn set_instance_url(&self, url: Url) -> Result<()> {
-    self.store.set(INSTANCE_URL_KEY, url.as_str());
-    *self.instance_url.lock().await = Some(url);
+  pub async fn set_instance_url(&self, url: Option<Url>) -> Result<()> {
+    if let Some(url) = &url {
+      self.store.set(INSTANCE_URL_KEY, url.as_str());
+    } else {
+      self.store.delete(INSTANCE_URL_KEY);
+    }
+    *self.instance_url.lock().await = url;
     self.store.save()?;
     Ok(())
   }

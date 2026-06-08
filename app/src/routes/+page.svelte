@@ -2,6 +2,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { Label } from '@profidev/pleiades/components/ui/label';
   import { Button } from '@profidev/pleiades/components/ui/button';
+  import { logout } from '$lib/commands/auth.svelte';
 
   let name = $state('');
   let greetMsg = $state('');
@@ -17,5 +18,6 @@
   <div>
     <Label>{greetMsg}</Label>
     <Button onclick={greet}>Greet</Button>
+    <Button onclick={logout}>Logout</Button>
   </div>
 </div>

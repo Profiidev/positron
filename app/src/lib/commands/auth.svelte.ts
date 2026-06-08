@@ -24,3 +24,12 @@ export const confirmCode = async (code: string) => {
     return undefined;
   }
 };
+
+export const logout = async () => {
+  try {
+    await invoke('logout');
+    return true;
+  } catch {
+    return undefined;
+  }
+};

@@ -5,7 +5,13 @@ use crate::store::Store;
 
 #[tauri::command]
 pub async fn setup(state: State<'_, Store>, url: Url) -> Result<()> {
-  state.set_instance_url(url).await?;
+  state.set_instance_url(Some(url)).await?;
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn reset_setup(state: State<'_, Store>) -> Result<()> {
+  state.set_instance_url(None).await?;
   Ok(())
 }
 

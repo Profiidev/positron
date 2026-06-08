@@ -34,3 +34,9 @@ pub async fn start_auth(store: State<'_, Store>) -> Result<String> {
 
   Ok(code_challenge)
 }
+
+#[tauri::command]
+pub async fn logout(store: State<'_, Store>) -> Result<()> {
+  store.set_token(None).await?;
+  Ok(())
+}
