@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use reqwest::{Method, RequestBuilder, Response, StatusCode};
@@ -8,6 +8,7 @@ use tokio::sync::{Mutex, Notify};
 use crate::store::Store;
 
 pub mod auth;
+pub mod user;
 
 pub struct Client {
   url: Arc<Mutex<Option<Url>>>,
@@ -19,7 +20,10 @@ pub struct Client {
 
 impl Client {
   pub fn init(handle: &AppHandle) -> Result<()> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+      .timeout(Duration::from_secs(10))
+      .connect_timeout(Duration::from_secs(10))
+      .build()?;
     let store = handle.state::<Store>();
     let connection_task = Arc::new(Notify::new());
 
@@ -37,6 +41,7 @@ impl Client {
 
     Self::connection_check(handle.clone());
     Self::token_check(handle.clone());
+    Self::update_user_info(handle.clone());
 
     Ok(())
   }

@@ -11,10 +11,17 @@
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
-  import { getEncrypt } from '$lib/backend/auth.svelte';
+  import {
+    appLoginWebsocket,
+    cancelAppLogin,
+    generateCodeChallenge,
+    generateCodeVerifier,
+    getEncrypt
+  } from '$lib/backend/auth.svelte';
   import {
     finishAuthentication,
     passwordAuthenticate,
+    retrieveAppToken,
     startAuthentication,
     totpConfirm
   } from '$lib/client';
@@ -25,6 +32,8 @@
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import Smartphone from '@lucide/svelte/icons/smartphone';
+  import QRCode from 'qrcode';
 
   let { data } = $props();
 
@@ -32,6 +41,8 @@
   let isLoading = $state(false);
   let totp = $state(false);
   let mailEnabled = $state(false);
+  let appError = $state(false);
+  let qrCode = $state<string | undefined>(undefined);
 
   $effect(() => {
     data.config?.then((config) => {
@@ -190,6 +201,45 @@
     }
     isLoading = false;
   };
+
+  const appLogin = async () => {
+    appError = false;
+    isLoading = true;
+
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    let initialCode = false;
+
+    appLoginWebsocket(
+      challenge,
+      async (code) => {
+        if (!initialCode) {
+          initialCode = true;
+          qrCode = await QRCode.toDataURL(`positron://login?code=${code}`, {
+            margin: 1,
+            scale: 10
+          });
+        } else {
+          const { data, response } = await retrieveAppToken({
+            body: { auth_code: code, verifier }
+          });
+
+          if (response?.status !== 200 || !data) {
+            appError = true;
+            toast.error('There was an error while signing in.');
+          } else {
+            appError = false;
+            loginSuccess((data as { user: string }).user);
+          }
+          isLoading = false;
+        }
+      },
+      () => {
+        appError = true;
+        isLoading = false;
+      }
+    );
+  };
 </script>
 
 <div class="flex h-screen w-full items-center justify-center px-4">
@@ -197,70 +247,103 @@
     <Card.Header>
       <Card.Title class="text-2xl">Login</Card.Title>
       <Card.Description
-        >{totp
-          ? 'Enter the 6-digit code from your authenticator app to continue'
-          : 'Enter your login details below to login'}</Card.Description
+        >{qrCode
+          ? 'Scan the QR code with your Positron app to continue'
+          : totp
+            ? 'Enter the 6-digit code from your authenticator app to continue'
+            : 'Enter your login details below to login'}</Card.Description
       >
     </Card.Header>
     <Card.Content>
-      {#if totp}
-        <BaseForm
-          schema={totpSchema}
-          bind:isLoading
-          onsubmit={confirmTotp}
-          submitText="Continue"
-        >
-          {#snippet children({ props })}
-            <Totp6 {...props} key="code" label="" class="justify-evenly" />
-          {/snippet}
-        </BaseForm>
-      {:else}
-        <BaseForm schema={login} {onsubmit} bind:isLoading submitText="Login">
-          {#snippet children({ props })}
-            <FormInput
-              {...props}
-              label="Email"
-              type="email"
-              placeholder="mail@example.com"
-              key="email"
-            />
-            <FormInputPassword
-              {...props}
-              label="Password"
-              placeholder="Your password"
-              key="password"
-            >
-              {#if mailEnabled}
-                <a
-                  href="/password/forgot"
-                  class="ms-auto inline-block text-sm underline"
-                  tabindex="-1"
-                >
-                  Forgot your password?
-                </a>
-              {/if}
-            </FormInputPassword>
-          {/snippet}
-        </BaseForm>
-      {/if}
-      <FieldSeparator class="*:data-[slot=field-separator-content]:bg-card my-4"
-        >Or continue with</FieldSeparator
-      >
-      <Button
-        class="w-full cursor-pointer"
-        onclick={passkeyLogin}
-        disabled={isLoading}
-        variant={passkeyError ? 'destructive' : 'outline'}
-      >
-        {#if isLoading}
-          <Spinner />
-        {:else if passkeyError}
-          <RotateCcw />
+      {#if !qrCode}
+        {#if totp}
+          <BaseForm
+            schema={totpSchema}
+            bind:isLoading
+            onsubmit={confirmTotp}
+            submitText="Continue"
+          >
+            {#snippet children({ props })}
+              <Totp6 {...props} key="code" label="" class="justify-evenly" />
+            {/snippet}
+          </BaseForm>
         {:else}
-          <KeyRound />
+          <BaseForm schema={login} {onsubmit} bind:isLoading submitText="Login">
+            {#snippet children({ props })}
+              <FormInput
+                {...props}
+                label="Email"
+                type="email"
+                placeholder="mail@example.com"
+                key="email"
+              />
+              <FormInputPassword
+                {...props}
+                label="Password"
+                placeholder="Your password"
+                key="password"
+              >
+                {#if mailEnabled}
+                  <a
+                    href="/password/forgot"
+                    class="ms-auto inline-block text-sm underline"
+                    tabindex="-1"
+                  >
+                    Forgot your password?
+                  </a>
+                {/if}
+              </FormInputPassword>
+            {/snippet}
+          </BaseForm>
         {/if}
-        {passkeyError ? 'Retry Passkey' : 'Passkey'}</Button
-      >
+        <FieldSeparator
+          class="*:data-[slot=field-separator-content]:bg-card my-4"
+          >Or continue with</FieldSeparator
+        >
+        <Button
+          class="w-full cursor-pointer"
+          onclick={passkeyLogin}
+          disabled={isLoading}
+          variant={passkeyError ? 'destructive' : 'outline'}
+        >
+          {#if isLoading}
+            <Spinner />
+          {:else if passkeyError}
+            <RotateCcw />
+          {:else}
+            <KeyRound />
+          {/if}
+          {passkeyError ? 'Retry Passkey' : 'Passkey'}</Button
+        >
+        <Button
+          class="mt-4 w-full cursor-pointer"
+          onclick={appLogin}
+          disabled={isLoading}
+          variant={appError ? 'destructive' : 'outline'}
+        >
+          {#if isLoading}
+            <Spinner />
+          {:else if appError}
+            <RotateCcw />
+          {:else}
+            <Smartphone />
+          {/if}
+          {appError ? 'Retry App Login' : 'App Login'}</Button
+        >
+      {:else}
+        <img src={qrCode} alt="QR Code" class="w-full" />
+        <Button
+          class="mt-4 w-full cursor-pointer"
+          variant="outline"
+          onclick={() => {
+            cancelAppLogin();
+            qrCode = undefined;
+            isLoading = false;
+          }}
+        >
+          Cancel
+        </Button>
+      {/if}
     </Card.Content>
   </Card.Root>
 </div>

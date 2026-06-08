@@ -14,6 +14,10 @@ export type ApodInfo = {
   user: SimpleUserInfo;
 };
 
+export type ApproveCodeReq = {
+  code: string;
+};
+
 export type AuthConfig = {
   mail_enabled: boolean;
 };
@@ -349,6 +353,11 @@ export type ResetRequest = {
 export type ResetUserPassword = {
   new_password: string;
   uuid: string;
+};
+
+export type RetrieveTokenReq = {
+  auth_code: string;
+  verifier: string;
 };
 
 export type SetGoodReq = {
@@ -1175,6 +1184,39 @@ export type ExchangeAppCodeErrors = {
 
 export type ExchangeAppCodeError =
   ExchangeAppCodeErrors[keyof ExchangeAppCodeErrors];
+
+export type RetrieveAppTokenData = {
+  body: RetrieveTokenReq;
+  path?: never;
+  query?: never;
+  url: '/api/auth/app/retrieve_token';
+};
+
+export type RetrieveAppTokenErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RetrieveAppTokenError =
+  RetrieveAppTokenErrors[keyof RetrieveAppTokenErrors];
 
 export type TestTokenData = {
   body?: never;

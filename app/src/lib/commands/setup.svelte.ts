@@ -20,3 +20,12 @@ export const setupStatus = async () => {
     return undefined;
   }
 };
+
+export const resetSetup = async () => {
+  try {
+    await invoke('reset_setup');
+    return true;
+  } catch {
+    return false;
+  }
+};

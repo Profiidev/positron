@@ -15,6 +15,9 @@ pub struct Updater {
 #[derive(Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum UpdateMessage {
+  AuthStatusUpdated,
+  SetupUpdated,
+  UserInfoUpdated,
   TokenInvalid,
   Disconnected,
   Connected,
@@ -22,6 +25,8 @@ pub enum UpdateMessage {
   CodeExchangeMissingCode,
   CodeExchangeMissingVerifier,
   AuthSuccess,
+  ConfirmAuthMissingCode,
+  ConfirmAuth { code: String },
 }
 
 #[tauri::command]

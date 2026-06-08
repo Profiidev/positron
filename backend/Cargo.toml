@@ -38,6 +38,7 @@ dashmap = "6.2.1"
 dotenvy = "0.15.7"
 entity = { path = "entity" }
 figment = { version = "0.10.19", features = ["env"] }
+futures-util = "0.3.32"
 http = "1.4.0"
 image = { version = "0.25.10", default-features = false, features = [
   "jpeg",

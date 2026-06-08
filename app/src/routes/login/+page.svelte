@@ -1,50 +1,33 @@
 <script lang="ts">
-  import { Button } from '@profidev/pleiades/components/ui/button';
   import * as Card from '@profidev/pleiades/components/ui/card';
+  import { Button } from '@profidev/pleiades/components/ui/button';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { logout, requestAppCode, type UserInfo } from '$lib/client';
-  import { toast } from '@profidev/pleiades/components/util/general';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
-  import { avatarUrl } from '$lib/permissions.svelte.js';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import { confirmCode, logout } from '$lib/commands/auth.svelte';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import { userAvatarState, userInfoState } from '$lib/updater/state.svelte.js';
+  import { isConnected } from '$lib/updater/updater.svelte.js';
+  import { Badge } from '@profidev/pleiades/components/ui/badge';
 
-  let { data } = $props();
+  const { data } = $props();
 
+  const user = $derived(userInfoState.value);
+  const avatar = $derived(userAvatarState.value);
   let isLoading = $state(false);
-  let user: UserInfo | undefined = $state();
-
-  $effect(() => {
-    data.user.then((u) => {
-      user = u;
-    });
-  });
 
   const confirm = async () => {
-    if (
-      !data.auth.authType ||
-      data.auth.authType !== 'app' ||
-      !data.auth.challenge
-    ) {
-      toast.error('There was an error while login in');
-      return;
-    }
-
+    if (!data.code) return;
     isLoading = true;
-
-    let ret = await requestAppCode({
-      body: {
-        challenge: data.auth.challenge
-      }
-    });
-    isLoading = false;
-
-    if (ret.data && ret.response?.status === 200) {
-      window.location.href = `positron://auth?code=${ret.data.code}`;
-      window.close();
+    const result = await confirmCode(data.code);
+    if (result) {
+      toast.success('Login confirmed successfully.');
+      goto('/');
     } else {
-      toast.error('There was an error while login in');
+      toast.error('Failed to confirm login.');
     }
+    isLoading = false;
   };
 
   const cancel = () => {
@@ -53,27 +36,26 @@
 
   const change = async () => {
     await logout();
-    const challenge = data.auth.challenge
-      ? `?challenge=${data.auth.challenge}`
-      : '';
-    goto(`/login?auth=${data.auth.authType}${challenge}`);
+    goto(`/auth`);
   };
 </script>
 
 <div class="flex h-full items-center justify-center">
   <Card.Root>
     <Card.Header>
-      <Card.Title>Log in to Positron App</Card.Title>
+      <Card.Title class="flex"
+        >Log in to Positron App
+        {#if !isConnected()}
+          <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
+        {/if}
+      </Card.Title>
       <Card.Description
         >Do you want to log in with the account below?</Card.Description
       >
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
       {#if user}
-        <SimpleAvatar
-          src={user ? `${avatarUrl}/${user.uuid}` : ''}
-          class="size-14"
-        />
+        <SimpleAvatar src={avatar ?? ''} class="size-14" />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
           <span class="truncate text-lg font-semibold">{user.name}</span>
           <span class="truncate">{user.email}</span>

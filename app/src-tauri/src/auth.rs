@@ -3,7 +3,11 @@ use rand::seq::IndexedRandom;
 use sha2::{Digest, Sha256};
 use tauri::{Result, State};
 
-use crate::store::Store;
+use crate::{
+  api::Client,
+  store::Store,
+  updater::{UpdateMessage, Updater},
+};
 
 pub const URL_SAFE_CHARS: &[u8] =
   b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
@@ -33,4 +37,20 @@ pub async fn start_auth(store: State<'_, Store>) -> Result<String> {
   store.set_auth_verifier(code_verifier).await?;
 
   Ok(code_challenge)
+}
+
+#[tauri::command]
+pub async fn logout(store: State<'_, Store>, updater: State<'_, Updater>) -> Result<()> {
+  store.set_token(None).await?;
+  store.set_user_info(None).await?;
+  store.set_avatar_store(None).await?;
+  updater.send(UpdateMessage::AuthStatusUpdated).await;
+  updater.send(UpdateMessage::UserInfoUpdated).await;
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn confirm_code(client: State<'_, Client>, code: String) -> Result<()> {
+  client.confirm_code(code).await?;
+  Ok(())
 }

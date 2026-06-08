@@ -1,9 +1,10 @@
 use crate::{
   api::Client,
-  auth::{auth_status, start_auth},
-  setup::{setup, setup_status},
+  auth::{auth_status, confirm_code, logout, start_auth},
+  setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
+  user::{user_avatar, user_info},
 };
 
 mod api;
@@ -12,10 +13,21 @@ mod deep_link;
 mod setup;
 mod store;
 mod updater;
+mod user;
+
+#[cfg(desktop)]
+mod tauri_plugin_barcode_scanner {
+  use tauri::Wry;
+
+  pub fn init() -> tauri::plugin::TauriPlugin<Wry> {
+    unimplemented!()
+  }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_barcode_scanner::init())
     .plugin(tauri_plugin_store::Builder::new().build())
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_opener::init())
@@ -26,6 +38,11 @@ pub fn run() {
       disconnect_updater,
       auth_status,
       start_auth,
+      logout,
+      reset_setup,
+      user_info,
+      user_avatar,
+      confirm_code,
     ])
     .setup(|app| {
       deep_link::setup_deep_link(app.handle())?;
