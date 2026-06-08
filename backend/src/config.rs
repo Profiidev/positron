@@ -72,7 +72,10 @@ impl Default for Config {
       apod_api_key: "DEMO_KEY".to_string(),
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
-      auth: AuthConfig::default(),
+      auth: AuthConfig {
+        auth_jwt_expiration: 60 * 60 * 24 * 31, // 31 days
+        ..Default::default()
+      },
       mail: MailSettings::default(),
     }
   }

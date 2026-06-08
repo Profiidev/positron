@@ -8,7 +8,7 @@
   import { page } from '$app/state';
   import { items, noSidebarPaths } from '$lib/components/nav.svelte';
   import { setMode } from 'mode-watcher';
-  import { logout, testToken, type UserInfo } from '$lib/client';
+  import { logout, refreshToken, testToken, type UserInfo } from '$lib/client';
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
   import Atom from '@lucide/svelte/icons/atom';
   import { avatarUrl } from '$lib/permissions.svelte';
@@ -30,8 +30,11 @@
   onMount(() => {
     setMode('dark');
     testToken().then(async ({ data: dataRaw }) => {
-      let { valid } = (dataRaw as { valid: boolean } | undefined) ?? {
-        valid: false
+      let { valid, exp_short } = (dataRaw as
+        | { valid: boolean; exp_short: boolean }
+        | undefined) ?? {
+        valid: false,
+        exp_short: false
       };
       // can also be undefined if there was an error
       if (valid === false) {
@@ -55,6 +58,9 @@
           }
         }
       } else {
+        if (exp_short) {
+          refreshToken();
+        }
         let user = await data.user;
         connectWebsocket(user.uuid);
       }

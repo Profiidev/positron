@@ -174,6 +174,8 @@ import type {
   PasswordAuthenticateErrors,
   PasswordSpecialAccessData,
   PasswordSpecialAccessErrors,
+  RefreshTokenData,
+  RefreshTokenErrors,
   RegenerateSecretOauthClientData,
   RegenerateSecretOauthClientErrors,
   RegenerateSecretOauthClientResponses,
@@ -319,14 +321,6 @@ export const logout = <ThrowOnError extends boolean = false>(
 ): RequestResult<unknown, LogoutErrors, ThrowOnError> =>
   (options?.client ?? client).post<unknown, LogoutErrors, ThrowOnError>({
     url: '/api/auth/logout',
-    ...options
-  });
-
-export const testToken = <ThrowOnError extends boolean = false>(
-  options?: Options<TestTokenData, ThrowOnError>
-): RequestResult<unknown, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<unknown, unknown, ThrowOnError>({
-    url: '/api/auth/test_token',
     ...options
   });
 
@@ -595,6 +589,22 @@ export const exchangeAppCode = <ThrowOnError extends boolean = false>(
       }
     }
   );
+
+export const testToken = <ThrowOnError extends boolean = false>(
+  options?: Options<TestTokenData, ThrowOnError>
+): RequestResult<unknown, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<unknown, unknown, ThrowOnError>({
+    url: '/api/auth/test_token',
+    ...options
+  });
+
+export const refreshToken = <ThrowOnError extends boolean = false>(
+  options?: Options<RefreshTokenData, ThrowOnError>
+): RequestResult<unknown, RefreshTokenErrors, ThrowOnError> =>
+  (options?.client ?? client).get<unknown, RefreshTokenErrors, ThrowOnError>({
+    url: '/api/auth/refresh_token',
+    ...options
+  });
 
 export const resetUserAvatar = <ThrowOnError extends boolean = false>(
   options: Options<ResetUserAvatarData, ThrowOnError>
