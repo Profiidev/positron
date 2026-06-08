@@ -15,9 +15,19 @@ mod store;
 mod updater;
 mod user;
 
+#[cfg(desktop)]
+mod tauri_plugin_barcode_scanner {
+  use tauri::Wry;
+
+  pub fn init() -> tauri::plugin::TauriPlugin<Wry> {
+    unimplemented!()
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_barcode_scanner::init())
     .plugin(tauri_plugin_store::Builder::new().build())
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_opener::init())
