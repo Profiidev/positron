@@ -15,6 +15,8 @@ pub struct Updater {
 #[derive(Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum UpdateMessage {
+  AuthStatusUpdated,
+  SetupUpdated,
   TokenInvalid,
   Disconnected,
   Connected,

@@ -10,6 +10,15 @@
   import { setup } from '$lib/commands/setup.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { goto } from '$app/navigation';
+  import { setupStatusState } from '$lib/updater/state.svelte';
+
+  const setupStatus = $derived(setupStatusState.value);
+
+  $effect(() => {
+    if (setupStatus?.url && setupStatus !== null) {
+      goto('/');
+    }
+  });
 
   const stages: Stage[] = [
     {

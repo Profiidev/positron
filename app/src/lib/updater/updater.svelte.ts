@@ -2,36 +2,8 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { toast } from '@profidev/pleiades/components/util/general';
 import { Channel, invoke } from '@tauri-apps/api/core';
-
-export enum UpdateMessageType {
-  TokenInvalid = 'TokenInvalid',
-  Disconnected = 'Disconnected',
-  Connected = 'Connected',
-  CodeExchangeFailed = 'CodeExchangeFailed',
-  CodeExchangeMissingCode = 'CodeExchangeMissingCode',
-  CodeExchangeMissingVerifier = 'CodeExchangeMissingVerifier',
-  AuthSuccess = 'AuthSuccess',
-  ConfirmAuth = 'ConfirmAuth',
-  ConfirmAuthMissingCode = 'ConfirmAuthMissingCode'
-}
-
-// oxlint-disable-next-line consistent-type-definitions
-export type UpdateMessage =
-  | {
-      type:
-        | UpdateMessageType.Disconnected
-        | UpdateMessageType.TokenInvalid
-        | UpdateMessageType.Connected
-        | UpdateMessageType.CodeExchangeFailed
-        | UpdateMessageType.CodeExchangeMissingCode
-        | UpdateMessageType.CodeExchangeMissingVerifier
-        | UpdateMessageType.AuthSuccess
-        | UpdateMessageType.ConfirmAuthMissingCode;
-    }
-  | {
-      type: UpdateMessageType.ConfirmAuth;
-      code: string;
-    };
+import { triggerUpdates } from './state.svelte';
+import { type UpdateMessage, UpdateMessageType } from './types.svelte';
 
 export const startListener = async () => {
   const channel = new Channel<UpdateMessage>();
@@ -41,6 +13,8 @@ export const startListener = async () => {
   const uuid = await invoke<string>('connect_updater', {
     channel
   });
+
+  triggerUpdates();
 
   return () => {
     invoke('disconnect_updater', {
@@ -107,4 +81,6 @@ const handleMessage = (message: UpdateMessage) => {
       break;
     }
   }
+
+  triggerUpdates();
 };

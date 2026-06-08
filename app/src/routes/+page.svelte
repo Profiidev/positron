@@ -3,6 +3,8 @@
   import { Label } from '@profidev/pleiades/components/ui/label';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { logout } from '$lib/commands/auth.svelte';
+  import { isConnected } from '$lib/updater/updater.svelte';
+  import { Badge } from '@profidev/pleiades/components/ui/badge';
 
   let name = $state('');
   let greetMsg = $state('');
@@ -19,5 +21,8 @@
     <Label>{greetMsg}</Label>
     <Button onclick={greet}>Greet</Button>
     <Button onclick={logout}>Logout</Button>
+    {#if !isConnected()}
+      <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
+    {/if}
   </div>
 </div>

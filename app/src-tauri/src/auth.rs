@@ -3,7 +3,10 @@ use rand::seq::IndexedRandom;
 use sha2::{Digest, Sha256};
 use tauri::{Result, State};
 
-use crate::store::Store;
+use crate::{
+  store::Store,
+  updater::{UpdateMessage, Updater},
+};
 
 pub const URL_SAFE_CHARS: &[u8] =
   b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
@@ -36,7 +39,8 @@ pub async fn start_auth(store: State<'_, Store>) -> Result<String> {
 }
 
 #[tauri::command]
-pub async fn logout(store: State<'_, Store>) -> Result<()> {
+pub async fn logout(store: State<'_, Store>, updater: State<'_, Updater>) -> Result<()> {
   store.set_token(None).await?;
+  updater.send(UpdateMessage::AuthStatusUpdated).await;
   Ok(())
 }

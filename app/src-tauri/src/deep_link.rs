@@ -73,6 +73,7 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
           updater.send(UpdateMessage::CodeExchangeFailed).await;
         } else {
           updater.send(UpdateMessage::AuthSuccess).await;
+          updater.send(UpdateMessage::AuthStatusUpdated).await;
         }
       }
       "login" => {

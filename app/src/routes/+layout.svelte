@@ -4,7 +4,35 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
-  import { startListener } from '$lib/updater.svelte';
+  import { page } from '$app/state';
+  import { goto } from '$app/navigation';
+  import { authStatusState, setupStatusState } from '$lib/updater/state.svelte';
+  import { startListener } from '$lib/updater/updater.svelte';
+
+  const setupStatus = $derived(setupStatusState.value);
+  const authStatus = $derived(authStatusState.value);
+
+  $effect(() => {
+    if (
+      (!setupStatus || !setupStatus.url) &&
+      page.url.pathname !== '/setup' &&
+      setupStatus !== null
+    ) {
+      goto('/setup');
+    }
+  });
+
+  $effect(() => {
+    if (
+      authStatus !== undefined &&
+      !authStatus &&
+      page.url.pathname !== '/auth' &&
+      page.url.pathname !== '/setup' &&
+      authStatus !== null
+    ) {
+      goto('/auth');
+    }
+  });
 
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
