@@ -24,5 +24,6 @@
     {#if !isConnected()}
       <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
     {/if}
+    <a href="/login?code=123">Test</a>
   </div>
 </div>

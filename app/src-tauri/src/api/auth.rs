@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use cookie::Cookie;
-use reqwest::{Method, header::SET_COOKIE};
+use reqwest::{Method, Response, header::SET_COOKIE};
 use serde::Deserialize;
 use serde_json::json;
 use tauri::{AppHandle, Manager, async_runtime::spawn};
@@ -16,6 +16,7 @@ use crate::{
 #[derive(Deserialize)]
 struct TestTokenResponse {
   valid: bool,
+  exp_short: bool,
 }
 
 impl super::Client {
@@ -29,14 +30,7 @@ impl super::Client {
       }));
 
     let res = self.send(req).await?;
-    let token = res
-      .headers()
-      .get_all(SET_COOKIE)
-      .iter()
-      .filter_map(|h| h.to_str().ok())
-      .filter_map(|h| Cookie::parse(h).ok())
-      .find(|c| c.name() == "centaurus_jwt")
-      .map(|c| c.value().to_string());
+    let token = extract_token(&res);
 
     if token.is_none() {
       bail!("no token found");
@@ -57,7 +51,22 @@ impl super::Client {
     let res = self.send_auth(req).await?;
     let body = res.json::<TestTokenResponse>().await?;
 
+    if body.exp_short {
+      self.refresh_token().await.ok();
+    }
+
     Ok(body.valid)
+  }
+
+  pub async fn refresh_token(&self) -> Result<()> {
+    let req = self.builder(Method::GET, "/api/auth/refresh_token").await?;
+    let res = self.send_auth(req).await?;
+    let token = extract_token(&res);
+
+    let store = self.handle.state::<Store>();
+    store.set_token(token).await?;
+
+    Ok(())
   }
 
   pub async fn test_connection(&self) -> Result<bool> {
@@ -129,4 +138,15 @@ impl super::Client {
       }
     });
   }
+}
+
+fn extract_token(res: &Response) -> Option<String> {
+  res
+    .headers()
+    .get_all(SET_COOKIE)
+    .iter()
+    .filter_map(|h| h.to_str().ok())
+    .filter_map(|h| Cookie::parse(h).ok())
+    .find(|c| c.name() == "centaurus_jwt")
+    .map(|c| c.value().to_string())
 }

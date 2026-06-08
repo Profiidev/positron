@@ -592,7 +592,6 @@ export const exchangeAppCode = <ThrowOnError extends boolean = false>(
     }
   );
 
-<<<<<<< HEAD
 export const retrieveAppToken = <ThrowOnError extends boolean = false>(
   options: Options<RetrieveAppTokenData, ThrowOnError>
 ): RequestResult<unknown, RetrieveAppTokenErrors, ThrowOnError> =>
@@ -607,7 +606,8 @@ export const retrieveAppToken = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers
     }
-=======
+  });
+
 export const testToken = <ThrowOnError extends boolean = false>(
   options?: Options<TestTokenData, ThrowOnError>
 ): RequestResult<unknown, unknown, ThrowOnError> =>
@@ -622,7 +622,6 @@ export const refreshToken = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<unknown, RefreshTokenErrors, ThrowOnError>({
     url: '/api/auth/refresh_token',
     ...options
->>>>>>> main
   });
 
 export const resetUserAvatar = <ThrowOnError extends boolean = false>(
