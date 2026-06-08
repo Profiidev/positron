@@ -1,18 +1,34 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use base64::prelude::*;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Url, Wry};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 const STORE_PATH: &str = "store.json";
 const INSTANCE_URL_KEY: &str = "instance_url";
 const TOKEN_KEY: &str = "token";
 const AUTH_VERIFIER_KEY: &str = "auth_verifier";
+const USER_INFO_KEY: &str = "user_info";
+
+const AVATAR_STORE_PATH: &str = "avatar_store.json";
+const AVATAR_STORE_KEY: &str = "avatar";
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserInfo {
+  pub uuid: Uuid,
+  pub name: String,
+  pub email: String,
+}
 
 pub struct Store {
   store: Arc<tauri_plugin_store::Store<Wry>>,
+  avatar_store: Arc<tauri_plugin_store::Store<Wry>>,
   auth_verifier: Mutex<Option<String>>,
+  user_info: Mutex<Option<UserInfo>>,
   pub instance_url: Arc<Mutex<Option<Url>>>,
   pub token: Arc<Mutex<Option<String>>>,
 }
@@ -20,11 +36,17 @@ pub struct Store {
 impl Store {
   pub fn init(handle: &AppHandle) -> Result<()> {
     let store = handle.store(STORE_PATH)?;
+    let avatar_store = handle.store(AVATAR_STORE_PATH)?;
 
     let instance_url = store
       .get(INSTANCE_URL_KEY)
       .and_then(|val| val.as_str().map(|s| s.to_string()))
       .and_then(|url| Url::parse(&url).ok());
+
+    let user_info = store
+      .get(USER_INFO_KEY)
+      .and_then(|val| val.as_str().map(|s| s.to_string()))
+      .and_then(|s| serde_json::from_str(&s).ok());
 
     let token = store
       .get(TOKEN_KEY)
@@ -36,9 +58,11 @@ impl Store {
 
     let store = Self {
       store,
+      avatar_store,
       auth_verifier: Mutex::new(auth_verifier),
       instance_url: Arc::new(Mutex::new(instance_url)),
       token: Arc::new(Mutex::new(token)),
+      user_info: Mutex::new(user_info),
     };
 
     handle.manage(store);
@@ -84,6 +108,43 @@ impl Store {
     }
     *self.token.lock().await = token;
     self.store.save()?;
+    Ok(())
+  }
+
+  pub async fn user_info(&self) -> Option<UserInfo> {
+    self.user_info.lock().await.clone()
+  }
+
+  pub async fn set_user_info(&self, user_info: Option<UserInfo>) -> Result<()> {
+    if let Some(user_info) = &user_info {
+      self
+        .store
+        .set(USER_INFO_KEY, serde_json::to_string(user_info)?);
+    } else {
+      self.store.delete(USER_INFO_KEY);
+    }
+    *self.user_info.lock().await = user_info;
+    self.store.save()?;
+    Ok(())
+  }
+
+  pub async fn avatar_store(&self) -> Option<Vec<u8>> {
+    self
+      .avatar_store
+      .get(AVATAR_STORE_KEY)
+      .and_then(|v| v.as_str().map(|s| s.to_string()))
+      .and_then(|s| BASE64_STANDARD.decode(s).ok())
+  }
+
+  pub async fn set_avatar_store(&self, avatar: Option<Vec<u8>>) -> Result<()> {
+    if let Some(avatar) = &avatar {
+      self
+        .avatar_store
+        .set(AVATAR_STORE_KEY, BASE64_STANDARD.encode(avatar).as_str());
+    } else {
+      self.avatar_store.delete(AVATAR_STORE_KEY);
+    }
+    self.avatar_store.save()?;
     Ok(())
   }
 }

@@ -17,6 +17,7 @@ pub struct Updater {
 pub enum UpdateMessage {
   AuthStatusUpdated,
   SetupUpdated,
+  UserInfoUpdated,
   TokenInvalid,
   Disconnected,
   Connected,

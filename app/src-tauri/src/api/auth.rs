@@ -63,8 +63,10 @@ impl super::Client {
     let res = self.send_auth(req).await?;
     let token = extract_token(&res);
 
-    let store = self.handle.state::<Store>();
-    store.set_token(token).await?;
+    if let Some(token) = token {
+      let store = self.handle.state::<Store>();
+      store.set_token(Some(token)).await?;
+    }
 
     Ok(())
   }
@@ -88,11 +90,12 @@ impl super::Client {
       if !valid {
         let store = handle.state::<Store>();
         store.set_token(None).await.ok();
+        store.set_user_info(None).await.ok();
+        store.set_avatar_store(None).await.ok();
 
-        handle
-          .state::<Updater>()
-          .send(UpdateMessage::TokenInvalid)
-          .await;
+        let updater = handle.state::<Updater>();
+        updater.send(UpdateMessage::TokenInvalid).await;
+        updater.send(UpdateMessage::UserInfoUpdated).await;
       }
     });
   }

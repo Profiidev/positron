@@ -4,6 +4,7 @@ use crate::{
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
+  user::{user_avatar, user_info},
 };
 
 mod api;
@@ -12,6 +13,7 @@ mod deep_link;
 mod setup;
 mod store;
 mod updater;
+mod user;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,6 +30,8 @@ pub fn run() {
       start_auth,
       logout,
       reset_setup,
+      user_info,
+      user_avatar,
     ])
     .setup(|app| {
       deep_link::setup_deep_link(app.handle())?;

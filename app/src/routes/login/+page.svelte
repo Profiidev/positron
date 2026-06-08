@@ -5,20 +5,15 @@
   import { goto } from '$app/navigation';
   import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { confirmCode } from '$lib/commands/auth.svelte';
+  import { confirmCode, logout } from '$lib/commands/auth.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
-
-  interface UserInfo {
-    uuid: string;
-    name: string;
-    email: string;
-  }
+  import { userAvatarState, userInfoState } from '$lib/updater/state.svelte.js';
 
   const { data } = $props();
 
+  const user = $derived(userInfoState.value);
+  const avatar = $derived(userAvatarState.value);
   let isLoading = $state(false);
-  let user: UserInfo | undefined = $state();
-  const avatarUrl = '';
 
   const confirm = async () => {
     if (!data.code) return;
@@ -38,8 +33,8 @@
   };
 
   const change = async () => {
-    //await logout();
-    goto(`/login?code=${data.code}`);
+    await logout();
+    goto(`/auth`);
   };
 </script>
 
@@ -53,10 +48,7 @@
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
       {#if user}
-        <SimpleAvatar
-          src={user ? `${avatarUrl}/${user.uuid}` : ''}
-          class="size-14"
-        />
+        <SimpleAvatar src={avatar ?? ''} class="size-14" />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
           <span class="truncate text-lg font-semibold">{user.name}</span>
           <span class="truncate">{user.email}</span>

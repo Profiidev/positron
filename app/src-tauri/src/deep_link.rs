@@ -75,6 +75,10 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
           updater.send(UpdateMessage::AuthSuccess).await;
           updater.send(UpdateMessage::AuthStatusUpdated).await;
         }
+
+        if let Err(e) = client.load_user_info().await {
+          println!("Failed to load user info: {:?}", e);
+        }
       }
       "login" => {
         let code = link

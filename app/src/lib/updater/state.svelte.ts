@@ -2,6 +2,7 @@ import { tick } from 'svelte';
 import { UpdateMessageType } from './types.svelte';
 import { setupStatus } from '$lib/commands/setup.svelte';
 import { authStatus } from '$lib/commands/auth.svelte';
+import { userAvatar, userInfo } from '$lib/commands/user.svelte';
 
 const updater_cbs = new Map<UpdateMessageType, Map<string, () => void>>();
 
@@ -84,4 +85,14 @@ export const setupStatusState = create_updater(
 export const authStatusState = create_updater(
   UpdateMessageType.AuthStatusUpdated,
   authStatus
+);
+
+export const userInfoState = create_updater(
+  UpdateMessageType.UserInfoUpdated,
+  userInfo
+);
+
+export const userAvatarState = create_updater(
+  UpdateMessageType.UserInfoUpdated,
+  userAvatar
 );

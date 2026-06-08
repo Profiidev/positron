@@ -8,6 +8,7 @@ use tokio::sync::{Mutex, Notify};
 use crate::store::Store;
 
 pub mod auth;
+pub mod user;
 
 pub struct Client {
   url: Arc<Mutex<Option<Url>>>,
@@ -37,6 +38,7 @@ impl Client {
 
     Self::connection_check(handle.clone());
     Self::token_check(handle.clone());
+    Self::update_user_info(handle.clone());
 
     Ok(())
   }

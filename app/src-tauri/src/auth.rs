@@ -41,6 +41,9 @@ pub async fn start_auth(store: State<'_, Store>) -> Result<String> {
 #[tauri::command]
 pub async fn logout(store: State<'_, Store>, updater: State<'_, Updater>) -> Result<()> {
   store.set_token(None).await?;
+  store.set_user_info(None).await?;
+  store.set_avatar_store(None).await?;
   updater.send(UpdateMessage::AuthStatusUpdated).await;
+  updater.send(UpdateMessage::UserInfoUpdated).await;
   Ok(())
 }
