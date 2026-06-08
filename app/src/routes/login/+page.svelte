@@ -8,6 +8,8 @@
   import { confirmCode, logout } from '$lib/commands/auth.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { userAvatarState, userInfoState } from '$lib/updater/state.svelte.js';
+  import { isConnected } from '$lib/updater/updater.svelte.js';
+  import { Badge } from '@profidev/pleiades/components/ui/badge';
 
   const { data } = $props();
 
@@ -41,7 +43,12 @@
 <div class="flex h-full items-center justify-center">
   <Card.Root>
     <Card.Header>
-      <Card.Title>Log in to Positron App</Card.Title>
+      <Card.Title class="flex"
+        >Log in to Positron App
+        {#if !isConnected()}
+          <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
+        {/if}
+      </Card.Title>
       <Card.Description
         >Do you want to log in with the account below?</Card.Description
       >
