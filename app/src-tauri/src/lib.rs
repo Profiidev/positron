@@ -1,6 +1,6 @@
 use crate::{
   api::Client,
-  auth::{auth_status, logout, start_auth},
+  auth::{auth_status, confirm_code, logout, start_auth},
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
@@ -32,6 +32,7 @@ pub fn run() {
       reset_setup,
       user_info,
       user_avatar,
+      confirm_code,
     ])
     .setup(|app| {
       deep_link::setup_deep_link(app.handle())?;

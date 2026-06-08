@@ -20,6 +20,17 @@ struct TestTokenResponse {
 }
 
 impl super::Client {
+  pub async fn confirm_code(&self, code: String) -> Result<()> {
+    let req = self
+      .builder(Method::POST, "/api/auth/app/approve")
+      .await?
+      .json(&json!({
+        "code": code
+      }));
+    self.send_auth(req).await?;
+    Ok(())
+  }
+
   pub async fn exchange_code(&self, code: String, verifier: String) -> Result<()> {
     let req = self
       .builder(Method::POST, "/api/auth/app/exchange")

@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 use tauri::{Result, State};
 
 use crate::{
+  api::Client,
   store::Store,
   updater::{UpdateMessage, Updater},
 };
@@ -45,5 +46,11 @@ pub async fn logout(store: State<'_, Store>, updater: State<'_, Updater>) -> Res
   store.set_avatar_store(None).await?;
   updater.send(UpdateMessage::AuthStatusUpdated).await;
   updater.send(UpdateMessage::UserInfoUpdated).await;
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn confirm_code(client: State<'_, Client>, code: String) -> Result<()> {
+  client.confirm_code(code).await?;
   Ok(())
 }
