@@ -594,13 +594,6 @@ export type LogoutErrors = {
   '5XX': unknown;
 };
 
-export type TestTokenData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/api/auth/test_token';
-};
-
 export type FinishRegistrationData = {
   body: RegFinishReq;
   path?: never;
@@ -1192,26 +1185,21 @@ export type ExchangeAppCodeErrors = {
 export type ExchangeAppCodeError =
   ExchangeAppCodeErrors[keyof ExchangeAppCodeErrors];
 
-export type RetrieveAppTokenData = {
-  body: RetrieveTokenReq;
+export type TestTokenData = {
+  body?: never;
   path?: never;
   query?: never;
-  url: '/api/auth/app/retrieve_token';
+  url: '/api/auth/test_token';
 };
 
-export type RetrieveAppTokenErrors = {
-  /**
-   * Failed to parse the request body as JSON
-   */
-  400: string;
-  /**
-   * Expected request with `Content-Type: application/json`
-   */
-  415: string;
-  /**
-   * Failed to deserialize the JSON body into the target type
-   */
-  422: string;
+export type RefreshTokenData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/auth/refresh_token';
+};
+
+export type RefreshTokenErrors = {
   /**
    * An error occurred
    */
@@ -1221,9 +1209,6 @@ export type RetrieveAppTokenErrors = {
    */
   '5XX': unknown;
 };
-
-export type RetrieveAppTokenError =
-  RetrieveAppTokenErrors[keyof RetrieveAppTokenErrors];
 
 export type ResetUserAvatarData = {
   body: UserAvatarResetRequest;
