@@ -66,7 +66,7 @@
                 size="sm"
                 type="button"
                 class={cn(
-                  'h-8 w-max gap-1 px-3 font-normal',
+                  'h-8 w-max cursor-pointer gap-1 px-3 font-normal',
                   isHeadingActive && 'bg-accent',
                   className
                 )}
@@ -76,7 +76,7 @@
               </Button>
             {/snippet}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" class="flex flex-col gap-1">
             <DropdownMenuItem
               onclick={() => editor.chain().focus().setParagraph().run()}
               class={cn(

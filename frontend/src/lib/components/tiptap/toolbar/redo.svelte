@@ -27,11 +27,11 @@
         variant="ghost"
         size="icon"
         type="button"
-        class={cn('h-8 w-8 p-0 sm:h-9 sm:w-9', className)}
+        class={cn('cursor-pointer', className)}
         onclick={handleClick}
         disabled={isDisabled}
       >
-        <Redo2Icon class="h-4 w-4" />
+        <Redo2Icon />
       </Button>
     {/snippet}
   </TooltipTrigger>

@@ -34,20 +34,16 @@
         variant="ghost"
         size="icon"
         type="button"
-        class={cn(
-          'h-8 w-8 p-0 sm:h-9 sm:w-9',
-          isActive && 'bg-accent',
-          className
-        )}
+        class={cn('cursor-pointer', isActive && 'bg-accent', className)}
         onclick={handleClick}
         disabled={isDisabled}
       >
-        <BoldIcon class="h-4 w-4" />
+        <BoldIcon />
       </Button>
     {/snippet}
   </TooltipTrigger>
   <TooltipContent>
     <span>Bold</span>
-    <span class="text-gray-11 ml-1 text-xs">(cmd + b)</span>
+    <span class="ml-1 text-xs">(cmd + b)</span>
   </TooltipContent>
 </Tooltip>

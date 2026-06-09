@@ -30,15 +30,11 @@
         variant="ghost"
         size="icon"
         type="button"
-        class={cn(
-          'h-8 w-8 p-0 sm:h-9 sm:w-9',
-          isActive && 'bg-accent',
-          className
-        )}
+        class={cn('cursor-pointer', isActive && 'bg-accent', className)}
         onclick={handleClick}
         disabled={isDisabled}
       >
-        <ListIcon class="h-4 w-4" />
+        <ListIcon />
       </Button>
     {/snippet}
   </TooltipTrigger>

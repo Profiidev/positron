@@ -30,20 +30,16 @@
         variant="ghost"
         size="icon"
         type="button"
-        class={cn(
-          'h-8 w-8 p-0 sm:h-9 sm:w-9',
-          isActive && 'bg-accent',
-          className
-        )}
+        class={cn('cursor-pointer', isActive && 'bg-accent', className)}
         onclick={handleClick}
         disabled={isDisabled}
       >
-        <StrikethroughIcon class="h-4 w-4" />
+        <StrikethroughIcon />
       </Button>
     {/snippet}
   </TooltipTrigger>
   <TooltipContent>
     <span>Strikethrough</span>
-    <span class="text-gray-11 ml-1 text-xs">(cmd + shift + x)</span>
+    <span class="ml-1 text-xs">(strg + shift + x)</span>
   </TooltipContent>
 </Tooltip>

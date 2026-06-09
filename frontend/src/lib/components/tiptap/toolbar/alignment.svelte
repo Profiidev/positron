@@ -83,11 +83,11 @@
                 {...triggerProps}
                 variant="ghost"
                 size="sm"
-                class="h-8 w-max font-normal"
+                class="h-8 w-max cursor-pointer font-normal"
                 type="button"
               >
                 <span class="mr-2">
-                  <CurrentIcon class="h-4 w-4" />
+                  <CurrentIcon />
                 </span>
                 {currentOption.name}
                 <ChevronDownIcon class="ml-2 h-4 w-4" />
@@ -98,7 +98,11 @@
       </TooltipTrigger>
       <TooltipContent>Text Alignment</TooltipContent>
     </Tooltip>
-    <DropdownMenuContent loop onCloseAutoFocus={(e) => e.preventDefault()}>
+    <DropdownMenuContent
+      loop
+      onCloseAutoFocus={(e) => e.preventDefault()}
+      class="w-42"
+    >
       <DropdownMenuGroup class="w-40">
         {#each alignmentOptions as option, index (index)}
           {@const OptionIcon = option.icon}

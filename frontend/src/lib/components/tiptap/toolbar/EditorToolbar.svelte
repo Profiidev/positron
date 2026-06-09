@@ -32,29 +32,29 @@
         <div class="flex items-center gap-1 px-2">
           <UndoToolbar {editor} />
           <RedoToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
 
           <HeadingsToolbar {editor} />
-          <BlockquoteToolbar {editor} />
-          <CodeBlockToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
 
           <BoldToolbar {editor} />
           <ItalicToolbar {editor} />
           <UnderlineToolbar {editor} />
           <StrikeThroughToolbar {editor} />
-          <LinkToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
-
-          <BulletListToolbar {editor} />
-          <OrderedListToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
+          <ColorHighlightToolbar {editor} />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
 
           <AlignmentToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
 
-          <ColorHighlightToolbar {editor} />
-          <Separator orientation="vertical" class="mx-1 h-7" />
+          <BlockquoteToolbar {editor} />
+          <CodeBlockToolbar {editor} />
+          <BulletListToolbar {editor} />
+          <OrderedListToolbar {editor} />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
+
+          <LinkToolbar {editor} />
+          <Separator orientation="vertical" class="mx-1 h-7!" />
 
           <div class="flex-1"></div>
 

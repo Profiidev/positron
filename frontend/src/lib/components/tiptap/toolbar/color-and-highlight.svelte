@@ -14,6 +14,7 @@
     TooltipContent,
     TooltipTrigger
   } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Command from '@profidev/pleiades/components/ui/command';
   import { IsMobile } from '@profidev/pleiades/hooks/is-mobile.svelte';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
@@ -134,7 +135,7 @@
                   size="sm"
                   type="button"
                   style={currentColor ? `color: ${currentColor}` : undefined}
-                  class={cn('h-8 w-14 p-0 font-normal')}
+                  class={cn('h-8 w-14 cursor-pointer p-0 font-normal')}
                 >
                   <span class="text-md">A</span>
                   <ChevronDownIcon class="ml-2 h-4 w-4" />
@@ -146,56 +147,56 @@
         <TooltipContent>Text Color & Highlight</TooltipContent>
       </Tooltip>
 
-      <PopoverContent align="start" class="dark:bg-gray-2 w-56 p-1">
-        <ScrollArea class="max-h-80 overflow-y-auto pr-2">
-          <div class="text-gray-11 mt-2 mb-2.5 px-2 text-xs">Color</div>
-          {#each TEXT_COLORS as { name, color } (name)}
-            <button
-              type="button"
-              onclick={() => handleSetColor(color)}
-              class="hover:bg-gray-3 flex w-full items-center justify-between rounded-sm px-2 py-1 text-sm"
-            >
-              <div class="flex items-center space-x-2">
-                <div
-                  class="rounded-sm border px-1 py-px font-medium"
-                  style:color
-                >
-                  A
-                </div>
-                <span>{name}</span>
-              </div>
-              {#if currentColor === color}
-                <CheckIcon class="h-4 w-4" />
-              {/if}
-            </button>
-          {/each}
+      <PopoverContent class="w-52 p-0">
+        <Command.Root>
+          <Command.List class="flex overflow-hidden">
+            <ScrollArea class="grow">
+              <Command.Group heading="Color">
+                {#each TEXT_COLORS as { name, color } (name)}
+                  <Command.Item
+                    onSelect={() => handleSetColor(color)}
+                    class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
+                  >
+                    <div
+                      class="rounded-sm border px-1 py-px font-medium"
+                      style:color
+                    >
+                      A
+                    </div>
+                    <span>{name}</span>
+                    {#if currentColor === color}
+                      <CheckIcon class="ml-auto h-4 w-4" />
+                    {/if}
+                  </Command.Item>
+                {/each}
+              </Command.Group>
 
-          <Separator class="my-3" />
+              <Separator class="my-1" />
 
-          <div class="text-gray-11 mb-2.5 w-full px-2 pr-3 text-xs">
-            Background
-          </div>
-          {#each HIGHLIGHT_COLORS as { name, color } (name)}
-            <button
-              type="button"
-              onclick={() => handleSetHighlight(color)}
-              class="hover:bg-gray-3 flex w-full items-center justify-between rounded-sm px-2 py-1 text-sm"
-            >
-              <div class="flex items-center space-x-2">
-                <div
-                  class="rounded-sm border px-1 py-px font-medium"
-                  style:background-color={color}
-                >
-                  A
-                </div>
-                <span>{name}</span>
-              </div>
-              {#if currentHighlight === color}
-                <CheckIcon class="h-4 w-4" />
-              {/if}
-            </button>
-          {/each}
-        </ScrollArea>
+              <Command.Group heading="Background">
+                {#each HIGHLIGHT_COLORS as { name, color } (name)}
+                  <Command.Item
+                    onSelect={() => handleSetHighlight(color)}
+                    class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
+                  >
+                    <div class="flex items-center space-x-2">
+                      <div
+                        class="rounded-sm border px-1 py-px font-medium"
+                        style:background-color={color}
+                      >
+                        A
+                      </div>
+                      <span>{name}</span>
+                    </div>
+                    {#if currentHighlight === color}
+                      <CheckIcon class="ml-auto h-4 w-4" />
+                    {/if}
+                  </Command.Item>
+                {/each}
+              </Command.Group>
+            </ScrollArea>
+          </Command.List>
+        </Command.Root>
       </PopoverContent>
     </div>
   </Popover>

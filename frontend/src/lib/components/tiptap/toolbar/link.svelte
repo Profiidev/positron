@@ -79,7 +79,7 @@
               size="sm"
               type="button"
               class={cn(
-                'h-8 w-max px-3 font-normal',
+                'h-8 w-max cursor-pointer px-3 font-normal',
                 isActive && 'bg-accent',
                 className
               )}
@@ -101,12 +101,8 @@
     class="relative px-3 py-2.5"
   >
     <div class="relative">
-      <PopoverClose class="absolute top-3 right-3">
-        <XIcon class="h-4 w-4" />
-      </PopoverClose>
       <form onsubmit={handleSubmit}>
-        <Label>Link</Label>
-        <p class="text-gray-11 text-sm">Attach a link to the selected text</p>
+        <p class="text-sm">Attach a link to the selected text</p>
         <div class="mt-3 flex flex-col items-end justify-end gap-3">
           <Input
             bind:value={link}
@@ -118,15 +114,14 @@
               <Button
                 type="button"
                 size="sm"
-                class="text-gray-11 h-8"
                 variant="ghost"
                 onclick={handleRemove}
               >
-                <Trash2Icon class="mr-2 h-4 w-4" />
+                <Trash2Icon class="mr-2" />
                 Remove
               </Button>
             {/if}
-            <Button size="sm" class="h-8" type="submit">
+            <Button size="sm" type="submit">
               {linkHref ? 'Update' : 'Confirm'}
             </Button>
           </div>

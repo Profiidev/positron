@@ -1,18 +1,22 @@
 <script lang="ts">
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+  import CaseSensitiveIcon from '@lucide/svelte/icons/case-sensitive';
   import RepeatIcon from '@lucide/svelte/icons/repeat';
-  import XIcon from '@lucide/svelte/icons/x';
   import { Button } from '@profidev/pleiades/components/ui/button';
-  import { Checkbox } from '@profidev/pleiades/components/ui/checkbox';
   import { Input } from '@profidev/pleiades/components/ui/input';
-  import { Label } from '@profidev/pleiades/components/ui/label';
   import {
     Popover,
     PopoverContent,
     PopoverTrigger
   } from '@profidev/pleiades/components/ui/popover';
   import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Toggle } from '@profidev/pleiades/components/ui/toggle';
+  import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
+  } from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
 
@@ -22,7 +26,7 @@
   let replacing = $state(false);
   let searchText = $state('');
   let replaceText = $state('');
-  let checked = $state(false);
+  let caseSensitive = $state(false);
 
   const results = $derived(editor.storage.searchAndReplace.results);
   const selectedResult = $derived(
@@ -38,14 +42,14 @@
     const storage = editor.storage.searchAndReplace;
     storage.searchTerm = searchText;
     storage.replaceTerm = replaceText;
-    storage.caseSensitive = checked;
+    storage.caseSensitive = caseSensitive;
     refreshSearchDecorations();
   }
 
   function resetSearchState() {
     searchText = '';
     replaceText = '';
-    checked = false;
+    caseSensitive = false;
     replacing = false;
 
     const storage = editor.storage.searchAndReplace;
@@ -74,8 +78,8 @@
     syncSearchToEditor();
   }
 
-  function handleCaseSensitiveChange(value: boolean) {
-    checked = value;
+  function handleCaseSensitiveChange(pressed: boolean) {
+    caseSensitive = pressed;
     syncSearchToEditor();
   }
 
@@ -105,149 +109,104 @@
   <PopoverContent
     align="end"
     onCloseAutoFocus={(e) => e.preventDefault()}
-    class="relative flex w-[400px] px-3 py-2.5"
+    class="flex w-[425px] flex-col gap-1.5 px-3 py-2.5"
   >
-    {#if !replacing}
-      <div class={cn('relative flex items-center gap-1.5')}>
-        <Input
-          value={searchText}
-          oninput={(e) => handleSearchInput(e.currentTarget.value)}
-          class="w-48"
-          placeholder="Search..."
-        />
-        <span>
-          {results.length === 0
-            ? selectedResult
-            : selectedResult + 1}/{results.length}
-        </span>
-        <Button
-          onclick={selectPrevious}
-          size="icon"
-          variant="ghost"
-          class="size-7"
-        >
-          <ArrowLeftIcon class="size-4" />
-        </Button>
-        <Button onclick={selectNext} size="icon" class="size-7" variant="ghost">
-          <ArrowRightIcon class="h-4 w-4" />
-        </Button>
-        <Separator orientation="vertical" class="mx-0.5 h-7" />
-        <Button
-          onclick={() => {
-            replacing = true;
-          }}
-          size="icon"
-          class="size-7"
-          variant="ghost"
-        >
-          <RepeatIcon class="h-4 w-4" />
-        </Button>
-        <Button
-          onclick={() => handleOpenChange(false)}
-          size="icon"
-          class="size-7"
-          variant="ghost"
-        >
-          <XIcon class="h-4 w-4" />
-        </Button>
-      </div>
-    {:else}
-      <div class={cn('relative w-full')}>
-        <button
-          type="button"
-          onclick={() => handleOpenChange(false)}
-          class="absolute top-3 right-3"
-          aria-label="Close"
-        >
-          <XIcon class="h-4 w-4" />
-        </button>
-        <div class="flex w-full items-center gap-3">
-          <Button
-            size="icon"
-            class="size-7 rounded-full"
-            variant="ghost"
-            onclick={() => {
-              replacing = false;
-            }}
-          >
-            <ArrowLeftIcon class="h-4 w-4" />
-          </Button>
-          <h2 class="text-sm font-medium">Search and replace</h2>
-        </div>
+    <div class="flex items-center gap-1.5">
+      <Input
+        value={searchText}
+        oninput={(e) => handleSearchInput(e.currentTarget.value)}
+        class="w-48"
+        placeholder="Search..."
+      />
+      <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+        {results.length === 0
+          ? selectedResult
+          : selectedResult + 1}/{results.length}
+      </span>
+      <Button
+        onclick={selectPrevious}
+        size="icon"
+        variant="ghost"
+        class="size-7"
+        type="button"
+      >
+        <ArrowLeftIcon class="size-4" />
+      </Button>
+      <Button
+        onclick={selectNext}
+        size="icon"
+        variant="ghost"
+        class="size-7"
+        type="button"
+      >
+        <ArrowRightIcon class="size-4" />
+      </Button>
 
-        <div class="my-2 w-full">
-          <div class="mb-3">
-            <Label class="text-muted-foreground mb-1 text-xs">Search</Label>
-            <Input
-              value={searchText}
-              oninput={(e) => handleSearchInput(e.currentTarget.value)}
-              placeholder="Search..."
-            />
-            {results.length === 0
-              ? selectedResult
-              : selectedResult + 1}/{results.length}
-          </div>
-          <div class="mb-2">
-            <Label class="text-muted-foreground mb-1 text-xs"
-              >Replace with</Label
-            >
-            <Input
-              value={replaceText}
-              oninput={(e) => handleReplaceInput(e.currentTarget.value)}
-              class="w-full"
-              placeholder="Replace..."
-            />
-          </div>
-          <div class="mt-3 flex items-center space-x-2">
-            <Checkbox
-              {checked}
-              onCheckedChange={(value) =>
-                handleCaseSensitiveChange(value === true)}
-              id="match_case"
-            />
-            <Label
-              for="match_case"
-              class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Match case
-            </Label>
-          </div>
-        </div>
-
-        <div class="actions mt-6 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Button
-              onclick={selectPrevious}
-              size="icon"
-              class="h-7 w-7"
-              variant="secondary"
-            >
-              <ArrowLeftIcon class="h-4 w-4" />
-            </Button>
-            <Button
-              onclick={selectNext}
-              size="icon"
-              class="h-7 w-7"
-              variant="secondary"
-            >
-              <ArrowRightIcon class="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div class="main-actions flex items-center gap-2">
-            <Button
+      <Tooltip>
+        <TooltipTrigger>
+          {#snippet child({ props })}
+            <Toggle
+              {...props}
+              pressed={caseSensitive}
+              onPressedChange={handleCaseSensitiveChange}
               size="sm"
-              class="h-7 px-3 text-xs"
-              variant="secondary"
-              onclick={replaceAll}
+              variant="default"
+              aria-label="Match case"
+              class="size-7"
             >
-              Replace All
-            </Button>
-            <Button onclick={replace} size="sm" class="h-7 px-3 text-xs"
-              >Replace</Button
+              <CaseSensitiveIcon class="size-4" />
+            </Toggle>
+          {/snippet}
+        </TooltipTrigger>
+        <TooltipContent>Match case</TooltipContent>
+      </Tooltip>
+
+      <Separator orientation="vertical" class="mx-0.5 h-7" />
+
+      <Tooltip>
+        <TooltipTrigger>
+          {#snippet child({ props })}
+            <Toggle
+              {...props}
+              bind:pressed={replacing}
+              size="sm"
+              variant="default"
+              aria-label="Replace mode"
+              class="size-7"
             >
-          </div>
-        </div>
+              <RepeatIcon class="size-4" />
+            </Toggle>
+          {/snippet}
+        </TooltipTrigger>
+        <TooltipContent>Replace</TooltipContent>
+      </Tooltip>
+    </div>
+
+    {#if replacing}
+      <div class="flex items-center gap-1.5">
+        <Input
+          value={replaceText}
+          oninput={(e) => handleReplaceInput(e.currentTarget.value)}
+          class="w-48"
+          placeholder="Replace..."
+        />
+        <Button
+          onclick={replace}
+          size="sm"
+          class="ml-auto h-7 px-3 text-xs"
+          type="button"
+        >
+          Replace
+        </Button>
+        <Button
+          onclick={replaceAll}
+          size="sm"
+          variant="secondary"
+          class="h-7 px-3 text-xs"
+          type="button"
+        >
+          Replace All
+        </Button>
       </div>
     {/if}
   </PopoverContent>
