@@ -3,7 +3,6 @@
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import RepeatIcon from '@lucide/svelte/icons/repeat';
 	import XIcon from '@lucide/svelte/icons/x';
-	import type { SearchAndReplaceStorage } from '$lib/components/tiptap/extensions/search-and-replace.js';
 	import { Button } from '@profidev/pleiades/components/ui/button';
 	import { Checkbox } from '@profidev/pleiades/components/ui/checkbox';
 	import { Input } from '@profidev/pleiades/components/ui/input';
@@ -25,12 +24,8 @@
 	let replaceText = $state('');
 	let checked = $state(false);
 
-	const results = $derived(
-		(editor.storage.searchAndReplace as SearchAndReplaceStorage | undefined)?.results ?? []
-	);
-	const selectedResult = $derived(
-		(editor.storage.searchAndReplace as SearchAndReplaceStorage | undefined)?.selectedResult ?? 0
-	);
+	const results = $derived(editor.storage.searchAndReplace.results);
+	const selectedResult = $derived(editor.storage.searchAndReplace.selectedResult);
 
 	function refreshSearchDecorations() {
 		const { state, view } = editor;
@@ -38,7 +33,7 @@
 	}
 
 	function syncSearchToEditor() {
-		const storage = editor.storage.searchAndReplace as SearchAndReplaceStorage;
+		const storage = editor.storage.searchAndReplace;
 		storage.searchTerm = searchText;
 		storage.replaceTerm = replaceText;
 		storage.caseSensitive = checked;
@@ -51,7 +46,7 @@
 		checked = false;
 		replacing = false;
 
-		const storage = editor.storage.searchAndReplace as SearchAndReplaceStorage;
+		const storage = editor.storage.searchAndReplace;
 		storage.searchTerm = '';
 		storage.replaceTerm = '';
 		storage.caseSensitive = false;

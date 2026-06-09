@@ -8,16 +8,11 @@ import { Highlight } from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import StarterKit from '@tiptap/starter-kit';
 
-import type { Extension } from '@tiptap/core';
+import type { Extensions } from '@tiptap/core';
 import SearchAndReplace from './extensions/search-and-replace';
 
-export const extensions: Extension[] = [
+export const extensions = [
   StarterKit.configure({
-    orderedList: {
-      HTMLAttributes: {
-        class: 'list-decimal'
-      }
-    },
     bulletList: {
       HTMLAttributes: {
         class: 'list-disc'
@@ -25,24 +20,33 @@ export const extensions: Extension[] = [
     },
     heading: {
       levels: [1, 2, 3, 4]
+    },
+    orderedList: {
+      HTMLAttributes: {
+        class: 'list-decimal'
+      }
     }
   }),
   Placeholder.configure({
     emptyNodeClass: 'is-editor-empty',
+    includeChildren: false,
     placeholder: ({ node }) => {
       switch (node.type.name) {
-        case 'heading':
+        case 'heading': {
           return `Heading ${node.attrs.level}`;
-        case 'detailsSummary':
+        }
+        case 'detailsSummary': {
           return 'Section title';
-        case 'codeBlock':
-          // never show the placeholder when editing code
+        }
+        case 'codeBlock': {
+          // Never show the placeholder when editing code
           return '';
-        default:
+        }
+        default: {
           return 'Write something...';
+        }
       }
-    },
-    includeChildren: false
+    }
   }),
   TextAlign.configure({
     types: ['heading', 'paragraph']
@@ -58,4 +62,4 @@ export const extensions: Extension[] = [
   TaskItem,
   TaskList,
   BubbleMenu
-] as Extension[];
+] satisfies Extensions;

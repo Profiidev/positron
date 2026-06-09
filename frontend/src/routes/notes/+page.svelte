@@ -1,5 +1,5 @@
 <script lang="ts">
-  import TipTab from '$lib/components/notes/TipTab.svelte';
+  import TipTab from '$lib/components/tiptap/TipTab.svelte';
 </script>
 
 <TipTab />
