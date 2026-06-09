@@ -2,6 +2,7 @@
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
   import CaseSensitiveIcon from '@lucide/svelte/icons/case-sensitive';
+  import RegexIcon from '@lucide/svelte/icons/regex';
   import RepeatIcon from '@lucide/svelte/icons/repeat';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Input } from '@profidev/pleiades/components/ui/input';
@@ -27,6 +28,7 @@
   let searchText = $state('');
   let replaceText = $state('');
   let caseSensitive = $state(false);
+  let useRegex = $state(false);
 
   const results = $derived(editor.storage.searchAndReplace.results);
   const selectedResult = $derived(
@@ -43,6 +45,7 @@
     storage.searchTerm = searchText;
     storage.replaceTerm = replaceText;
     storage.caseSensitive = caseSensitive;
+    storage.useRegex = useRegex;
     refreshSearchDecorations();
   }
 
@@ -50,12 +53,14 @@
     searchText = '';
     replaceText = '';
     caseSensitive = false;
+    useRegex = false;
     replacing = false;
 
     const storage = editor.storage.searchAndReplace;
     storage.searchTerm = '';
     storage.replaceTerm = '';
     storage.caseSensitive = false;
+    storage.useRegex = false;
     storage.selectedResult = 0;
     storage.results = [];
     refreshSearchDecorations();
@@ -80,6 +85,11 @@
 
   function handleCaseSensitiveChange(pressed: boolean) {
     caseSensitive = pressed;
+    syncSearchToEditor();
+  }
+
+  function handleUseRegexChange(pressed: boolean) {
+    useRegex = pressed;
     syncSearchToEditor();
   }
 
@@ -109,7 +119,7 @@
   <PopoverContent
     align="end"
     onCloseAutoFocus={(e) => e.preventDefault()}
-    class="flex w-[425px] flex-col gap-1.5 px-3 py-2.5"
+    class="flex w-[412px] flex-col gap-1.5 px-3 py-2.5"
   >
     <div class="flex items-center gap-1.5">
       <Input
@@ -161,7 +171,24 @@
         <TooltipContent>Match case</TooltipContent>
       </Tooltip>
 
-      <Separator orientation="vertical" class="mx-0.5 h-7" />
+      <Tooltip>
+        <TooltipTrigger>
+          {#snippet child({ props })}
+            <Toggle
+              {...props}
+              pressed={useRegex}
+              onPressedChange={handleUseRegexChange}
+              size="sm"
+              variant="default"
+              aria-label="Use regular expression"
+              class="size-7"
+            >
+              <RegexIcon class="size-4" />
+            </Toggle>
+          {/snippet}
+        </TooltipTrigger>
+        <TooltipContent>Use regular expression</TooltipContent>
+      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger>

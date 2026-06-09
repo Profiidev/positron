@@ -1,6 +1,5 @@
 import BubbleMenu from '@tiptap/extension-bubble-menu';
 import Emoji from '@tiptap/extension-emoji';
-import { TaskItem, TaskList } from '@tiptap/extension-list';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import { Placeholder } from '@tiptap/extensions';
@@ -59,7 +58,5 @@ export const extensions = [
   SearchAndReplace,
   Typography,
   Emoji,
-  TaskItem,
-  TaskList,
   BubbleMenu
 ] satisfies Extensions;

@@ -12,6 +12,8 @@ export interface SearchAndReplaceStorage {
   lastSelectedResult: number;
   caseSensitive: boolean;
   lastCaseSensitiveState: boolean;
+  useRegex: boolean;
+  lastUseRegexState: boolean;
 }
 
 declare module '@tiptap/core' {
@@ -49,6 +51,10 @@ declare module '@tiptap/core' {
        * @description Set case sensitivity in extension.
        */
       setCaseSensitive: (caseSensitive: boolean) => ReturnType;
+      /**
+       * @description Set regex search mode in extension.
+       */
+      setUseRegex: (useRegex: boolean) => ReturnType;
     };
   }
 }
@@ -318,6 +324,13 @@ export const SearchAndReplace = Extension.create<
 
           return false;
         },
+      setUseRegex:
+        (useRegex: boolean) =>
+        ({ editor }) => {
+          editor.storage.searchAndReplace.useRegex = useRegex;
+
+          return false;
+        },
       setReplaceTerm:
         (replaceTerm: string) =>
         ({ editor }) => {
@@ -360,6 +373,10 @@ export const SearchAndReplace = Extension.create<
       editor.storage.searchAndReplace.lastCaseSensitiveState = s;
     };
 
+    const setLastUseRegexState = (s: boolean) => {
+      editor.storage.searchAndReplace.lastUseRegexState = s;
+    };
+
     return [
       new Plugin({
         key: searchAndReplacePluginKey,
@@ -376,14 +393,17 @@ export const SearchAndReplace = Extension.create<
               lastSearchTerm,
               lastSelectedResult,
               caseSensitive,
-              lastCaseSensitiveState
+              lastCaseSensitiveState,
+              useRegex,
+              lastUseRegexState
             } = editor.storage.searchAndReplace;
 
             if (
               !docChanged &&
               lastSearchTerm === searchTerm &&
               selectedResult === lastSelectedResult &&
-              lastCaseSensitiveState === caseSensitive
+              lastCaseSensitiveState === caseSensitive &&
+              lastUseRegexState === useRegex
             ) {
               return oldState;
             }
@@ -391,6 +411,7 @@ export const SearchAndReplace = Extension.create<
             setLastSearchTerm(searchTerm);
             setLastSelectedResult(selectedResult);
             setLastCaseSensitiveState(caseSensitive);
+            setLastUseRegexState(useRegex);
 
             if (!searchTerm) {
               editor.storage.searchAndReplace.selectedResult = 0;
@@ -398,9 +419,22 @@ export const SearchAndReplace = Extension.create<
               return DecorationSet.empty;
             }
 
+            let searchRegex: RegExp;
+            try {
+              searchRegex = getRegex(
+                searchTerm,
+                useRegex ? false : disableRegex,
+                caseSensitive
+              );
+            } catch {
+              editor.storage.searchAndReplace.selectedResult = 0;
+              editor.storage.searchAndReplace.results = [];
+              return DecorationSet.empty;
+            }
+
             const { decorationsToReturn, results } = processSearches(
               doc,
-              getRegex(searchTerm, disableRegex, caseSensitive),
+              searchRegex,
               selectedResult,
               searchResultClass,
               selectedResultClass
@@ -427,10 +461,12 @@ export const SearchAndReplace = Extension.create<
       lastCaseSensitiveState: false,
       lastSearchTerm: '',
       lastSelectedResult: 0,
+      lastUseRegexState: false,
       replaceTerm: '',
       results: [],
       searchTerm: '',
-      selectedResult: 0
+      selectedResult: 0,
+      useRegex: false
     };
   },
 
