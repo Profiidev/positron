@@ -4,12 +4,12 @@
   import { extensions } from './config';
   import EditorToolbar from './toolbar/EditorToolbar.svelte';
   import FloatingToolbar from './extensions/FloatingToolbar.svelte';
-  import { EditorContent, Editor } from 'svelte-tiptap';
+  import { EditorContent, Editor, BubbleMenu } from 'svelte-tiptap';
 
-  let editor = $state<Editor | null>(null);
+  let editorState = $state<{ editor: Editor | null }>({ editor: null });
 
   onMount(() => {
-    editor = new Editor({
+    editorState.editor = new Editor({
       extensions,
       content: `
         <h1>Hello Svelte! 🌍️ </h1>
@@ -24,24 +24,28 @@
       onUpdate: ({ editor }) => {
         console.log(editor.getText());
       },
+      onTransaction: ({ editor }) => {
+        editorState = { editor: editor as Editor };
+      },
       autofocus: false
     });
   });
 
   onDestroy(() => {
-    editor?.destroy();
+    editorState.editor?.destroy();
   });
 </script>
 
-{#if editor}
+{#if editorState.editor}
   <div
     class="bg-card relative max-h-[calc(100dvh-6rem)] w-full overflow-hidden overflow-y-scroll border pb-[60px] sm:pb-0"
   >
-    <EditorToolbar {editor} />
-    <FloatingToolbar {editor} />
+    <EditorToolbar editor={editorState.editor} />
+    <FloatingToolbar editor={editorState.editor} />
     <EditorContent
-      {editor}
+      editor={editorState.editor}
       class="min-h-[600px] w-full min-w-full cursor-text sm:p-6"
     />
+    <BubbleMenu editor={editorState.editor} />
   </div>
 {/if}
