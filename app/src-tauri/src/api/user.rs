@@ -1,6 +1,6 @@
 use anyhow::Result;
-use reqwest::Method;
 use tauri::{AppHandle, Manager, async_runtime::spawn};
+use tauri_plugin_http::reqwest::Method;
 use uuid::Uuid;
 
 use crate::{

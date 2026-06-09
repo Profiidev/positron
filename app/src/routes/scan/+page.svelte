@@ -1,11 +1,10 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { Format } from '@tauri-apps/plugin-barcode-scanner';
   import { onDestroy, onMount } from 'svelte';
 
   onMount(async () => {
-    const { checkPermissions, requestPermissions, scan, cancel } =
+    const { checkPermissions, requestPermissions, scan, Format } =
       await import('@tauri-apps/plugin-barcode-scanner');
     const permissions = await checkPermissions();
     if (permissions !== 'granted') {

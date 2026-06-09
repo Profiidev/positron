@@ -33,7 +33,6 @@
   import Totp6 from '@profidev/pleiades/components/form/totp-6.svelte';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Smartphone from '@lucide/svelte/icons/smartphone';
-  import QRCode from 'qrcode';
 
   let { data } = $props();
 
@@ -215,6 +214,7 @@
       async (code) => {
         if (!initialCode) {
           initialCode = true;
+          const QRCode = await import('qrcode');
           qrCode = await QRCode.toDataURL(`positron://login?code=${code}`, {
             margin: 1,
             scale: 10
