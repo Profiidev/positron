@@ -1,17 +1,15 @@
 <script lang="ts">
   import './tiptap.css';
-  import { Editor } from '@tiptap/core';
   import { onDestroy, onMount } from 'svelte';
   import { extensions } from './config';
+  import EditorToolbar from './toolbar/EditorToolbar.svelte';
+  import FloatingToolbar from './extensions/FloatingToolbar.svelte';
+  import { EditorContent, Editor } from 'svelte-tiptap';
 
-  let element: HTMLElement | undefined = $state();
-  let editorState = $state<{
-    editor: Editor | null;
-  }>({ editor: null });
+  let editor = $state<Editor | null>(null);
 
   onMount(() => {
-    editorState.editor = new Editor({
-      element,
+    editor = new Editor({
       extensions,
       content: `
         <h1>Hello Svelte! 🌍️ </h1>
@@ -23,50 +21,27 @@
           class: 'max-w-full focus:outline-none'
         }
       },
-      onTransaction: ({ editor }) => {
-        editorState = { editor };
+      onUpdate: ({ editor }) => {
+        console.log(editor.getText());
       },
       autofocus: false
     });
   });
 
   onDestroy(() => {
-    editorState.editor?.destroy();
+    editor?.destroy();
   });
 </script>
 
-<div style="position: relative">
-  {#if editorState.editor}
-    <div class="fixed-menu">
-      <button
-        onclick={() =>
-          editorState.editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-        class:active={editorState.editor.isActive('heading', { level: 1 })}
-      >
-        H1
-      </button>
-      <button
-        onclick={() =>
-          editorState.editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-        class:active={editorState.editor.isActive('heading', { level: 2 })}
-      >
-        H2
-      </button>
-      <button
-        onclick={() => editorState.editor?.chain().focus().setParagraph().run()}
-        class:active={editorState.editor.isActive('paragraph')}
-      >
-        P
-      </button>
-    </div>
-  {/if}
-
-  <div bind:this={element}></div>
-</div>
-
-<style>
-  button.active {
-    background: black;
-    color: white;
-  }
-</style>
+{#if editor}
+  <div
+    class="bg-card relative max-h-[calc(100dvh-6rem)] w-full overflow-hidden overflow-y-scroll border pb-[60px] sm:pb-0"
+  >
+    <EditorToolbar {editor} />
+    <FloatingToolbar {editor} />
+    <EditorContent
+      {editor}
+      class="min-h-[600px] w-full min-w-full cursor-text sm:p-6"
+    />
+  </div>
+{/if}
