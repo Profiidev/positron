@@ -20,6 +20,7 @@
   } from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
+  import { isValidSearchPattern } from '../extensions/search-and-replace';
 
   let { editor }: { editor: Editor } = $props();
 
@@ -33,6 +34,9 @@
   const results = $derived(editor.storage.searchAndReplace.results);
   const selectedResult = $derived(
     editor.storage.searchAndReplace.selectedResult
+  );
+  const isInvalidRegex = $derived(
+    !isValidSearchPattern(searchText, useRegex, caseSensitive)
   );
 
   function refreshSearchDecorations() {
@@ -127,6 +131,8 @@
         oninput={(e) => handleSearchInput(e.currentTarget.value)}
         class="w-48"
         placeholder="Search..."
+        aria-invalid={isInvalidRegex}
+        title={isInvalidRegex ? 'Invalid regular expression' : undefined}
       />
       <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
         {results.length === 0

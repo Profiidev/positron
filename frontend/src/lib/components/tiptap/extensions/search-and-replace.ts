@@ -75,6 +75,23 @@ const getRegex = (
   return new RegExp(escapedString, caseSensitive ? 'gu' : 'gui');
 };
 
+export const isValidSearchPattern = (
+  searchString: string,
+  useRegex: boolean,
+  caseSensitive: boolean
+): boolean => {
+  if (!searchString || !useRegex) {
+    return true;
+  }
+
+  try {
+    getRegex(searchString, false, caseSensitive);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 interface ProcessedSearches {
   decorationsToReturn: DecorationSet;
   results: Range[];
@@ -102,8 +119,8 @@ const processSearches = (
   });
 
   for (const { text, pos } of textNodesWithPosition) {
-    const matches = [...text.matchAll(searchTerm)].filter(
-      ([matchText]) => matchText.trim()
+    const matches = [...text.matchAll(searchTerm)].filter(([matchText]) =>
+      matchText.trim()
     );
 
     for (const match of matches) {
@@ -118,7 +135,9 @@ const processSearches = (
 
   for (let i = 0; i < results.length; i += 1) {
     const result = results[i];
-    if (!result) {continue;}
+    if (!result) {
+      continue;
+    }
     const { from, to } = result;
     decorations.push(
       Decoration.inline(from, to, {
@@ -196,7 +215,9 @@ const replaceAll = (
 
   for (let i = 0; i < results.length; i += 1) {
     const result = results[i];
-    if (!result) {continue;}
+    if (!result) {
+      continue;
+    }
     const { from, to } = result;
     tr.insertText(replaceTerm, from, to);
     const rebaseResponse = rebaseNextResult(replaceTerm, i, offset, results);
@@ -226,11 +247,13 @@ const selectNext = (editor: CoreEditor) => {
   }
 
   const result = results[editor.storage.searchAndReplace.selectedResult];
-  if (!result) {return;}
+  if (!result) {
+    return;
+  }
 
   const { from } = result;
 
-  const {view} = editor;
+  const { view } = editor;
 
   if (view) {
     view
@@ -258,7 +281,7 @@ const selectPrevious = (editor: CoreEditor) => {
 
   const { from } = results[editor.storage.searchAndReplace.selectedResult];
 
-  const {view} = editor;
+  const { view } = editor;
 
   if (view) {
     view
@@ -324,13 +347,6 @@ export const SearchAndReplace = Extension.create<
 
           return false;
         },
-      setUseRegex:
-        (useRegex: boolean) =>
-        ({ editor }) => {
-          editor.storage.searchAndReplace.useRegex = useRegex;
-
-          return false;
-        },
       setReplaceTerm:
         (replaceTerm: string) =>
         ({ editor }) => {
@@ -342,6 +358,13 @@ export const SearchAndReplace = Extension.create<
         (searchTerm: string) =>
         ({ editor }) => {
           editor.storage.searchAndReplace.searchTerm = searchTerm;
+
+          return false;
+        },
+      setUseRegex:
+        (useRegex: boolean) =>
+        ({ editor }) => {
+          editor.storage.searchAndReplace.useRegex = useRegex;
 
           return false;
         }
@@ -357,7 +380,7 @@ export const SearchAndReplace = Extension.create<
   },
 
   addProseMirrorPlugins() {
-    const {editor} = this;
+    const { editor } = this;
     const { searchResultClass, selectedResultClass, disableRegex } =
       this.options;
 
@@ -419,7 +442,7 @@ export const SearchAndReplace = Extension.create<
               return DecorationSet.empty;
             }
 
-            let searchRegex: RegExp;
+            let searchRegex = new RegExp(/./);
             try {
               searchRegex = getRegex(
                 searchTerm,
