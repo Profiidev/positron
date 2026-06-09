@@ -1,8 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
-use reqwest::{Method, RequestBuilder, Response, StatusCode};
 use tauri::{AppHandle, Manager, Url};
+use tauri_plugin_http::reqwest::{self, Method, RequestBuilder, Response, StatusCode};
 use tokio::sync::{Mutex, Notify};
 
 use crate::store::Store;

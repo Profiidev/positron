@@ -2,10 +2,10 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use cookie::Cookie;
-use reqwest::{Method, Response, header::SET_COOKIE};
 use serde::Deserialize;
 use serde_json::json;
 use tauri::{AppHandle, Manager, async_runtime::spawn};
+use tauri_plugin_http::reqwest::{Method, Response, header::SET_COOKIE};
 use tokio::{sync::Notify, time::sleep};
 
 use crate::{
