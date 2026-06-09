@@ -22,7 +22,6 @@
       const result = await scan({ formats: [Format.QRCode], windowed: true });
       const url = new URL(result.content);
       const code = url.searchParams.get('code');
-      toast.success(`Scanned code: ${code}`);
       goto(`/login?code=${code}`);
     } catch {
       toast.error('Failed to scan QR code');
