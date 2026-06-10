@@ -1,4 +1,3 @@
-import BubbleMenu from '@tiptap/extension-bubble-menu';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import { Highlight } from '@tiptap/extension-highlight';
@@ -33,6 +32,5 @@ export const extensions = [
     multicolor: true
   }),
   SearchAndReplace,
-  Typography,
-  BubbleMenu
+  Typography
 ] satisfies Extensions;

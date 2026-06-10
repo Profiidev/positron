@@ -67,7 +67,6 @@
                 type="button"
                 class={cn(
                   'h-8 w-max cursor-pointer gap-1 px-3 font-normal',
-                  isHeadingActive && 'bg-accent',
                   className
                 )}
               >
