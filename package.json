@@ -12,5 +12,8 @@
   },
   "allowScripts": {
     "sharp": true
+  },
+  "dependencies": {
+    "y-websocket": "^3.0.0"
   }
 }

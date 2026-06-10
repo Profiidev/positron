@@ -3,7 +3,6 @@ import { Color, TextStyle } from '@tiptap/extension-text-style';
 import { Highlight } from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import StarterKit from '@tiptap/starter-kit';
-
 import type { Extensions } from '@tiptap/core';
 import SearchAndReplace from './extensions/search-and-replace';
 

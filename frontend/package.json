@@ -19,6 +19,7 @@
     "@sveltejs/enhanced-img": "0.10.4",
     "@tiptap/core": "^3.26.0",
     "@tiptap/extension-bubble-menu": "^3.26.0",
+    "@tiptap/extension-collaboration": "^3.26.0",
     "@tiptap/extension-highlight": "^3.26.0",
     "@tiptap/extension-text-align": "^3.26.0",
     "@tiptap/extension-text-style": "^3.26.0",
@@ -28,7 +29,8 @@
     "jsencrypt": "3.5.4",
     "qrcode": "^1.5.4",
     "svelte-tiptap": "^3.0.1",
-    "valibot": "^1.2.0"
+    "valibot": "^1.2.0",
+    "yjs": "^13.6.31"
   },
   "devDependencies": {
     "@fontsource-variable/geist": "5.2.9",
