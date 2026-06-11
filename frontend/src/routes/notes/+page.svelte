@@ -101,7 +101,7 @@
                 </div>
                 {#if note.shared_with.length > 0}
                   <Card.Description>
-                    · Shared with {note.shared_with
+                    Shared with {note.shared_with
                       .map((user) => user.name)
                       .join(', ')}
                   </Card.Description>

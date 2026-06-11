@@ -128,11 +128,12 @@
 </script>
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
-  <div class="mt-1! mb-0 ml-7 flex min-w-0 items-center gap-2 md:m-0">
-    <Button size="icon" variant="ghost" href="/notes" class="shrink-0">
+  <div class="mt-1! mb-0 ml-7 flex min-w-0 gap-2 md:m-0">
+    <Button size="icon" variant="ghost" href="/notes" class="mt-4 shrink-0">
       <ArrowLeft class="size-5" />
     </Button>
-    <div class="flex min-w-0 flex-1">
+    <div class="mb-2 max-w-70 grow">
+      <Label class="mb-1 ml-2">Title</Label>
       <Input
         class="max-w-70 flex-1"
         bind:value={title}
@@ -145,9 +146,11 @@
           }
         }}
       />
-      <Label class="ml-2">Shared with:</Label>
+    </div>
+    <div class="flex max-w-70 grow flex-col">
+      <Label class="mb-1 ml-2">Shared with</Label>
       <Multiselect
-        class="ml-2 max-w-70 flex-1"
+        class="max-w-70"
         data={shareableUsers.map((user) => ({
           label: user.name,
           value: user.id
@@ -163,8 +166,12 @@
         }}
       />
     </div>
+    <div class="flex max-w-70 grow flex-col">
+      <Label class="mb-1 ml-2">Owner</Label>
+      <Input class="max-w-70" value={note?.owner.name} readonly />
+    </div>
     <Button
-      class="shrink-0 cursor-pointer"
+      class="mt-4.5 ml-auto shrink-0 cursor-pointer"
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
@@ -175,9 +182,7 @@
   </div>
   <Separator class="my-4" />
   <div class="flex min-h-0 grow flex-col space-y-4">
-    {#if note}
-      <p class="text-muted-foreground text-sm">Owner: {note.owner.name}</p>
-    {/if}
+    <p>Content</p>
   </div>
 </div>
 <FormDialog
