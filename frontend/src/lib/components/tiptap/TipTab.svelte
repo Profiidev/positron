@@ -47,7 +47,7 @@
             color: getRandomColor()
           }
         })
-      ],
+      ] as any,
       content: `
         <h1>Hello Svelte! 🌍️ </h1>
         <p>This editor is running in Svelte.</p>
@@ -77,6 +77,7 @@
 
 {#if editorState.editor}
   <div class="bg-card relative w-full overflow-hidden border pb-[60px] sm:pb-0">
+    {/* @ts-ignore */ null}
     <EditorToolbar editor={editorState.editor} />
     <EditorContent
       editor={editorState.editor}
