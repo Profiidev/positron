@@ -21,6 +21,7 @@ mod auth;
 mod cli;
 mod config;
 mod db;
+mod notes;
 mod oauth;
 mod oauth_management;
 mod services;
@@ -54,6 +55,7 @@ fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
     .nest("/services", services::router())
     .nest("/oauth", oauth::router())
     .nest("/oauth_management", oauth_management::router())
+    .nest("/notes", notes::router())
 }
 
 async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
