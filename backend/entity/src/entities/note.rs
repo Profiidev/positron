@@ -8,6 +8,8 @@ pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
   pub title: String,
+  #[sea_orm(column_type = "Text")]
+  pub content: String,
   pub owner: Uuid,
 }
 
@@ -22,7 +24,7 @@ pub enum Relation {
     on_update = "Cascade",
     on_delete = "Cascade"
   )]
-  Owner,
+  User,
 }
 
 impl Related<super::note_user::Entity> for Entity {
@@ -33,7 +35,10 @@ impl Related<super::note_user::Entity> for Entity {
 
 impl Related<super::user::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::Owner.def()
+    super::note_user::Relation::User.def()
+  }
+  fn via() -> Option<RelationDef> {
+    Some(super::note_user::Relation::Note.def().rev())
   }
 }
 

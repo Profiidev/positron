@@ -39,6 +39,18 @@ impl<'db> NoteTable<'db> {
     Ok(count > 0)
   }
 
+  pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<Uuid>> {
+    let shared_users: Vec<Uuid> = note_user::Entity::find()
+      .filter(note_user::Column::Note.eq(note_id))
+      .all(self.db)
+      .await?
+      .into_iter()
+      .map(|row| row.user)
+      .collect();
+
+    Ok(shared_users)
+  }
+
   pub async fn is_owner(&self, user_id: Uuid, note_id: Uuid) -> Result<bool> {
     let count = note::Entity::find()
       .filter(note::Column::Id.eq(note_id))
@@ -147,6 +159,7 @@ impl<'db> NoteTable<'db> {
     note::ActiveModel {
       id: Set(id),
       title: Set(title),
+      content: Set(String::new()),
       owner: Set(owner),
     }
     .insert(&txn)
