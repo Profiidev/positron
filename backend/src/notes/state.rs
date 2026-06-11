@@ -14,9 +14,13 @@ use axum::{
 use centaurus::{db::init::Connection, error::Result, eyre::Context};
 use dashmap::DashMap;
 use image::EncodableLayout;
-use tokio::sync::{
-  Mutex,
-  broadcast::{Receiver, Sender, channel},
+use tokio::{
+  spawn,
+  sync::{
+    Mutex,
+    broadcast::{Receiver, Sender, channel},
+    mpsc,
+  },
 };
 use uuid::Uuid;
 use yrs::{
@@ -41,10 +45,12 @@ pub struct NoteEditing {
 }
 
 pub struct NoteState {
-  doc: Mutex<Awareness>,
+  doc: Arc<Mutex<Awareness>>,
   sender: Sender<Message>,
   #[allow(dead_code)]
-  subscription: Subscription,
+  doc_subscription: Subscription,
+  #[allow(dead_code)]
+  awareness_subscription: Subscription,
   subscriber_count: AtomicUsize,
 }
 
@@ -73,8 +79,7 @@ impl NoteEditing {
     }
 
     let (sender, _) = channel(10);
-
-    let subscription = doc
+    let doc_subscription = doc
       .observe_update_v1({
         let sender = sender.clone();
 
@@ -88,13 +93,37 @@ impl NoteEditing {
       })
       .context("failed to observe update")?;
 
-    let awareness = Awareness::new(doc);
-    let doc_arc = Mutex::new(awareness);
+    let mut awareness = Awareness::new(doc);
+    let (awareness_sender, mut awareness_receiver) = mpsc::channel(10);
+    let awareness_subscription = awareness.on_update(move |_awareness, event, _origin| {
+      let changes = event.all_changes();
+      let _ = awareness_sender.try_send(changes);
+    });
+
+    let doc_arc = Arc::new(Mutex::new(awareness));
+
+    spawn({
+      let sender = sender.clone();
+      let doc_arc = doc_arc.clone();
+      async move {
+        while let Some(changes) = awareness_receiver.recv().await {
+          let awareness = doc_arc.lock().await;
+          let Ok(upgrade) = awareness.update_with_clients(changes) else {
+            tracing::warn!("failed to update with clients");
+            continue;
+          };
+
+          let payload = yrs::sync::Message::Awareness(upgrade).encode_v1();
+          let _ = sender.send(Message::Binary(Bytes::from_owner(payload)));
+        }
+      }
+    });
 
     let state = Arc::new(NoteState {
       doc: doc_arc,
       subscriber_count: AtomicUsize::new(1),
-      subscription,
+      doc_subscription,
+      awareness_subscription,
       sender,
     });
 

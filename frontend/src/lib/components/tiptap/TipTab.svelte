@@ -1,10 +1,11 @@
 <script lang="ts">
   import './tiptap.css';
   import { onDestroy, onMount } from 'svelte';
-  import { extensions } from './config';
+  import { extensions, getRandomColor } from './config';
   import EditorToolbar from './toolbar/EditorToolbar.svelte';
   import { EditorContent, Editor } from 'svelte-tiptap';
   import Collaboration from '@tiptap/extension-collaboration';
+  import CollaborationCaret from '@tiptap/extension-collaboration-caret';
   import * as Y from 'yjs';
   import { WebsocketProvider } from 'y-websocket';
 
@@ -24,11 +25,6 @@
       disableBc: true
     });
     undoManager = new Y.UndoManager(doc);
-    provider.awareness.setLocalStateField('user', {
-      name: 'Anonymous',
-      color: '#ffff00',
-      colorLight: '#00ff00'
-    });
 
     provider.on('status', (e) => {
       console.log(e);
@@ -42,6 +38,13 @@
           provider,
           yUndoOptions: {
             undoManager
+          }
+        }),
+        CollaborationCaret.configure({
+          provider,
+          user: {
+            name: 'Anonymous',
+            color: getRandomColor()
           }
         })
       ],
