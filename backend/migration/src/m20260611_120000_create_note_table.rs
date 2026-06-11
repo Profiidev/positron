@@ -14,7 +14,7 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(Note::Id))
           .col(string(Note::Title))
-          .col(text(Note::Content).default(""))
+          .col(binary(Note::Content))
           .col(uuid(Note::Owner))
           .foreign_key(
             ForeignKey::create()

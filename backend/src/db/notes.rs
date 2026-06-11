@@ -17,20 +17,6 @@ pub struct NoteInfo {
   pub is_owner: bool,
 }
 
-fn preview_from_content(content: &str) -> String {
-  let text = content.trim();
-  if text.is_empty() {
-    return String::new();
-  }
-
-  let truncated: String = text.chars().take(150).collect();
-  if text.chars().count() > 150 {
-    format!("{truncated}…")
-  } else {
-    truncated
-  }
-}
-
 struct NoteOwnerLink;
 
 impl Linked for NoteOwnerLink {
@@ -123,7 +109,7 @@ impl<'db> NoteTable<'db> {
         Ok(NoteInfo {
           id: note.id,
           title: note.title,
-          preview: preview_from_content(&note.content),
+          preview: "".into(),
           owner: SimpleUserInfo {
             id: owner.id,
             name: owner.name,
@@ -170,7 +156,7 @@ impl<'db> NoteTable<'db> {
     Ok(Some(NoteInfo {
       id: note.id,
       title: note.title,
-      preview: preview_from_content(&note.content),
+      preview: "".into(),
       owner: SimpleUserInfo {
         id: owner.id,
         name: owner.name,
@@ -187,7 +173,7 @@ impl<'db> NoteTable<'db> {
     note::ActiveModel {
       id: Set(id),
       title: Set(title),
-      content: Set(String::new()),
+      content: Set(Vec::new()),
       owner: Set(owner),
     }
     .insert(&txn)
@@ -228,6 +214,28 @@ impl<'db> NoteTable<'db> {
     replace_shared_users(&txn, note_id, owner, shared_with).await?;
     txn.commit().await?;
     Ok(())
+  }
+
+  pub async fn set_content(&self, note_id: Uuid, content: Vec<u8>) -> Result<()> {
+    let mut note: note::ActiveModel = Note::find_by_id(note_id)
+      .one(self.db)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?
+      .into();
+
+    note.content = Set(content);
+    note.update(self.db).await?;
+
+    Ok(())
+  }
+
+  pub async fn get_content(&self, note_id: Uuid) -> Result<Vec<u8>> {
+    let note: note::Model = Note::find_by_id(note_id)
+      .one(self.db)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?;
+
+    Ok(note.content)
   }
 }
 

@@ -69,6 +69,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   oauth_management::init(&db).await;
 
   router = endpoints::user::state(router);
+  router = notes::state(router);
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;

@@ -8,14 +8,22 @@
   import * as Y from 'yjs';
   import { WebsocketProvider } from 'y-websocket';
 
+  const {
+    id
+  }: {
+    id: string;
+  } = $props();
+
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
   const doc = new Y.Doc();
+  let provider: WebsocketProvider | undefined = undefined;
+  let undoManager: Y.UndoManager | undefined = undefined;
 
   onMount(() => {
-    const provider = new WebsocketProvider('/api/notes/ws', 'test-room', doc, {
+    provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
       disableBc: true
     });
-    const undoManager = new Y.UndoManager(doc);
+    undoManager = new Y.UndoManager(doc);
     provider.awareness.setLocalStateField('user', {
       name: 'Anonymous',
       color: '#ffff00',
@@ -59,6 +67,8 @@
 
   onDestroy(() => {
     editorState.editor?.destroy();
+    undoManager?.destroy();
+    provider?.destroy();
   });
 </script>
 
