@@ -11,9 +11,35 @@ use uuid::Uuid;
 pub struct NoteInfo {
   pub id: Uuid,
   pub title: String,
+  pub preview: String,
   pub owner: SimpleUserInfo,
   pub shared_with: Vec<SimpleUserInfo>,
   pub is_owner: bool,
+}
+
+fn preview_from_content(content: &str) -> String {
+  let text = content.trim();
+  if text.is_empty() {
+    return String::new();
+  }
+
+  let truncated: String = text.chars().take(150).collect();
+  if text.chars().count() > 150 {
+    format!("{truncated}…")
+  } else {
+    truncated
+  }
+}
+
+struct NoteOwnerLink;
+
+impl Linked for NoteOwnerLink {
+  type FromEntity = note::Entity;
+  type ToEntity = user::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![note::Relation::User.def()]
+  }
 }
 
 pub struct NoteTable<'db> {
@@ -76,7 +102,7 @@ impl<'db> NoteTable<'db> {
           .add(note::Column::Owner.eq(user_id))
           .add(note::Column::Id.is_in(shared_note_ids)),
       )
-      .find_also_related(user::Entity)
+      .find_also_linked(NoteOwnerLink)
       .all(self.db)
       .await?;
 
@@ -97,6 +123,7 @@ impl<'db> NoteTable<'db> {
         Ok(NoteInfo {
           id: note.id,
           title: note.title,
+          preview: preview_from_content(&note.content),
           owner: SimpleUserInfo {
             id: owner.id,
             name: owner.name,
@@ -116,7 +143,7 @@ impl<'db> NoteTable<'db> {
 
   pub async fn info(&self, note_id: Uuid, user_id: Uuid) -> Result<Option<NoteInfo>> {
     let res = Note::find_by_id(note_id)
-      .find_also_related(user::Entity)
+      .find_also_linked(NoteOwnerLink)
       .one(self.db)
       .await?;
 
@@ -127,13 +154,13 @@ impl<'db> NoteTable<'db> {
     let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
 
     let shared_with = note_user::Entity::find()
-      .filter(note_user::Column::User.eq(user_id))
+      .filter(note_user::Column::Note.eq(note_id))
       .find_also_related(user::Entity)
       .all(self.db)
       .await?
       .into_iter()
-      .filter_map(|(_, group)| {
-        group.map(|u| SimpleUserInfo {
+      .filter_map(|(_, user)| {
+        user.map(|u| SimpleUserInfo {
           id: u.id,
           name: u.name,
         })
@@ -143,6 +170,7 @@ impl<'db> NoteTable<'db> {
     Ok(Some(NoteInfo {
       id: note.id,
       title: note.title,
+      preview: preview_from_content(&note.content),
       owner: SimpleUserInfo {
         id: owner.id,
         name: owner.name,

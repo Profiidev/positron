@@ -13,7 +13,8 @@ export enum UpdateType {
   OAuthScope = 'OAuthScope',
   OAuthPolicy = 'OAuthPolicy',
   Passkey = 'Passkey',
-  Apod = 'Apod'
+  Apod = 'Apod',
+  Note = 'Note'
 }
 
 export type UpdateMessage =
@@ -23,7 +24,8 @@ export type UpdateMessage =
         | UpdateType.Group
         | UpdateType.OAuthClient
         | UpdateType.OAuthScope
-        | UpdateType.OAuthPolicy;
+        | UpdateType.OAuthPolicy
+        | UpdateType.Note;
       uuid: string;
     }
   | {
@@ -51,6 +53,7 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate('/api/group/users').catch(() => {});
       invalidate('/api/oauth_management/client/users').catch(() => {});
       invalidate(`/api/user/info/avatar/${msg.uuid}`).catch(() => {});
+      invalidate(`/api/notes/management/users`).catch(() => {});
       // Same as current user
       if (msg.uuid === user) {
         invalidate('/api/user/info').catch(() => {});
@@ -90,6 +93,12 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     case UpdateType.Apod: {
       invalidate('/api/services/apod').catch(() => {});
       invalidate('/api/services/apod/get_image_info').catch(() => {});
+      break;
+    }
+    case UpdateType.Note: {
+      invalidate('/api/notes/management').catch(() => {});
+      invalidate(`/api/notes/management/${msg.uuid}`).catch(() => {});
+      break;
     }
     default: {
       break;
