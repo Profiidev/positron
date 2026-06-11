@@ -3,6 +3,9 @@
     "frontend",
     "app"
   ],
+  "dependencies": {
+    "y-websocket": "^3.0.0"
+  },
   "devDependencies": {
     "oxfmt": "0.53.0",
     "oxlint": "1.68.0",
@@ -12,8 +15,5 @@
   },
   "allowScripts": {
     "sharp": true
-  },
-  "dependencies": {
-    "y-websocket": "^3.0.0"
   }
 }

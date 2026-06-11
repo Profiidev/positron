@@ -39,7 +39,7 @@ impl Test {
   }
 }
 
-async fn notes_websocket(auth: JwtAuth, test: Test, ws: WebSocketUpgrade) -> Response {
+async fn notes_websocket(_auth: JwtAuth, test: Test, ws: WebSocketUpgrade) -> Response {
   ws.on_upgrade(move |socket| handle_socket(socket, test))
 }
 
@@ -71,7 +71,7 @@ async fn handle_socket(mut socket: WebSocket, test: Test) {
         key,
         text_ref.get_string(&txn)
       );
-    } else if let Some(map_ref) = txn.get_map(key) {
+    } else if let Some(_map_ref) = txn.get_map(key) {
       println!("Key '{}' is a Map type.", key);
     } else {
       println!("Key '{}' is another type.", key);
