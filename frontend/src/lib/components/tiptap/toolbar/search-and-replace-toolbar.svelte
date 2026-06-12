@@ -11,7 +11,6 @@
     PopoverContent,
     PopoverTrigger
   } from '@profidev/pleiades/components/ui/popover';
-  import { Separator } from '@profidev/pleiades/components/ui/separator';
   import { Toggle } from '@profidev/pleiades/components/ui/toggle';
   import {
     Tooltip,

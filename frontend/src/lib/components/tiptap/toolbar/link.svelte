@@ -1,12 +1,9 @@
 <script lang="ts">
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
-  import XIcon from '@lucide/svelte/icons/x';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Input } from '@profidev/pleiades/components/ui/input';
-  import { Label } from '@profidev/pleiades/components/ui/label';
   import {
     Popover,
-    PopoverClose,
     PopoverContent,
     PopoverTrigger
   } from '@profidev/pleiades/components/ui/popover';

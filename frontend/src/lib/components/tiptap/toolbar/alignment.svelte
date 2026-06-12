@@ -18,14 +18,13 @@
     TooltipContent,
     TooltipTrigger
   } from '@profidev/pleiades/components/ui/tooltip';
-  import { IsMobile } from '@profidev/pleiades/hooks/is-mobile.svelte';
   import type { Editor } from '@tiptap/core';
-  import MobileToolbarGroup from './mobile-toolbar-group.svelte';
-  import MobileToolbarItem from './MobileToolbarItem.svelte';
 
-  let { editor }: { editor: Editor } = $props();
-
-  const isMobile = new IsMobile();
+  let {
+    editor
+  }: {
+    editor: Editor;
+  } = $props();
 
   const alignmentOptions = [
     { name: 'Left Align', value: 'left', icon: AlignLeftIcon },
@@ -52,71 +51,51 @@
   );
 </script>
 
-{#if isMobile.current}
-  <MobileToolbarGroup label={currentOption.name}>
-    {#snippet children({ closeDrawer })}
+<DropdownMenu>
+  <Tooltip>
+    <TooltipTrigger>
+      {#snippet child({ props })}
+        {@const CurrentIcon = currentOption.icon}
+        <DropdownMenuTrigger>
+          {#snippet child({ props: triggerProps })}
+            <Button
+              {...props}
+              {...triggerProps}
+              variant="ghost"
+              size="sm"
+              class="h-8 w-max cursor-pointer font-normal"
+              type="button"
+            >
+              <span class="mr-2">
+                <CurrentIcon />
+              </span>
+              {currentOption.name}
+              <ChevronDownIcon class="ml-2 h-4 w-4" />
+            </Button>
+          {/snippet}
+        </DropdownMenuTrigger>
+      {/snippet}
+    </TooltipTrigger>
+    <TooltipContent>Text Alignment</TooltipContent>
+  </Tooltip>
+  <DropdownMenuContent
+    loop
+    onCloseAutoFocus={(e) => e.preventDefault()}
+    class="w-42"
+  >
+    <DropdownMenuGroup class="w-40">
       {#each alignmentOptions as option, index (index)}
         {@const OptionIcon = option.icon}
-        <MobileToolbarItem
-          {closeDrawer}
-          onclick={() => handleAlign(option.value)}
-          active={currentTextAlign === option.value}
-        >
+        <DropdownMenuItem onSelect={() => handleAlign(option.value)}>
           <span class="mr-2">
             <OptionIcon class="h-4 w-4" />
           </span>
           {option.name}
-        </MobileToolbarItem>
+          {#if option.value === currentTextAlign}
+            <CheckIcon class="ml-auto h-4 w-4" />
+          {/if}
+        </DropdownMenuItem>
       {/each}
-    {/snippet}
-  </MobileToolbarGroup>
-{:else}
-  <DropdownMenu>
-    <Tooltip>
-      <TooltipTrigger>
-        {#snippet child({ props })}
-          {@const CurrentIcon = currentOption.icon}
-          <DropdownMenuTrigger>
-            {#snippet child({ props: triggerProps })}
-              <Button
-                {...props}
-                {...triggerProps}
-                variant="ghost"
-                size="sm"
-                class="h-8 w-max cursor-pointer font-normal"
-                type="button"
-              >
-                <span class="mr-2">
-                  <CurrentIcon />
-                </span>
-                {currentOption.name}
-                <ChevronDownIcon class="ml-2 h-4 w-4" />
-              </Button>
-            {/snippet}
-          </DropdownMenuTrigger>
-        {/snippet}
-      </TooltipTrigger>
-      <TooltipContent>Text Alignment</TooltipContent>
-    </Tooltip>
-    <DropdownMenuContent
-      loop
-      onCloseAutoFocus={(e) => e.preventDefault()}
-      class="w-42"
-    >
-      <DropdownMenuGroup class="w-40">
-        {#each alignmentOptions as option, index (index)}
-          {@const OptionIcon = option.icon}
-          <DropdownMenuItem onSelect={() => handleAlign(option.value)}>
-            <span class="mr-2">
-              <OptionIcon class="h-4 w-4" />
-            </span>
-            {option.name}
-            {#if option.value === currentTextAlign}
-              <CheckIcon class="ml-auto h-4 w-4" />
-            {/if}
-          </DropdownMenuItem>
-        {/each}
-      </DropdownMenuGroup>
-    </DropdownMenuContent>
-  </DropdownMenu>
-{/if}
+    </DropdownMenuGroup>
+  </DropdownMenuContent>
+</DropdownMenu>

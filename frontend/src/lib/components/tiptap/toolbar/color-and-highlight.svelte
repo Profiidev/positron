@@ -15,11 +15,8 @@
     TooltipTrigger
   } from '@profidev/pleiades/components/ui/tooltip';
   import * as Command from '@profidev/pleiades/components/ui/command';
-  import { IsMobile } from '@profidev/pleiades/hooks/is-mobile.svelte';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
-  import MobileToolbarGroup from './mobile-toolbar-group.svelte';
-  import MobileToolbarItem from './MobileToolbarItem.svelte';
 
   const TEXT_COLORS = [
     { name: 'Default', color: 'var(--editor-text-default)' },
@@ -47,9 +44,11 @@
     { name: 'Red', color: 'var(--editor-highlight-red)' }
   ] as const;
 
-  let { editor }: { editor: Editor } = $props();
-
-  const isMobile = new IsMobile();
+  let {
+    editor
+  }: {
+    editor: Editor;
+  } = $props();
 
   const currentColor = $derived(
     editor.getAttributes('textStyle').color as string | undefined
@@ -79,125 +78,82 @@
   }
 </script>
 
-{#if isMobile.current}
-  <div class="flex gap-1">
-    <MobileToolbarGroup label="Color">
-      {#snippet children({ closeDrawer })}
-        {#each TEXT_COLORS as { name, color } (name)}
-          <MobileToolbarItem
-            {closeDrawer}
-            onclick={() => handleSetColor(color)}
-            active={currentColor === color}
-          >
-            <div class="flex items-center gap-2">
-              <div class="rounded-sm border px-2" style:color>A</div>
-              <span>{name}</span>
-            </div>
-          </MobileToolbarItem>
-        {/each}
-      {/snippet}
-    </MobileToolbarGroup>
-
-    <MobileToolbarGroup label="Highlight">
-      {#snippet children({ closeDrawer })}
-        {#each HIGHLIGHT_COLORS as { name, color } (name)}
-          <MobileToolbarItem
-            {closeDrawer}
-            onclick={() => handleSetHighlight(color)}
-            active={currentHighlight === color}
-          >
-            <div class="flex items-center gap-2">
-              <div
-                class="rounded-sm border px-2"
-                style:background-color={color}
+<Popover>
+  <div class="relative h-full">
+    <Tooltip>
+      <TooltipTrigger>
+        {#snippet child({ props })}
+          <PopoverTrigger disabled={isDisabled}>
+            {#snippet child({ props: triggerProps })}
+              <Button
+                {...props}
+                {...triggerProps}
+                variant="ghost"
+                size="sm"
+                type="button"
+                style={currentColor ? `color: ${currentColor}` : undefined}
+                class={cn('h-8 w-14 cursor-pointer p-0 font-normal')}
               >
-                A
-              </div>
-              <span>{name}</span>
-            </div>
-          </MobileToolbarItem>
-        {/each}
-      {/snippet}
-    </MobileToolbarGroup>
-  </div>
-{:else}
-  <Popover>
-    <div class="relative h-full">
-      <Tooltip>
-        <TooltipTrigger>
-          {#snippet child({ props })}
-            <PopoverTrigger disabled={isDisabled}>
-              {#snippet child({ props: triggerProps })}
-                <Button
-                  {...props}
-                  {...triggerProps}
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  style={currentColor ? `color: ${currentColor}` : undefined}
-                  class={cn('h-8 w-14 cursor-pointer p-0 font-normal')}
-                >
-                  <span class="text-md">A</span>
-                  <ChevronDownIcon class="ml-2 h-4 w-4" />
-                </Button>
-              {/snippet}
-            </PopoverTrigger>
-          {/snippet}
-        </TooltipTrigger>
-        <TooltipContent>Text Color & Highlight</TooltipContent>
-      </Tooltip>
+                <span class="text-md">A</span>
+                <ChevronDownIcon class="ml-2 h-4 w-4" />
+              </Button>
+            {/snippet}
+          </PopoverTrigger>
+        {/snippet}
+      </TooltipTrigger>
+      <TooltipContent>Text Color & Highlight</TooltipContent>
+    </Tooltip>
 
-      <PopoverContent class="w-52 p-0">
-        <Command.Root>
-          <Command.List class="flex overflow-hidden">
-            <ScrollArea class="grow">
-              <Command.Group heading="Color">
-                {#each TEXT_COLORS as { name, color } (name)}
-                  <Command.Item
-                    onSelect={() => handleSetColor(color)}
-                    class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
+    <PopoverContent class="w-52 p-0">
+      <Command.Root>
+        <Command.List class="flex overflow-hidden">
+          <ScrollArea class="grow">
+            <Command.Group heading="Color">
+              {#each TEXT_COLORS as { name, color } (name)}
+                <Command.Item
+                  onSelect={() => handleSetColor(color)}
+                  class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
+                >
+                  <div
+                    class="rounded-sm border px-1 py-px font-medium"
+                    style:color
                   >
+                    A
+                  </div>
+                  <span>{name}</span>
+                  {#if currentColor === color}
+                    <CheckIcon class="ml-auto h-4 w-4" />
+                  {/if}
+                </Command.Item>
+              {/each}
+            </Command.Group>
+
+            <Separator class="my-1" />
+
+            <Command.Group heading="Background">
+              {#each HIGHLIGHT_COLORS as { name, color } (name)}
+                <Command.Item
+                  onSelect={() => handleSetHighlight(color)}
+                  class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
+                >
+                  <div class="flex items-center space-x-2">
                     <div
                       class="rounded-sm border px-1 py-px font-medium"
-                      style:color
+                      style:background-color={color}
                     >
                       A
                     </div>
                     <span>{name}</span>
-                    {#if currentColor === color}
-                      <CheckIcon class="ml-auto h-4 w-4" />
-                    {/if}
-                  </Command.Item>
-                {/each}
-              </Command.Group>
-
-              <Separator class="my-1" />
-
-              <Command.Group heading="Background">
-                {#each HIGHLIGHT_COLORS as { name, color } (name)}
-                  <Command.Item
-                    onSelect={() => handleSetHighlight(color)}
-                    class="flex w-full cursor-pointer items-center rounded-sm px-2 py-1 text-sm [&_svg.cn-command-item-indicator]:hidden!"
-                  >
-                    <div class="flex items-center space-x-2">
-                      <div
-                        class="rounded-sm border px-1 py-px font-medium"
-                        style:background-color={color}
-                      >
-                        A
-                      </div>
-                      <span>{name}</span>
-                    </div>
-                    {#if currentHighlight === color}
-                      <CheckIcon class="ml-auto h-4 w-4" />
-                    {/if}
-                  </Command.Item>
-                {/each}
-              </Command.Group>
-            </ScrollArea>
-          </Command.List>
-        </Command.Root>
-      </PopoverContent>
-    </div>
-  </Popover>
-{/if}
+                  </div>
+                  {#if currentHighlight === color}
+                    <CheckIcon class="ml-auto h-4 w-4" />
+                  {/if}
+                </Command.Item>
+              {/each}
+            </Command.Group>
+          </ScrollArea>
+        </Command.List>
+      </Command.Root>
+    </PopoverContent>
+  </div>
+</Popover>
