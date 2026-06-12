@@ -4,9 +4,8 @@
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
   import type { UserInfo } from '$lib/client';
-  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
-  import { avatarUrl } from '$lib/permissions.svelte.js';
   import { toast } from '@profidev/pleiades/components/util/general';
+  import UserAvatar from '$lib/components/UserAvatar.svelte';
 
   let { data } = $props();
 
@@ -41,10 +40,7 @@
     </Card.Header>
     <Card.Content class="flex w-100 items-center">
       {#if user}
-        <SimpleAvatar
-          src={user ? `${avatarUrl}/${user.uuid}` : ''}
-          class="size-14"
-        />
+        <UserAvatar userId={user.uuid} username={user.name} class="size-14" />
         <div class="ml-2 grid flex-1 text-left text-sm leading-tight">
           <span class="truncate text-lg font-semibold">{user.name}</span>
           <span class="truncate">{user.email}</span>
