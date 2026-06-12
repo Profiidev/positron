@@ -14,7 +14,8 @@
     editNote,
     shareNote,
     type NoteInfo,
-    type SimpleUserInfo
+    type SimpleUserInfo,
+    type UserInfo
   } from '$lib/client';
   import { Label } from '@profidev/pleiades/components/ui/label';
   import TipTab from '$lib/components/tiptap/TipTab.svelte';
@@ -32,6 +33,7 @@
   let sharedWithIds = $state<string[]>([]);
   let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
     $state(undefined);
+  let userInfo: UserInfo | undefined = $state(undefined);
 
   let shareableUsers = $derived(
     users?.filter((user) => user.id !== note?.owner.id) ?? []
@@ -57,6 +59,12 @@
   $effect(() => {
     data.usersPromise.then(({ data: userList }) => {
       users = userList;
+    });
+  });
+
+  $effect(() => {
+    data.user.then((userInfoData) => {
+      userInfo = userInfoData;
     });
   });
 
@@ -182,7 +190,7 @@
     </Button>
   </div>
   <div class="flex min-h-0 grow flex-col space-y-4">
-    <TipTab id={data.id} />
+    <TipTab id={data.id} username={userInfo?.name} />
   </div>
 </div>
 <FormDialog

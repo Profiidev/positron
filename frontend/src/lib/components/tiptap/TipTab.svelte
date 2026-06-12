@@ -11,15 +11,27 @@
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
 
   const {
-    id
+    id,
+    username
   }: {
     id: string;
+    username?: string;
   } = $props();
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
   const doc = new Y.Doc();
   let provider: WebsocketProvider | undefined = undefined;
   let undoManager: Y.UndoManager | undefined = undefined;
+
+  $effect(() => {
+    username;
+    const localState = provider?.awareness.getLocalState();
+    const currentUser = localState?.user ?? {};
+    provider?.awareness.setLocalStateField('user', {
+      ...currentUser,
+      name: username ?? 'Unknown'
+    });
+  });
 
   onMount(() => {
     provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
@@ -40,7 +52,7 @@
         CollaborationCaret.configure({
           provider,
           user: {
-            name: 'Anonymous',
+            name: username ?? 'Unknown',
             color: getRandomColor()
           }
         })
