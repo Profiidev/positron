@@ -1,6 +1,9 @@
-use std::sync::{
-  Arc,
-  atomic::{AtomicUsize, Ordering},
+use std::{
+  sync::{
+    Arc,
+    atomic::{AtomicIsize, AtomicUsize, Ordering},
+  },
+  time::Duration,
 };
 
 use axum::{
@@ -21,6 +24,7 @@ use tokio::{
     broadcast::{Receiver, Sender, channel},
     mpsc,
   },
+  time::sleep,
 };
 use uuid::Uuid;
 use yrs::{
@@ -52,6 +56,7 @@ pub struct NoteState {
   #[allow(dead_code)]
   awareness_subscription: Subscription,
   subscriber_count: AtomicUsize,
+  save_counter: AtomicIsize,
 }
 
 impl NoteEditing {
@@ -122,10 +127,13 @@ impl NoteEditing {
     let state = Arc::new(NoteState {
       doc: doc_arc,
       subscriber_count: AtomicUsize::new(1),
+      save_counter: AtomicIsize::new(0),
       doc_subscription,
       awareness_subscription,
       sender,
     });
+
+    state.clone().start_save_task(db.clone(), note_id);
 
     self.docs.insert(note_id, state.clone());
 
@@ -147,14 +155,8 @@ impl NoteEditing {
       return Ok(());
     };
 
-    let awareness = state.doc.lock().await;
-    let doc = awareness.doc();
-    let content = doc
-      .transact()
-      .await
-      .encode_state_as_update_v1(&StateVector::default());
-
-    db.notes().set_content(note_id, content).await?;
+    state.save(db, note_id).await?;
+    state.save_counter.store(-1, Ordering::Relaxed);
 
     Ok(())
   }
@@ -197,11 +199,42 @@ impl NoteState {
     };
     drop(awareness);
 
+    self.save_counter.fetch_add(1, Ordering::Relaxed);
+
     for msg in res {
       let payload = msg.encode_v1();
       if let Err(e) = ws.send(Message::Binary(Bytes::from_owner(payload))).await {
         tracing::warn!("failed to send message: {}", e);
       }
     }
+  }
+
+  pub async fn save(&self, db: &Connection, note_id: Uuid) -> Result<()> {
+    let awareness = self.doc.lock().await;
+    let doc = awareness.doc();
+    let content = doc
+      .transact()
+      .await
+      .encode_state_as_update_v1(&StateVector::default());
+
+    db.notes().set_content(note_id, content).await?;
+
+    Ok(())
+  }
+
+  pub fn start_save_task(self: Arc<Self>, db: Connection, note_id: Uuid) {
+    spawn(async move {
+      loop {
+        let count = self.save_counter.swap(0, Ordering::Relaxed);
+        if count > 0 {
+          self.save(&db, note_id).await.ok();
+        } else if count < 0 {
+          drop(self);
+          return;
+        }
+
+        sleep(Duration::from_secs(10)).await;
+      }
+    });
   }
 }
