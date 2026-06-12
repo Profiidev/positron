@@ -1,18 +1,10 @@
 <script lang="ts">
   import LinkIcon from '@lucide/svelte/icons/link';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import { Input } from '@profidev/pleiades/components/ui/input';
-  import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger
-  } from '@profidev/pleiades/components/ui/popover';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as Input from '@profidev/pleiades/components/ui/input';
+  import * as Popover from '@profidev/pleiades/components/ui/popover';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
@@ -71,7 +63,7 @@
 </script>
 
 {#snippet linkMenu()}
-  <PopoverContent
+  <Popover.Content
     onCloseAutoFocus={(e) => e.preventDefault()}
     class="relative px-3 py-2.5"
   >
@@ -79,14 +71,14 @@
       <form onsubmit={handleSubmit}>
         <p class="text-sm">Attach a link to the selected text</p>
         <div class="mt-3 flex flex-col items-end justify-end gap-3">
-          <Input
+          <Input.Root
             bind:value={link}
             class="w-full"
             placeholder="https://example.com"
           />
           <div class="flex items-center gap-3">
             {#if linkHref}
-              <Button
+              <Button.Root
                 type="button"
                 size="sm"
                 variant="ghost"
@@ -94,21 +86,21 @@
               >
                 <Trash2Icon class="mr-2" />
                 Remove
-              </Button>
+              </Button.Root>
             {/if}
-            <Button size="sm" type="submit">
+            <Button.Root size="sm" type="submit">
               {linkHref ? 'Update' : 'Confirm'}
-            </Button>
+            </Button.Root>
           </div>
         </div>
       </form>
     </div>
-  </PopoverContent>
+  </Popover.Content>
 {/snippet}
 
-<Popover>
+<Popover.Root>
   {#if inOverflowMenu}
-    <PopoverTrigger disabled={isDisabled}>
+    <Popover.Trigger disabled={isDisabled}>
       {#snippet child({ props })}
         <ToolbarOverflowTrigger
           {...props}
@@ -120,15 +112,15 @@
           class={className}
         />
       {/snippet}
-    </PopoverTrigger>
+    </Popover.Trigger>
     {@render linkMenu()}
   {:else}
-    <Tooltip>
-      <TooltipTrigger>
+    <Tooltip.Root>
+      <Tooltip.Trigger>
         {#snippet child({ props })}
-          <PopoverTrigger disabled={isDisabled}>
+          <Popover.Trigger disabled={isDisabled}>
             {#snippet child({ props: triggerProps })}
-              <Button
+              <Button.Root
                 {...props}
                 {...triggerProps}
                 variant="ghost"
@@ -142,15 +134,15 @@
               >
                 <p class="mr-2 text-base">↗</p>
                 <p class="decoration-gray-7 underline underline-offset-4">Link</p>
-              </Button>
+              </Button.Root>
             {/snippet}
-          </PopoverTrigger>
+          </Popover.Trigger>
         {/snippet}
-      </TooltipTrigger>
-      <TooltipContent>
+      </Tooltip.Trigger>
+      <Tooltip.Content>
         <span>Link</span>
-      </TooltipContent>
-    </Tooltip>
+      </Tooltip.Content>
+    </Tooltip.Root>
     {@render linkMenu()}
   {/if}
-</Popover>
+</Popover.Root>

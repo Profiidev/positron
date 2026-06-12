@@ -1,11 +1,7 @@
 <script lang="ts">
   import CodeIcon from '@lucide/svelte/icons/code';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
@@ -41,10 +37,10 @@
     class={className}
   />
 {:else}
-  <Tooltip>
-    <TooltipTrigger>
+  <Tooltip.Root>
+    <Tooltip.Trigger>
       {#snippet child({ props })}
-        <Button
+        <Button.Root
           {...props}
           variant="ghost"
           size="icon"
@@ -54,11 +50,11 @@
           disabled={isDisabled}
         >
           <CodeIcon />
-        </Button>
+        </Button.Root>
       {/snippet}
-    </TooltipTrigger>
-    <TooltipContent>
+    </Tooltip.Trigger>
+    <Tooltip.Content>
       <span>Code Block</span>
-    </TooltipContent>
-  </Tooltip>
+    </Tooltip.Content>
+  </Tooltip.Root>
 {/if}

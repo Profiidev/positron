@@ -2,19 +2,11 @@
   import CheckIcon from '@lucide/svelte/icons/check';
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import PaletteIcon from '@lucide/svelte/icons/palette';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger
-  } from '@profidev/pleiades/components/ui/popover';
-  import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
-  import { Separator } from '@profidev/pleiades/components/ui/separator';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as Popover from '@profidev/pleiades/components/ui/popover';
+  import * as ScrollArea from '@profidev/pleiades/components/ui/scroll-area';
+  import * as Separator from '@profidev/pleiades/components/ui/separator';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import * as Command from '@profidev/pleiades/components/ui/command';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
@@ -83,10 +75,10 @@
 </script>
 
 {#snippet colorMenu()}
-  <PopoverContent class="w-52 p-0">
+  <Popover.Content class="w-52 p-0">
     <Command.Root>
       <Command.List class="flex overflow-hidden">
-        <ScrollArea class="grow">
+        <ScrollArea.ScrollArea class="grow">
           <Command.Group heading="Color">
             {#each TEXT_COLORS as { name, color } (name)}
               <Command.Item
@@ -107,7 +99,7 @@
             {/each}
           </Command.Group>
 
-          <Separator class="my-1" />
+          <Separator.Root class="my-1" />
 
           <Command.Group heading="Background">
             {#each HIGHLIGHT_COLORS as { name, color } (name)}
@@ -130,15 +122,15 @@
               </Command.Item>
             {/each}
           </Command.Group>
-        </ScrollArea>
+        </ScrollArea.ScrollArea>
       </Command.List>
     </Command.Root>
-  </PopoverContent>
+  </Popover.Content>
 {/snippet}
 
-<Popover>
+<Popover.Root>
   {#if inOverflowMenu}
-    <PopoverTrigger disabled={isDisabled}>
+    <Popover.Trigger disabled={isDisabled}>
       {#snippet child({ props })}
         <ToolbarOverflowTrigger
           {...props}
@@ -148,16 +140,16 @@
           disabled={isDisabled}
         />
       {/snippet}
-    </PopoverTrigger>
+    </Popover.Trigger>
     {@render colorMenu()}
   {:else}
     <div class="relative h-full">
-      <Tooltip>
-        <TooltipTrigger>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
           {#snippet child({ props })}
-            <PopoverTrigger disabled={isDisabled}>
+            <Popover.Trigger disabled={isDisabled}>
               {#snippet child({ props: triggerProps })}
-                <Button
+                <Button.Root
                   {...props}
                   {...triggerProps}
                   variant="ghost"
@@ -168,14 +160,14 @@
                 >
                   <span class="text-md">A</span>
                   <ChevronDownIcon class="ml-2 h-4 w-4" />
-                </Button>
+                </Button.Root>
               {/snippet}
-            </PopoverTrigger>
+            </Popover.Trigger>
           {/snippet}
-        </TooltipTrigger>
-        <TooltipContent>Text Color & Highlight</TooltipContent>
-      </Tooltip>
+        </Tooltip.Trigger>
+        <Tooltip.Content>Text Color & Highlight</Tooltip.Content>
+      </Tooltip.Root>
       {@render colorMenu()}
     </div>
   {/if}
-</Popover>
+</Popover.Root>

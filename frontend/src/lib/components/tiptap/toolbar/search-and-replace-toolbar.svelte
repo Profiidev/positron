@@ -4,19 +4,11 @@
   import CaseSensitiveIcon from '@lucide/svelte/icons/case-sensitive';
   import RegexIcon from '@lucide/svelte/icons/regex';
   import RepeatIcon from '@lucide/svelte/icons/repeat';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import { Input } from '@profidev/pleiades/components/ui/input';
-  import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger
-  } from '@profidev/pleiades/components/ui/popover';
-  import { Toggle } from '@profidev/pleiades/components/ui/toggle';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as Input from '@profidev/pleiades/components/ui/input';
+  import * as Popover from '@profidev/pleiades/components/ui/popover';
+  import * as Toggle from '@profidev/pleiades/components/ui/toggle';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import { isValidSearchPattern } from '../extensions/search-and-replace';
@@ -110,13 +102,13 @@
 </script>
 
 {#snippet searchMenu()}
-  <PopoverContent
+  <Popover.Content
     align="end"
     onCloseAutoFocus={(e) => e.preventDefault()}
     class="flex w-[412px] flex-col gap-1.5 px-3 py-2.5"
   >
     <div class="flex items-center gap-1.5">
-      <Input
+      <Input.Root
         value={searchText}
         oninput={(e) => handleSearchInput(e.currentTarget.value)}
         class="w-48"
@@ -129,7 +121,7 @@
           ? selectedResult
           : selectedResult + 1}/{results.length}
       </span>
-      <Button
+      <Button.Root
         onclick={selectPrevious}
         size="icon"
         variant="ghost"
@@ -137,8 +129,8 @@
         type="button"
       >
         <ArrowLeftIcon class="size-4" />
-      </Button>
-      <Button
+      </Button.Root>
+      <Button.Root
         onclick={selectNext}
         size="icon"
         variant="ghost"
@@ -146,12 +138,12 @@
         type="button"
       >
         <ArrowRightIcon class="size-4" />
-      </Button>
+      </Button.Root>
 
-      <Tooltip>
-        <TooltipTrigger>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
           {#snippet child({ props })}
-            <Toggle
+            <Toggle.Root
               {...props}
               pressed={caseSensitive}
               onPressedChange={handleCaseSensitiveChange}
@@ -161,16 +153,16 @@
               class="size-7"
             >
               <CaseSensitiveIcon class="size-4" />
-            </Toggle>
+            </Toggle.Root>
           {/snippet}
-        </TooltipTrigger>
-        <TooltipContent>Match case</TooltipContent>
-      </Tooltip>
+        </Tooltip.Trigger>
+        <Tooltip.Content>Match case</Tooltip.Content>
+      </Tooltip.Root>
 
-      <Tooltip>
-        <TooltipTrigger>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
           {#snippet child({ props })}
-            <Toggle
+            <Toggle.Root
               {...props}
               pressed={useRegex}
               onPressedChange={handleUseRegexChange}
@@ -180,16 +172,16 @@
               class="size-7"
             >
               <RegexIcon class="size-4" />
-            </Toggle>
+            </Toggle.Root>
           {/snippet}
-        </TooltipTrigger>
-        <TooltipContent>Use regular expression</TooltipContent>
-      </Tooltip>
+        </Tooltip.Trigger>
+        <Tooltip.Content>Use regular expression</Tooltip.Content>
+      </Tooltip.Root>
 
-      <Tooltip>
-        <TooltipTrigger>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
           {#snippet child({ props })}
-            <Toggle
+            <Toggle.Root
               {...props}
               bind:pressed={replacing}
               size="sm"
@@ -198,30 +190,30 @@
               class="size-7"
             >
               <RepeatIcon class="size-4" />
-            </Toggle>
+            </Toggle.Root>
           {/snippet}
-        </TooltipTrigger>
-        <TooltipContent>Replace</TooltipContent>
-      </Tooltip>
+        </Tooltip.Trigger>
+        <Tooltip.Content>Replace</Tooltip.Content>
+      </Tooltip.Root>
     </div>
 
     {#if replacing}
       <div class="flex items-center gap-1.5">
-        <Input
+        <Input.Root
           value={replaceText}
           oninput={(e) => handleReplaceInput(e.currentTarget.value)}
           class="w-48"
           placeholder="Replace..."
         />
-        <Button
+        <Button.Root
           onclick={replace}
           size="sm"
           class="ml-auto h-7 px-3 text-xs"
           type="button"
         >
           Replace
-        </Button>
-        <Button
+        </Button.Root>
+        <Button.Root
           onclick={replaceAll}
           size="sm"
           variant="secondary"
@@ -229,15 +221,15 @@
           type="button"
         >
           Replace All
-        </Button>
+        </Button.Root>
       </div>
     {/if}
-  </PopoverContent>
+  </Popover.Content>
 {/snippet}
 
-<Popover {open} onOpenChange={handleOpenChange}>
+<Popover.Root {open} onOpenChange={handleOpenChange}>
   {#if inOverflowMenu}
-    <PopoverTrigger>
+    <Popover.Trigger>
       {#snippet child({ props })}
         <ToolbarOverflowTrigger
           {...props}
@@ -246,12 +238,12 @@
           hasSubmenu
         />
       {/snippet}
-    </PopoverTrigger>
+    </Popover.Trigger>
     {@render searchMenu()}
   {:else}
-    <PopoverTrigger>
+    <Popover.Trigger>
       {#snippet child({ props })}
-        <Button
+        <Button.Root
           {...props}
           variant="ghost"
           size="sm"
@@ -261,9 +253,9 @@
         >
           <RepeatIcon class="mr-2 h-4 w-4" />
           <p>Search & Replace</p>
-        </Button>
+        </Button.Root>
       {/snippet}
-    </PopoverTrigger>
+    </Popover.Trigger>
     {@render searchMenu()}
   {/if}
-</Popover>
+</Popover.Root>

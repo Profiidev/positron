@@ -1,11 +1,7 @@
 <script lang="ts">
   import Redo2Icon from '@lucide/svelte/icons/redo-2';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
@@ -36,10 +32,10 @@
     class={className}
   />
 {:else}
-  <Tooltip>
-    <TooltipTrigger>
+  <Tooltip.Root>
+    <Tooltip.Trigger>
       {#snippet child({ props })}
-        <Button
+        <Button.Root
           {...props}
           variant="ghost"
           size="icon"
@@ -49,11 +45,11 @@
           disabled={isDisabled}
         >
           <Redo2Icon />
-        </Button>
+        </Button.Root>
       {/snippet}
-    </TooltipTrigger>
-    <TooltipContent>
+    </Tooltip.Trigger>
+    <Tooltip.Content>
       <span>Redo</span>
-    </TooltipContent>
-  </Tooltip>
+    </Tooltip.Content>
+  </Tooltip.Root>
 {/if}

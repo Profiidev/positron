@@ -1,18 +1,9 @@
 <script lang="ts">
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import HeadingIcon from '@lucide/svelte/icons/heading';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-  } from '@profidev/pleiades/components/ui/dropdown-menu';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as DropdownMenu from '@profidev/pleiades/components/ui/dropdown-menu';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
@@ -37,15 +28,15 @@
 </script>
 
 {#snippet headingMenu()}
-  <DropdownMenuContent align="start" class="flex flex-col gap-1">
-    <DropdownMenuItem
+  <DropdownMenu.Content align="start" class="flex flex-col gap-1">
+    <DropdownMenu.Item
       onclick={() => editor.chain().focus().setParagraph().run()}
       class={cn('flex h-fit items-center gap-2', !isHeadingActive && 'bg-accent')}
     >
       Normal
-    </DropdownMenuItem>
+    </DropdownMenu.Item>
     {#each levels as level (level)}
-      <DropdownMenuItem
+      <DropdownMenu.Item
         onclick={() => editor.chain().focus().toggleHeading({ level }).run()}
         class={cn(
           'flex items-center gap-2',
@@ -53,14 +44,14 @@
         )}
       >
         H{level}
-      </DropdownMenuItem>
+      </DropdownMenu.Item>
     {/each}
-  </DropdownMenuContent>
+  </DropdownMenu.Content>
 {/snippet}
 
 {#if inOverflowMenu}
-  <DropdownMenu>
-    <DropdownMenuTrigger>
+  <DropdownMenu.Root>
+    <DropdownMenu.Trigger>
       {#snippet child({ props })}
         <ToolbarOverflowTrigger
           {...props}
@@ -70,17 +61,17 @@
           class={className}
         />
       {/snippet}
-    </DropdownMenuTrigger>
+    </DropdownMenu.Trigger>
     {@render headingMenu()}
-  </DropdownMenu>
+  </DropdownMenu.Root>
 {:else}
-  <Tooltip>
-    <TooltipTrigger>
+  <Tooltip.Root>
+    <Tooltip.Trigger>
       {#snippet child({ props })}
-        <DropdownMenu>
-          <DropdownMenuTrigger>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
             {#snippet child({ props: triggerProps })}
-              <Button
+              <Button.Root
                 {...props}
                 {...triggerProps}
                 variant="ghost"
@@ -93,15 +84,15 @@
               >
                 {activeLevel ? `H${activeLevel}` : 'Normal'}
                 <ChevronDownIcon class="h-4 w-4" />
-              </Button>
+              </Button.Root>
             {/snippet}
-          </DropdownMenuTrigger>
+          </DropdownMenu.Trigger>
           {@render headingMenu()}
-        </DropdownMenu>
+        </DropdownMenu.Root>
       {/snippet}
-    </TooltipTrigger>
-    <TooltipContent>
+    </Tooltip.Trigger>
+    <Tooltip.Content>
       <span>Headings</span>
-    </TooltipContent>
-  </Tooltip>
+    </Tooltip.Content>
+  </Tooltip.Root>
 {/if}

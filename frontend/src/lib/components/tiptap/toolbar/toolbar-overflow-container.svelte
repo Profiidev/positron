@@ -2,18 +2,10 @@
   import type { Component } from 'svelte';
   import type { Editor } from '@tiptap/core';
   import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger
-  } from '@profidev/pleiades/components/ui/dropdown-menu';
-  import { Separator } from '@profidev/pleiades/components/ui/separator';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as DropdownMenu from '@profidev/pleiades/components/ui/dropdown-menu';
+  import * as Separator from '@profidev/pleiades/components/ui/separator';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import UndoToolbar from './undo.svelte';
   import RedoToolbar from './redo.svelte';
   import HeadingsToolbar from './headings.svelte';
@@ -95,7 +87,7 @@
 </script>
 
 {#snippet toolbarSeparator()}
-  <Separator orientation="vertical" class="mx-1 h-7!" />
+  <Separator.Root orientation="vertical" class="mx-1 h-7!" />
 {/snippet}
 
 {#snippet renderItem(item: ToolbarEntry, inOverflowMenu: boolean)}
@@ -120,13 +112,13 @@
     {/each}
 
     {#if layout.showOverflow}
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger>
+      <DropdownMenu.Root>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
             {#snippet child({ props })}
-              <DropdownMenuTrigger>
+              <DropdownMenu.Trigger>
                 {#snippet child({ props: triggerProps })}
-                  <Button
+                  <Button.Root
                     {...props}
                     {...triggerProps}
                     variant="ghost"
@@ -136,14 +128,14 @@
                     aria-label="More tools"
                   >
                     <MoreHorizontalIcon />
-                  </Button>
+                  </Button.Root>
                 {/snippet}
-              </DropdownMenuTrigger>
+              </DropdownMenu.Trigger>
             {/snippet}
-          </TooltipTrigger>
-          <TooltipContent>More tools</TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent
+          </Tooltip.Trigger>
+          <Tooltip.Content>More tools</Tooltip.Content>
+        </Tooltip.Root>
+        <DropdownMenu.Content
           align="end"
           class="w-52 p-1"
           onCloseAutoFocus={(e) => e.preventDefault()}
@@ -153,8 +145,8 @@
               {@render renderItem(item, true)}
             {/if}
           {/each}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
     {/if}
   </div>
 
@@ -170,9 +162,9 @@
     {/each}
 
     <div bind:offsetWidth={overflowButtonWidth}>
-      <Button variant="ghost" size="icon" type="button" tabindex={-1}>
+      <Button.Root variant="ghost" size="icon" type="button" tabindex={-1}>
         <MoreHorizontalIcon />
-      </Button>
+      </Button.Root>
     </div>
   </div>
 </div>

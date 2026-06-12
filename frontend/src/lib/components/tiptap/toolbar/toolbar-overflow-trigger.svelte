@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Component, ComponentProps } from 'svelte';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-  import { Button } from '@profidev/pleiades/components/ui/button';
+  import * as Button from '@profidev/pleiades/components/ui/button';
   import { cn } from '@profidev/pleiades/utils';
 
   let {
@@ -11,7 +11,7 @@
     active = false,
     class: className,
     ...buttonProps
-  }: ComponentProps<typeof Button> & {
+  }: ComponentProps<typeof Button.Root> & {
     label: string;
     icon: Component;
     hasSubmenu?: boolean;
@@ -19,7 +19,7 @@
   } = $props();
 </script>
 
-<Button
+<Button.Root
   variant="ghost"
   size="sm"
   type="button"
@@ -35,4 +35,4 @@
   {#if hasSubmenu}
     <ChevronRightIcon class="h-4 w-4 shrink-0 opacity-60" />
   {/if}
-</Button>
+</Button.Root>

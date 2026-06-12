@@ -5,19 +5,9 @@
   import AlignRightIcon from '@lucide/svelte/icons/align-right';
   import CheckIcon from '@lucide/svelte/icons/check';
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-  import { Button } from '@profidev/pleiades/components/ui/button';
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-  } from '@profidev/pleiades/components/ui/dropdown-menu';
-  import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
-  } from '@profidev/pleiades/components/ui/tooltip';
+  import * as Button from '@profidev/pleiades/components/ui/button';
+  import * as DropdownMenu from '@profidev/pleiades/components/ui/dropdown-menu';
+  import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import type { Editor } from '@tiptap/core';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
 
@@ -55,15 +45,15 @@
 </script>
 
 {#snippet alignmentMenu()}
-  <DropdownMenuContent
+  <DropdownMenu.Content
     loop
     onCloseAutoFocus={(e) => e.preventDefault()}
     class="w-42"
   >
-    <DropdownMenuGroup class="w-40">
+    <DropdownMenu.Group class="w-40">
       {#each alignmentOptions as option, index (index)}
         {@const OptionIcon = option.icon}
-        <DropdownMenuItem onSelect={() => handleAlign(option.value)}>
+        <DropdownMenu.Item onSelect={() => handleAlign(option.value)}>
           <span class="mr-2">
             <OptionIcon class="h-4 w-4" />
           </span>
@@ -71,15 +61,15 @@
           {#if option.value === currentTextAlign}
             <CheckIcon class="ml-auto h-4 w-4" />
           {/if}
-        </DropdownMenuItem>
+        </DropdownMenu.Item>
       {/each}
-    </DropdownMenuGroup>
-  </DropdownMenuContent>
+    </DropdownMenu.Group>
+  </DropdownMenu.Content>
 {/snippet}
 
 {#if inOverflowMenu}
-  <DropdownMenu>
-    <DropdownMenuTrigger>
+  <DropdownMenu.Root>
+    <DropdownMenu.Trigger>
       {#snippet child({ props })}
         {@const CurrentIcon = currentOption.icon}
         <ToolbarOverflowTrigger
@@ -89,18 +79,18 @@
           hasSubmenu
         />
       {/snippet}
-    </DropdownMenuTrigger>
+    </DropdownMenu.Trigger>
     {@render alignmentMenu()}
-  </DropdownMenu>
+  </DropdownMenu.Root>
 {:else}
-  <DropdownMenu>
-    <Tooltip>
-      <TooltipTrigger>
+  <DropdownMenu.Root>
+    <Tooltip.Root>
+      <Tooltip.Trigger>
         {#snippet child({ props })}
           {@const CurrentIcon = currentOption.icon}
-          <DropdownMenuTrigger>
+          <DropdownMenu.Trigger>
             {#snippet child({ props: triggerProps })}
-              <Button
+              <Button.Root
                 {...props}
                 {...triggerProps}
                 variant="ghost"
@@ -113,13 +103,13 @@
                 </span>
                 {currentOption.name}
                 <ChevronDownIcon class="ml-2 h-4 w-4" />
-              </Button>
+              </Button.Root>
             {/snippet}
-          </DropdownMenuTrigger>
+          </DropdownMenu.Trigger>
         {/snippet}
-      </TooltipTrigger>
-      <TooltipContent>Text Alignment</TooltipContent>
-    </Tooltip>
+      </Tooltip.Trigger>
+      <Tooltip.Content>Text Alignment</Tooltip.Content>
+    </Tooltip.Root>
     {@render alignmentMenu()}
-  </DropdownMenu>
+  </DropdownMenu.Root>
 {/if}
