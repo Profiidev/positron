@@ -24,14 +24,19 @@
     levels.find((level) => editor.isActive('heading', { level }))
   );
   const isHeadingActive = $derived(editor.isActive('heading'));
-  const overflowLabel = $derived(activeLevel ? `Heading ${activeLevel}` : 'Normal');
+  const overflowLabel = $derived(
+    activeLevel ? `Heading ${activeLevel}` : 'Normal'
+  );
 </script>
 
 {#snippet headingMenu()}
   <DropdownMenu.Content align="start" class="flex flex-col gap-1">
     <DropdownMenu.Item
       onclick={() => editor.chain().focus().setParagraph().run()}
-      class={cn('flex h-fit items-center gap-2', !isHeadingActive && 'bg-accent')}
+      class={cn(
+        'flex h-fit items-center gap-2',
+        !isHeadingActive && 'bg-accent'
+      )}
     >
       Normal
     </DropdownMenu.Item>

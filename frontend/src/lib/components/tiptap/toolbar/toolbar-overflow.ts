@@ -1,14 +1,16 @@
-export type ToolbarOverflowItem = {
+export interface ToolbarOverflowItem {
   id: string;
   isSeparator?: boolean;
-};
+}
 
 export const totalWidth = (
   itemWidths: number[],
   count: number,
   gap: number
 ): number => {
-  if (count <= 0) return 0;
+  if (count <= 0) {
+    return 0;
+  }
   const itemsWidth = itemWidths
     .slice(0, count)
     .reduce((sum, width) => sum + width, 0);
@@ -24,12 +26,12 @@ export const calculateVisibleCount = (
   const itemCount = itemWidths.length;
 
   if (itemCount === 0 || containerWidth <= 0) {
-    return { visibleCount: 0, showOverflow: false };
+    return { showOverflow: false, visibleCount: 0 };
   }
 
   const fitsAll = totalWidth(itemWidths, itemCount, gap) <= containerWidth;
   if (fitsAll) {
-    return { visibleCount: itemCount, showOverflow: false };
+    return { showOverflow: false, visibleCount: itemCount };
   }
 
   const availableWithOverflow = containerWidth - overflowButtonWidth - gap;
@@ -43,7 +45,7 @@ export const calculateVisibleCount = (
     visibleCount = i + 1;
   }
 
-  return { visibleCount, showOverflow: true };
+  return { showOverflow: true, visibleCount };
 };
 
 export const cleanupSeparatorVisibility = (

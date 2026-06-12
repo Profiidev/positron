@@ -133,7 +133,9 @@
                 )}
               >
                 <p class="mr-2 text-base">↗</p>
-                <p class="decoration-gray-7 underline underline-offset-4">Link</p>
+                <p class="decoration-gray-7 underline underline-offset-4">
+                  Link
+                </p>
               </Button.Root>
             {/snippet}
           </Popover.Trigger>
