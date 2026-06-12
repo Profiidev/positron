@@ -20,7 +20,8 @@ export const extensions = [
       HTMLAttributes: {
         class: 'list-decimal'
       }
-    }
+    },
+    undoRedo: false
   }),
   TextAlign.configure({
     types: ['heading', 'paragraph']

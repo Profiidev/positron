@@ -21,7 +21,6 @@
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
   const doc = new Y.Doc();
   let provider: WebsocketProvider | undefined = undefined;
-  let undoManager: Y.UndoManager | undefined = undefined;
 
   $effect(() => {
     username;
@@ -37,17 +36,13 @@
     provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
       disableBc: true
     });
-    undoManager = new Y.UndoManager(doc);
 
     editorState.editor = new Editor({
       extensions: [
         ...extensions,
         Collaboration.configure({
           document: doc,
-          provider,
-          yUndoOptions: {
-            undoManager
-          }
+          provider
         }),
         CollaborationCaret.configure({
           provider,
@@ -71,7 +66,6 @@
 
   const cleanup = () => {
     editorState.editor?.destroy();
-    undoManager?.destroy();
     provider?.destroy();
   };
 
