@@ -181,9 +181,7 @@
       Delete
     </Button>
   </div>
-  <Separator class="my-4" />
   <div class="flex min-h-0 grow flex-col space-y-4">
-    <p>Content</p>
     <TipTab id={data.id} />
   </div>
 </div>

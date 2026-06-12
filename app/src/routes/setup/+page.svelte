@@ -61,10 +61,4 @@
   };
 </script>
 
-<MultistepForm
-  cancelHref="/"
-  {stages}
-  {onsubmit}
-  submitLabel="Confirm"
-  submitIcon={Check}
-/>
+<MultistepForm {stages} {onsubmit} submitLabel="Confirm" submitIcon={Check} />

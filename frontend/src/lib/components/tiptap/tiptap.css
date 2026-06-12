@@ -99,15 +99,15 @@
 .ProseMirror {
   caret-color: var(--editor-text-default);
   outline: none;
-  padding: var(--editor-spacing-16) var(--editor-spacing-8);
-  margin: 0 auto;
-  max-width: 90ch;
+  padding: 0 var(--editor-spacing-8);
+  padding-top: var(--editor-spacing-4);
+  margin: 0;
+  flex-grow: 1;
   font-family: var(--editor-font-sans);
   position: relative;
   /* background-color: var(--editor-bg-default); */
   color: var(--editor-text-default);
   transition: all var(--editor-transition-normal);
-  min-height: 100vh;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -140,13 +140,13 @@
 /* Typography Styles */
 .ProseMirror p {
   line-height: 1.75;
-  margin: var(--editor-spacing-4) 0;
+  margin: 0;
   color: var(--editor-text-default);
   font-size: 1.125rem;
 }
 
 .ProseMirror > p {
-  margin: var(--editor-spacing-6) 0;
+  margin: 0;
 }
 
 .ProseMirror h1,
@@ -416,7 +416,7 @@
 /* Mobile Optimizations */
 @media (max-width: 640px) {
   .ProseMirror {
-    padding: var(--editor-spacing-8) var(--editor-spacing-4);
+    padding: 0 var(--editor-spacing-4);
   }
 
   .ProseMirror h1 {

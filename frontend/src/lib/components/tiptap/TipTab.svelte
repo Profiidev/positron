@@ -8,6 +8,7 @@
   import CollaborationCaret from '@tiptap/extension-collaboration-caret';
   import * as Y from 'yjs';
   import { WebsocketProvider } from 'y-websocket';
+  import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
 
   const {
     id
@@ -48,11 +49,6 @@
           }
         })
       ] as any,
-      content: `
-        <h1>Hello Svelte! 🌍️ </h1>
-        <p>This editor is running in Svelte.</p>
-        <p>Select some text to see the bubble menu popping up.</p>
-      `,
       editorProps: {
         attributes: {
           class: 'max-w-full focus:outline-none'
@@ -76,12 +72,16 @@
 </script>
 
 {#if editorState.editor}
-  <div class="bg-card relative w-full overflow-hidden border pb-[60px] sm:pb-0">
+  <div
+    class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border pb-[60px] sm:pb-0"
+  >
     {/* @ts-ignore */ null}
     <EditorToolbar editor={editorState.editor} />
-    <EditorContent
-      editor={editorState.editor}
-      class="min-h-[600px] w-full min-w-full cursor-text sm:p-6"
-    />
+    <ScrollArea class="min-h-0 grow">
+      <EditorContent
+        editor={editorState.editor}
+        class="flex w-full min-w-full cursor-text min-h-full"
+      />
+    </ScrollArea>
   </div>
 {/if}
