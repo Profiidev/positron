@@ -119,8 +119,8 @@ const processSearches = (
   });
 
   for (const { text, pos } of textNodesWithPosition) {
-    const matches = [...text.matchAll(searchTerm)].filter(([matchText]) =>
-      matchText.trim()
+    const matches = [...text.matchAll(searchTerm)].filter(
+      ([matchText]) => matchText.length > 0
     );
 
     for (const match of matches) {
