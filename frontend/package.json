@@ -19,6 +19,7 @@
     "@sveltejs/enhanced-img": "0.10.4",
     "@tiptap/core": "3.26.1",
     "@tiptap/extension-bubble-menu": "3.26.1",
+    "@tiptap/extension-character-count": "3.26.1",
     "@tiptap/extension-collaboration": "3.26.1",
     "@tiptap/extension-collaboration-caret": "3.26.1",
     "@tiptap/extension-highlight": "3.26.1",

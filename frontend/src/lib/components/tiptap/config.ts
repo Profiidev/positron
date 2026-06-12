@@ -5,6 +5,7 @@ import Typography from '@tiptap/extension-typography';
 import StarterKit from '@tiptap/starter-kit';
 import type { Extensions } from '@tiptap/core';
 import SearchAndReplace from './extensions/search-and-replace';
+import CharacterCount from '@tiptap/extension-character-count';
 
 export const extensions = [
   StarterKit.configure({
@@ -32,7 +33,12 @@ export const extensions = [
     multicolor: true
   }),
   SearchAndReplace,
-  Typography
+  Typography,
+  CharacterCount.configure({
+    autoTrim: true,
+    limit: 50_000,
+    mode: 'nodeSize'
+  })
 ] satisfies Extensions;
 
 const AVATAR_COLORS = [

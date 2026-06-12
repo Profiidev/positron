@@ -42,6 +42,8 @@ use yrs::{
 
 use crate::db::DBTrait;
 
+const MB: usize = 1024 * 1024;
+
 #[derive(Clone, FromRequestParts)]
 #[from_request(via(Extension))]
 pub struct NoteEditing {
@@ -212,10 +214,16 @@ impl NoteState {
   pub async fn save(&self, db: &Connection, note_id: Uuid) -> Result<()> {
     let awareness = self.doc.lock().await;
     let doc = awareness.doc();
+    doc.transact_mut().await.gc(None);
     let content = doc
       .transact()
       .await
       .encode_state_as_update_v1(&StateVector::default());
+
+    if content.len() > MB * 10 {
+      tracing::warn!("content size exceeds 10MB: {}", content.len());
+      return Ok(());
+    }
 
     db.notes().set_content(note_id, content).await?;
 
