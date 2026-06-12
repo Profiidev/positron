@@ -27,10 +27,6 @@
     });
     undoManager = new Y.UndoManager(doc);
 
-    provider.on('status', (e) => {
-      console.log(e);
-    });
-
     editorState.editor = new Editor({
       extensions: [
         ...extensions,
@@ -54,9 +50,6 @@
           class: 'max-w-full focus:outline-none'
         }
       },
-      onUpdate: ({ editor }) => {
-        console.log(editor.getText());
-      },
       onTransaction: ({ editor }) => {
         editorState = { editor: editor as Editor };
       },
@@ -64,12 +57,16 @@
     });
   });
 
-  onDestroy(() => {
+  const cleanup = () => {
     editorState.editor?.destroy();
     undoManager?.destroy();
     provider?.destroy();
-  });
+  };
+
+  onDestroy(cleanup);
 </script>
+
+<svelte:window onbeforeunload={cleanup} />
 
 {#if editorState.editor}
   <div
@@ -80,7 +77,7 @@
     <ScrollArea class="min-h-0 grow">
       <EditorContent
         editor={editorState.editor}
-        class="flex w-full min-w-full cursor-text min-h-full"
+        class="flex min-h-full w-full min-w-full cursor-text"
       />
     </ScrollArea>
   </div>
