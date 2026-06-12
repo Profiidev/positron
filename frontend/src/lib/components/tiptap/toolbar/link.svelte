@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LinkIcon from '@lucide/svelte/icons/link';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Input } from '@profidev/pleiades/components/ui/input';
@@ -14,12 +15,11 @@
   } from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
+  import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
 
-  function isValidUrl(url: string) {
-    return /^https?:\/\/\S+$/.test(url);
-  }
+  const isValidUrl = (url: string) => /^https?:\/\/\S+$/.test(url);
 
-  function getUrlFromString(str: string) {
+  const getUrlFromString = (str: string) => {
     if (isValidUrl(str)) {
       return str;
     }
@@ -30,10 +30,17 @@
     } catch {
       return null;
     }
-  }
+  };
 
-  let { editor, class: className }: { editor: Editor; class?: string } =
-    $props();
+  let {
+    editor,
+    class: className,
+    inOverflowMenu = false
+  }: {
+    editor: Editor;
+    class?: string;
+    inOverflowMenu?: boolean;
+  } = $props();
 
   let link = $state('');
 
@@ -49,50 +56,21 @@
     link = linkHref ?? '';
   });
 
-  function handleSubmit(e: SubmitEvent) {
+  const handleSubmit = (e: SubmitEvent) => {
     e.preventDefault();
     const url = getUrlFromString(link);
     if (url) {
       editor.chain().focus().setLink({ href: url }).run();
     }
-  }
+  };
 
-  function handleRemove() {
+  const handleRemove = () => {
     editor.chain().focus().unsetLink().run();
     link = '';
-  }
+  };
 </script>
 
-<Popover>
-  <Tooltip>
-    <TooltipTrigger>
-      {#snippet child({ props })}
-        <PopoverTrigger disabled={isDisabled}>
-          {#snippet child({ props: triggerProps })}
-            <Button
-              {...props}
-              {...triggerProps}
-              variant="ghost"
-              size="sm"
-              type="button"
-              class={cn(
-                'h-8 w-max cursor-pointer px-3 font-normal',
-                isActive && 'bg-accent',
-                className
-              )}
-            >
-              <p class="mr-2 text-base">↗</p>
-              <p class="decoration-gray-7 underline underline-offset-4">Link</p>
-            </Button>
-          {/snippet}
-        </PopoverTrigger>
-      {/snippet}
-    </TooltipTrigger>
-    <TooltipContent>
-      <span>Link</span>
-    </TooltipContent>
-  </Tooltip>
-
+{#snippet linkMenu()}
   <PopoverContent
     onCloseAutoFocus={(e) => e.preventDefault()}
     class="relative px-3 py-2.5"
@@ -126,4 +104,53 @@
       </form>
     </div>
   </PopoverContent>
+{/snippet}
+
+<Popover>
+  {#if inOverflowMenu}
+    <PopoverTrigger disabled={isDisabled}>
+      {#snippet child({ props })}
+        <ToolbarOverflowTrigger
+          {...props}
+          label="Link"
+          icon={LinkIcon}
+          hasSubmenu
+          active={isActive}
+          disabled={isDisabled}
+          class={className}
+        />
+      {/snippet}
+    </PopoverTrigger>
+    {@render linkMenu()}
+  {:else}
+    <Tooltip>
+      <TooltipTrigger>
+        {#snippet child({ props })}
+          <PopoverTrigger disabled={isDisabled}>
+            {#snippet child({ props: triggerProps })}
+              <Button
+                {...props}
+                {...triggerProps}
+                variant="ghost"
+                size="sm"
+                type="button"
+                class={cn(
+                  'h-8 w-max cursor-pointer px-3 font-normal',
+                  isActive && 'bg-accent',
+                  className
+                )}
+              >
+                <p class="mr-2 text-base">↗</p>
+                <p class="decoration-gray-7 underline underline-offset-4">Link</p>
+              </Button>
+            {/snippet}
+          </PopoverTrigger>
+        {/snippet}
+      </TooltipTrigger>
+      <TooltipContent>
+        <span>Link</span>
+      </TooltipContent>
+    </Tooltip>
+    {@render linkMenu()}
+  {/if}
 </Popover>

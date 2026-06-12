@@ -20,8 +20,15 @@
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
   import { isValidSearchPattern } from '../extensions/search-and-replace';
+  import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
 
-  let { editor }: { editor: Editor } = $props();
+  let {
+    editor,
+    inOverflowMenu = false
+  }: {
+    editor: Editor;
+    inOverflowMenu?: boolean;
+  } = $props();
 
   let open = $state(false);
   let replacing = $state(false);
@@ -38,21 +45,21 @@
     !isValidSearchPattern(searchText, useRegex, caseSensitive)
   );
 
-  function refreshSearchDecorations() {
+  const refreshSearchDecorations = () => {
     const { state, view } = editor;
     view.dispatch(state.tr);
-  }
+  };
 
-  function syncSearchToEditor() {
+  const syncSearchToEditor = () => {
     const storage = editor.storage.searchAndReplace;
     storage.searchTerm = searchText;
     storage.replaceTerm = replaceText;
     storage.caseSensitive = caseSensitive;
     storage.useRegex = useRegex;
     refreshSearchDecorations();
-  }
+  };
 
-  function resetSearchState() {
+  const resetSearchState = () => {
     searchText = '';
     replaceText = '';
     caseSensitive = false;
@@ -67,34 +74,34 @@
     storage.selectedResult = 0;
     storage.results = [];
     refreshSearchDecorations();
-  }
+  };
 
-  function handleOpenChange(nextOpen: boolean) {
+  const handleOpenChange = (nextOpen: boolean) => {
     open = nextOpen;
     if (!nextOpen) {
       resetSearchState();
     }
-  }
+  };
 
-  function handleSearchInput(value: string) {
+  const handleSearchInput = (value: string) => {
     searchText = value;
     syncSearchToEditor();
-  }
+  };
 
-  function handleReplaceInput(value: string) {
+  const handleReplaceInput = (value: string) => {
     replaceText = value;
     syncSearchToEditor();
-  }
+  };
 
-  function handleCaseSensitiveChange(pressed: boolean) {
+  const handleCaseSensitiveChange = (pressed: boolean) => {
     caseSensitive = pressed;
     syncSearchToEditor();
-  }
+  };
 
-  function handleUseRegexChange(pressed: boolean) {
+  const handleUseRegexChange = (pressed: boolean) => {
     useRegex = pressed;
     syncSearchToEditor();
-  }
+  };
 
   const replace = () => editor.chain().replace().run();
   const replaceAll = () => editor.chain().replaceAll().run();
@@ -102,23 +109,7 @@
   const selectPrevious = () => editor.chain().selectPreviousResult().run();
 </script>
 
-<Popover {open} onOpenChange={handleOpenChange}>
-  <PopoverTrigger>
-    {#snippet child({ props })}
-      <Button
-        {...props}
-        variant="ghost"
-        size="sm"
-        type="button"
-        title="Search & Replace"
-        class={cn('h-8 w-max px-3 font-normal')}
-      >
-        <RepeatIcon class="mr-2 h-4 w-4" />
-        <p>Search & Replace</p>
-      </Button>
-    {/snippet}
-  </PopoverTrigger>
-
+{#snippet searchMenu()}
   <PopoverContent
     align="end"
     onCloseAutoFocus={(e) => e.preventDefault()}
@@ -242,4 +233,37 @@
       </div>
     {/if}
   </PopoverContent>
+{/snippet}
+
+<Popover {open} onOpenChange={handleOpenChange}>
+  {#if inOverflowMenu}
+    <PopoverTrigger>
+      {#snippet child({ props })}
+        <ToolbarOverflowTrigger
+          {...props}
+          label="Search & Replace"
+          icon={RepeatIcon}
+          hasSubmenu
+        />
+      {/snippet}
+    </PopoverTrigger>
+    {@render searchMenu()}
+  {:else}
+    <PopoverTrigger>
+      {#snippet child({ props })}
+        <Button
+          {...props}
+          variant="ghost"
+          size="sm"
+          type="button"
+          title="Search & Replace"
+          class={cn('ml-auto h-8 w-max px-3 font-normal')}
+        >
+          <RepeatIcon class="mr-2 h-4 w-4" />
+          <p>Search & Replace</p>
+        </Button>
+      {/snippet}
+    </PopoverTrigger>
+    {@render searchMenu()}
+  {/if}
 </Popover>

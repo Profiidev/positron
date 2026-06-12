@@ -19,11 +19,14 @@
     TooltipTrigger
   } from '@profidev/pleiades/components/ui/tooltip';
   import type { Editor } from '@tiptap/core';
+  import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
 
   let {
-    editor
+    editor,
+    inOverflowMenu = false
   }: {
     editor: Editor;
+    inOverflowMenu?: boolean;
   } = $props();
 
   const alignmentOptions = [
@@ -33,9 +36,9 @@
     { name: 'Justify Align', value: 'justify', icon: AlignJustifyIcon }
   ] as const;
 
-  function handleAlign(value: string) {
+  const handleAlign = (value: string) => {
     editor.chain().focus().setTextAlign(value).run();
-  }
+  };
 
   const currentTextAlign = $derived.by(() => {
     if (editor.isActive({ textAlign: 'left' })) return 'left';
@@ -51,33 +54,7 @@
   );
 </script>
 
-<DropdownMenu>
-  <Tooltip>
-    <TooltipTrigger>
-      {#snippet child({ props })}
-        {@const CurrentIcon = currentOption.icon}
-        <DropdownMenuTrigger>
-          {#snippet child({ props: triggerProps })}
-            <Button
-              {...props}
-              {...triggerProps}
-              variant="ghost"
-              size="sm"
-              class="h-8 w-max cursor-pointer font-normal"
-              type="button"
-            >
-              <span class="mr-2">
-                <CurrentIcon />
-              </span>
-              {currentOption.name}
-              <ChevronDownIcon class="ml-2 h-4 w-4" />
-            </Button>
-          {/snippet}
-        </DropdownMenuTrigger>
-      {/snippet}
-    </TooltipTrigger>
-    <TooltipContent>Text Alignment</TooltipContent>
-  </Tooltip>
+{#snippet alignmentMenu()}
   <DropdownMenuContent
     loop
     onCloseAutoFocus={(e) => e.preventDefault()}
@@ -98,4 +75,51 @@
       {/each}
     </DropdownMenuGroup>
   </DropdownMenuContent>
-</DropdownMenu>
+{/snippet}
+
+{#if inOverflowMenu}
+  <DropdownMenu>
+    <DropdownMenuTrigger>
+      {#snippet child({ props })}
+        {@const CurrentIcon = currentOption.icon}
+        <ToolbarOverflowTrigger
+          {...props}
+          label={currentOption.name}
+          icon={CurrentIcon}
+          hasSubmenu
+        />
+      {/snippet}
+    </DropdownMenuTrigger>
+    {@render alignmentMenu()}
+  </DropdownMenu>
+{:else}
+  <DropdownMenu>
+    <Tooltip>
+      <TooltipTrigger>
+        {#snippet child({ props })}
+          {@const CurrentIcon = currentOption.icon}
+          <DropdownMenuTrigger>
+            {#snippet child({ props: triggerProps })}
+              <Button
+                {...props}
+                {...triggerProps}
+                variant="ghost"
+                size="sm"
+                class="h-8 w-max cursor-pointer font-normal"
+                type="button"
+              >
+                <span class="mr-2">
+                  <CurrentIcon />
+                </span>
+                {currentOption.name}
+                <ChevronDownIcon class="ml-2 h-4 w-4" />
+              </Button>
+            {/snippet}
+          </DropdownMenuTrigger>
+        {/snippet}
+      </TooltipTrigger>
+      <TooltipContent>Text Alignment</TooltipContent>
+    </Tooltip>
+    {@render alignmentMenu()}
+  </DropdownMenu>
+{/if}
