@@ -15,6 +15,7 @@ impl MigrationTrait for Migration {
           .col(pk_uuid(Note::Id))
           .col(string(Note::Title))
           .col(binary(Note::Content))
+          .col(string(Note::Preview))
           .col(uuid(Note::Owner))
           .foreign_key(
             ForeignKey::create()
@@ -77,6 +78,7 @@ enum Note {
   Id,
   Title,
   Content,
+  Preview,
   Owner,
 }
 

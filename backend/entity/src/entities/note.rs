@@ -10,6 +10,7 @@ pub struct Model {
   pub title: String,
   #[sea_orm(column_type = "VarBinary(StringLen::None)")]
   pub content: Vec<u8>,
+  pub preview: String,
   pub owner: Uuid,
 }
 

@@ -109,7 +109,7 @@ impl<'db> NoteTable<'db> {
         Ok(NoteInfo {
           id: note.id,
           title: note.title,
-          preview: "".into(),
+          preview: note.preview,
           owner: SimpleUserInfo {
             id: owner.id,
             name: owner.name,
@@ -156,7 +156,7 @@ impl<'db> NoteTable<'db> {
     Ok(Some(NoteInfo {
       id: note.id,
       title: note.title,
-      preview: "".into(),
+      preview: note.preview,
       owner: SimpleUserInfo {
         id: owner.id,
         name: owner.name,
@@ -174,6 +174,7 @@ impl<'db> NoteTable<'db> {
       id: Set(id),
       title: Set(title),
       content: Set(Vec::new()),
+      preview: Set("".into()),
       owner: Set(owner),
     }
     .insert(&txn)
@@ -216,7 +217,7 @@ impl<'db> NoteTable<'db> {
     Ok(())
   }
 
-  pub async fn set_content(&self, note_id: Uuid, content: Vec<u8>) -> Result<()> {
+  pub async fn set_content(&self, note_id: Uuid, content: Vec<u8>, preview: String) -> Result<()> {
     let mut note: note::ActiveModel = Note::find_by_id(note_id)
       .one(self.db)
       .await?
@@ -224,6 +225,7 @@ impl<'db> NoteTable<'db> {
       .into();
 
     note.content = Set(content);
+    note.preview = Set(preview);
     note.update(self.db).await?;
 
     Ok(())

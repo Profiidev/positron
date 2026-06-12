@@ -4,6 +4,7 @@ use axum::Extension;
 use crate::notes::state::NoteEditing;
 
 mod management;
+mod preview;
 mod state;
 mod websocket;
 

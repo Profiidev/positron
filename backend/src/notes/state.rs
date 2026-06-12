@@ -40,7 +40,7 @@ use yrs::{
   },
 };
 
-use crate::db::DBTrait;
+use crate::{db::DBTrait, notes::preview::render_preview};
 
 const MB: usize = 1024 * 1024;
 
@@ -225,7 +225,8 @@ impl NoteState {
       return Ok(());
     }
 
-    db.notes().set_content(note_id, content).await?;
+    let preview = render_preview(doc).await;
+    db.notes().set_content(note_id, content, preview).await?;
 
     Ok(())
   }
