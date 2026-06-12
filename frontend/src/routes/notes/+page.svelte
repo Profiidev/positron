@@ -81,7 +81,7 @@
         {#each notes as note (note.id)}
           <a href="/notes/{note.id}" class="block h-full">
             <Card.Root
-              class="hover:bg-muted/50 flex h-full flex-col transition-colors gap-1"
+              class="hover:bg-muted/50 flex h-full flex-col gap-1 transition-colors"
             >
               <Card.Header>
                 <div class="flex items-start gap-2">
