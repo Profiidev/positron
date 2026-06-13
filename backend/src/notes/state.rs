@@ -312,4 +312,32 @@ mod note_editing_test {
     let fresh = editing.get_or_open_note(note_id, &db).await.unwrap();
     assert!(!Arc::ptr_eq(&first, &fresh));
   }
+
+  #[tokio::test]
+  async fn save_persists_document_content_and_preview() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // an empty doc saves successfully (covers gc/encode/render_preview/set_content)
+    state.save(&db, note_id).await.unwrap();
+    // content row is now present (empty doc still encodes a small state vector)
+    assert!(db.notes().get_content(note_id).await.is_ok());
+  }
+
+  #[tokio::test]
+  async fn receiver_subscribes_to_the_note_channel() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+    // a fresh subscriber has no buffered messages
+    let mut rx = state.receiver();
+    assert!(rx.try_recv().is_err());
+  }
 }

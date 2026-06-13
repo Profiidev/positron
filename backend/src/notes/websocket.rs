@@ -78,3 +78,58 @@ async fn handle_socket(mut ws: WebSocket, state: NoteEditing, db: Connection, no
     tracing::warn!("failed to close note: {}", e);
   }
 }
+
+#[cfg(test)]
+mod test {
+  use crate::{
+    db::test::{auth_state, test_db},
+    notes::state::NoteEditing,
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, header},
+    routing::get,
+  };
+  use centaurus::{backend::auth::jwt_state::JwtState, db::init::Connection};
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  fn app(db: Connection, jwt: JwtState) -> Router {
+    Router::new()
+      .route("/{uuid}", get(super::notes_websocket))
+      .layer(Extension(NoteEditing::init()))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  // NOTE: the websocket handler body (`has_access` check + `handle_socket`) is
+  // only reachable once `WebSocketUpgrade` extraction succeeds, which requires a
+  // real upgradeable hyper connection (`oneshot` has no `OnUpgrade` extension,
+  // so the extractor returns 426 first). That path is exercised by end-to-end
+  // tests. Here we cover the route + that the auth guard runs before the
+  // upgrade is attempted.
+  fn ws_request(uri: &str, cookie: Option<&str>) -> Request<Body> {
+    let mut builder = Request::builder()
+      .uri(uri)
+      .header(header::CONNECTION, "upgrade")
+      .header(header::UPGRADE, "websocket")
+      .header(header::SEC_WEBSOCKET_VERSION, "13")
+      .header(header::SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
+    if let Some(cookie) = cookie {
+      builder = builder.header(header::COOKIE, cookie);
+    }
+    builder.body(Body::empty()).unwrap()
+  }
+
+  #[tokio::test]
+  async fn websocket_requires_authentication() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let resp = app(db, jwt)
+      .oneshot(ws_request(&format!("/{}", Uuid::new_v4()), None))
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+}

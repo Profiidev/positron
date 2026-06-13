@@ -546,4 +546,241 @@ mod test {
       assert!(logout(db, Path(Uuid::new_v4()), state).await.is_err());
     }
   }
+
+  mod endpoints {
+    use crate::{
+      config::Config,
+      db::{
+        DBTrait,
+        test::{auth_cookie, auth_state, body_json, insert_user, test_db},
+      },
+      oauth::state::{AuthReq, AuthorizeState},
+    };
+    use axum::{
+      Extension, Router,
+      body::Body,
+      http::{Request, StatusCode, header},
+      routing::{get, post},
+    };
+    use centaurus::{backend::auth::jwt_state::JwtState, db::init::Connection};
+    use entity::o_auth_client;
+    use std::time::Instant;
+    use tower::ServiceExt;
+    use uuid::Uuid;
+
+    const REDIRECT: &str = "https://app.example.com/cb";
+
+    /// Creates a confidential client with a default `openid` scope and,
+    /// optionally, the user mapped for access.
+    async fn setup_client(db: &Connection, user: Uuid, grant_access: bool) -> Uuid {
+      let scope = db
+        .oauth_scope()
+        .create_scope("Openid".into(), "openid".into(), vec![])
+        .await
+        .unwrap();
+      let client_id = Uuid::new_v4();
+      db.oauth_client()
+        .create_client(o_auth_client::Model {
+          id: client_id,
+          name: "App".into(),
+          redirect_uri: REDIRECT.into(),
+          client_secret: "s".into(),
+          salt: "salt".into(),
+          confidential: true,
+          require_pkce: false,
+        })
+        .await
+        .unwrap();
+      db.oauth_client()
+        .edit_client(
+          client_id,
+          "App".into(),
+          false,
+          REDIRECT.into(),
+          vec![],
+          vec![scope],
+          if grant_access { vec![user] } else { vec![] },
+          vec![],
+        )
+        .await
+        .unwrap();
+      client_id
+    }
+
+    fn auth_req(client_id: Uuid) -> AuthReq {
+      AuthReq {
+        response_type: "code".into(),
+        client_id,
+        redirect_uri: None,
+        scope: None,
+        state: None,
+        nonce: None,
+        code_challenge: None,
+        code_challenge_method: None,
+      }
+    }
+
+    fn app(db: Connection, jwt: JwtState, state: AuthorizeState) -> Router {
+      Router::new()
+        .route("/authorize", get(super::super::authorize_get).post(super::super::authorize_post))
+        .route("/authorize_confirm", post(super::super::authorize_confirm))
+        .layer(Extension(state))
+        .layer(Extension(jwt))
+        .layer(Extension(db))
+    }
+
+    #[tokio::test]
+    async fn authorize_confirm_allow_issues_code() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&jwt, user);
+      let client_id = setup_client(&db, user, true).await;
+
+      let state = AuthorizeState::init(&Config::default());
+      let code = Uuid::new_v4();
+      state
+        .auth_pending
+        .insert(code, (Instant::now(), auth_req(client_id)));
+
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri(format!("/authorize_confirm?code={code}&allow=true"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+      let location = body_json(resp).await["location"].as_str().unwrap().to_string();
+      assert!(location.contains("code="), "location was {location}");
+    }
+
+    #[tokio::test]
+    async fn authorize_confirm_deny_returns_empty_location() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&jwt, user);
+
+      let state = AuthorizeState::init(&Config::default());
+      let code = Uuid::new_v4();
+      state
+        .auth_pending
+        .insert(code, (Instant::now(), auth_req(Uuid::new_v4())));
+
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri(format!("/authorize_confirm?code={code}&allow=false"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+      assert_eq!(body_json(resp).await["location"], "");
+    }
+
+    #[tokio::test]
+    async fn authorize_confirm_without_access_is_unauthorized() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&jwt, user);
+      // client exists but the user is not granted access
+      let client_id = setup_client(&db, user, false).await;
+
+      let state = AuthorizeState::init(&Config::default());
+      let code = Uuid::new_v4();
+      state
+        .auth_pending
+        .insert(code, (Instant::now(), auth_req(client_id)));
+
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri(format!("/authorize_confirm?code={code}&allow=true"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn authorize_confirm_unknown_pending_errors() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&jwt, user);
+
+      let state = AuthorizeState::init(&Config::default());
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri(format!("/authorize_confirm?code={}&allow=true", Uuid::new_v4()))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert!(!resp.status().is_success());
+    }
+
+    #[tokio::test]
+    async fn authorize_get_redirects_to_login() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let client_id = setup_client(&db, Uuid::new_v4(), false).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .uri(format!(
+              "/authorize?response_type=code&client_id={client_id}"
+            ))
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      // authorize_start returns a redirect to the frontend login page
+      assert_eq!(resp.status(), StatusCode::FOUND);
+    }
+
+    #[tokio::test]
+    async fn authorize_post_form_redirects_to_login() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let client_id = setup_client(&db, Uuid::new_v4(), false).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state)
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri("/authorize")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+              "response_type=code&client_id={client_id}"
+            )))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::FOUND);
+    }
+  }
 }

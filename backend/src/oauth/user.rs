@@ -248,4 +248,119 @@ mod test {
     .unwrap();
     assert_eq!(res.unwrap_err(), StatusCode::NOT_FOUND);
   }
+
+  // Exercises the `OAuthClaims` request extractor (validating the access token
+  // cookie) together with the `user`/`user_post`/`picture` route handlers.
+  mod endpoints {
+    use super::claims_full;
+    use crate::db::test::{jwt_state, test_db};
+    use axum::{
+      Extension, Router,
+      body::Body,
+      http::{Request, StatusCode, header},
+      routing::get,
+    };
+    use centaurus::backend::auth::jwt_state::JWT_COOKIE_NAME;
+    use centaurus::db::init::Connection;
+    use tower::ServiceExt;
+    use uuid::Uuid;
+
+    async fn body_json(resp: axum::response::Response) -> serde_json::Value {
+      crate::db::test::body_json(resp).await
+    }
+
+    /// `claims_full` uses an epoch-1970 expiry; refresh it so the token passes
+    /// JWT expiry validation.
+    fn valid_claims() -> crate::oauth::jwt::OAuthClaims {
+      let mut claims = claims_full();
+      claims.exp = chrono::Utc::now().timestamp() + 1000;
+      claims
+    }
+
+    fn app(db: Connection, jwt: crate::auth::jwt::JwtStateOther) -> Router {
+      Router::new()
+        .route("/user", get(super::super::user).post(super::super::user_post))
+        .route("/picture/{uuid}", get(super::super::picture))
+        .layer(Extension(jwt))
+        .layer(Extension(db))
+    }
+
+    #[tokio::test]
+    async fn user_endpoint_returns_claims_for_valid_token() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let claims = valid_claims();
+      let sub = claims.sub;
+      let token = jwt.create_generic_token(&claims).unwrap();
+      let cookie = format!("{JWT_COOKIE_NAME}={token}");
+      let app = app(db, jwt);
+
+      for method in ["GET", "POST"] {
+        let resp = app
+          .clone()
+          .oneshot(
+            Request::builder()
+              .method(method)
+              .uri("/user")
+              .header(header::COOKIE, &cookie)
+              .body(Body::empty())
+              .unwrap(),
+          )
+          .await
+          .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "method {method}");
+        assert_eq!(body_json(resp).await["sub"], sub.to_string());
+      }
+    }
+
+    #[tokio::test]
+    async fn user_endpoint_rejects_missing_or_invalid_token() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let app = app(db, jwt);
+
+      // no cookie
+      let resp = app
+        .clone()
+        .oneshot(Request::builder().uri("/user").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+      assert!(resp.status().is_client_error());
+
+      // garbage token
+      let resp = app
+        .oneshot(
+          Request::builder()
+            .uri("/user")
+            .header(header::COOKIE, format!("{JWT_COOKIE_NAME}=not.a.jwt"))
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn picture_endpoint_returns_not_found_without_avatar() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let token = jwt.create_generic_token(&valid_claims()).unwrap();
+      let cookie = format!("{JWT_COOKIE_NAME}={token}");
+      let app = app(db, jwt);
+
+      let resp = app
+        .oneshot(
+          Request::builder()
+            .uri(format!("/picture/{}", Uuid::new_v4()))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      // handler ran (token valid) and reported a missing avatar
+      assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+  }
 }

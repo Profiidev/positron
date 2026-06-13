@@ -260,4 +260,169 @@ mod test {
     let resp = Error::from_str("invalid_grant").into_response();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
   }
+
+  // Exercises the `ClientAuth` request extractor: credential sources (form vs
+  // HTTP Basic), public vs confidential clients, and secret verification.
+  mod extractor {
+    use super::super::ClientAuth;
+    use crate::{
+      config::Config,
+      db::{DBTrait, test::test_db},
+      oauth::state::ClientState,
+    };
+    use axum::{Extension, Router, body::Body, http::Request, http::StatusCode, routing::post};
+    use base64::{Engine, prelude::BASE64_STANDARD};
+    use centaurus::{backend::auth::pw_state::hash_secret, db::init::Connection};
+    use entity::o_auth_client;
+    use tower::ServiceExt;
+    use uuid::Uuid;
+
+    const SALT: &str = "c2FsdHNhbHQ"; // base64(no pad) of "saltsalt"
+    const SECRET: &str = "topsecret";
+
+    async fn echo(auth: ClientAuth) -> String {
+      auth.client_id.to_string()
+    }
+
+    async fn make_client(db: &Connection, confidential: bool, pepper: &[u8]) -> Uuid {
+      let id = Uuid::new_v4();
+      // confidential clients store a peppered argon2 hash of the secret
+      let client_secret = if confidential {
+        hash_secret(pepper, SALT, SECRET.as_bytes()).unwrap()
+      } else {
+        String::new()
+      };
+      db.oauth_client()
+        .create_client(o_auth_client::Model {
+          id,
+          name: "App".into(),
+          redirect_uri: "https://app/cb".into(),
+          client_secret,
+          salt: SALT.into(),
+          confidential,
+          require_pkce: false,
+        })
+        .await
+        .unwrap();
+      id
+    }
+
+    fn app(db: Connection, client_state: ClientState) -> Router {
+      Router::new()
+        .route("/", post(echo))
+        .layer(Extension(client_state))
+        .layer(Extension(db))
+    }
+
+    fn form_request(body: String, basic: Option<(&str, &str)>) -> Request<Body> {
+      let mut builder = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("content-type", "application/x-www-form-urlencoded");
+      if let Some((user, pass)) = basic {
+        let creds = BASE64_STANDARD.encode(format!("{user}:{pass}"));
+        builder = builder.header("authorization", format!("Basic {creds}"));
+      }
+      builder.body(Body::from(body)).unwrap()
+    }
+
+    async fn ctx() -> (Connection, ClientState, Vec<u8>) {
+      let db = test_db().await;
+      let config = Config::default();
+      let pepper = config.auth.auth_pepper.as_bytes().to_vec();
+      (db, ClientState::init(&config), pepper)
+    }
+
+    #[tokio::test]
+    async fn public_client_via_form_authenticates() {
+      let (db, state, pepper) = ctx().await;
+      let id = make_client(&db, false, &pepper).await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          format!("grant_type=authorization_code&client_id={id}"),
+          None,
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn confidential_client_with_correct_secret_authenticates() {
+      let (db, state, pepper) = ctx().await;
+      let id = make_client(&db, true, &pepper).await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          format!("grant_type=authorization_code&client_id={id}&client_secret={SECRET}"),
+          None,
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn confidential_client_via_basic_auth_header() {
+      let (db, state, pepper) = ctx().await;
+      let id = make_client(&db, true, &pepper).await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          "grant_type=authorization_code".into(),
+          Some((&id.to_string(), SECRET)),
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn confidential_client_with_wrong_secret_is_rejected() {
+      let (db, state, pepper) = ctx().await;
+      let id = make_client(&db, true, &pepper).await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          format!("grant_type=authorization_code&client_id={id}&client_secret=wrong"),
+          None,
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn missing_client_id_is_rejected() {
+      let (db, state, _) = ctx().await;
+      let resp = app(db, state)
+        .oneshot(form_request("grant_type=authorization_code".into(), None))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn unknown_client_is_rejected() {
+      let (db, state, _) = ctx().await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          format!("grant_type=authorization_code&client_id={}", Uuid::new_v4()),
+          None,
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn malformed_client_id_is_rejected() {
+      let (db, state, _) = ctx().await;
+      let resp = app(db, state)
+        .oneshot(form_request(
+          "grant_type=authorization_code&client_id=not-a-uuid".into(),
+          None,
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+  }
 }

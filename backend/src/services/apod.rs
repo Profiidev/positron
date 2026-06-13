@@ -340,4 +340,58 @@ mod test {
     let (apod, _) = db.apod().get_for_date(date(5)).await.unwrap().unwrap();
     assert_eq!(apod.selector, Some(user));
   }
+
+  #[tokio::test]
+  async fn get_image_info_returns_cached_db_entry_without_network() {
+    use crate::{services::state::ApodState, storage::StorageExt};
+    use centaurus::storage::{FileStorage, StorageConfig};
+
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    grant_permissions(&db, user, &["apod:list"]).await;
+    let cookie = auth_cookie(&jwt, user);
+    create_apod(&db, date(7), Some(user)).await;
+
+    // local storage + a dummy api key; the cached branch touches neither
+    let storage_dir = std::env::temp_dir().join(format!("apod-info-{}", Uuid::new_v4()));
+    let storage = FileStorage::init(&StorageConfig {
+      storage_path: storage_dir.to_string_lossy().into_owned(),
+      s3_bucket: None,
+      s3_region: None,
+      s3_host: None,
+      s3_access_key: None,
+      s3_secret_key: None,
+      s3_force_path_style: false,
+    })
+    .await
+    .unwrap();
+    let _ = storage.apod(); // keep StorageExt in use
+
+    let app = Router::new()
+      .route("/get_image_info", axum::routing::post(super::get_image_info))
+      .layer(Extension(storage))
+      .layer(Extension(ApodState::init("DEMO_KEY".into())))
+      .layer(Extension(jwt))
+      .layer(Extension(db));
+
+    let resp = app
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/get_image_info")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(
+            json!({ "date": "2024-01-07T00:00:00Z" }).to_string(),
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["title"], "Galaxy");
+    assert_eq!(body["user"]["id"], user.to_string());
+  }
 }
