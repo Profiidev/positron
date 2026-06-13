@@ -419,8 +419,7 @@ mod test {
     assert_eq!(info.title, "New");
 
     // missing note -> RecordNotFound
-    let err = db.notes().edit_title(Uuid::new_v4(), "x".into()).await;
-    assert!(matches!(err, Err(_)));
+    assert!(db.notes().edit_title(Uuid::new_v4(), "x".into()).await.is_err());
   }
 
   #[tokio::test]

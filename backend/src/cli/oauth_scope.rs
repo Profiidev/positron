@@ -77,7 +77,7 @@ mod test {
     .run(db.clone())
     .await
     .unwrap();
-    assert_eq!(db.oauth_scope().by_name("Openid").await.unwrap().is_some(), true);
+    assert!(db.oauth_scope().by_name("Openid").await.unwrap().is_some());
 
     // duplicate name
     assert!(

@@ -516,7 +516,7 @@ mod test {
 
       let mut req = auth_req(client_id);
       // 43 chars but contains a space (not URL-safe)
-      req.code_challenge = Some(format!("{}{}", " ".repeat(1), "a".repeat(42)));
+      req.code_challenge = Some(format!(" {}", "a".repeat(42)));
       assert!(authorize_start(req, state, db).await.is_err());
     }
 

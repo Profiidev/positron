@@ -225,6 +225,32 @@ pub mod test {
     format!("{}={}", cookie.name(), cookie.value())
   }
 
+  /// Seeds a single jwt key and builds both the centaurus `JwtState` (used by
+  /// `JwtAuth`) and the positron `JwtStateOther` (used by `JwtAuthOther<_>`)
+  /// from it, so cookies minted by either validate.
+  pub async fn jwt_states(
+    conn: &Connection,
+  ) -> (
+    centaurus::backend::auth::jwt_state::JwtState,
+    crate::auth::jwt::JwtStateOther,
+  ) {
+    insert_jwt_key(conn).await;
+    let config = crate::config::Config::default();
+    let jwt = centaurus::backend::auth::jwt_state::JwtState::init(&config.auth, conn).await;
+    let other = crate::auth::jwt::JwtStateOther::init(&config.auth, conn).await;
+    (jwt, other)
+  }
+
+  /// `Cookie:` header for a `JwtAuthOther<T>` token (e.g. `JwtSpecial`,
+  /// `JwtTotpRequired`).
+  pub fn other_cookie<T: crate::auth::jwt::JwtType + serde::Serialize>(
+    other: &crate::auth::jwt::JwtStateOther,
+    user: Uuid,
+  ) -> String {
+    let cookie = other.create_token::<T>(user).expect("create token");
+    format!("{}={}", cookie.name(), cookie.value())
+  }
+
   /// Grants `permissions` to `user` by creating a group, attaching the
   /// permissions and adding the user to it.
   pub async fn grant_permissions(conn: &Connection, user: Uuid, permissions: &[&str]) {

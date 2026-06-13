@@ -219,8 +219,10 @@ mod test {
     let b = s(&["b", "a"]);
     assert!(a >= b);
     assert!(a <= b);
-    assert!(!(a > b));
-    assert!(!(a < b));
+    // equal sets are neither strictly greater nor strictly less (method form
+    // keeps clippy's neg_cmp_op_on_partial_ord lint happy)
+    assert!(!a.gt(&b));
+    assert!(!a.lt(&b));
     assert_eq!(a.partial_cmp(&b), Some(Ordering::Equal));
   }
 

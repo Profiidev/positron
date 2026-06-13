@@ -70,10 +70,16 @@ mod test {
   use super::{Resource, StaticFiles, assetlinks, webfinger};
   use crate::{config::Config, oauth::ConfigurationState};
 
+  fn config_with_assetlinks(assetlinks: &str) -> Config {
+    Config {
+      assetlinks: assetlinks.into(),
+      ..Default::default()
+    }
+  }
+
   #[test]
   fn static_files_init_parses_assetlinks_json() {
-    let mut config = Config::default();
-    config.assetlinks = r#"{"relation":["delegate"]}"#.into();
+    let config = config_with_assetlinks(r#"{"relation":["delegate"]}"#);
     let files = StaticFiles::init(&config);
     assert_eq!(files.assetlinks["relation"][0], "delegate");
   }
@@ -81,15 +87,13 @@ mod test {
   #[test]
   #[should_panic(expected = "Failed to parse ASSETLINKS")]
   fn static_files_init_panics_on_invalid_json() {
-    let mut config = Config::default();
-    config.assetlinks = "this is not json".into();
+    let config = config_with_assetlinks("this is not json");
     let _ = StaticFiles::init(&config);
   }
 
   #[tokio::test]
   async fn assetlinks_handler_returns_configured_value() {
-    let mut config = Config::default();
-    config.assetlinks = r#"{"a":1}"#.into();
+    let config = config_with_assetlinks(r#"{"a":1}"#);
     let files = StaticFiles::init(&config);
     let axum::Json(value) = assetlinks(files).await;
     assert_eq!(value["a"], 1);

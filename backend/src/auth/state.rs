@@ -162,20 +162,25 @@ mod test {
 
   #[test]
   fn webauthn_state_init_with_explicit_origin_and_id() {
-    let mut config = Config::default();
-    config.webauthn_id = Some("example.com".into());
-    config.webauthn_rp_origin = Some(Url::parse("https://example.com").unwrap());
-    config.webauthn_additional_origins = "https://app.example.com,not a url".into();
-    // Must not panic; invalid additional origins are silently skipped.
+    let config = Config {
+      webauthn_id: Some("example.com".into()),
+      webauthn_rp_origin: Some(Url::parse("https://example.com").unwrap()),
+      // invalid additional origins are silently skipped
+      webauthn_additional_origins: "https://app.example.com,not a url".into(),
+      ..Default::default()
+    };
+    // Must not panic.
     let _ = WebauthnState::init(&config);
   }
 
   #[test]
   fn webauthn_state_init_derives_id_from_rp_origin_host() {
-    let mut config = Config::default();
-    config.webauthn_id = None;
-    config.webauthn_rp_origin = Some(Url::parse("https://derived.example.com").unwrap());
-    config.webauthn_additional_origins = String::new();
+    let config = Config {
+      webauthn_id: None,
+      webauthn_rp_origin: Some(Url::parse("https://derived.example.com").unwrap()),
+      webauthn_additional_origins: String::new(),
+      ..Default::default()
+    };
     // host is derived from the rp_origin when no explicit id is configured.
     let _ = WebauthnState::init(&config);
   }
