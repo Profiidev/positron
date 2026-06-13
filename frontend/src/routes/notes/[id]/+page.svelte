@@ -19,6 +19,8 @@
   import TipTab from '$lib/components/tiptap/TipTab.svelte';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
+  import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
+  import type { NoteActiveEditor } from '$lib/components/notes/types';
   import { Input } from '@profidev/pleiades/components/ui/input';
 
   const { data } = $props();
@@ -35,6 +37,7 @@
   let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
     $state(undefined);
   let userInfo: UserInfo | undefined = $state(undefined);
+  let activeEditors = $state<NoteActiveEditor[]>([]);
 
   let shareableUsers = $derived(
     users?.filter((user) => user.id !== note?.owner.id) ?? []
@@ -159,6 +162,8 @@
       }}
     />
 
+    <NoteActiveEditorsIndicator editors={activeEditors} />
+
     <NoteShareControl
       {shareableUsers}
       selected={sharedWithUsers}
@@ -193,7 +198,12 @@
     </Button>
   </div>
   <div class="flex min-h-0 grow flex-col space-y-4">
-    <TipTab id={data.id} username={userInfo?.name} />
+    <TipTab
+      id={data.id}
+      username={userInfo?.name}
+      userId={userInfo?.uuid}
+      bind:activeEditors
+    />
   </div>
 </div>
 <FormDialog
