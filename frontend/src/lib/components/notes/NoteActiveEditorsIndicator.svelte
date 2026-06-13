@@ -15,7 +15,7 @@
   <Popover.Root bind:open>
     <Popover.Trigger
       class={cn(
-        'flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3.5 pl-1.5 text-sm font-medium transition-colors',
+        'flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-1.5 text-sm font-medium transition-colors md:px-3.5 md:pl-1.5',
         'hover:bg-muted',
         open && 'bg-muted'
       )}
@@ -47,7 +47,7 @@
           </div>
         {/if}
       </div>
-      <span>{editors.length} editing</span>
+      <span class="hidden md:inline">{editors.length} editing</span>
     </Popover.Trigger>
     <Popover.Content class="w-[240px] p-2" align="end">
       <p

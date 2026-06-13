@@ -415,7 +415,7 @@
 /* Mobile Optimizations */
 @media (max-width: 640px) {
   .ProseMirror {
-    padding: 0 var(--editor-spacing-4);
+    padding: var(--editor-spacing-4);
   }
 
   .ProseMirror h1 {

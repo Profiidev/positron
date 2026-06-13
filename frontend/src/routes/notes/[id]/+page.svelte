@@ -150,7 +150,7 @@
     </Button>
 
     <Input
-      class="bg-background! mr-auto max-w-70 flex-1 border-none text-xl!"
+      class="bg-background! mr-auto w-full min-w-0 flex-1 border-none text-xl! md:max-w-70"
       bind:value={title}
       placeholder="Note title"
       disabled={readonly || titleSaving}
@@ -173,19 +173,20 @@
     />
     {#if note}
       <div
-        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full border px-3.5 pl-1.5 text-sm font-medium"
-        title="Owner can't be changed"
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:pl-1.5 lg:px-3.5"
+        title={`Owner: ${note.owner.name}`}
       >
         <UserAvatar
           userId={note.owner.id}
           username={note.owner.name}
-          class="size-6.5"
+          class="size-6.5 shrink-0"
         />
-        <span class="max-w-32 truncate">{note.owner.name}</span>
-        <Lock class="text-muted-foreground size-3.5 shrink-0" />
+        <span class="hidden max-w-32 truncate lg:inline">{note.owner.name}</span
+        >
+        <Lock class="text-muted-foreground hidden size-3.5 shrink-0 lg:block" />
       </div>
     {/if}
-    <Separator orientation="vertical" class="h-5" />
+    <Separator orientation="vertical" class="hidden h-5 lg:block" />
 
     <Button
       class="shrink-0 cursor-pointer"
@@ -194,7 +195,7 @@
       disabled={readonly}
     >
       <Trash />
-      Delete
+      <span class="hidden lg:inline">Delete</span>
     </Button>
   </div>
   <div class="flex min-h-0 grow flex-col space-y-4">
