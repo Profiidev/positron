@@ -1,11 +1,10 @@
 <script lang="ts">
   import { Separator } from '@profidev/pleiades/components/ui/separator';
   import { Button } from '@profidev/pleiades/components/ui/button';
-  import { Input } from '@profidev/pleiades/components/ui/input';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
+  import Lock from '@lucide/svelte/icons/lock';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
-  import Multiselect from '@profidev/pleiades/components/table/multiselect.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { goto } from '$app/navigation';
@@ -17,8 +16,10 @@
     type SimpleUserInfo,
     type UserInfo
   } from '$lib/client';
-  import { Label } from '@profidev/pleiades/components/ui/label';
   import TipTab from '$lib/components/tiptap/TipTab.svelte';
+  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
+  import { Input } from '@profidev/pleiades/components/ui/input';
 
   const { data } = $props();
 
@@ -30,7 +31,7 @@
   let readonly = $derived(!note?.is_owner);
   let shareSaving = $state(false);
   let title = $state('');
-  let sharedWithIds = $state<string[]>([]);
+  let sharedWithUsers = $state<SimpleUserInfo[]>([]);
   let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
     $state(undefined);
   let userInfo: UserInfo | undefined = $state(undefined);
@@ -52,7 +53,7 @@
 
       note = res.data;
       title = res.data.title;
-      sharedWithIds = res.data.shared_with.map((user) => user.id);
+      sharedWithUsers = res.data.shared_with;
     });
   });
 
@@ -106,15 +107,18 @@
     shareSaving = false;
 
     if (res.error) {
-      sharedWithIds = note.shared_with.map((user) => user.id);
+      sharedWithUsers = note.shared_with;
       toast.error('Failed to update shared users');
     } else {
-      note = {
-        ...note,
-        shared_with: shareableUsers.filter((user) => selected.includes(user.id))
-      };
       toast.success('Shared users updated');
     }
+  };
+
+  const handleShareSelectChange = (selected: string[]) => {
+    if (sharedUpdateTimeout) clearTimeout(sharedUpdateTimeout);
+    sharedUpdateTimeout = setTimeout(() => {
+      onSharedChange(selected);
+    }, 500);
   };
 
   const deleteItemConfirm = async () => {
@@ -137,50 +141,49 @@
 </script>
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
-  <div class="mt-1! mb-0 ml-7 flex min-w-0 gap-2 md:m-0">
-    <Button size="icon" variant="ghost" href="/notes" class="mt-4 shrink-0">
+  <div class="mb-0 ml-7 flex min-w-0 items-center gap-2 md:m-0">
+    <Button size="icon" variant="ghost" href="/notes" class="shrink-0">
       <ArrowLeft class="size-5" />
     </Button>
-    <div class="mb-2 max-w-70 grow">
-      <Label class="mb-1 ml-2">Title</Label>
-      <Input
-        class="max-w-70 flex-1"
-        bind:value={title}
-        placeholder="Note title"
-        disabled={readonly || titleSaving}
-        onblur={saveTitle}
-        onkeydown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
-        }}
-      />
-    </div>
-    <div class="flex max-w-70 grow flex-col">
-      <Label class="mb-1 ml-2">Shared with</Label>
-      <Multiselect
-        class="max-w-70"
-        data={shareableUsers.map((user) => ({
-          label: user.name,
-          value: user.id
-        }))}
-        label="Shared with"
-        selected={sharedWithIds}
-        disabled={readonly || shareSaving}
-        onSelectChange={(selected) => {
-          if (sharedUpdateTimeout) clearTimeout(sharedUpdateTimeout);
-          sharedUpdateTimeout = setTimeout(() => {
-            onSharedChange(selected);
-          }, 500);
-        }}
-      />
-    </div>
-    <div class="flex max-w-70 grow flex-col">
-      <Label class="mb-1 ml-2">Owner</Label>
-      <Input class="max-w-70" value={note?.owner.name} readonly />
-    </div>
+
+    <Input
+      class="bg-background! mr-auto max-w-70 flex-1 border-none text-xl!"
+      bind:value={title}
+      placeholder="Note title"
+      disabled={readonly || titleSaving}
+      onblur={saveTitle}
+      onkeydown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+      }}
+    />
+
+    <NoteShareControl
+      {shareableUsers}
+      selected={sharedWithUsers}
+      onSelectChange={handleShareSelectChange}
+      {readonly}
+      saving={shareSaving}
+    />
+    {#if note}
+      <div
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full border px-3.5 pl-1.5 text-sm font-medium"
+        title="Owner can't be changed"
+      >
+        <UserAvatar
+          userId={note.owner.id}
+          username={note.owner.name}
+          class="size-6.5"
+        />
+        <span class="max-w-32 truncate">{note.owner.name}</span>
+        <Lock class="text-muted-foreground size-3.5 shrink-0" />
+      </div>
+    {/if}
+    <Separator orientation="vertical" class="h-5" />
+
     <Button
-      class="mt-4.5 ml-auto shrink-0 cursor-pointer"
+      class="shrink-0 cursor-pointer"
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
