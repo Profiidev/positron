@@ -149,6 +149,115 @@ pub mod test {
     id
   }
 
+  /// Inserts an RSA private key row under the name `jwt` (the name the JWT
+  /// states load). A small 512-bit key keeps test runtime low and pre-seeding
+  /// it stops `JwtState::init` from generating a slow 4096-bit key; it is never
+  /// used to protect anything real.
+  pub async fn insert_jwt_key(conn: &Connection) {
+    use entity::key;
+    use rsa::{
+      RsaPrivateKey,
+      pkcs1::{EncodeRsaPrivateKey, LineEnding},
+      rand_core::OsRng,
+    };
+
+    let private_key = RsaPrivateKey::new(&mut OsRng, 512).expect("Failed to generate RSA key");
+    let pem = private_key
+      .to_pkcs1_pem(LineEnding::LF)
+      .expect("Failed to encode key")
+      .to_string();
+
+    key::Entity::insert(key::ActiveModel {
+      id: Set(Uuid::new_v4()),
+      name: Set("jwt".to_string()),
+      private_key: Set(pem),
+    })
+    .exec(&conn.0)
+    .await
+    .expect("Failed to insert jwt key");
+  }
+
+  /// Seeds a jwt key and returns the built `JwtStateOther`.
+  pub async fn jwt_state(conn: &Connection) -> crate::auth::jwt::JwtStateOther {
+    insert_jwt_key(conn).await;
+    let config = crate::config::Config::default();
+    crate::auth::jwt::JwtStateOther::init(&config.auth, conn).await
+  }
+
+  // --- HTTP endpoint test harness ----------------------------------------
+  //
+  // These helpers let module tests drive real route handlers through an
+  // `axum::Router` with `tower::ServiceExt::oneshot`, the way the upstream
+  // axum testing example does, while supplying the `Extension`s that the
+  // centaurus extractors (`Connection`, `JwtState`, `Updater`, ...) need.
+
+  /// Seeds a jwt key and returns the centaurus `JwtState` used by `JwtAuth`.
+  pub async fn auth_state(conn: &Connection) -> centaurus::backend::auth::jwt_state::JwtState {
+    insert_jwt_key(conn).await;
+    let config = crate::config::Config::default();
+    centaurus::backend::auth::jwt_state::JwtState::init(&config.auth, conn).await
+  }
+
+  /// Builds an `Updater` extension whose channel has no websocket subscribers,
+  /// so handler calls to `broadcast`/`send_to` are accepted and dropped.
+  pub async fn updater() -> crate::utils::Updater {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+    UpdateState::<crate::utils::UpdateMessage>::init().await.1
+  }
+
+  /// Builds a `PasswordState` with a small RSA key and a short pepper. The real
+  /// `init_pw_state` generates a 2048+-bit key which is far too slow for the
+  /// (unoptimized) test build; a 512-bit key behaves identically for hashing.
+  pub async fn password_state() -> centaurus::backend::auth::pw_state::PasswordState {
+    use centaurus::backend::auth::pw_state::PasswordState;
+    use rsa::{RsaPrivateKey, rand_core::OsRng};
+
+    let key = RsaPrivateKey::new(&mut OsRng, 512).expect("Failed to generate RSA key");
+    PasswordState::init(b"test-pepper".to_vec(), key).await
+  }
+
+  /// Produces a `Cookie:` header value carrying a valid auth token for `user`.
+  pub fn auth_cookie(
+    jwt: &centaurus::backend::auth::jwt_state::JwtState,
+    user: Uuid,
+  ) -> String {
+    let cookie = jwt.create_token(user).expect("create token");
+    format!("{}={}", cookie.name(), cookie.value())
+  }
+
+  /// Grants `permissions` to `user` by creating a group, attaching the
+  /// permissions and adding the user to it.
+  pub async fn grant_permissions(conn: &Connection, user: Uuid, permissions: &[&str]) {
+    use centaurus::db::tables::ConnectionExt;
+    let group_id = conn
+      .group()
+      .create_group("perm-group".into())
+      .await
+      .expect("create group");
+    conn
+      .group()
+      .add_permissions_to_group(group_id, permissions.iter().map(|p| p.to_string()).collect())
+      .await
+      .expect("add permissions");
+    conn
+      .group()
+      .add_users_to_group(group_id, vec![user])
+      .await
+      .expect("add user to group");
+  }
+
+  /// Reads a JSON response body, returning `Null` for an empty body.
+  pub async fn body_json(resp: axum::response::Response) -> serde_json::Value {
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+      .await
+      .expect("read body");
+    if bytes.is_empty() {
+      serde_json::Value::Null
+    } else {
+      serde_json::from_slice(&bytes).expect("parse json body")
+    }
+  }
+
   #[tokio::test]
   async fn test_db_connects_and_migrates() {
     let conn = test_db().await;

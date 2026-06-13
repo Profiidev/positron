@@ -283,3 +283,141 @@ async fn retrieve_token(
 
   Ok((cookies, TokenRes(AuthRes { user: user_id })))
 }
+
+#[cfg(test)]
+mod test {
+  use super::AppState;
+  use crate::db::test::{auth_cookie, auth_state, body_json, insert_user, test_db};
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::post,
+  };
+  use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+  use centaurus::{backend::auth::jwt_state::JwtState, db::init::Connection};
+  use serde_json::{Value, json};
+  use sha2::{Digest, Sha256};
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  fn challenge_for(verifier: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(verifier.as_bytes());
+    BASE64_URL_SAFE_NO_PAD.encode(hasher.finalize())
+  }
+
+  fn app(db: Connection, jwt: JwtState) -> Router {
+    Router::new()
+      .route("/code", post(super::request_code))
+      .route("/exchange", post(super::exchange_code))
+      .layer(Extension(AppState::init()))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  fn post_json(uri: &str, cookie: Option<&str>, body: Value) -> Request<Body> {
+    let mut builder = Request::builder()
+      .method("POST")
+      .uri(uri)
+      .header(header::CONTENT_TYPE, "application/json");
+    if let Some(cookie) = cookie {
+      builder = builder.header(header::COOKIE, cookie);
+    }
+    builder.body(Body::from(body.to_string())).unwrap()
+  }
+
+  #[tokio::test]
+  async fn request_code_then_exchange_returns_user() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&jwt, user);
+    let app = app(db, jwt);
+
+    let verifier = "verifier-string-1234567890";
+    let challenge = challenge_for(verifier);
+
+    // request a code (authenticated)
+    let resp = app
+      .clone()
+      .oneshot(post_json(
+        "/code",
+        Some(&cookie),
+        json!({ "challenge": challenge }),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let code = body_json(resp).await["code"].as_str().unwrap().to_string();
+
+    // exchange the code with the matching verifier
+    let resp = app
+      .oneshot(post_json(
+        "/exchange",
+        None,
+        json!({ "code": code, "verifier": verifier }),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["user"], user.to_string());
+  }
+
+  #[tokio::test]
+  async fn request_code_requires_authentication() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let resp = app(db, jwt)
+      .oneshot(post_json("/code", None, json!({ "challenge": "x" })))
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+
+  #[tokio::test]
+  async fn exchange_with_wrong_verifier_fails() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&jwt, user);
+    let app = app(db, jwt);
+
+    let resp = app
+      .clone()
+      .oneshot(post_json(
+        "/code",
+        Some(&cookie),
+        json!({ "challenge": challenge_for("correct-verifier") }),
+      ))
+      .await
+      .unwrap();
+    let code = body_json(resp).await["code"].as_str().unwrap().to_string();
+
+    let resp = app
+      .oneshot(post_json(
+        "/exchange",
+        None,
+        json!({ "code": code, "verifier": "wrong-verifier" }),
+      ))
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+  }
+
+  #[tokio::test]
+  async fn exchange_unknown_code_fails() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let app = app(db, jwt);
+    let resp = app
+      .oneshot(post_json(
+        "/exchange",
+        None,
+        json!({ "code": Uuid::new_v4(), "verifier": "v" }),
+      ))
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+  }
+}

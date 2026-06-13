@@ -129,3 +129,35 @@ impl ApodCommands {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::ApodCommands;
+  use crate::db::test::test_db;
+  use uuid::Uuid;
+
+  fn fix_s3(storage_path: String) -> ApodCommands {
+    ApodCommands::FixS3 {
+      storage_path: Some(storage_path),
+      s3_bucket: None,
+      s3_region: None,
+      s3_host: None,
+      s3_access_key: None,
+      s3_secret_key: None,
+      s3_force_path_style: false,
+      apod_api_key: Some("DEMO_KEY".into()),
+    }
+  }
+
+  #[tokio::test]
+  async fn fix_s3_with_no_apod_entries_is_ok() {
+    let db = test_db().await;
+    // local filesystem storage in a unique temp dir; with no APOD rows the
+    // command initialises storage, lists zero entries and returns without any
+    // network access.
+    let dir = std::env::temp_dir().join(format!("positron-apod-test-{}", Uuid::new_v4()));
+    let path = dir.to_string_lossy().to_string();
+
+    fix_s3(path).run(db).await.unwrap();
+  }
+}

@@ -68,3 +68,33 @@ async fn refresh_token(
   cookies = cookies.add(cookie);
   Ok((cookies, TokenRes(())))
 }
+
+#[cfg(test)]
+mod test {
+  use super::test_token;
+  use crate::{
+    config::Config,
+    db::test::{insert_jwt_key, test_db},
+  };
+  use axum_extra::extract::CookieJar;
+  use centaurus::backend::auth::jwt_state::{JWT_COOKIE_NAME, JwtState};
+
+  // `test_token` with `Some(auth)` requires a fully-extracted `JwtAuth`, which
+  // can only come from a real signed request (integration territory). The
+  // unauthenticated branch is unit-testable on its own.
+  #[tokio::test]
+  async fn test_token_without_auth_reports_invalid_and_clears_cookie() {
+    let db = test_db().await;
+    insert_jwt_key(&db).await;
+    let jwt = JwtState::init(&Config::default().auth, &db).await;
+
+    // start with a jwt cookie present so we can observe it being removed
+    let cookies = CookieJar::new().add((JWT_COOKIE_NAME, "stale"));
+    let (cookies, axum::Json(res)) = test_token(None, cookies, jwt).await;
+
+    assert!(!res.valid);
+    assert!(!res.exp_short);
+    // the stale auth cookie is removed from the jar
+    assert!(cookies.get(JWT_COOKIE_NAME).is_none());
+  }
+}

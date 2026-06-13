@@ -36,3 +36,54 @@ impl GroupCommands {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::GroupCommands;
+  use crate::db::test::test_db;
+  use centaurus::db::tables::ConnectionExt;
+
+  #[tokio::test]
+  async fn create_then_duplicate_then_delete() {
+    let db = test_db().await;
+
+    GroupCommands::Create {
+      name: "admins".into(),
+    }
+    .run(db.clone())
+    .await
+    .unwrap();
+    assert!(db.group().find_group_by_name("admins").await.unwrap().is_some());
+
+    // creating the same group again fails
+    assert!(
+      GroupCommands::Create {
+        name: "admins".into(),
+      }
+      .run(db.clone())
+      .await
+      .is_err()
+    );
+
+    GroupCommands::Delete {
+      name: "admins".into(),
+    }
+    .run(db.clone())
+    .await
+    .unwrap();
+    assert!(db.group().find_group_by_name("admins").await.unwrap().is_none());
+  }
+
+  #[tokio::test]
+  async fn delete_missing_group_errors() {
+    let db = test_db().await;
+    assert!(
+      GroupCommands::Delete {
+        name: "ghost".into(),
+      }
+      .run(db)
+      .await
+      .is_err()
+    );
+  }
+}

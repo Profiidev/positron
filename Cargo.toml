@@ -1,3 +1,13 @@
 [workspace]
 resolver = "3"
 members = ["backend", "backend/entity", "backend/migration", "app/src-tauri"]
+
+# Argon2 password hashing is intentionally CPU-heavy and is unusably slow when
+# compiled without optimizations, which makes the (debug-profile) test suite
+# crawl. Build just the hashing crates optimized while keeping everything else
+# in debug. This changes performance only, not behavior.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3

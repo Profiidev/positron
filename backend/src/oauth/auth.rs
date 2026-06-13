@@ -432,4 +432,118 @@ mod test {
     let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
     assert_eq!(err.0, "invalid_scope");
   }
+
+  // ---- authorize_start / logout (directly callable handlers) -------------
+
+  mod handlers {
+    use super::super::{authorize_start, logout};
+    use crate::{
+      config::Config,
+      db::{DBTrait, test::test_db},
+      oauth::state::{AuthReq, AuthorizeState},
+    };
+    use axum::extract::Path;
+    use entity::o_auth_client;
+    use uuid::Uuid;
+
+    async fn make_client(db: &centaurus::db::init::Connection) -> Uuid {
+      let id = Uuid::new_v4();
+      db.oauth_client()
+        .create_client(o_auth_client::Model {
+          id,
+          name: "App".into(),
+          redirect_uri: "https://app.example.com/cb".into(),
+          client_secret: "s".into(),
+          salt: "salt".into(),
+          confidential: true,
+          require_pkce: false,
+        })
+        .await
+        .unwrap();
+      id
+    }
+
+    fn auth_req(client_id: Uuid) -> AuthReq {
+      AuthReq {
+        response_type: "code".into(),
+        client_id,
+        redirect_uri: None,
+        scope: None,
+        state: None,
+        nonce: None,
+        code_challenge: None,
+        code_challenge_method: None,
+      }
+    }
+
+    #[tokio::test]
+    async fn authorize_start_stores_pending_request() {
+      let db = test_db().await;
+      let client_id = make_client(&db).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      assert!(state.auth_pending.is_empty());
+      let res = authorize_start(auth_req(client_id), state.clone(), db).await;
+      assert!(res.is_ok());
+      assert_eq!(state.auth_pending.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn authorize_start_unknown_client_errors() {
+      let db = test_db().await;
+      let state = AuthorizeState::init(&Config::default());
+      // no client inserted -> get_client fails
+      let res = authorize_start(auth_req(Uuid::new_v4()), state, db).await;
+      assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn authorize_start_rejects_bad_code_challenge_length() {
+      let db = test_db().await;
+      let client_id = make_client(&db).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let mut req = auth_req(client_id);
+      req.code_challenge = Some("too-short".into()); // < 43 chars
+      assert!(authorize_start(req, state, db).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn authorize_start_rejects_non_urlsafe_code_challenge() {
+      let db = test_db().await;
+      let client_id = make_client(&db).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let mut req = auth_req(client_id);
+      // 43 chars but contains a space (not URL-safe)
+      req.code_challenge = Some(format!("{}{}", " ".repeat(1), "a".repeat(42)));
+      assert!(authorize_start(req, state, db).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn authorize_start_accepts_valid_code_challenge() {
+      let db = test_db().await;
+      let client_id = make_client(&db).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let mut req = auth_req(client_id);
+      req.code_challenge = Some("a".repeat(43));
+      assert!(authorize_start(req, state, db).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn logout_redirects_for_known_client() {
+      let db = test_db().await;
+      let client_id = make_client(&db).await;
+      let state = AuthorizeState::init(&Config::default());
+      assert!(logout(db, Path(client_id), state).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn logout_errors_for_unknown_client() {
+      let db = test_db().await;
+      let state = AuthorizeState::init(&Config::default());
+      assert!(logout(db, Path(Uuid::new_v4()), state).await.is_err());
+    }
+  }
 }

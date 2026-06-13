@@ -69,3 +69,45 @@ async fn config(state: ConfigurationState, db: Connection) -> Result<Json<Config
     .collect(),
   }))
 }
+
+#[cfg(test)]
+mod test {
+  use super::{ConfigurationState, config};
+  use crate::{
+    config::Config,
+    db::{DBTrait, test::test_db},
+  };
+
+  #[tokio::test]
+  async fn configuration_lists_endpoints_and_scopes() {
+    let db = test_db().await;
+    db.oauth_scope()
+      .create_scope("Openid".into(), "openid".into(), vec![])
+      .await
+      .unwrap();
+
+    let state = ConfigurationState::init(&Config::default());
+    let issuer = state.issuer.to_string();
+    let axum::Json(cfg) = config(state, db).await.unwrap();
+
+    assert_eq!(cfg.issuer, issuer);
+    assert_eq!(cfg.token_endpoint, format!("{issuer}/token"));
+    assert_eq!(cfg.authorization_endpoint, format!("{issuer}/authorize"));
+    assert_eq!(cfg.jwks_uri, format!("{issuer}/jwks"));
+    assert_eq!(cfg.response_types_supported, vec!["code".to_string()]);
+    assert_eq!(
+      cfg.id_token_signing_alg_values_supported,
+      vec!["RS256".to_string()]
+    );
+    assert!(cfg.scopes_supported.contains(&"openid".to_string()));
+    assert!(cfg.claims_supported.contains(&"sub".to_string()));
+  }
+
+  #[tokio::test]
+  async fn configuration_scopes_empty_when_none_defined() {
+    let db = test_db().await;
+    let state = ConfigurationState::init(&Config::default());
+    let axum::Json(cfg) = config(state, db).await.unwrap();
+    assert!(cfg.scopes_supported.is_empty());
+  }
+}

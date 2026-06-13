@@ -212,3 +212,132 @@ async fn random(s3: FileStorage, db: Connection) -> Result<Body> {
 
   Ok(image)
 }
+
+#[cfg(test)]
+mod test {
+  use crate::db::{
+    DBTrait,
+    test::{auth_cookie, auth_state, body_json, grant_permissions, insert_user, test_db, updater},
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::get,
+  };
+  use centaurus::{
+    backend::auth::jwt_state::JwtState, backend::endpoints::websocket::state::Updater,
+    db::init::Connection,
+  };
+  use chrono::NaiveDate;
+  use entity::apod;
+  use serde_json::json;
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  use crate::utils::UpdateMessage;
+
+  fn app(db: Connection, jwt: JwtState, upd: Updater<UpdateMessage>) -> Router {
+    Router::new()
+      .route("/", get(super::list).post(super::set_good))
+      .layer(Extension(upd))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  fn date(day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(2024, 1, day).unwrap()
+  }
+
+  async fn create_apod(db: &Connection, d: NaiveDate, selector: Option<Uuid>) {
+    db.apod()
+      .create(apod::Model {
+        id: Uuid::new_v4(),
+        title: "Galaxy".into(),
+        date: d,
+        selector,
+      })
+      .await
+      .unwrap();
+  }
+
+  #[tokio::test]
+  async fn list_returns_selected_apods_only() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    grant_permissions(&db, user, &["apod:list"]).await;
+    let cookie = auth_cookie(&jwt, user);
+
+    create_apod(&db, date(1), None).await; // unselected -> excluded
+    create_apod(&db, date(2), Some(user)).await; // selected -> included
+
+    let resp = app(db, jwt, upd)
+      .oneshot(
+        Request::builder()
+          .uri("/")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+    assert_eq!(body[0]["title"], "Galaxy");
+  }
+
+  #[tokio::test]
+  async fn list_requires_apod_list_permission() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    // no apod:list permission granted
+    let cookie = auth_cookie(&jwt, user);
+
+    let resp = app(db, jwt, upd)
+      .oneshot(
+        Request::builder()
+          .uri("/")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn set_good_marks_apod_selected() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    grant_permissions(&db, user, &["apod:select"]).await;
+    let cookie = auth_cookie(&jwt, user);
+    create_apod(&db, date(5), None).await;
+
+    let resp = app(db.clone(), jwt, upd)
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(
+            json!({ "date": "2024-01-05T00:00:00Z", "good": true }).to_string(),
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let (apod, _) = db.apod().get_for_date(date(5)).await.unwrap().unwrap();
+    assert_eq!(apod.selector, Some(user));
+  }
+}

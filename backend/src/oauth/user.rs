@@ -197,4 +197,55 @@ mod test {
     // #[serde(flatten)] hoists rest entries to the top level
     assert_eq!(json.get("custom").and_then(|v| v.as_str()), Some("value"));
   }
+
+  #[tokio::test]
+  async fn user_internal_wraps_claims_as_userinfo() {
+    let c = claims_full();
+    let sub = c.sub;
+    let axum::Json(info) = super::user_internal(c).await;
+    assert_eq!(info.sub, sub);
+  }
+
+  #[tokio::test]
+  async fn picture_returns_avatar_bytes_when_present() {
+    use crate::db::test::{insert_user, test_db};
+    use axum::extract::Path;
+    use entity::user_avatar;
+    use sea_orm::{ActiveValue::Set, EntityTrait};
+
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    user_avatar::Entity::insert(user_avatar::ActiveModel {
+      user_id: Set(user),
+      data: Set(vec![9, 8, 7]),
+    })
+    .exec(&db.0)
+    .await
+    .unwrap();
+
+    let mut claims = claims_full();
+    claims.sub = user;
+    let res = super::picture(claims, Path(super::AvatarPath { uuid: user }), db)
+      .await
+      .unwrap();
+    assert_eq!(res.unwrap(), vec![9, 8, 7]);
+  }
+
+  #[tokio::test]
+  async fn picture_returns_not_found_when_absent() {
+    use crate::db::test::test_db;
+    use axum::extract::Path;
+    use http::StatusCode;
+    use uuid::Uuid;
+
+    let db = test_db().await;
+    let res = super::picture(
+      claims_full(),
+      Path(super::AvatarPath { uuid: Uuid::new_v4() }),
+      db,
+    )
+    .await
+    .unwrap();
+    assert_eq!(res.unwrap_err(), StatusCode::NOT_FOUND);
+  }
 }

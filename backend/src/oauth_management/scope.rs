@@ -175,3 +175,262 @@ async fn simple_policy_list(
   let user = db.oauth_policy().simple_list().await?;
   Ok(Json(user))
 }
+
+#[cfg(test)]
+mod test {
+  use crate::db::{
+    DBTrait,
+    test::{auth_cookie, auth_state, body_json, grant_permissions, insert_user, test_db, updater},
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::get,
+  };
+  use centaurus::{
+    backend::auth::jwt_state::JwtState, backend::endpoints::websocket::state::Updater,
+    db::init::Connection,
+  };
+  use serde_json::{Value, json};
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  use crate::utils::UpdateMessage;
+
+  fn app(db: Connection, jwt: JwtState, upd: Updater<UpdateMessage>) -> Router {
+    Router::new()
+      .route(
+        "/",
+        get(super::list)
+          .post(super::create)
+          .delete(super::delete)
+          .put(super::edit),
+      )
+      .route("/{uuid}", get(super::info))
+      .route("/policies", get(super::simple_policy_list))
+      .layer(Extension(upd))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  fn request(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+      .method(method)
+      .uri(uri)
+      .header(header::COOKIE, cookie);
+    match body {
+      Some(value) => builder
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(value.to_string()))
+        .unwrap(),
+      None => builder.body(Body::empty()).unwrap(),
+    }
+  }
+
+  struct Setup {
+    db: Connection,
+    jwt: JwtState,
+    upd: Updater<UpdateMessage>,
+    cookie: String,
+  }
+
+  async fn setup(perms: &[&str]) -> Setup {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "admin", "admin@x.com").await;
+    grant_permissions(&db, user, perms).await;
+    let cookie = auth_cookie(&jwt, user);
+    Setup {
+      db,
+      jwt,
+      upd,
+      cookie,
+    }
+  }
+
+  #[tokio::test]
+  async fn create_list_info_and_delete_flow() {
+    let s = setup(&["oauth_scope:view", "oauth_scope:edit"]).await;
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    // create
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "POST",
+        "/",
+        &s.cookie,
+        Some(json!({ "name": "Custom", "scope": "custom", "policies": [] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let uuid = body_json(resp).await["uuid"].as_str().unwrap().to_string();
+
+    // list shows it
+    let resp = app
+      .clone()
+      .oneshot(request("GET", "/", &s.cookie, None))
+      .await
+      .unwrap();
+    let body = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+
+    // info
+    let resp = app
+      .clone()
+      .oneshot(request("GET", &format!("/{uuid}"), &s.cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["scope"], "custom");
+
+    // delete
+    let resp = app
+      .oneshot(request(
+        "DELETE",
+        "/",
+        &s.cookie,
+        Some(json!({ "uuid": uuid })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+  }
+
+  #[tokio::test]
+  async fn create_rejects_duplicate_name_and_scope() {
+    let s = setup(&["oauth_scope:view", "oauth_scope:edit"]).await;
+    s.db
+      .oauth_scope()
+      .create_scope("Custom".into(), "custom".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db, s.jwt, s.upd);
+
+    // duplicate name -> 409
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "POST",
+        "/",
+        &s.cookie,
+        Some(json!({ "name": "Custom", "scope": "other", "policies": [] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+    // duplicate scope value -> 406
+    let resp = app
+      .oneshot(request(
+        "POST",
+        "/",
+        &s.cookie,
+        Some(json!({ "name": "Other", "scope": "custom", "policies": [] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_ACCEPTABLE);
+  }
+
+  #[tokio::test]
+  async fn delete_default_scope_is_forbidden_and_missing_is_404() {
+    let s = setup(&["oauth_scope:view", "oauth_scope:edit"]).await;
+    // "openid" is a default scope
+    let id = s
+      .db
+      .oauth_scope()
+      .create_scope("Openid".into(), "openid".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db, s.jwt, s.upd);
+
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "DELETE",
+        "/",
+        &s.cookie,
+        Some(json!({ "uuid": id })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    let resp = app
+      .oneshot(request(
+        "DELETE",
+        "/",
+        &s.cookie,
+        Some(json!({ "uuid": Uuid::new_v4() })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn edit_updates_scope() {
+    let s = setup(&["oauth_scope:view", "oauth_scope:edit"]).await;
+    let id = s
+      .db
+      .oauth_scope()
+      .create_scope("Name".into(), "scp".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/",
+        &s.cookie,
+        Some(json!({ "uuid": id, "name": "Renamed", "scope": "scp2", "policies": [] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+      s.db.oauth_scope().get_scope(id).await.unwrap().name,
+      "Renamed"
+    );
+  }
+
+  #[tokio::test]
+  async fn view_only_user_cannot_edit() {
+    // user has view but not edit -> create is forbidden
+    let s = setup(&["oauth_scope:view"]).await;
+    let app = app(s.db, s.jwt, s.upd);
+    let resp = app
+      .oneshot(request(
+        "POST",
+        "/",
+        &s.cookie,
+        Some(json!({ "name": "X", "scope": "x", "policies": [] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn simple_policy_list_returns_policies() {
+    let s = setup(&["oauth_scope:view"]).await;
+    s.db
+      .oauth_policy()
+      .create_policy("P".into(), "c".into(), "d".into())
+      .await
+      .unwrap();
+    let app = app(s.db, s.jwt, s.upd);
+    let resp = app
+      .oneshot(request("GET", "/policies", &s.cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+  }
+}
