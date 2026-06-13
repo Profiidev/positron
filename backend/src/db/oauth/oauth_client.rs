@@ -414,3 +414,223 @@ impl<'db> OauthClientTable<'db> {
     Ok(group.is_some())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use crate::db::{
+    DBTrait,
+    test::{add_user_to_group, insert_group, insert_user, test_db},
+  };
+  use entity::o_auth_client;
+  use sea_orm::DbErr;
+  use uuid::Uuid;
+
+  async fn create_client(
+    db: &centaurus::db::init::Connection,
+    name: &str,
+    confidential: bool,
+  ) -> Uuid {
+    let id = Uuid::new_v4();
+    db.oauth_client()
+      .create_client(o_auth_client::Model {
+        id,
+        name: name.to_string(),
+        redirect_uri: "https://example.com/cb".to_string(),
+        client_secret: "secret".to_string(),
+        salt: "salt".to_string(),
+        confidential,
+        require_pkce: false,
+      })
+      .await
+      .unwrap();
+    id
+  }
+
+  #[tokio::test]
+  async fn create_get_and_by_name() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+
+    assert_eq!(db.oauth_client().get_client(id).await.unwrap().name, "App");
+    assert_eq!(db.oauth_client().by_name("App").await.unwrap(), Some(id));
+    assert_eq!(db.oauth_client().by_name("none").await.unwrap(), None);
+    assert!(matches!(
+      db.oauth_client().get_client(Uuid::new_v4()).await,
+      Err(DbErr::RecordNotFound(_))
+    ));
+  }
+
+  #[tokio::test]
+  async fn remove_client_deletes() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    db.oauth_client().remove_client(id).await.unwrap();
+    assert_eq!(db.oauth_client().by_name("App").await.unwrap(), None);
+    // removing a non-existent client is a no-op
+    db.oauth_client().remove_client(Uuid::new_v4()).await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn client_exists_ignores_same_id() {
+    let db = test_db().await;
+    let id = create_client(&db, "Dup", true).await;
+    assert!(db.oauth_client().client_exists("Dup".into(), Uuid::new_v4()).await.unwrap());
+    assert!(!db.oauth_client().client_exists("Dup".into(), id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn set_secret_hash_updates() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    db.oauth_client().set_secret_hash(id, "newhash".into()).await.unwrap();
+    assert_eq!(db.oauth_client().get_client(id).await.unwrap().client_secret, "newhash");
+  }
+
+  #[tokio::test]
+  async fn default_scope_add_and_read() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+
+    // empty input is a no-op
+    db.oauth_client().add_default_scope(id, vec![]).await.unwrap();
+    assert!(db.oauth_client().client_default_scope(id).await.unwrap().is_empty());
+
+    db.oauth_client().add_default_scope(id, vec![scope]).await.unwrap();
+    let scopes = db.oauth_client().client_default_scope(id).await.unwrap();
+    assert_eq!(scopes.len(), 1);
+    assert_eq!(scopes[0].scope, "s");
+  }
+
+  #[tokio::test]
+  async fn groups_add_and_read() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    let group = insert_group(&db, "g").await;
+
+    db.oauth_client().add_groups_to_client(id, vec![]).await.unwrap();
+    assert!(db.oauth_client().client_groups(id).await.unwrap().is_empty());
+
+    db.oauth_client().add_groups_to_client(id, vec![group]).await.unwrap();
+    let groups = db.oauth_client().client_groups(id).await.unwrap();
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].uuid, group);
+  }
+
+  #[tokio::test]
+  async fn has_user_access_direct_group_and_none() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    let direct_user = insert_user(&db, "direct", "d@x.com").await;
+    let group_user = insert_user(&db, "grp", "g@x.com").await;
+    let stranger = insert_user(&db, "stranger", "s@x.com").await;
+    let group = insert_group(&db, "g").await;
+    add_user_to_group(&db, group, group_user).await;
+
+    db.oauth_client()
+      .edit_client(
+        id,
+        "App".into(),
+        false,
+        "https://example.com/cb".into(),
+        vec![],
+        vec![],
+        vec![direct_user],
+        vec![group],
+      )
+      .await
+      .unwrap();
+
+    // direct user mapping
+    assert!(db.oauth_client().has_user_access(direct_user, id).await.unwrap());
+    // access via group membership
+    assert!(db.oauth_client().has_user_access(group_user, id).await.unwrap());
+    // no relationship
+    assert!(!db.oauth_client().has_user_access(stranger, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn edit_client_replaces_all_relations() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let group = insert_group(&db, "g").await;
+    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+
+    db.oauth_client()
+      .edit_client(
+        id,
+        "Renamed".into(),
+        true,
+        "https://new.example.com/cb".into(),
+        vec!["https://extra.example.com/cb".into()],
+        vec![scope],
+        vec![user],
+        vec![group],
+      )
+      .await
+      .unwrap();
+
+    let client = db.oauth_client().get_client(id).await.unwrap();
+    assert_eq!(client.name, "Renamed");
+    assert!(client.require_pkce);
+    assert_eq!(client.redirect_uri, "https://new.example.com/cb");
+
+    assert_eq!(db.oauth_client().client_users(id).await.unwrap().len(), 1);
+    assert_eq!(db.oauth_client().client_groups(id).await.unwrap().len(), 1);
+    assert_eq!(
+      db.oauth_client().client_additional_redirect_uris(id).await.unwrap().len(),
+      1
+    );
+    assert_eq!(db.oauth_client().client_default_scope(id).await.unwrap().len(), 1);
+
+    // a second edit clears the previous relations
+    db.oauth_client()
+      .edit_client(
+        id,
+        "Renamed".into(),
+        false,
+        "https://new.example.com/cb".into(),
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+      )
+      .await
+      .unwrap();
+    assert!(db.oauth_client().client_users(id).await.unwrap().is_empty());
+    assert!(db.oauth_client().client_groups(id).await.unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn list_and_info() {
+    let db = test_db().await;
+    let id = create_client(&db, "App", true).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+    db.oauth_client()
+      .edit_client(
+        id,
+        "App".into(),
+        false,
+        "https://example.com/cb".into(),
+        vec!["https://extra.example.com/cb".into()],
+        vec![scope],
+        vec![user],
+        vec![],
+      )
+      .await
+      .unwrap();
+
+    let list = db.oauth_client().list_client().await.unwrap();
+    assert_eq!(list.len(), 1);
+    let info = &list[0];
+    assert_eq!(info.user_access.len(), 1);
+    assert_eq!(info.default_scope.len(), 1);
+    assert_eq!(info.additional_redirect_uris.len(), 1);
+
+    let single = db.oauth_client().client_info(id).await.unwrap().unwrap();
+    assert_eq!(single.name, "App");
+    assert!(db.oauth_client().client_info(Uuid::new_v4()).await.unwrap().is_none());
+  }
+}
