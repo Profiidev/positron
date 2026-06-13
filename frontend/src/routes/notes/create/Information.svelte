@@ -1,0 +1,44 @@
+<script lang="ts">
+  import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
+  import { type FormValue } from '@profidev/pleiades/components/form/types';
+  import type { ComponentProps, Snippet } from 'svelte';
+  import { information } from './schema.svelte';
+  import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
+
+  interface Props {
+    initialValue?: FormValue<typeof information>;
+    // @ts-ignore
+    onsubmit: ComponentProps<BaseForm<any>>['onsubmit'];
+    footer: Snippet<[{ isLoading: boolean; isError: boolean }]>;
+    isLoading: boolean;
+    readonly?: boolean;
+  }
+
+  let { initialValue, onsubmit, footer, isLoading, readonly }: Props = $props();
+
+  let form: BaseForm<typeof information> | undefined = $state();
+
+  export const getValue = () => {
+    return form?.getValue();
+  };
+</script>
+
+<BaseForm
+  schema={information}
+  {onsubmit}
+  {footer}
+  {initialValue}
+  bind:this={form}
+  bind:isLoading
+>
+  {#snippet children({ props })}
+    <FormInput
+      {...props}
+      key="title"
+      label="Title"
+      placeholder="Enter note title"
+      {readonly}
+      required
+    />
+  {/snippet}
+</BaseForm>

@@ -36,6 +36,9 @@ import type {
   CreateGroupData,
   CreateGroupErrors,
   CreateGroupResponses,
+  CreateNoteData,
+  CreateNoteErrors,
+  CreateNoteResponses,
   CreateOauthClientData,
   CreateOauthClientErrors,
   CreateOauthClientResponses,
@@ -51,6 +54,9 @@ import type {
   DeleteGroupData,
   DeleteGroupErrors,
   DeleteGroupResponses,
+  DeleteNoteData,
+  DeleteNoteErrors,
+  DeleteNoteResponses,
   DeleteOauthClientData,
   DeleteOauthClientErrors,
   DeleteOauthClientResponses,
@@ -66,6 +72,9 @@ import type {
   EditGroupData,
   EditGroupErrors,
   EditGroupResponses,
+  EditNoteData,
+  EditNoteErrors,
+  EditNoteResponses,
   EditOauthClientData,
   EditOauthClientErrors,
   EditOauthClientResponses,
@@ -105,6 +114,9 @@ import type {
   GroupInfoResponses,
   InfoData,
   InfoErrors,
+  InfoNoteData,
+  InfoNoteErrors,
+  InfoNoteResponses,
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
@@ -138,6 +150,9 @@ import type {
   ListGroupsSimpleData,
   ListGroupsSimpleErrors,
   ListGroupsSimpleResponses,
+  ListNotesData,
+  ListNotesErrors,
+  ListNotesResponses,
   ListOauthClientsData,
   ListOauthClientsErrors,
   ListOauthClientsResponses,
@@ -158,6 +173,9 @@ import type {
   ListScopesOAuthClientResponses,
   ListUsersData,
   ListUsersErrors,
+  ListUsersNoteData,
+  ListUsersNoteErrors,
+  ListUsersNoteResponses,
   ListUsersOAuthClientData,
   ListUsersOAuthClientErrors,
   ListUsersOAuthClientResponses,
@@ -208,6 +226,9 @@ import type {
   SetGoodApodData,
   SetGoodApodErrors,
   SetGoodApodResponses,
+  ShareNoteData,
+  ShareNoteErrors,
+  ShareNoteResponses,
   SiteUrlData,
   SiteUrlErrors,
   SiteUrlResponses,
@@ -1487,3 +1508,94 @@ export const listGroupsOAuthPolicy = <ThrowOnError extends boolean = false>(
     ListGroupsOAuthPolicyErrors,
     ThrowOnError
   >({ url: '/api/oauth_management/policy/groups', ...options });
+
+export const deleteNote = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteNoteData, ThrowOnError>
+): RequestResult<DeleteNoteResponses, DeleteNoteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    DeleteNoteResponses,
+    DeleteNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listNotes = <ThrowOnError extends boolean = false>(
+  options?: Options<ListNotesData, ThrowOnError>
+): RequestResult<ListNotesResponses, ListNotesErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListNotesResponses,
+    ListNotesErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management', ...options });
+
+export const createNote = <ThrowOnError extends boolean = false>(
+  options: Options<CreateNoteData, ThrowOnError>
+): RequestResult<CreateNoteResponses, CreateNoteErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CreateNoteResponses,
+    CreateNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const editNote = <ThrowOnError extends boolean = false>(
+  options: Options<EditNoteData, ThrowOnError>
+): RequestResult<EditNoteResponses, EditNoteErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    EditNoteResponses,
+    EditNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const infoNote = <ThrowOnError extends boolean = false>(
+  options: Options<InfoNoteData, ThrowOnError>
+): RequestResult<InfoNoteResponses, InfoNoteErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    InfoNoteResponses,
+    InfoNoteErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/{uuid}', ...options });
+
+export const listUsersNote = <ThrowOnError extends boolean = false>(
+  options?: Options<ListUsersNoteData, ThrowOnError>
+): RequestResult<ListUsersNoteResponses, ListUsersNoteErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListUsersNoteResponses,
+    ListUsersNoteErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/users', ...options });
+
+export const shareNote = <ThrowOnError extends boolean = false>(
+  options: Options<ShareNoteData, ThrowOnError>
+): RequestResult<ShareNoteResponses, ShareNoteErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    ShareNoteResponses,
+    ShareNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management/share',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });

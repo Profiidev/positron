@@ -3,11 +3,17 @@
     "frontend",
     "app"
   ],
+  "dependencies": {
+    "y-websocket": "^3.0.0"
+  },
   "devDependencies": {
-    "oxfmt": "0.53.0",
-    "oxlint": "1.68.0",
+    "oxfmt": "0.54.0",
+    "oxlint": "1.69.0",
     "oxlint-tsgolint": "0.23.0",
     "prettier-plugin-svelte": "4.1.0",
     "prettier-plugin-tailwindcss": "0.8.0"
+  },
+  "allowScripts": {
+    "sharp": true
   }
 }

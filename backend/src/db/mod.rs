@@ -1,4 +1,5 @@
 use centaurus::db::init::Connection;
+use notes::NoteTable;
 use oauth::{
   oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
 };
@@ -7,6 +8,7 @@ use user::{passkey::PasskeyTable, settings::SettingsTable};
 
 use crate::db::user::user_ext::UserExtTable;
 
+pub mod notes;
 pub mod oauth;
 pub mod services;
 pub mod user;
@@ -19,6 +21,7 @@ pub trait DBTrait {
   fn oauth_scope(&self) -> OAuthScopeTable<'_>;
   fn apod(&self) -> ApodTable<'_>;
   fn settings(&self) -> SettingsTable<'_>;
+  fn notes(&self) -> NoteTable<'_>;
 }
 
 impl DBTrait for Connection {
@@ -48,5 +51,9 @@ impl DBTrait for Connection {
 
   fn settings(&self) -> SettingsTable<'_> {
     SettingsTable::new(&self.0)
+  }
+
+  fn notes(&self) -> NoteTable<'_> {
+    NoteTable::new(&self.0)
   }
 }

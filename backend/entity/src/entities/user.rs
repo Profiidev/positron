@@ -22,6 +22,10 @@ pub enum Relation {
   Apod,
   #[sea_orm(has_many = "super::group_user::Entity")]
   GroupUser,
+  #[sea_orm(has_many = "super::note::Entity")]
+  Note,
+  #[sea_orm(has_many = "super::note_user::Entity")]
+  NoteUser,
   #[sea_orm(has_many = "super::o_auth_client_user::Entity")]
   OAuthClientUser,
   #[sea_orm(has_many = "super::passkey::Entity")]
@@ -41,6 +45,12 @@ impl Related<super::apod::Entity> for Entity {
 impl Related<super::group_user::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::GroupUser.def()
+  }
+}
+
+impl Related<super::note_user::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::NoteUser.def()
   }
 }
 
@@ -74,6 +84,15 @@ impl Related<super::group::Entity> for Entity {
   }
   fn via() -> Option<RelationDef> {
     Some(super::group_user::Relation::User.def().rev())
+  }
+}
+
+impl Related<super::note::Entity> for Entity {
+  fn to() -> RelationDef {
+    super::note_user::Relation::Note.def()
+  }
+  fn via() -> Option<RelationDef> {
+    Some(super::note_user::Relation::User.def().rev())
   }
 }
 

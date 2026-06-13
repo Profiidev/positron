@@ -38,6 +38,9 @@ pub enum UpdateMessage {
   OAuthPolicy {
     uuid: Uuid,
   },
+  Note {
+    uuid: Uuid,
+  },
 }
 
 pub fn generate_secret() -> String {

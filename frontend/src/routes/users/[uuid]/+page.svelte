@@ -34,7 +34,7 @@
   } from '$lib/client';
   import { getEncrypt } from '$lib/backend/auth.svelte.js';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
-  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+  import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { Label } from '@profidev/pleiades/components/ui/label';
   import { Input } from '@profidev/pleiades/components/ui/input';
 
@@ -231,8 +231,9 @@
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto_1fr]">
             <div>
               <div class="mb-2 flex items-center">
-                <SimpleAvatar
-                  src={userInfo ? avatarUrl + `/${userInfo.uuid}` : ''}
+                <UserAvatar
+                  userId={userInfo?.uuid}
+                  username={userInfo?.name}
                   class="size-14"
                 />
                 <Button

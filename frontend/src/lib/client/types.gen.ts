@@ -238,6 +238,42 @@ export type MailSettingsResponse = {
   settings: MailSettings;
 };
 
+export type NoteCreateReq = {
+  shared_with?: Array<string>;
+  title: string;
+};
+
+export type NoteCreateRes = {
+  id: string;
+};
+
+export type NoteDeleteReq = {
+  note_id: string;
+};
+
+export type NoteEditReq = {
+  note_id: string;
+  title: string;
+};
+
+export type NoteInfo = {
+  id: string;
+  is_owner: boolean;
+  owner: SimpleUserInfo;
+  preview: string;
+  shared_with: Array<SimpleUserInfo>;
+  title: string;
+};
+
+export type NotePath = {
+  uuid: string;
+};
+
+export type NoteShareReq = {
+  note_id: string;
+  shared_with: Array<string>;
+};
+
 export type OAuthClientEditReq = {
   additional_redirect_uris: Array<string>;
   client_id: string;
@@ -3123,3 +3159,233 @@ export type ListGroupsOAuthPolicyResponses = {
 
 export type ListGroupsOAuthPolicyResponse =
   ListGroupsOAuthPolicyResponses[keyof ListGroupsOAuthPolicyResponses];
+
+export type DeleteNoteData = {
+  body: NoteDeleteReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management';
+};
+
+export type DeleteNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type DeleteNoteError = DeleteNoteErrors[keyof DeleteNoteErrors];
+
+export type DeleteNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ListNotesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management';
+};
+
+export type ListNotesErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListNotesResponses = {
+  200: Array<NoteInfo>;
+};
+
+export type ListNotesResponse = ListNotesResponses[keyof ListNotesResponses];
+
+export type CreateNoteData = {
+  body: NoteCreateReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management';
+};
+
+export type CreateNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type CreateNoteError = CreateNoteErrors[keyof CreateNoteErrors];
+
+export type CreateNoteResponses = {
+  200: NoteCreateRes;
+};
+
+export type CreateNoteResponse = CreateNoteResponses[keyof CreateNoteResponses];
+
+export type EditNoteData = {
+  body: NoteEditReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management';
+};
+
+export type EditNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type EditNoteError = EditNoteErrors[keyof EditNoteErrors];
+
+export type EditNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type InfoNoteData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/management/{uuid}';
+};
+
+export type InfoNoteErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoNoteResponses = {
+  200: NoteInfo;
+};
+
+export type InfoNoteResponse = InfoNoteResponses[keyof InfoNoteResponses];
+
+export type ListUsersNoteData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/users';
+};
+
+export type ListUsersNoteErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListUsersNoteResponses = {
+  200: Array<SimpleUserInfo>;
+};
+
+export type ListUsersNoteResponse =
+  ListUsersNoteResponses[keyof ListUsersNoteResponses];
+
+export type ShareNoteData = {
+  body: NoteShareReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/share';
+};
+
+export type ShareNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ShareNoteError = ShareNoteErrors[keyof ShareNoteErrors];
+
+export type ShareNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};

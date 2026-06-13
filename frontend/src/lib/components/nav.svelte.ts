@@ -7,6 +7,7 @@ import KeyRound from '@lucide/svelte/icons/key-round';
 import Goal from '@lucide/svelte/icons/goal';
 import UserKey from '@lucide/svelte/icons/user-key';
 import Telescope from '@lucide/svelte/icons/telescope';
+import NotepadText from '@lucide/svelte/icons/notepad-text';
 import type { NavGroup } from '@profidev/pleiades/components/nav/sidebar/types';
 
 export const items: NavGroup[] = [
@@ -16,6 +17,11 @@ export const items: NavGroup[] = [
   },
   {
     items: [
+      {
+        href: '/notes',
+        icon: NotepadText,
+        label: 'Notes'
+      },
       {
         href: '/apod',
         icon: Telescope,

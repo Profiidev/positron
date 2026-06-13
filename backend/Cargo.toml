@@ -69,3 +69,4 @@ url = { version = "2.5.8", features = ["serde"] }
 uuid = "1.23.1"
 webauthn-rs = { version = "0.5.5", features = ["conditional-ui"] }
 webauthn-rs-proto = "0.5.5"
+yrs = { version = "0.27.0", features = ["sync"] }
