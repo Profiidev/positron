@@ -58,8 +58,14 @@
       <ul class="space-y-1">
         {#each editors as editor (editor.clientId)}
           <li class="flex items-center gap-2.5 rounded-md px-1 py-1.5 text-sm">
-            <UserAvatar userId={editor.id} username={editor.name} class="size-6" />
-            <span class="min-w-0 flex-1 truncate font-medium">{editor.name}</span>
+            <UserAvatar
+              userId={editor.id}
+              username={editor.name}
+              class="size-6"
+            />
+            <span class="min-w-0 flex-1 truncate font-medium"
+              >{editor.name}</span
+            >
             {#if editor.color}
               <span
                 class="size-2.5 shrink-0 rounded-full"
