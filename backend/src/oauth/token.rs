@@ -358,3 +358,22 @@ async fn revoke(
 
   Ok(())
 }
+
+#[cfg(test)]
+mod test {
+  use super::RevokeReqOption;
+
+  #[test]
+  fn revoke_option_none_when_token_absent() {
+    let opt = RevokeReqOption { token: None };
+    assert!(opt.try_into().is_none());
+  }
+
+  #[test]
+  fn revoke_option_some_when_token_present() {
+    let opt = RevokeReqOption {
+      token: Some("tok".into()),
+    };
+    assert_eq!(opt.try_into().unwrap().token, "tok");
+  }
+}

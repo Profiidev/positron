@@ -130,3 +130,48 @@ impl ClientState {
     Self { pepper }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::{AuthorizeState, ClientState, ConfigurationState, get_timestamp_10_min};
+  use crate::config::Config;
+  use chrono::Utc;
+
+  #[test]
+  fn get_timestamp_10_min_is_about_600s_ahead() {
+    let now = Utc::now().timestamp();
+    let ts = get_timestamp_10_min();
+    let delta = ts - now;
+    // allow a couple seconds of slack for execution time
+    assert!((598..=602).contains(&delta), "delta was {delta}");
+  }
+
+  #[test]
+  fn configuration_state_appends_api_oauth_to_issuer() {
+    let config = Config::default();
+    let state = ConfigurationState::init(&config);
+    assert!(
+      state.issuer.as_str().ends_with("/api/oauth"),
+      "issuer was {}",
+      state.issuer
+    );
+    assert_eq!(state.refresh_exp, config.oidc_refresh_exp);
+  }
+
+  #[test]
+  fn client_state_uses_pepper_bytes() {
+    let mut config = Config::default();
+    config.auth.auth_pepper = "pepper123".into();
+    let state = ClientState::init(&config);
+    assert_eq!(state.pepper, b"pepper123".to_vec());
+  }
+
+  #[tokio::test]
+  async fn authorize_state_initialises_empty_maps() {
+    let config = Config::default();
+    let state = AuthorizeState::init(&config);
+    assert!(state.auth_pending.is_empty());
+    assert!(state.auth_codes.is_empty());
+    assert_eq!(state.frontend_url, config.site.site_url);
+  }
+}

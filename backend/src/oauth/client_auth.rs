@@ -202,3 +202,62 @@ impl IntoResponse for Error {
     Response::from_parts(parts, body)
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::{Error, TokenReq};
+  use axum::response::IntoResponse;
+  use http::StatusCode;
+  use uuid::Uuid;
+
+  fn token_req(grant_type: &str) -> TokenReq {
+    TokenReq {
+      grant_type: grant_type.to_string(),
+      code: None,
+      redirect_uri: None,
+      client_id: None,
+      client_secret: None,
+      refresh_token: None,
+      code_verifier: None,
+    }
+  }
+
+  #[test]
+  fn try_into_issue_requires_correct_grant_and_code() {
+    // wrong grant type
+    assert!(token_req("refresh_token").try_into_issue().is_none());
+
+    // right grant but missing code
+    assert!(token_req("authorization_code").try_into_issue().is_none());
+
+    // right grant and code present
+    let code = Uuid::new_v4();
+    let mut req = token_req("authorization_code");
+    req.code = Some(code);
+    req.redirect_uri = Some("https://x".into());
+    req.code_verifier = Some("v".into());
+    let issue = req.try_into_issue().unwrap();
+    assert_eq!(issue.code, code);
+    assert_eq!(issue.redirect_uri.as_deref(), Some("https://x"));
+    assert_eq!(issue.code_verifier.as_deref(), Some("v"));
+  }
+
+  #[test]
+  fn try_into_refresh_requires_correct_grant_and_token() {
+    // wrong grant type
+    assert!(token_req("authorization_code").try_into_refresh().is_none());
+
+    // right grant but missing refresh token
+    assert!(token_req("refresh_token").try_into_refresh().is_none());
+
+    let mut req = token_req("refresh_token");
+    req.refresh_token = Some("rt".into());
+    assert_eq!(req.try_into_refresh().unwrap().refresh_token, "rt");
+  }
+
+  #[test]
+  fn error_into_response_is_bad_request() {
+    let resp = Error::from_str("invalid_grant").into_response();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+  }
+}

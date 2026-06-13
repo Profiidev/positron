@@ -286,3 +286,150 @@ async fn logout(
     .to_string(),
   ))
 }
+
+#[cfg(test)]
+mod test {
+  use super::{AuthReq, Scope, validate_req};
+  use entity::o_auth_client;
+  use uuid::Uuid;
+  use webauthn_rs::prelude::Url;
+
+  const REDIRECT: &str = "https://app.example.com/cb";
+
+  fn client(confidential: bool, require_pkce: bool) -> o_auth_client::Model {
+    o_auth_client::Model {
+      id: Uuid::new_v4(),
+      name: "n".into(),
+      redirect_uri: REDIRECT.into(),
+      client_secret: "s".into(),
+      salt: "salt".into(),
+      confidential,
+      require_pkce,
+    }
+  }
+
+  fn req() -> AuthReq {
+    AuthReq {
+      response_type: "code".into(),
+      client_id: Uuid::new_v4(),
+      redirect_uri: Some(REDIRECT.into()),
+      scope: Some("openid".into()),
+      state: None,
+      nonce: None,
+      code_challenge: Some("a".repeat(43)),
+      code_challenge_method: None,
+    }
+  }
+
+  fn default_scope() -> Scope {
+    Scope::from(vec!["openid".to_string(), "profile".to_string()])
+  }
+
+  #[test]
+  fn valid_request_narrows_scope() {
+    let mut r = req();
+    assert!(validate_req(&mut r, &client(true, false), vec![], default_scope()).is_ok());
+    // requested "openid" intersected with default {openid, profile}
+    assert_eq!(r.scope.as_deref(), Some("openid"));
+  }
+
+  #[test]
+  fn missing_redirect_uri_is_filled_from_client() {
+    let mut r = req();
+    r.redirect_uri = None;
+    assert!(validate_req(&mut r, &client(true, false), vec![], default_scope()).is_ok());
+    assert_eq!(r.redirect_uri.as_deref(), Some(REDIRECT));
+  }
+
+  #[test]
+  fn invalid_redirect_uri_format() {
+    let mut r = req();
+    r.redirect_uri = Some("not a url".into());
+    let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_request");
+  }
+
+  #[test]
+  fn redirect_uri_not_in_allowlist() {
+    let mut r = req();
+    r.redirect_uri = Some("https://evil.example.com/cb".into());
+    let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_request");
+  }
+
+  #[test]
+  fn redirect_uri_in_additional_list_is_allowed() {
+    let mut r = req();
+    let extra = "https://extra.example.com/cb";
+    r.redirect_uri = Some(extra.into());
+    let additional = vec![Url::parse(extra).unwrap()];
+    assert!(validate_req(&mut r, &client(true, false), additional, default_scope()).is_ok());
+  }
+
+  #[test]
+  fn response_type_must_be_code() {
+    let mut r = req();
+    r.response_type = "token".into();
+    let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "unsupported_response_type");
+  }
+
+  #[test]
+  fn public_client_requires_pkce() {
+    let mut r = req();
+    r.code_challenge = None;
+    let err = validate_req(&mut r, &client(false, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_request");
+  }
+
+  #[test]
+  fn confidential_client_requiring_pkce_without_challenge() {
+    let mut r = req();
+    r.code_challenge = None;
+    let err = validate_req(&mut r, &client(true, true), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_request");
+  }
+
+  #[test]
+  fn confidential_client_without_pkce_requirement_allows_missing_challenge() {
+    let mut r = req();
+    r.code_challenge = None;
+    assert!(validate_req(&mut r, &client(true, false), vec![], default_scope()).is_ok());
+  }
+
+  #[test]
+  fn invalid_code_challenge_method() {
+    let mut r = req();
+    r.code_challenge_method = Some("sha1".into());
+    let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_request");
+  }
+
+  #[test]
+  fn valid_code_challenge_methods_accepted() {
+    for method in ["plain", "S256"] {
+      let mut r = req();
+      r.code_challenge_method = Some(method.into());
+      assert!(
+        validate_req(&mut r, &client(true, false), vec![], default_scope()).is_ok(),
+        "method {method} should be accepted"
+      );
+    }
+  }
+
+  #[test]
+  fn missing_scope_defaults_to_client_default() {
+    let mut r = req();
+    r.scope = None;
+    assert!(validate_req(&mut r, &client(true, false), vec![], default_scope()).is_ok());
+    assert_eq!(r.scope.as_deref(), Some("openid profile"));
+  }
+
+  #[test]
+  fn scope_with_no_overlap_is_rejected() {
+    let mut r = req();
+    r.scope = Some("offline_access".into());
+    let err = validate_req(&mut r, &client(true, false), vec![], default_scope()).unwrap_err();
+    assert_eq!(err.0, "invalid_scope");
+  }
+}

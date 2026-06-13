@@ -121,3 +121,75 @@ impl Config {
     config
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::Config;
+
+  // These tests mutate process-global environment variables. They rely on
+  // `cargo nextest` running each test in its own process for isolation.
+
+  fn set(key: &str, value: &str) {
+    unsafe { std::env::set_var(key, value) };
+  }
+
+  #[test]
+  fn default_values() {
+    let config = Config::default();
+    assert!(config.db_url.is_empty());
+    assert_eq!(config.webauthn_name, "Positron");
+    assert_eq!(config.apod_api_key, "DEMO_KEY");
+    assert_eq!(config.oidc_refresh_exp, 604800);
+    assert_eq!(config.assetlinks, "{}");
+    assert_eq!(config.auth.auth_jwt_expiration, 60 * 60 * 24 * 31);
+  }
+
+  #[test]
+  fn parse_appends_required_tauri_origin() {
+    set("DB_URL", "postgres://localhost/db");
+    set("STORAGE_PATH", "/tmp/positron-test");
+    set("ALLOWED_ORIGINS", "http://a.com");
+
+    let config = Config::parse();
+    let origins: Vec<&str> = config.base.allowed_origins.split(',').collect();
+    assert!(origins.contains(&"http://a.com"));
+    assert!(origins.contains(&"http://tauri.localhost"));
+  }
+
+  #[test]
+  fn parse_does_not_duplicate_existing_tauri_origin() {
+    set("DB_URL", "postgres://localhost/db");
+    set("STORAGE_PATH", "/tmp/positron-test");
+    set("ALLOWED_ORIGINS", "http://tauri.localhost,http://b.com");
+
+    let config = Config::parse();
+    let count = config
+      .base
+      .allowed_origins
+      .split(',')
+      .filter(|o| *o == "http://tauri.localhost")
+      .count();
+    assert_eq!(count, 1);
+  }
+
+  #[test]
+  fn parse_trims_and_drops_empty_origins() {
+    set("DB_URL", "postgres://localhost/db");
+    set("STORAGE_PATH", "/tmp/positron-test");
+    set("ALLOWED_ORIGINS", " http://a.com , ,http://b.com ");
+
+    let config = Config::parse();
+    let origins: Vec<&str> = config.base.allowed_origins.split(',').collect();
+    assert!(origins.contains(&"http://a.com"));
+    assert!(origins.contains(&"http://b.com"));
+    assert!(!origins.iter().any(|o| o.is_empty()));
+  }
+
+  #[test]
+  #[should_panic(expected = "Database URL")]
+  fn parse_panics_without_db_url() {
+    unsafe { std::env::remove_var("DB_URL") };
+    set("STORAGE_PATH", "/tmp/positron-test");
+    let _ = Config::parse();
+  }
+}
