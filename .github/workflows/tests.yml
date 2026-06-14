@@ -56,5 +56,6 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
+          github_token: ${{ steps.app-token.outputs.token }}
           files: |
             test-results/**/*.xml
