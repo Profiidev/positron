@@ -181,3 +181,266 @@ async fn notify_note_update(updater: &Updater, users: Vec<Uuid>, note_id: Uuid) 
     updater.send_to(user_id, message).await;
   }
 }
+
+#[cfg(test)]
+mod test {
+  use crate::db::{
+    DBTrait,
+    test::{auth_cookie, auth_state, body_json, insert_user, test_db, updater},
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::get,
+  };
+  use centaurus::{
+    backend::auth::jwt_state::JwtState, backend::endpoints::websocket::state::Updater,
+    db::init::Connection,
+  };
+  use serde_json::{Value, json};
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  use crate::utils::UpdateMessage;
+
+  fn app(db: Connection, jwt: JwtState, upd: Updater<UpdateMessage>) -> Router {
+    Router::new()
+      .route(
+        "/",
+        get(super::list)
+          .post(super::create)
+          .put(super::edit)
+          .delete(super::delete),
+      )
+      .route("/{uuid}", get(super::info))
+      .route("/users", get(super::list_users))
+      .route("/share", axum::routing::put(super::share))
+      .layer(Extension(upd))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  fn request(method: &str, uri: &str, cookie: Option<&str>, body: Option<Value>) -> Request<Body> {
+    let mut builder = Request::builder().method(method).uri(uri);
+    if let Some(cookie) = cookie {
+      builder = builder.header(header::COOKIE, cookie);
+    }
+    match body {
+      Some(value) => builder
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(value.to_string()))
+        .unwrap(),
+      None => builder.body(Body::empty()).unwrap(),
+    }
+  }
+
+  struct Setup {
+    db: Connection,
+    jwt: JwtState,
+    upd: Updater<UpdateMessage>,
+    user: Uuid,
+    cookie: String,
+  }
+
+  async fn setup() -> Setup {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "owner", "owner@x.com").await;
+    let cookie = auth_cookie(&jwt, user);
+    Setup {
+      db,
+      jwt,
+      upd,
+      user,
+      cookie,
+    }
+  }
+
+  #[tokio::test]
+  async fn list_requires_authentication() {
+    let s = setup().await;
+    let app = app(s.db, s.jwt, s.upd);
+    let resp = app.oneshot(request("GET", "/", None, None)).await.unwrap();
+    // no auth cookie -> request is rejected before reaching the handler
+    assert!(resp.status().is_client_error());
+  }
+
+  #[tokio::test]
+  async fn create_then_list_note() {
+    let s = setup().await;
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "POST",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "title": "My note" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    let id = body["id"].as_str().unwrap();
+    assert!(Uuid::parse_str(id).is_ok());
+
+    // it now shows up in the list
+    let resp = app
+      .oneshot(request("GET", "/", Some(&s.cookie), None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+    assert_eq!(body[0]["title"], "My note");
+    assert_eq!(body[0]["is_owner"], true);
+  }
+
+  #[tokio::test]
+  async fn info_returns_note_for_owner_and_404_for_stranger() {
+    let s = setup().await;
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
+
+    let app = app(s.db.clone(), s.jwt, s.upd);
+    let resp = app
+      .clone()
+      .oneshot(request("GET", &format!("/{note}"), Some(&s.cookie), None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["title"], "T");
+
+    // unknown note id -> 404
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{}", Uuid::new_v4()),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn edit_title_as_owner_and_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "Old".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    // owner can edit
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "PUT",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "note_id": note, "title": "New" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+      s.db
+        .notes()
+        .info(note, s.user)
+        .await
+        .unwrap()
+        .unwrap()
+        .title,
+      "New"
+    );
+
+    // a non-owner is forbidden
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/",
+        Some(&stranger_cookie),
+        Some(json!({ "note_id": note, "title": "Hacked" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn delete_as_owner_removes_note() {
+    let s = setup().await;
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    let resp = app
+      .oneshot(request(
+        "DELETE",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "note_id": note })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(s.db.notes().info(note, s.user).await.unwrap().is_none());
+  }
+
+  #[tokio::test]
+  async fn share_updates_shared_users() {
+    let s = setup().await;
+    let friend = insert_user(&s.db, "friend", "f@x.com").await;
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share",
+        Some(&s.cookie),
+        Some(json!({ "note_id": note, "shared_with": [friend] })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(s.db.notes().shared_users(note).await.unwrap(), vec![friend]);
+  }
+
+  #[tokio::test]
+  async fn list_users_returns_all_users() {
+    let s = setup().await;
+    insert_user(&s.db, "second", "second@x.com").await;
+    let app = app(s.db, s.jwt, s.upd);
+
+    let resp = app
+      .oneshot(request("GET", "/users", Some(&s.cookie), None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 2);
+  }
+}

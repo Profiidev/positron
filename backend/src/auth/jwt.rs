@@ -191,3 +191,112 @@ impl JwtStateOther {
     }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::{JwtClaims, JwtSpecial, JwtStateOther, JwtTotpRequired, JwtType};
+  use crate::{config::Config, db::test::test_db};
+  use axum_extra::extract::cookie::SameSite;
+  use chrono::Utc;
+  use entity::key;
+  use rsa::{
+    RsaPrivateKey,
+    pkcs1::{EncodeRsaPrivateKey, LineEnding},
+    rand_core::OsRng,
+  };
+  use sea_orm::{ActiveValue::Set, EntityTrait};
+  use serde::{Deserialize, Serialize};
+  use uuid::Uuid;
+
+  async fn state() -> JwtStateOther {
+    let db = test_db().await;
+    let private_key = RsaPrivateKey::new(&mut OsRng, 512).unwrap();
+    let pem = private_key
+      .to_pkcs1_pem(LineEnding::LF)
+      .unwrap()
+      .to_string();
+
+    key::Entity::insert(key::ActiveModel {
+      id: Set(Uuid::new_v4()),
+      name: Set("jwt".to_string()),
+      private_key: Set(pem),
+    })
+    .exec(&db.0)
+    .await
+    .unwrap();
+
+    let config = Config::default();
+    JwtStateOther::init(&config.auth, &db).await
+  }
+
+  #[test]
+  fn cookie_names_are_stable() {
+    assert_eq!(JwtSpecial::cookie_name(), "special");
+    assert_eq!(JwtTotpRequired::cookie_name(), "totp_required");
+  }
+
+  #[tokio::test]
+  async fn create_token_roundtrips_through_validation() {
+    let state = state().await;
+    let uuid = Uuid::new_v4();
+
+    let cookie = state.create_token::<JwtSpecial>(uuid).unwrap();
+    assert_eq!(cookie.name(), "special");
+
+    let claims: JwtClaims<JwtSpecial> = state.validate_token(cookie.value()).unwrap();
+    assert_eq!(claims.sub, uuid);
+    assert_eq!(claims.iss, state.iss);
+    // exp is roughly now + 300s
+    let delta = claims.exp - Utc::now().timestamp();
+    assert!((296..=302).contains(&delta), "delta was {delta}");
+  }
+
+  #[tokio::test]
+  async fn totp_required_token_uses_its_own_cookie_name() {
+    let state = state().await;
+    let cookie = state
+      .create_token::<JwtTotpRequired>(Uuid::new_v4())
+      .unwrap();
+    assert_eq!(cookie.name(), "totp_required");
+  }
+
+  #[tokio::test]
+  async fn validate_token_rejects_garbage() {
+    let state = state().await;
+    let res = state.validate_token::<JwtClaims<JwtSpecial>>("not.a.jwt");
+    assert!(res.is_err());
+  }
+
+  #[tokio::test]
+  async fn generic_token_roundtrips() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Custom {
+      exp: i64,
+      value: String,
+    }
+    let state = state().await;
+    let claims = Custom {
+      exp: Utc::now().timestamp() + 100,
+      value: "hello".into(),
+    };
+    let token = state.create_generic_token(&claims).unwrap();
+    let decoded: Custom = state.validate_token(&token).unwrap();
+    assert_eq!(decoded, claims);
+  }
+
+  #[tokio::test]
+  async fn create_cookie_sets_security_attributes() {
+    let state = state().await;
+    let cookie = state.create_cookie("session", "value".to_string(), true);
+    assert_eq!(cookie.name(), "session");
+    assert_eq!(cookie.value(), "value");
+    assert_eq!(cookie.http_only(), Some(true));
+    assert_eq!(cookie.secure(), Some(true));
+    assert_eq!(cookie.same_site(), Some(SameSite::Lax));
+    assert_eq!(cookie.path(), Some("/"));
+
+    // http_only flag is configurable
+    let non_http = state.create_cookie("x", "y".to_string(), false);
+    assert_eq!(non_http.http_only(), Some(false));
+  }
+}

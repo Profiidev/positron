@@ -38,3 +38,67 @@ async fn info(auth: JwtAuth, db: Connection) -> Result<Json<UserInfo>> {
     totp_enabled: user.totp.is_some(),
   }))
 }
+
+#[cfg(test)]
+mod test {
+  use crate::db::test::{
+    auth_cookie, auth_state, body_json, grant_permissions, insert_user, test_db,
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::get,
+  };
+  use centaurus::{backend::auth::jwt_state::JwtState, db::init::Connection};
+  use tower::ServiceExt;
+
+  fn app(db: Connection, jwt: JwtState) -> Router {
+    Router::new()
+      .route("/", get(super::info))
+      .layer(Extension(jwt))
+      .layer(Extension(db))
+  }
+
+  fn get_request(cookie: Option<&str>) -> Request<Body> {
+    let mut builder = Request::builder().uri("/");
+    if let Some(cookie) = cookie {
+      builder = builder.header(header::COOKIE, cookie);
+    }
+    builder.body(Body::empty()).unwrap()
+  }
+
+  #[tokio::test]
+  async fn info_returns_user_profile_and_permissions() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "Alice", "alice@x.com").await;
+    grant_permissions(&db, user, &["apod:list"]).await;
+    let cookie = auth_cookie(&jwt, user);
+
+    let resp = app(db, jwt)
+      .oneshot(get_request(Some(&cookie)))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["name"], "Alice");
+    assert_eq!(body["email"], "alice@x.com");
+    assert_eq!(body["totp_enabled"], false);
+    assert!(
+      body["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p == "apod:list")
+    );
+  }
+
+  #[tokio::test]
+  async fn info_rejects_unauthenticated() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let resp = app(db, jwt).oneshot(get_request(None)).await.unwrap();
+    assert!(resp.status().is_client_error());
+  }
+}

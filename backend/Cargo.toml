@@ -23,7 +23,7 @@ argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.22.1"
-centaurus = { version = "0.14.5", features = [
+centaurus = { version = "0.14.6", features = [
   "fix-migrations",
   "uuid",
   "webauthn",
@@ -70,3 +70,16 @@ uuid = "1.23.1"
 webauthn-rs = { version = "0.5.5", features = ["conditional-ui"] }
 webauthn-rs-proto = "0.5.5"
 yrs = { version = "0.27.0", features = ["sync"] }
+
+[features]
+test = ["centaurus/test"]
+
+[dev-dependencies]
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.5", features = ["util"] }
+reqwest = { version = "0.13.4", features = ["form", "json"] }
+serde_json = "1.0.150"
+base64 = "0.22.1"
+rsa = "0.9.10"
+uuid = { version = "1.23.1", features = ["v4"] }
+totp-rs = { version = "5.7.1", features = ["gen_secret", "otpauth"] }

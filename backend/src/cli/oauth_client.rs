@@ -109,3 +109,78 @@ impl OAuthClientCommands {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::OAuthClientCommands;
+  use crate::db::{DBTrait, test::test_db};
+  use url::Url;
+
+  fn create(name: &str, scope: &str) -> OAuthClientCommands {
+    OAuthClientCommands::Create {
+      name: name.into(),
+      redirect_uri: Url::parse("https://app.example.com/cb").unwrap(),
+      scope: scope.into(),
+      groups: vec![],
+      require_pkce: false,
+      auth_pepper: Some("pepper".into()),
+    }
+  }
+
+  #[tokio::test]
+  async fn create_success_and_duplicate() {
+    let db = test_db().await;
+    db.oauth_scope()
+      .create_scope("Openid".into(), "openid".into(), vec![])
+      .await
+      .unwrap();
+
+    create("App", "openid").run(db.clone()).await.unwrap();
+    let id = db.oauth_client().by_name("App").await.unwrap().unwrap();
+    assert_eq!(
+      db.oauth_client()
+        .client_default_scope(id)
+        .await
+        .unwrap()
+        .len(),
+      1
+    );
+
+    // duplicate name
+    assert!(create("App", "openid").run(db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn create_with_unknown_scope_errors() {
+    let db = test_db().await;
+    // scope "openid" was never created -> scope_ids length mismatch
+    assert!(create("App", "openid").run(db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn create_with_empty_scope_succeeds() {
+    let db = test_db().await;
+    // empty scope string -> no scopes required
+    create("App", "").run(db.clone()).await.unwrap();
+    assert!(db.oauth_client().by_name("App").await.unwrap().is_some());
+  }
+
+  #[tokio::test]
+  async fn delete_existing_and_missing() {
+    let db = test_db().await;
+    create("App", "").run(db.clone()).await.unwrap();
+
+    OAuthClientCommands::Delete { name: "App".into() }
+      .run(db.clone())
+      .await
+      .unwrap();
+    assert!(db.oauth_client().by_name("App").await.unwrap().is_none());
+
+    assert!(
+      OAuthClientCommands::Delete { name: "App".into() }
+        .run(db)
+        .await
+        .is_err()
+    );
+  }
+}

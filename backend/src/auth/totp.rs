@@ -177,3 +177,222 @@ async fn remove(
 
   Ok(StatusCode::OK)
 }
+
+#[cfg(test)]
+mod test {
+  use super::TotpState;
+  use crate::{
+    auth::jwt::{JwtSpecial, JwtStateOther, JwtTotpRequired},
+    config::Config,
+    db::{
+      DBTrait,
+      test::{body_json, insert_user, jwt_states, other_cookie, test_db, updater},
+    },
+    utils::UpdateMessage,
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::{get, post},
+  };
+  use centaurus::backend::auth::jwt_state::JwtState;
+  use centaurus::backend::endpoints::websocket::state::Updater;
+  use centaurus::db::init::Connection;
+  use serde_json::{Value, json};
+  use totp_rs::{Rfc6238, Secret, TOTP};
+  use tower::ServiceExt;
+
+  /// Generates the current 6-digit code for a base32 secret, matching how the
+  /// handlers build their TOTP instances.
+  fn current_code(base32_secret: &str) -> String {
+    let totp = TOTP::from_rfc6238(
+      Rfc6238::with_defaults(
+        Secret::Encoded(base32_secret.to_string())
+          .to_bytes()
+          .unwrap(),
+      )
+      .unwrap(),
+    )
+    .unwrap();
+    totp.generate_current().unwrap()
+  }
+
+  fn totp_state() -> TotpState {
+    let mut config = Config::default();
+    config.auth.auth_issuer = "positron".into();
+    TotpState::init(&config)
+  }
+
+  fn mk_app(
+    db: Connection,
+    other: JwtStateOther,
+    jwt: JwtState,
+    state: TotpState,
+    upd: Updater<UpdateMessage>,
+  ) -> Router {
+    Router::new()
+      .route("/start_setup", get(super::start_setup))
+      .route("/finish_setup", post(super::finish_setup))
+      .route("/confirm", post(super::confirm))
+      .route("/remove", post(super::remove))
+      .layer(Extension(state))
+      .layer(Extension(upd))
+      .layer(Extension(jwt))
+      .layer(Extension(other))
+      .layer(Extension(db))
+  }
+
+  fn req(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+      .method(method)
+      .uri(uri)
+      .header(header::COOKIE, cookie);
+    match body {
+      Some(value) => builder
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(value.to_string()))
+        .unwrap(),
+      None => builder.body(Body::empty()).unwrap(),
+    }
+  }
+
+  #[tokio::test]
+  async fn full_totp_setup_then_confirm_flow() {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let special = other_cookie::<JwtSpecial>(&other, user);
+
+    let app = mk_app(db.clone(), other.clone(), jwt.clone(), totp_state(), upd);
+
+    // start setup -> returns the base32 secret
+    let resp = app
+      .clone()
+      .oneshot(req("GET", "/start_setup", &special, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    let secret = body["code"].as_str().unwrap().to_string();
+    assert!(!body["qr"].as_str().unwrap().is_empty());
+
+    // finish setup with a valid current code
+    let resp = app
+      .oneshot(req(
+        "POST",
+        "/finish_setup",
+        &special,
+        Some(json!({ "code": current_code(&secret) })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    // totp is now stored on the user
+    let stored = db.user_ext().get_user_by_id(user).await.unwrap().totp;
+    assert!(stored.is_some());
+
+    // confirm using a JwtTotpRequired cookie and a valid code issues a session
+    let totp_cookie = other_cookie::<JwtTotpRequired>(&other, user);
+    let app = mk_app(db, other, jwt, totp_state(), updater().await);
+    let resp = app
+      .oneshot(req(
+        "POST",
+        "/confirm",
+        &totp_cookie,
+        Some(json!({ "code": current_code(&stored.unwrap()) })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+  }
+
+  #[tokio::test]
+  async fn start_setup_fails_when_already_configured() {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    db.user_ext()
+      .add_totp(user, "EXISTINGSECRET".into())
+      .await
+      .unwrap();
+    let special = other_cookie::<JwtSpecial>(&other, user);
+
+    let app = mk_app(db, other, jwt, totp_state(), updater().await);
+    let resp = app
+      .oneshot(req("GET", "/start_setup", &special, None))
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+  }
+
+  #[tokio::test]
+  async fn finish_setup_rejects_invalid_code() {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let special = other_cookie::<JwtSpecial>(&other, user);
+    let app = mk_app(db, other, jwt, totp_state(), updater().await);
+
+    // start setup to populate reg_state
+    let resp = app
+      .clone()
+      .oneshot(req("GET", "/start_setup", &special, None))
+      .await
+      .unwrap();
+    let _ = body_json(resp).await;
+
+    let resp = app
+      .oneshot(req(
+        "POST",
+        "/finish_setup",
+        &special,
+        Some(json!({ "code": "000000" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+  }
+
+  #[tokio::test]
+  async fn remove_clears_totp() {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    db.user_ext().add_totp(user, "SECRET".into()).await.unwrap();
+    let special = other_cookie::<JwtSpecial>(&other, user);
+
+    let app = mk_app(db.clone(), other, jwt, totp_state(), updater().await);
+    let resp = app
+      .oneshot(req("POST", "/remove", &special, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(
+      db.user_ext()
+        .get_user_by_id(user)
+        .await
+        .unwrap()
+        .totp
+        .is_none()
+    );
+  }
+
+  #[tokio::test]
+  async fn endpoints_reject_missing_special_cookie() {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let app = mk_app(db, other, jwt, totp_state(), updater().await);
+    let resp = app
+      .oneshot(
+        Request::builder()
+          .uri("/start_setup")
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+}

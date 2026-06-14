@@ -82,3 +82,73 @@ impl OAuthPolicyCommands {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::OAuthPolicyCommands;
+  use crate::db::{
+    DBTrait,
+    test::{insert_group, test_db},
+  };
+  use uuid::Uuid;
+
+  fn create(name: &str, mappings: Vec<String>) -> OAuthPolicyCommands {
+    OAuthPolicyCommands::Create {
+      name: name.into(),
+      claim: "claim".into(),
+      default: "def".into(),
+      mappings,
+    }
+  }
+
+  #[tokio::test]
+  async fn create_success_with_mapping_and_duplicate() {
+    let db = test_db().await;
+    let group = insert_group(&db, "g").await;
+
+    create("Role", vec![format!("{group}:admin")])
+      .run(db.clone())
+      .await
+      .unwrap();
+    let id = db.oauth_policy().by_name("Role").await.unwrap().unwrap();
+    let info = db.oauth_policy().policy_info(id).await.unwrap().unwrap();
+    assert_eq!(info.content.len(), 1);
+    assert_eq!(info.content[0].content, "admin");
+
+    // duplicate name fails
+    assert!(create("Role", vec![]).run(db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn create_rejects_bad_mapping_format() {
+    let db = test_db().await;
+    // missing the ':' separator
+    assert!(create("P", vec!["no-colon".into()]).run(db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn create_rejects_unknown_group() {
+    let db = test_db().await;
+    let mapping = format!("{}:x", Uuid::new_v4());
+    assert!(create("P", vec![mapping]).run(db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn delete_existing_and_missing() {
+    let db = test_db().await;
+    create("P", vec![]).run(db.clone()).await.unwrap();
+
+    OAuthPolicyCommands::Delete { name: "P".into() }
+      .run(db.clone())
+      .await
+      .unwrap();
+    assert!(db.oauth_policy().by_name("P").await.unwrap().is_none());
+
+    assert!(
+      OAuthPolicyCommands::Delete { name: "P".into() }
+        .run(db)
+        .await
+        .is_err()
+    );
+  }
+}

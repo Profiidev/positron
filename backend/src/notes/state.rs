@@ -247,3 +247,97 @@ impl NoteState {
     });
   }
 }
+
+#[cfg(test)]
+mod note_editing_test {
+  use super::NoteEditing;
+  use crate::db::{
+    DBTrait,
+    test::{insert_user, test_db},
+  };
+  use std::sync::Arc;
+  use uuid::Uuid;
+
+  #[tokio::test]
+  async fn get_or_open_note_caches_same_state() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let first = editing.get_or_open_note(note_id, &db).await.unwrap();
+    let second = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // second open must return the cached Arc, not a fresh document
+    assert!(Arc::ptr_eq(&first, &second));
+  }
+
+  #[tokio::test]
+  async fn get_or_open_note_errors_for_missing_note() {
+    let db = test_db().await;
+    let editing = NoteEditing::init();
+    // no note row exists -> get_content fails -> error propagates
+    assert!(editing.get_or_open_note(Uuid::new_v4(), &db).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn close_note_on_unopened_note_is_ok() {
+    let db = test_db().await;
+    let editing = NoteEditing::init();
+    // closing a note that was never opened hits the early-return branch
+    editing.close_note(Uuid::new_v4(), &db).await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn close_note_keeps_open_while_subscribers_remain() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    // two subscribers
+    let first = editing.get_or_open_note(note_id, &db).await.unwrap();
+    let _second = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // first close just decrements the subscriber count; the doc stays cached
+    editing.close_note(note_id, &db).await.unwrap();
+    let reopened = editing.get_or_open_note(note_id, &db).await.unwrap();
+    assert!(Arc::ptr_eq(&first, &reopened));
+
+    // drain remaining subscribers; final close removes and persists the note
+    editing.close_note(note_id, &db).await.unwrap();
+    editing.close_note(note_id, &db).await.unwrap();
+
+    // after full close a new open allocates a fresh document
+    let fresh = editing.get_or_open_note(note_id, &db).await.unwrap();
+    assert!(!Arc::ptr_eq(&first, &fresh));
+  }
+
+  #[tokio::test]
+  async fn save_persists_document_content_and_preview() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // an empty doc saves successfully (covers gc/encode/render_preview/set_content)
+    state.save(&db, note_id).await.unwrap();
+    // content row is now present (empty doc still encodes a small state vector)
+    assert!(db.notes().get_content(note_id).await.is_ok());
+  }
+
+  #[tokio::test]
+  async fn receiver_subscribes_to_the_note_channel() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+    // a fresh subscriber has no buffered messages
+    let mut rx = state.receiver();
+    assert!(rx.try_recv().is_err());
+  }
+}

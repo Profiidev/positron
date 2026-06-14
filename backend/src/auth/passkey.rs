@@ -367,3 +367,165 @@ async fn edit_name(
 
   Ok(())
 }
+
+// The WebAuthn registration/authentication handlers require a real authenticator
+// and are exercised end-to-end elsewhere. The non-crypto management handlers
+// (`list`, `remove`, `edit_name`) are unit-tested here through the router.
+#[cfg(test)]
+mod test {
+  use crate::{
+    auth::jwt::JwtSpecial,
+    db::test::{
+      auth_cookie, body_json, insert_passkey, insert_user, jwt_states, other_cookie, test_db,
+      updater,
+    },
+    utils::UpdateMessage,
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::{get, post},
+  };
+  use centaurus::{
+    backend::auth::jwt_state::JwtState, backend::endpoints::websocket::state::Updater,
+    db::init::Connection,
+  };
+  use serde_json::{Value, json};
+  use tower::ServiceExt;
+
+  struct Ctx {
+    db: Connection,
+    jwt: JwtState,
+    other: crate::auth::jwt::JwtStateOther,
+    upd: Updater<UpdateMessage>,
+    user: uuid::Uuid,
+  }
+
+  async fn ctx() -> Ctx {
+    let db = test_db().await;
+    let (jwt, other) = jwt_states(&db).await;
+    let upd = updater().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    Ctx {
+      db,
+      jwt,
+      other,
+      upd,
+      user,
+    }
+  }
+
+  fn app(c: &Ctx) -> Router {
+    Router::new()
+      .route("/list", get(super::list))
+      .route("/remove", post(super::remove))
+      .route("/edit_name", post(super::edit_name))
+      .layer(Extension(c.upd.clone()))
+      .layer(Extension(c.jwt.clone()))
+      .layer(Extension(c.other.clone()))
+      .layer(Extension(c.db.clone()))
+  }
+
+  fn req(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+      .method(method)
+      .uri(uri)
+      .header(header::COOKIE, cookie);
+    match body {
+      Some(value) => builder
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(value.to_string()))
+        .unwrap(),
+      None => builder.body(Body::empty()).unwrap(),
+    }
+  }
+
+  #[tokio::test]
+  async fn list_returns_user_passkeys() {
+    let c = ctx().await;
+    insert_passkey(&c.db, c.user, "key-a", "credA").await;
+    insert_passkey(&c.db, c.user, "key-b", "credB").await;
+    let cookie = auth_cookie(&c.jwt, c.user);
+
+    let resp = app(&c)
+      .oneshot(req("GET", "/list", &cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 2);
+  }
+
+  #[tokio::test]
+  async fn remove_deletes_passkey_by_name() {
+    let c = ctx().await;
+    insert_passkey(&c.db, c.user, "key-a", "credA").await;
+    let cookie = other_cookie::<JwtSpecial>(&c.other, c.user);
+
+    let resp = app(&c)
+      .oneshot(req(
+        "POST",
+        "/remove",
+        &cookie,
+        Some(json!({ "name": "key-a" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // removing a missing passkey fails
+    let resp = app(&c)
+      .oneshot(req(
+        "POST",
+        "/remove",
+        &cookie,
+        Some(json!({ "name": "key-a" })),
+      ))
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+  }
+
+  #[tokio::test]
+  async fn edit_name_renames_and_rejects_conflict() {
+    let c = ctx().await;
+    insert_passkey(&c.db, c.user, "old", "credA").await;
+    insert_passkey(&c.db, c.user, "taken", "credB").await;
+    let cookie = other_cookie::<JwtSpecial>(&c.other, c.user);
+
+    // rename old -> fresh
+    let resp = app(&c)
+      .oneshot(req(
+        "POST",
+        "/edit_name",
+        &cookie,
+        Some(json!({ "name": "fresh", "old_name": "old" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // renaming to an existing name conflicts
+    let resp = app(&c)
+      .oneshot(req(
+        "POST",
+        "/edit_name",
+        &cookie,
+        Some(json!({ "name": "taken", "old_name": "fresh" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+  }
+
+  #[tokio::test]
+  async fn list_requires_authentication() {
+    let c = ctx().await;
+    let resp = app(&c)
+      .oneshot(Request::builder().uri("/list").body(Body::empty()).unwrap())
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+}

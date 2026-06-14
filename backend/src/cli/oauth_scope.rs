@@ -59,3 +59,106 @@ impl OAuthScopeCommands {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::OAuthScopeCommands;
+  use crate::db::{DBTrait, test::test_db};
+  use uuid::Uuid;
+
+  #[tokio::test]
+  async fn create_success_and_duplicate() {
+    let db = test_db().await;
+    OAuthScopeCommands::Create {
+      name: "Openid".into(),
+      scope: "openid".into(),
+      policies: vec![],
+    }
+    .run(db.clone())
+    .await
+    .unwrap();
+    assert!(db.oauth_scope().by_name("Openid").await.unwrap().is_some());
+
+    // duplicate name
+    assert!(
+      OAuthScopeCommands::Create {
+        name: "Openid".into(),
+        scope: "openid2".into(),
+        policies: vec![],
+      }
+      .run(db.clone())
+      .await
+      .is_err()
+    );
+  }
+
+  #[tokio::test]
+  async fn create_with_missing_policy_errors() {
+    let db = test_db().await;
+    assert!(
+      OAuthScopeCommands::Create {
+        name: "S".into(),
+        scope: "s".into(),
+        policies: vec![Uuid::new_v4()],
+      }
+      .run(db)
+      .await
+      .is_err()
+    );
+  }
+
+  #[tokio::test]
+  async fn create_with_existing_policy_succeeds() {
+    let db = test_db().await;
+    let policy = db
+      .oauth_policy()
+      .create_policy("P".into(), "c".into(), "d".into())
+      .await
+      .unwrap();
+    OAuthScopeCommands::Create {
+      name: "S".into(),
+      scope: "s".into(),
+      policies: vec![policy],
+    }
+    .run(db.clone())
+    .await
+    .unwrap();
+    let scope = db.oauth_scope().by_name("S").await.unwrap().unwrap();
+    assert_eq!(
+      db.oauth_scope()
+        .scope_info(scope)
+        .await
+        .unwrap()
+        .unwrap()
+        .policies
+        .len(),
+      1
+    );
+  }
+
+  #[tokio::test]
+  async fn delete_existing_and_missing() {
+    let db = test_db().await;
+    OAuthScopeCommands::Create {
+      name: "S".into(),
+      scope: "s".into(),
+      policies: vec![],
+    }
+    .run(db.clone())
+    .await
+    .unwrap();
+
+    OAuthScopeCommands::Delete { name: "S".into() }
+      .run(db.clone())
+      .await
+      .unwrap();
+    assert!(db.oauth_scope().by_name("S").await.unwrap().is_none());
+
+    assert!(
+      OAuthScopeCommands::Delete { name: "S".into() }
+        .run(db)
+        .await
+        .is_err()
+    );
+  }
+}

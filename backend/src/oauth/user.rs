@@ -96,3 +96,276 @@ impl From<OAuthClaims> for UserInfo {
     }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::UserInfo;
+  use crate::oauth::jwt::OAuthClaims;
+  use std::collections::HashMap;
+  use uuid::Uuid;
+
+  fn claims_full() -> OAuthClaims {
+    let mut rest = HashMap::new();
+    rest.insert("custom".to_string(), "value".to_string());
+    OAuthClaims {
+      sub: Uuid::new_v4(),
+      exp: 100,
+      iss: "iss".into(),
+      aud: Uuid::new_v4(),
+      iat: 50,
+      auth_time: 40,
+      nonce: Some("nonce".into()),
+      scope: vec!["openid".to_string()].into(),
+      email: Some("e@x.com".into()),
+      name: Some("Name".into()),
+      preferred_username: Some("Name".into()),
+      picture: Some("https://pic".into()),
+      groups: vec!["g".to_string()],
+      rest,
+    }
+  }
+
+  #[test]
+  fn conversion_preserves_all_populated_fields() {
+    let c = claims_full();
+    let (sub, aud) = (c.sub, c.aud);
+    let info: UserInfo = c.into();
+
+    assert_eq!(info.sub, sub);
+    assert_eq!(info.aud, aud);
+    assert_eq!(info.exp, 100);
+    assert_eq!(info.iss, "iss");
+    assert_eq!(info.iat, 50);
+    assert_eq!(info.auth_time, 40);
+    assert_eq!(info.nonce.as_deref(), Some("nonce"));
+    assert_eq!(info.email.as_deref(), Some("e@x.com"));
+    assert_eq!(info.name.as_deref(), Some("Name"));
+    assert_eq!(info.preferred_username.as_deref(), Some("Name"));
+    assert_eq!(info.picture.as_deref(), Some("https://pic"));
+    assert_eq!(info.groups, vec!["g".to_string()]);
+    assert_eq!(info.rest.get("custom"), Some(&"value".to_string()));
+    assert_eq!(info.scope.to_string(), "openid");
+  }
+
+  #[test]
+  fn conversion_preserves_none_fields() {
+    let mut c = claims_full();
+    c.nonce = None;
+    c.email = None;
+    c.name = None;
+    c.preferred_username = None;
+    c.picture = None;
+    c.groups = vec![];
+    c.rest = HashMap::new();
+    let info: UserInfo = c.into();
+
+    assert!(info.nonce.is_none());
+    assert!(info.email.is_none());
+    assert!(info.name.is_none());
+    assert!(info.preferred_username.is_none());
+    assert!(info.picture.is_none());
+    assert!(info.groups.is_empty());
+    assert!(info.rest.is_empty());
+  }
+
+  #[test]
+  fn optional_none_fields_are_skipped_in_serialization() {
+    let mut c = claims_full();
+    c.nonce = None;
+    c.email = None;
+    c.name = None;
+    c.preferred_username = None;
+    c.picture = None;
+    let info: UserInfo = c.into();
+
+    let json = serde_json::to_value(&info).unwrap();
+    // skip_serializing_if = "Option::is_none" must drop these keys entirely
+    assert!(json.get("nonce").is_none());
+    assert!(json.get("email").is_none());
+    assert!(json.get("name").is_none());
+    assert!(json.get("preferred_username").is_none());
+    assert!(json.get("picture").is_none());
+    // non-optional fields remain
+    assert!(json.get("sub").is_some());
+    assert!(json.get("groups").is_some());
+  }
+
+  #[test]
+  fn rest_is_flattened_into_top_level() {
+    let info: UserInfo = claims_full().into();
+    let json = serde_json::to_value(&info).unwrap();
+    // #[serde(flatten)] hoists rest entries to the top level
+    assert_eq!(json.get("custom").and_then(|v| v.as_str()), Some("value"));
+  }
+
+  #[tokio::test]
+  async fn user_internal_wraps_claims_as_userinfo() {
+    let c = claims_full();
+    let sub = c.sub;
+    let axum::Json(info) = super::user_internal(c).await;
+    assert_eq!(info.sub, sub);
+  }
+
+  #[tokio::test]
+  async fn picture_returns_avatar_bytes_when_present() {
+    use crate::db::test::{insert_user, test_db};
+    use axum::extract::Path;
+    use entity::user_avatar;
+    use sea_orm::{ActiveValue::Set, EntityTrait};
+
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    user_avatar::Entity::insert(user_avatar::ActiveModel {
+      user_id: Set(user),
+      data: Set(vec![9, 8, 7]),
+    })
+    .exec(&db.0)
+    .await
+    .unwrap();
+
+    let mut claims = claims_full();
+    claims.sub = user;
+    let res = super::picture(claims, Path(super::AvatarPath { uuid: user }), db)
+      .await
+      .unwrap();
+    assert_eq!(res.unwrap(), vec![9, 8, 7]);
+  }
+
+  #[tokio::test]
+  async fn picture_returns_not_found_when_absent() {
+    use crate::db::test::test_db;
+    use axum::extract::Path;
+    use http::StatusCode;
+    use uuid::Uuid;
+
+    let db = test_db().await;
+    let res = super::picture(
+      claims_full(),
+      Path(super::AvatarPath {
+        uuid: Uuid::new_v4(),
+      }),
+      db,
+    )
+    .await
+    .unwrap();
+    assert_eq!(res.unwrap_err(), StatusCode::NOT_FOUND);
+  }
+
+  // Exercises the `OAuthClaims` request extractor (validating the access token
+  // cookie) together with the `user`/`user_post`/`picture` route handlers.
+  mod endpoints {
+    use super::claims_full;
+    use crate::db::test::{jwt_state, test_db};
+    use axum::{
+      Extension, Router,
+      body::Body,
+      http::{Request, StatusCode, header},
+      routing::get,
+    };
+    use centaurus::backend::auth::jwt_state::JWT_COOKIE_NAME;
+    use centaurus::db::init::Connection;
+    use tower::ServiceExt;
+    use uuid::Uuid;
+
+    async fn body_json(resp: axum::response::Response) -> serde_json::Value {
+      crate::db::test::body_json(resp).await
+    }
+
+    /// `claims_full` uses an epoch-1970 expiry; refresh it so the token passes
+    /// JWT expiry validation.
+    fn valid_claims() -> crate::oauth::jwt::OAuthClaims {
+      let mut claims = claims_full();
+      claims.exp = chrono::Utc::now().timestamp() + 1000;
+      claims
+    }
+
+    fn app(db: Connection, jwt: crate::auth::jwt::JwtStateOther) -> Router {
+      Router::new()
+        .route(
+          "/user",
+          get(super::super::user).post(super::super::user_post),
+        )
+        .route("/picture/{uuid}", get(super::super::picture))
+        .layer(Extension(jwt))
+        .layer(Extension(db))
+    }
+
+    #[tokio::test]
+    async fn user_endpoint_returns_claims_for_valid_token() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let claims = valid_claims();
+      let sub = claims.sub;
+      let token = jwt.create_generic_token(&claims).unwrap();
+      let cookie = format!("{JWT_COOKIE_NAME}={token}");
+      let app = app(db, jwt);
+
+      for method in ["GET", "POST"] {
+        let resp = app
+          .clone()
+          .oneshot(
+            Request::builder()
+              .method(method)
+              .uri("/user")
+              .header(header::COOKIE, &cookie)
+              .body(Body::empty())
+              .unwrap(),
+          )
+          .await
+          .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "method {method}");
+        assert_eq!(body_json(resp).await["sub"], sub.to_string());
+      }
+    }
+
+    #[tokio::test]
+    async fn user_endpoint_rejects_missing_or_invalid_token() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let app = app(db, jwt);
+
+      // no cookie
+      let resp = app
+        .clone()
+        .oneshot(Request::builder().uri("/user").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+      assert!(resp.status().is_client_error());
+
+      // garbage token
+      let resp = app
+        .oneshot(
+          Request::builder()
+            .uri("/user")
+            .header(header::COOKIE, format!("{JWT_COOKIE_NAME}=not.a.jwt"))
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn picture_endpoint_returns_not_found_without_avatar() {
+      let db = test_db().await;
+      let jwt = jwt_state(&db).await;
+      let token = jwt.create_generic_token(&valid_claims()).unwrap();
+      let cookie = format!("{JWT_COOKIE_NAME}={token}");
+      let app = app(db, jwt);
+
+      let resp = app
+        .oneshot(
+          Request::builder()
+            .uri(format!("/picture/{}", Uuid::new_v4()))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      // handler ran (token valid) and reported a missing avatar
+      assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+  }
+}

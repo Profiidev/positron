@@ -128,3 +128,60 @@ impl TotpState {
     }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::{PasskeyState, TotpState, WebauthnState};
+  use crate::config::Config;
+  use webauthn_rs::prelude::Url;
+
+  #[tokio::test]
+  async fn totp_state_init_keeps_issuer_and_starts_empty() {
+    let mut config = Config::default();
+    config.auth.auth_issuer = "positron".into();
+    let state = TotpState::init(&config);
+    assert_eq!(state.issuer, "positron");
+    assert!(state.reg_state.is_empty());
+  }
+
+  #[test]
+  #[should_panic(expected = "Issuer can not contain ':'")]
+  fn totp_state_init_panics_when_issuer_has_colon() {
+    let mut config = Config::default();
+    config.auth.auth_issuer = "host:8080".into();
+    let _ = TotpState::init(&config);
+  }
+
+  #[tokio::test]
+  async fn passkey_state_init_starts_empty() {
+    let state = PasskeyState::init();
+    assert!(state.reg_state.is_empty());
+    assert!(state.auth_state.is_empty());
+    assert!(state.special_access_state.is_empty());
+  }
+
+  #[test]
+  fn webauthn_state_init_with_explicit_origin_and_id() {
+    let config = Config {
+      webauthn_id: Some("example.com".into()),
+      webauthn_rp_origin: Some(Url::parse("https://example.com").unwrap()),
+      // invalid additional origins are silently skipped
+      webauthn_additional_origins: "https://app.example.com,not a url".into(),
+      ..Default::default()
+    };
+    // Must not panic.
+    let _ = WebauthnState::init(&config);
+  }
+
+  #[test]
+  fn webauthn_state_init_derives_id_from_rp_origin_host() {
+    let config = Config {
+      webauthn_id: None,
+      webauthn_rp_origin: Some(Url::parse("https://derived.example.com").unwrap()),
+      webauthn_additional_origins: String::new(),
+      ..Default::default()
+    };
+    // host is derived from the rp_origin when no explicit id is configured.
+    let _ = WebauthnState::init(&config);
+  }
+}

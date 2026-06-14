@@ -262,3 +262,253 @@ async fn site_url(_auth: JwtAuth, config: SiteConfig) -> Result<Json<SiteUrlResp
     url: config.site_url,
   }))
 }
+
+#[cfg(test)]
+mod test {
+  use crate::{
+    db::test::{
+      auth_cookie, auth_state, body_json, grant_permissions, insert_user, password_state, test_db,
+      updater,
+    },
+    utils::UpdateMessage,
+  };
+  use axum::{
+    Extension, Router,
+    body::Body,
+    http::{Request, StatusCode, header},
+    routing::get,
+  };
+  use centaurus::{
+    backend::endpoints::websocket::state::Updater,
+    backend::{
+      auth::{jwt_state::JwtState, pw_state::PasswordState},
+      config::SiteConfig,
+    },
+    db::init::Connection,
+  };
+  use serde_json::{Value, json};
+  use tower::ServiceExt;
+  use uuid::Uuid;
+
+  struct Ctx {
+    db: Connection,
+    jwt: JwtState,
+    upd: Updater<UpdateMessage>,
+    pw: PasswordState,
+    cookie: String,
+  }
+
+  async fn ctx(perms: &[&str]) -> Ctx {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let upd = updater().await;
+    let pw = password_state().await;
+    let user = insert_user(&db, "admin", "admin@x.com").await;
+    grant_permissions(&db, user, perms).await;
+    let cookie = auth_cookie(&jwt, user);
+    Ctx {
+      db,
+      jwt,
+      upd,
+      pw,
+      cookie,
+    }
+  }
+
+  fn app(c: &Ctx) -> Router {
+    Router::new()
+      .route(
+        "/",
+        get(super::list)
+          .delete(super::delete)
+          .post(super::create)
+          .put(super::edit),
+      )
+      .route("/{uuid}", get(super::info).post(super::secret_regenerate))
+      .route("/site_url", get(super::site_url))
+      .route("/groups", get(super::simple_group_list))
+      .route("/users", get(super::simple_user_list))
+      .route("/scopes", get(super::simple_scope_list))
+      .layer(Extension(SiteConfig::default()))
+      .layer(Extension(c.pw.clone()))
+      .layer(Extension(c.upd.clone()))
+      .layer(Extension(c.jwt.clone()))
+      .layer(Extension(c.db.clone()))
+  }
+
+  fn request(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+      .method(method)
+      .uri(uri)
+      .header(header::COOKIE, cookie);
+    match body {
+      Some(value) => builder
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(value.to_string()))
+        .unwrap(),
+      None => builder.body(Body::empty()).unwrap(),
+    }
+  }
+
+  #[tokio::test]
+  async fn create_info_edit_secret_delete_flow() {
+    let c = ctx(&["oauth_client:view", "oauth_client:edit"]).await;
+    let app = app(&c);
+
+    // create
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "POST",
+        "/",
+        &c.cookie,
+        Some(json!({
+          "name": "MyApp",
+          "redirect_uri": "https://app.example.com/cb",
+          "scope": [],
+          "confidential": true,
+          "require_pkce": false
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let created = body_json(resp).await;
+    let client_id = created["client_id"].as_str().unwrap().to_string();
+    assert!(!created["client_secret"].as_str().unwrap().is_empty());
+
+    // info
+    let resp = app
+      .clone()
+      .oneshot(request("GET", &format!("/{client_id}"), &c.cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["name"], "MyApp");
+
+    // edit (rename)
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "PUT",
+        "/",
+        &c.cookie,
+        Some(json!({
+          "client_id": client_id,
+          "name": "Renamed",
+          "require_pkce": true,
+          "redirect_uri": "https://app.example.com/cb",
+          "additional_redirect_uris": [],
+          "scope": [],
+          "user_access": [],
+          "group_access": []
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // secret regenerate returns a new secret
+    let resp = app
+      .clone()
+      .oneshot(request("POST", &format!("/{client_id}"), &c.cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(!body_json(resp).await["secret"].as_str().unwrap().is_empty());
+
+    // list shows one client
+    let resp = app
+      .clone()
+      .oneshot(request("GET", "/", &c.cookie, None))
+      .await
+      .unwrap();
+    assert_eq!(body_json(resp).await.as_array().unwrap().len(), 1);
+
+    // delete
+    let resp = app
+      .oneshot(request(
+        "DELETE",
+        "/",
+        &c.cookie,
+        Some(json!({ "client_id": client_id })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+  }
+
+  #[tokio::test]
+  async fn create_duplicate_name_conflicts() {
+    let c = ctx(&["oauth_client:edit"]).await;
+    let app = app(&c);
+    let body = json!({
+      "name": "Dup",
+      "redirect_uri": "https://app.example.com/cb",
+      "scope": [],
+      "confidential": true,
+      "require_pkce": false
+    });
+    app
+      .clone()
+      .oneshot(request("POST", "/", &c.cookie, Some(body.clone())))
+      .await
+      .unwrap();
+    let resp = app
+      .oneshot(request("POST", "/", &c.cookie, Some(body)))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+  }
+
+  #[tokio::test]
+  async fn info_missing_client_is_404() {
+    let c = ctx(&["oauth_client:view"]).await;
+    let resp = app(&c)
+      .oneshot(request(
+        "GET",
+        &format!("/{}", Uuid::new_v4()),
+        &c.cookie,
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn simple_lists_and_site_url() {
+    let c = ctx(&["oauth_client:view"]).await;
+    let app = app(&c);
+
+    for uri in ["/groups", "/users", "/scopes", "/site_url"] {
+      let resp = app
+        .clone()
+        .oneshot(request("GET", uri, &c.cookie, None))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK, "GET {uri} failed");
+    }
+  }
+
+  #[tokio::test]
+  async fn view_only_user_cannot_create() {
+    let c = ctx(&["oauth_client:view"]).await;
+    let resp = app(&c)
+      .oneshot(request(
+        "POST",
+        "/",
+        &c.cookie,
+        Some(json!({
+          "name": "X",
+          "redirect_uri": "https://x/cb",
+          "scope": [],
+          "confidential": true,
+          "require_pkce": false
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+}

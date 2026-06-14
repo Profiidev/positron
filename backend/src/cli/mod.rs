@@ -86,3 +86,43 @@ impl Cli {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::Cli;
+  use centaurus::db::tables::ConnectionExt;
+  use clap::Parser;
+  use migration::{Migrator, MigratorTrait};
+  use sea_orm::Database;
+  use uuid::Uuid;
+
+  #[tokio::test]
+  async fn run_dispatches_a_subcommand_against_the_db() {
+    // a file-backed sqlite db so the CLI's own connection sees the schema
+    let path = std::env::temp_dir().join(format!("positron-cli-{}.db", Uuid::new_v4()));
+    let url = format!("sqlite://{}?mode=rwc", path.display());
+
+    // migrate the database up front
+    let conn = Database::connect(&url).await.unwrap();
+    Migrator::up(&conn, None).await.unwrap();
+    drop(conn);
+
+    // drive the real CLI entrypoint
+    let cli = Cli::try_parse_from(["backend", "--db-url", &url, "group", "create", "via-cli"])
+      .expect("parse cli");
+    cli.run().await;
+
+    // the group command ran and created the group
+    let conn = centaurus::db::init::Connection(Database::connect(&url).await.unwrap());
+    assert!(
+      conn
+        .group()
+        .find_group_by_name("via-cli")
+        .await
+        .unwrap()
+        .is_some()
+    );
+
+    let _ = std::fs::remove_file(&path);
+  }
+}

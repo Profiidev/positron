@@ -142,3 +142,126 @@ impl PartialOrd for Scope {
     })
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::Scope;
+  use std::cmp::Ordering;
+  use std::str::FromStr;
+
+  fn s(parts: &[&str]) -> Scope {
+    Scope(parts.iter().map(|p| p.to_string()).collect())
+  }
+
+  #[test]
+  fn from_str_splits_on_space() {
+    let scope = Scope::from_str("openid profile email").unwrap();
+    assert_eq!(scope.inner(), ["openid", "profile", "email"]);
+  }
+
+  #[test]
+  fn from_str_empty_yields_single_empty_element() {
+    // "".split(' ') yields one empty string
+    let scope = Scope::from_str("").unwrap();
+    assert_eq!(scope.inner(), [""]);
+  }
+
+  #[test]
+  fn display_roundtrips_with_from_str() {
+    let scope = Scope::from_str("a b c").unwrap();
+    assert_eq!(scope.to_string(), "a b c");
+  }
+
+  #[test]
+  fn from_vec() {
+    let scope = Scope::from(vec!["a".to_string(), "b".to_string()]);
+    assert_eq!(scope.inner(), ["a", "b"]);
+  }
+
+  #[test]
+  fn contains_checks_membership() {
+    let scope = s(&["openid", "email"]);
+    assert!(scope.contains("openid"));
+    assert!(!scope.contains("profile"));
+  }
+
+  #[test]
+  fn intersect_keeps_common_elements_in_self_order() {
+    let a = s(&["openid", "profile", "email"]);
+    let b = s(&["email", "openid"]);
+    assert_eq!(a.intersect(&b).inner(), ["openid", "email"]);
+    // disjoint -> empty
+    assert!(s(&["x"]).intersect(&s(&["y"])).inner().is_empty());
+  }
+
+  #[test]
+  fn equality_is_set_like() {
+    assert_eq!(s(&["a", "b"]), s(&["a", "b"]));
+    // different length
+    assert_ne!(s(&["a", "b"]), s(&["a"]));
+    // same length, different members
+    assert_ne!(s(&["a", "b"]), s(&["a", "c"]));
+  }
+
+  #[test]
+  fn ordering_superset_is_greater() {
+    let big = s(&["a", "b", "c"]);
+    let small = s(&["a", "b"]);
+    assert!(big > small);
+    assert!(big >= small);
+    assert!(small < big);
+    assert!(small <= big);
+  }
+
+  #[test]
+  fn ordering_equal_sets() {
+    let a = s(&["a", "b"]);
+    let b = s(&["b", "a"]);
+    assert!(a >= b);
+    assert!(a <= b);
+    // equal sets are neither strictly greater nor strictly less (method form
+    // keeps clippy's neg_cmp_op_on_partial_ord lint happy)
+    assert!(!a.gt(&b));
+    assert!(!a.lt(&b));
+    assert_eq!(a.partial_cmp(&b), Some(Ordering::Equal));
+  }
+
+  #[test]
+  fn ordering_disjoint_sets_are_less() {
+    let a = s(&["a"]);
+    let b = s(&["b"]);
+    // neither equal nor superset -> partial_cmp returns Less by definition
+    assert_eq!(a.partial_cmp(&b), Some(Ordering::Less));
+  }
+
+  #[test]
+  fn partial_cmp_greater_branch() {
+    assert_eq!(
+      s(&["a", "b"]).partial_cmp(&s(&["a"])),
+      Some(Ordering::Greater)
+    );
+  }
+
+  #[test]
+  fn serialize_is_space_joined_string() {
+    let scope = s(&["openid", "email"]);
+    assert_eq!(serde_json::to_string(&scope).unwrap(), "\"openid email\"");
+  }
+
+  #[test]
+  fn deserialize_from_string() {
+    let scope: Scope = serde_json::from_str("\"openid email\"").unwrap();
+    assert_eq!(scope.inner(), ["openid", "email"]);
+  }
+
+  #[test]
+  fn deserialize_from_array() {
+    let scope: Scope = serde_json::from_str("[\"openid\",\"email\"]").unwrap();
+    assert_eq!(scope.inner(), ["openid", "email"]);
+  }
+
+  #[test]
+  fn default_is_empty() {
+    assert!(Scope::default().inner().is_empty());
+  }
+}

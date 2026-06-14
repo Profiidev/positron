@@ -64,3 +64,57 @@ async fn webfinger(resource: Resource, state: ConfigurationState) -> Json<WebFin
     }],
   })
 }
+
+#[cfg(test)]
+mod test {
+  use super::{Resource, StaticFiles, assetlinks, webfinger};
+  use crate::{config::Config, oauth::ConfigurationState};
+
+  fn config_with_assetlinks(assetlinks: &str) -> Config {
+    Config {
+      assetlinks: assetlinks.into(),
+      ..Default::default()
+    }
+  }
+
+  #[test]
+  fn static_files_init_parses_assetlinks_json() {
+    let config = config_with_assetlinks(r#"{"relation":["delegate"]}"#);
+    let files = StaticFiles::init(&config);
+    assert_eq!(files.assetlinks["relation"][0], "delegate");
+  }
+
+  #[test]
+  #[should_panic(expected = "Failed to parse ASSETLINKS")]
+  fn static_files_init_panics_on_invalid_json() {
+    let config = config_with_assetlinks("this is not json");
+    let _ = StaticFiles::init(&config);
+  }
+
+  #[tokio::test]
+  async fn assetlinks_handler_returns_configured_value() {
+    let config = config_with_assetlinks(r#"{"a":1}"#);
+    let files = StaticFiles::init(&config);
+    let axum::Json(value) = assetlinks(files).await;
+    assert_eq!(value["a"], 1);
+  }
+
+  #[tokio::test]
+  async fn webfinger_echoes_subject_and_issuer_link() {
+    let config = Config::default();
+    let state = ConfigurationState::init(&config);
+    let issuer = state.issuer.to_string();
+    let resource = Resource {
+      resource: "acct:user@example.com".into(),
+    };
+
+    let axum::Json(res) = webfinger(resource, state).await;
+    assert_eq!(res.subject, "acct:user@example.com");
+    assert_eq!(res.links.len(), 1);
+    assert_eq!(
+      res.links[0].rel,
+      "http://openid.net/specs/connect/1.0/issuer"
+    );
+    assert_eq!(res.links[0].href, issuer);
+  }
+}
