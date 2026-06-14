@@ -1,5 +1,5 @@
 use aide::axum::ApiRouter;
-use axum::Extension;
+use axum::{Extension, Router};
 use centaurus::{
   backend::{
     endpoints::{self, group, mail, setup, websocket},
@@ -11,6 +11,7 @@ use centaurus::{
   logging::init_logging,
   version_header,
 };
+use tokio::net::TcpListener;
 use tracing::info;
 
 use crate::{config::Config, utils::UpdateMessage};
@@ -35,12 +36,39 @@ async fn serve() {
   let config = Config::parse();
   init_logging(config.base.log_level);
 
-  let listener = listener_setup(config.base.port).await;
-  let mut app = build_router(api_router, state, config).await;
-  version_header!(app);
+  App::from_config(config).await.run().await;
+}
 
-  info!("Starting application...");
-  run_app_connect_info(listener, app).await;
+pub struct App {
+  app: Router,
+  listener: TcpListener,
+}
+
+impl App {
+  pub async fn new() -> App {
+    App::from_config(Config::parse()).await
+  }
+
+  pub async fn from_config(config: Config) -> App {
+    let listener = listener_setup(config.base.port).await;
+    let mut app = build_router(api_router, state, config).await;
+    version_header!(app);
+
+    App { app, listener }
+  }
+
+  pub fn port(&self) -> u16 {
+    self
+      .listener
+      .local_addr()
+      .expect("Failed to read listener address")
+      .port()
+  }
+
+  pub async fn run(self) {
+    info!("Starting application...");
+    run_app_connect_info(self.listener, self.app).await;
+  }
 }
 
 fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
