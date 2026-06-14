@@ -217,10 +217,7 @@ pub mod test {
   }
 
   /// Produces a `Cookie:` header value carrying a valid auth token for `user`.
-  pub fn auth_cookie(
-    jwt: &centaurus::backend::auth::jwt_state::JwtState,
-    user: Uuid,
-  ) -> String {
+  pub fn auth_cookie(jwt: &centaurus::backend::auth::jwt_state::JwtState, user: Uuid) -> String {
     let cookie = jwt.create_token(user).expect("create token");
     format!("{}={}", cookie.name(), cookie.value())
   }
@@ -262,7 +259,10 @@ pub mod test {
       .expect("create group");
     conn
       .group()
-      .add_permissions_to_group(group_id, permissions.iter().map(|p| p.to_string()).collect())
+      .add_permissions_to_group(
+        group_id,
+        permissions.iter().map(|p| p.to_string()).collect(),
+      )
       .await
       .expect("add permissions");
     conn

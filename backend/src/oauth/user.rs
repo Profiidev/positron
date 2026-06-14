@@ -241,7 +241,9 @@ mod test {
     let db = test_db().await;
     let res = super::picture(
       claims_full(),
-      Path(super::AvatarPath { uuid: Uuid::new_v4() }),
+      Path(super::AvatarPath {
+        uuid: Uuid::new_v4(),
+      }),
       db,
     )
     .await
@@ -279,7 +281,10 @@ mod test {
 
     fn app(db: Connection, jwt: crate::auth::jwt::JwtStateOther) -> Router {
       Router::new()
-        .route("/user", get(super::super::user).post(super::super::user_post))
+        .route(
+          "/user",
+          get(super::super::user).post(super::super::user_post),
+        )
         .route("/picture/{uuid}", get(super::super::picture))
         .layer(Extension(jwt))
         .layer(Extension(db))

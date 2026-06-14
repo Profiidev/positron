@@ -111,13 +111,25 @@ mod test {
     );
 
     db.user_ext().totp_remove(user).await.unwrap();
-    assert!(db.user_ext().get_user_by_id(user).await.unwrap().totp.is_none());
+    assert!(
+      db.user_ext()
+        .get_user_by_id(user)
+        .await
+        .unwrap()
+        .totp
+        .is_none()
+    );
   }
 
   #[tokio::test]
   async fn totp_ops_error_for_missing_user() {
     let db = test_db().await;
-    assert!(db.user_ext().add_totp(Uuid::new_v4(), "s".into()).await.is_err());
+    assert!(
+      db.user_ext()
+        .add_totp(Uuid::new_v4(), "s".into())
+        .await
+        .is_err()
+    );
     assert!(db.user_ext().totp_remove(Uuid::new_v4()).await.is_err());
   }
 

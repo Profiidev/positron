@@ -279,11 +279,11 @@ mod test {
     routing::get,
   };
   use centaurus::{
+    backend::endpoints::websocket::state::Updater,
     backend::{
       auth::{jwt_state::JwtState, pw_state::PasswordState},
       config::SiteConfig,
     },
-    backend::endpoints::websocket::state::Updater,
     db::init::Connection,
   };
   use serde_json::{Value, json};

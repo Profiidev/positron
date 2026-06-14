@@ -366,7 +366,7 @@ mod test {
     config::Config,
     db::test::{insert_user, jwt_state, test_db},
     oauth::{
-      client_auth::{ClientAuth, Error, TokenIssueReq, TokenReq, TokenRefreshReq},
+      client_auth::{ClientAuth, Error, TokenIssueReq, TokenRefreshReq, TokenReq},
       jwt::{OAuthClaims, RefreshTokenClaims},
       scope::Scope,
       state::{
@@ -453,9 +453,10 @@ mod test {
   async fn issue_token_success_with_openid_emits_id_token() {
     let c = ctx().await;
     let code = Uuid::new_v4();
-    c.state
-      .auth_codes
-      .insert(code, (Instant::now(), code_req(c.client_id, c.user, &["openid"])));
+    c.state.auth_codes.insert(
+      code,
+      (Instant::now(), code_req(c.client_id, c.user, &["openid"])),
+    );
 
     let body = TokenIssueReq {
       grant_type: "authorization_code".into(),
@@ -479,9 +480,10 @@ mod test {
   async fn issue_token_without_openid_has_no_id_token() {
     let c = ctx().await;
     let code = Uuid::new_v4();
-    c.state
-      .auth_codes
-      .insert(code, (Instant::now(), code_req(c.client_id, c.user, &["email"])));
+    c.state.auth_codes.insert(
+      code,
+      (Instant::now(), code_req(c.client_id, c.user, &["email"])),
+    );
 
     let body = TokenIssueReq {
       grant_type: "authorization_code".into(),
@@ -515,9 +517,10 @@ mod test {
   async fn issue_token_wrong_grant_type_is_unsupported() {
     let c = ctx().await;
     let code = Uuid::new_v4();
-    c.state
-      .auth_codes
-      .insert(code, (Instant::now(), code_req(c.client_id, c.user, &["openid"])));
+    c.state.auth_codes.insert(
+      code,
+      (Instant::now(), code_req(c.client_id, c.user, &["openid"])),
+    );
     let body = TokenIssueReq {
       grant_type: "client_credentials".into(),
       code,
@@ -537,7 +540,10 @@ mod test {
     let code = Uuid::new_v4();
     c.state.auth_codes.insert(
       code,
-      (Instant::now(), code_req(Uuid::new_v4(), c.user, &["openid"])),
+      (
+        Instant::now(),
+        code_req(Uuid::new_v4(), c.user, &["openid"]),
+      ),
     );
     let body = TokenIssueReq {
       grant_type: "authorization_code".into(),
@@ -734,7 +740,10 @@ mod test {
     // user id that does not exist in the db
     c.state.auth_codes.insert(
       code,
-      (Instant::now(), code_req(c.client_id, Uuid::new_v4(), &["openid"])),
+      (
+        Instant::now(),
+        code_req(c.client_id, Uuid::new_v4(), &["openid"]),
+      ),
     );
     let body = TokenIssueReq {
       grant_type: "authorization_code".into(),
@@ -872,9 +881,10 @@ mod test {
     // issue path
     let c = ctx().await;
     let code = Uuid::new_v4();
-    c.state
-      .auth_codes
-      .insert(code, (Instant::now(), code_req(c.client_id, c.user, &["openid"])));
+    c.state.auth_codes.insert(
+      code,
+      (Instant::now(), code_req(c.client_id, c.user, &["openid"])),
+    );
     let auth = ClientAuth {
       client_id: c.client_id,
       body: TokenReq {

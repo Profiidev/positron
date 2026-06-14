@@ -137,7 +137,9 @@ async fn change(
 mod test {
   use crate::{
     auth::jwt::{JwtSpecial, JwtStateOther},
-    db::test::{auth_cookie, body_json, jwt_states, other_cookie, password_state, test_db, updater},
+    db::test::{
+      auth_cookie, body_json, jwt_states, other_cookie, password_state, test_db, updater,
+    },
     utils::UpdateMessage,
   };
   use axum::{
@@ -171,7 +173,12 @@ mod test {
     BASE64_STANDARD.encode(ciphertext)
   }
 
-  async fn insert_user(db: &Connection, pw: &PasswordState, password: &str, totp: Option<String>) -> Uuid {
+  async fn insert_user(
+    db: &Connection,
+    pw: &PasswordState,
+    password: &str,
+    totp: Option<String>,
+  ) -> Uuid {
     let id = Uuid::new_v4();
     let hash = pw.pw_hash_raw(SALT, password).unwrap();
     user::Entity::insert(user::ActiveModel {

@@ -236,7 +236,10 @@ mod test {
 
   #[test]
   fn partial_cmp_greater_branch() {
-    assert_eq!(s(&["a", "b"]).partial_cmp(&s(&["a"])), Some(Ordering::Greater));
+    assert_eq!(
+      s(&["a", "b"]).partial_cmp(&s(&["a"])),
+      Some(Ordering::Greater)
+    );
   }
 
   #[test]

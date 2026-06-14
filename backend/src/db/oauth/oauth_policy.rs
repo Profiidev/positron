@@ -270,7 +270,13 @@ mod test {
     assert_eq!(policy.claim, "claim");
     assert_eq!(policy.default, "def");
 
-    assert!(db.oauth_policy().get_policy(Uuid::new_v4()).await.unwrap().is_none());
+    assert!(
+      db.oauth_policy()
+        .get_policy(Uuid::new_v4())
+        .await
+        .unwrap()
+        .is_none()
+    );
   }
 
   #[tokio::test]
@@ -295,10 +301,27 @@ mod test {
       .unwrap();
 
     // another record with the same name (different id) -> exists
-    assert!(db.oauth_policy().policy_exists("Dup".into(), Uuid::new_v4()).await.unwrap());
+    assert!(
+      db.oauth_policy()
+        .policy_exists("Dup".into(), Uuid::new_v4())
+        .await
+        .unwrap()
+    );
     // excluding its own id -> not a conflict
-    assert!(!db.oauth_policy().policy_exists("Dup".into(), id).await.unwrap());
-    assert!(!db.oauth_policy().policy_exists("Other".into(), Uuid::new_v4()).await.unwrap());
+    assert!(
+      !db
+        .oauth_policy()
+        .policy_exists("Dup".into(), id)
+        .await
+        .unwrap()
+    );
+    assert!(
+      !db
+        .oauth_policy()
+        .policy_exists("Other".into(), Uuid::new_v4())
+        .await
+        .unwrap()
+    );
   }
 
   #[tokio::test]
@@ -311,8 +334,14 @@ mod test {
       .await
       .unwrap();
 
-    db.oauth_policy().add_content(id, group, "first".into()).await.unwrap();
-    db.oauth_policy().add_content(id, group, "second".into()).await.unwrap();
+    db.oauth_policy()
+      .add_content(id, group, "first".into())
+      .await
+      .unwrap();
+    db.oauth_policy()
+      .add_content(id, group, "second".into())
+      .await
+      .unwrap();
 
     let info = db.oauth_policy().policy_info(id).await.unwrap().unwrap();
     assert_eq!(info.content.len(), 2);
@@ -373,7 +402,10 @@ mod test {
       .create_policy("B".into(), "c".into(), "d".into())
       .await
       .unwrap();
-    db.oauth_policy().add_content(a, group, "x".into()).await.unwrap();
+    db.oauth_policy()
+      .add_content(a, group, "x".into())
+      .await
+      .unwrap();
 
     let list = db.oauth_policy().list().await.unwrap();
     assert_eq!(list.len(), 2);

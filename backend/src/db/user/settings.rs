@@ -88,7 +88,13 @@ mod test {
       )
       .await
       .unwrap();
-    assert!(db.settings().get(user).await.unwrap().o_auth_instant_confirm);
+    assert!(
+      db.settings()
+        .get(user)
+        .await
+        .unwrap()
+        .o_auth_instant_confirm
+    );
 
     // flipping it back exercises the update-existing branch.
     db.settings()
@@ -100,7 +106,14 @@ mod test {
       )
       .await
       .unwrap();
-    assert!(!db.settings().get(user).await.unwrap().o_auth_instant_confirm);
+    assert!(
+      !db
+        .settings()
+        .get(user)
+        .await
+        .unwrap()
+        .o_auth_instant_confirm
+    );
   }
 
   #[tokio::test]

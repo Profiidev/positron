@@ -58,7 +58,10 @@ mod test {
   async fn jwks_exposes_single_rsa_signing_key() {
     let db = test_db().await;
     let private_key = RsaPrivateKey::new(&mut OsRng, 512).unwrap();
-    let pem = private_key.to_pkcs1_pem(LineEnding::LF).unwrap().to_string();
+    let pem = private_key
+      .to_pkcs1_pem(LineEnding::LF)
+      .unwrap()
+      .to_string();
     let key_id = Uuid::new_v4();
     key::Entity::insert(key::ActiveModel {
       id: Set(key_id),

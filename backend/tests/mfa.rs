@@ -32,7 +32,10 @@ async fn totp_setup_login_and_remove_flow() {
 
   // A wrong code is rejected.
   let resp = server
-    .post("/auth/totp/finish_setup", serde_json::json!({ "code": "000000" }))
+    .post(
+      "/auth/totp/finish_setup",
+      serde_json::json!({ "code": "000000" }),
+    )
     .await;
   assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
@@ -68,7 +71,9 @@ async fn totp_setup_login_and_remove_flow() {
   // With a full session we can elevate again and remove TOTP.
   let resp = server.special_access("hunter2pass").await;
   assert_eq!(resp.status(), StatusCode::OK);
-  let resp = server.post("/auth/totp/remove", serde_json::json!({})).await;
+  let resp = server
+    .post("/auth/totp/remove", serde_json::json!({}))
+    .await;
   assert_eq!(resp.status(), StatusCode::OK);
 
   let info: Value = server.get("/user/info").await.json().await.unwrap();

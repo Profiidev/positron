@@ -11,7 +11,13 @@ async fn policy_crud_flow() {
 
   let resp = server.get("/oauth_management/policy").await;
   assert_eq!(resp.status(), StatusCode::OK);
-  let before = resp.json::<Value>().await.unwrap().as_array().unwrap().len();
+  let before = resp
+    .json::<Value>()
+    .await
+    .unwrap()
+    .as_array()
+    .unwrap()
+    .len();
 
   let name = unique("policy");
   let resp = server
@@ -70,7 +76,10 @@ async fn policy_crud_flow() {
 
   // Delete it.
   let resp = server
-    .delete("/oauth_management/policy", serde_json::json!({ "uuid": uuid }))
+    .delete(
+      "/oauth_management/policy",
+      serde_json::json!({ "uuid": uuid }),
+    )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);
 }
@@ -119,7 +128,10 @@ async fn scope_crud_flow() {
   assert_eq!(resp.status(), StatusCode::OK);
 
   let resp = server
-    .delete("/oauth_management/scope", serde_json::json!({ "uuid": uuid }))
+    .delete(
+      "/oauth_management/scope",
+      serde_json::json!({ "uuid": uuid }),
+    )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);
 }

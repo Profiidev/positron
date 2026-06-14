@@ -14,7 +14,9 @@ async fn is_setup_reports_false_then_true() {
   assert_eq!(body["is_setup"], false);
   assert_eq!(body["db_backend"], "SQLite");
 
-  server.setup_admin("admin", "admin@example.com", "hunter2pass").await;
+  server
+    .setup_admin("admin", "admin@example.com", "hunter2pass")
+    .await;
 
   let body: Value = server.get("/setup").await.json().await.unwrap();
   assert_eq!(body["is_setup"], true);

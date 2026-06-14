@@ -251,7 +251,8 @@ mod test {
         .unwrap()
     );
     assert!(
-      !db.passkey()
+      !db
+        .passkey()
         .passkey_name_exists(user, "old".into())
         .await
         .unwrap()
@@ -277,7 +278,8 @@ mod test {
       .await
       .unwrap();
     assert!(
-      !db.passkey()
+      !db
+        .passkey()
         .passkey_name_exists(user, "a".into())
         .await
         .unwrap()
@@ -297,7 +299,8 @@ mod test {
     let db = test_db().await;
     let user = insert_user(&db, "u", "u@x.com").await;
     assert!(
-      !db.passkey()
+      !db
+        .passkey()
         .passkey_name_exists(user, "a".into())
         .await
         .unwrap()

@@ -53,7 +53,13 @@ mod test {
     .run(db.clone())
     .await
     .unwrap();
-    assert!(db.group().find_group_by_name("admins").await.unwrap().is_some());
+    assert!(
+      db.group()
+        .find_group_by_name("admins")
+        .await
+        .unwrap()
+        .is_some()
+    );
 
     // creating the same group again fails
     assert!(
@@ -71,7 +77,13 @@ mod test {
     .run(db.clone())
     .await
     .unwrap();
-    assert!(db.group().find_group_by_name("admins").await.unwrap().is_none());
+    assert!(
+      db.group()
+        .find_group_by_name("admins")
+        .await
+        .unwrap()
+        .is_none()
+    );
   }
 
   #[tokio::test]

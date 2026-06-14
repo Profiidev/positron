@@ -369,7 +369,10 @@ mod test {
     let _ = storage.apod(); // keep StorageExt in use
 
     let app = Router::new()
-      .route("/get_image_info", axum::routing::post(super::get_image_info))
+      .route(
+        "/get_image_info",
+        axum::routing::post(super::get_image_info),
+      )
       .layer(Extension(storage))
       .layer(Extension(ApodState::init("DEMO_KEY".into())))
       .layer(Extension(jwt))

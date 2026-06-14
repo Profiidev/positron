@@ -114,7 +114,14 @@ mod test {
 
     // the group command ran and created the group
     let conn = centaurus::db::init::Connection(Database::connect(&url).await.unwrap());
-    assert!(conn.group().find_group_by_name("via-cli").await.unwrap().is_some());
+    assert!(
+      conn
+        .group()
+        .find_group_by_name("via-cli")
+        .await
+        .unwrap()
+        .is_some()
+    );
 
     let _ = std::fs::remove_file(&path);
   }

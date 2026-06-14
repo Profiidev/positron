@@ -31,9 +31,7 @@ async fn webfinger_echoes_subject() {
 async fn openid_configuration_is_public() {
   let server = TestServer::start().await;
 
-  let resp = server
-    .get("/oauth/.well-known/openid-configuration")
-    .await;
+  let resp = server.get("/oauth/.well-known/openid-configuration").await;
   assert_eq!(resp.status(), StatusCode::OK);
   let body: Value = resp.json().await.unwrap();
   assert!(body["issuer"].is_string());

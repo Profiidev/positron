@@ -305,7 +305,11 @@ mod test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
 
-    let id = db.notes().create(owner, "Title".into(), vec![]).await.unwrap();
+    let id = db
+      .notes()
+      .create(owner, "Title".into(), vec![])
+      .await
+      .unwrap();
 
     assert!(db.notes().shared_users(id).await.unwrap().is_empty());
   }
@@ -405,21 +409,36 @@ mod test {
     assert!(!info_shared.is_owner);
 
     // unknown note -> None
-    assert!(db.notes().info(Uuid::new_v4(), owner).await.unwrap().is_none());
+    assert!(
+      db.notes()
+        .info(Uuid::new_v4(), owner)
+        .await
+        .unwrap()
+        .is_none()
+    );
   }
 
   #[tokio::test]
   async fn edit_title_updates_or_errors() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let id = db.notes().create(owner, "Old".into(), vec![]).await.unwrap();
+    let id = db
+      .notes()
+      .create(owner, "Old".into(), vec![])
+      .await
+      .unwrap();
 
     db.notes().edit_title(id, "New".into()).await.unwrap();
     let info = db.notes().info(id, owner).await.unwrap().unwrap();
     assert_eq!(info.title, "New");
 
     // missing note -> RecordNotFound
-    assert!(db.notes().edit_title(Uuid::new_v4(), "x".into()).await.is_err());
+    assert!(
+      db.notes()
+        .edit_title(Uuid::new_v4(), "x".into())
+        .await
+        .is_err()
+    );
   }
 
   #[tokio::test]
@@ -437,7 +456,10 @@ mod test {
     assert_eq!(db.notes().shared_users(id).await.unwrap(), vec![b]);
 
     // clearing shares
-    db.notes().set_shared_users(id, owner, vec![]).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![])
+      .await
+      .unwrap();
     assert!(db.notes().shared_users(id).await.unwrap().is_empty());
   }
 

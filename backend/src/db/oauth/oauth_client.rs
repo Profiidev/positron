@@ -467,36 +467,76 @@ mod test {
     db.oauth_client().remove_client(id).await.unwrap();
     assert_eq!(db.oauth_client().by_name("App").await.unwrap(), None);
     // removing a non-existent client is a no-op
-    db.oauth_client().remove_client(Uuid::new_v4()).await.unwrap();
+    db.oauth_client()
+      .remove_client(Uuid::new_v4())
+      .await
+      .unwrap();
   }
 
   #[tokio::test]
   async fn client_exists_ignores_same_id() {
     let db = test_db().await;
     let id = create_client(&db, "Dup", true).await;
-    assert!(db.oauth_client().client_exists("Dup".into(), Uuid::new_v4()).await.unwrap());
-    assert!(!db.oauth_client().client_exists("Dup".into(), id).await.unwrap());
+    assert!(
+      db.oauth_client()
+        .client_exists("Dup".into(), Uuid::new_v4())
+        .await
+        .unwrap()
+    );
+    assert!(
+      !db
+        .oauth_client()
+        .client_exists("Dup".into(), id)
+        .await
+        .unwrap()
+    );
   }
 
   #[tokio::test]
   async fn set_secret_hash_updates() {
     let db = test_db().await;
     let id = create_client(&db, "App", true).await;
-    db.oauth_client().set_secret_hash(id, "newhash".into()).await.unwrap();
-    assert_eq!(db.oauth_client().get_client(id).await.unwrap().client_secret, "newhash");
+    db.oauth_client()
+      .set_secret_hash(id, "newhash".into())
+      .await
+      .unwrap();
+    assert_eq!(
+      db.oauth_client()
+        .get_client(id)
+        .await
+        .unwrap()
+        .client_secret,
+      "newhash"
+    );
   }
 
   #[tokio::test]
   async fn default_scope_add_and_read() {
     let db = test_db().await;
     let id = create_client(&db, "App", true).await;
-    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+    let scope = db
+      .oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![])
+      .await
+      .unwrap();
 
     // empty input is a no-op
-    db.oauth_client().add_default_scope(id, vec![]).await.unwrap();
-    assert!(db.oauth_client().client_default_scope(id).await.unwrap().is_empty());
+    db.oauth_client()
+      .add_default_scope(id, vec![])
+      .await
+      .unwrap();
+    assert!(
+      db.oauth_client()
+        .client_default_scope(id)
+        .await
+        .unwrap()
+        .is_empty()
+    );
 
-    db.oauth_client().add_default_scope(id, vec![scope]).await.unwrap();
+    db.oauth_client()
+      .add_default_scope(id, vec![scope])
+      .await
+      .unwrap();
     let scopes = db.oauth_client().client_default_scope(id).await.unwrap();
     assert_eq!(scopes.len(), 1);
     assert_eq!(scopes[0].scope, "s");
@@ -508,10 +548,22 @@ mod test {
     let id = create_client(&db, "App", true).await;
     let group = insert_group(&db, "g").await;
 
-    db.oauth_client().add_groups_to_client(id, vec![]).await.unwrap();
-    assert!(db.oauth_client().client_groups(id).await.unwrap().is_empty());
+    db.oauth_client()
+      .add_groups_to_client(id, vec![])
+      .await
+      .unwrap();
+    assert!(
+      db.oauth_client()
+        .client_groups(id)
+        .await
+        .unwrap()
+        .is_empty()
+    );
 
-    db.oauth_client().add_groups_to_client(id, vec![group]).await.unwrap();
+    db.oauth_client()
+      .add_groups_to_client(id, vec![group])
+      .await
+      .unwrap();
     let groups = db.oauth_client().client_groups(id).await.unwrap();
     assert_eq!(groups.len(), 1);
     assert_eq!(groups[0].uuid, group);
@@ -542,11 +594,27 @@ mod test {
       .unwrap();
 
     // direct user mapping
-    assert!(db.oauth_client().has_user_access(direct_user, id).await.unwrap());
+    assert!(
+      db.oauth_client()
+        .has_user_access(direct_user, id)
+        .await
+        .unwrap()
+    );
     // access via group membership
-    assert!(db.oauth_client().has_user_access(group_user, id).await.unwrap());
+    assert!(
+      db.oauth_client()
+        .has_user_access(group_user, id)
+        .await
+        .unwrap()
+    );
     // no relationship
-    assert!(!db.oauth_client().has_user_access(stranger, id).await.unwrap());
+    assert!(
+      !db
+        .oauth_client()
+        .has_user_access(stranger, id)
+        .await
+        .unwrap()
+    );
   }
 
   #[tokio::test]
@@ -555,7 +623,11 @@ mod test {
     let id = create_client(&db, "App", true).await;
     let user = insert_user(&db, "u", "u@x.com").await;
     let group = insert_group(&db, "g").await;
-    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+    let scope = db
+      .oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![])
+      .await
+      .unwrap();
 
     db.oauth_client()
       .edit_client(
@@ -579,10 +651,21 @@ mod test {
     assert_eq!(db.oauth_client().client_users(id).await.unwrap().len(), 1);
     assert_eq!(db.oauth_client().client_groups(id).await.unwrap().len(), 1);
     assert_eq!(
-      db.oauth_client().client_additional_redirect_uris(id).await.unwrap().len(),
+      db.oauth_client()
+        .client_additional_redirect_uris(id)
+        .await
+        .unwrap()
+        .len(),
       1
     );
-    assert_eq!(db.oauth_client().client_default_scope(id).await.unwrap().len(), 1);
+    assert_eq!(
+      db.oauth_client()
+        .client_default_scope(id)
+        .await
+        .unwrap()
+        .len(),
+      1
+    );
 
     // a second edit clears the previous relations
     db.oauth_client()
@@ -599,7 +682,13 @@ mod test {
       .await
       .unwrap();
     assert!(db.oauth_client().client_users(id).await.unwrap().is_empty());
-    assert!(db.oauth_client().client_groups(id).await.unwrap().is_empty());
+    assert!(
+      db.oauth_client()
+        .client_groups(id)
+        .await
+        .unwrap()
+        .is_empty()
+    );
   }
 
   #[tokio::test]
@@ -607,7 +696,11 @@ mod test {
     let db = test_db().await;
     let id = create_client(&db, "App", true).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+    let scope = db
+      .oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![])
+      .await
+      .unwrap();
     db.oauth_client()
       .edit_client(
         id,
@@ -631,6 +724,12 @@ mod test {
 
     let single = db.oauth_client().client_info(id).await.unwrap().unwrap();
     assert_eq!(single.name, "App");
-    assert!(db.oauth_client().client_info(Uuid::new_v4()).await.unwrap().is_none());
+    assert!(
+      db.oauth_client()
+        .client_info(Uuid::new_v4())
+        .await
+        .unwrap()
+        .is_none()
+    );
   }
 }

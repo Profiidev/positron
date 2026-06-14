@@ -182,7 +182,9 @@ impl TestServer {
   }
 
   pub async fn post(&self, path: &str, body: Value) -> Response {
-    self.send(self.client.post(self.url(path)).json(&body)).await
+    self
+      .send(self.client.post(self.url(path)).json(&body))
+      .await
   }
 
   pub async fn put(&self, path: &str, body: Value) -> Response {

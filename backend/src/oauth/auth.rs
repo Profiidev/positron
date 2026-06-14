@@ -622,7 +622,10 @@ mod test {
 
     fn app(db: Connection, jwt: JwtState, state: AuthorizeState) -> Router {
       Router::new()
-        .route("/authorize", get(super::super::authorize_get).post(super::super::authorize_post))
+        .route(
+          "/authorize",
+          get(super::super::authorize_get).post(super::super::authorize_post),
+        )
         .route("/authorize_confirm", post(super::super::authorize_confirm))
         .layer(Extension(state))
         .layer(Extension(jwt))
@@ -655,7 +658,10 @@ mod test {
         .await
         .unwrap();
       assert_eq!(resp.status(), StatusCode::OK);
-      let location = body_json(resp).await["location"].as_str().unwrap().to_string();
+      let location = body_json(resp).await["location"]
+        .as_str()
+        .unwrap()
+        .to_string();
       assert!(location.contains("code="), "location was {location}");
     }
 
@@ -728,7 +734,10 @@ mod test {
         .oneshot(
           Request::builder()
             .method("POST")
-            .uri(format!("/authorize_confirm?code={}&allow=true", Uuid::new_v4()))
+            .uri(format!(
+              "/authorize_confirm?code={}&allow=true",
+              Uuid::new_v4()
+            ))
             .header(header::COOKIE, &cookie)
             .body(Body::empty())
             .unwrap(),

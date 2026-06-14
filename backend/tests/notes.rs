@@ -12,7 +12,15 @@ async fn notes_crud_flow() {
   // No notes initially.
   let resp = server.get("/notes/management").await;
   assert_eq!(resp.status(), StatusCode::OK);
-  assert!(resp.json::<Value>().await.unwrap().as_array().unwrap().is_empty());
+  assert!(
+    resp
+      .json::<Value>()
+      .await
+      .unwrap()
+      .as_array()
+      .unwrap()
+      .is_empty()
+  );
 
   // Create a note.
   let resp = server
@@ -22,12 +30,8 @@ async fn notes_crud_flow() {
     )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);
-  let note_id = Uuid::parse_str(
-    resp.json::<Value>().await.unwrap()["id"]
-      .as_str()
-      .unwrap(),
-  )
-  .unwrap();
+  let note_id =
+    Uuid::parse_str(resp.json::<Value>().await.unwrap()["id"].as_str().unwrap()).unwrap();
 
   // It is listed.
   let resp = server.get("/notes/management").await;
@@ -72,7 +76,15 @@ async fn notes_crud_flow() {
   assert_eq!(resp.status(), StatusCode::OK);
 
   let resp = server.get("/notes/management").await;
-  assert!(resp.json::<Value>().await.unwrap().as_array().unwrap().is_empty());
+  assert!(
+    resp
+      .json::<Value>()
+      .await
+      .unwrap()
+      .as_array()
+      .unwrap()
+      .is_empty()
+  );
 }
 
 #[tokio::test]

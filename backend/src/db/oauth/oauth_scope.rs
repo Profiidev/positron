@@ -301,8 +301,14 @@ mod test {
   #[tokio::test]
   async fn scope_ids_and_names() {
     let db = test_db().await;
-    db.oauth_scope().create_scope("A".into(), "a".into(), vec![]).await.unwrap();
-    db.oauth_scope().create_scope("B".into(), "b".into(), vec![]).await.unwrap();
+    db.oauth_scope()
+      .create_scope("A".into(), "a".into(), vec![])
+      .await
+      .unwrap();
+    db.oauth_scope()
+      .create_scope("B".into(), "b".into(), vec![])
+      .await
+      .unwrap();
 
     let ids = db
       .oauth_scope()
@@ -319,9 +325,24 @@ mod test {
   #[tokio::test]
   async fn get_scope_by_scope_some_none() {
     let db = test_db().await;
-    db.oauth_scope().create_scope("A".into(), "a".into(), vec![]).await.unwrap();
-    assert!(db.oauth_scope().get_scope_by_scope("a".into()).await.unwrap().is_some());
-    assert!(db.oauth_scope().get_scope_by_scope("z".into()).await.unwrap().is_none());
+    db.oauth_scope()
+      .create_scope("A".into(), "a".into(), vec![])
+      .await
+      .unwrap();
+    assert!(
+      db.oauth_scope()
+        .get_scope_by_scope("a".into())
+        .await
+        .unwrap()
+        .is_some()
+    );
+    assert!(
+      db.oauth_scope()
+        .get_scope_by_scope("z".into())
+        .await
+        .unwrap()
+        .is_none()
+    );
   }
 
   #[tokio::test]
@@ -344,7 +365,13 @@ mod test {
 
     let info = db.oauth_scope().scope_info(scope).await.unwrap().unwrap();
     assert_eq!(info.policies.len(), 1);
-    assert!(db.oauth_scope().scope_info(Uuid::new_v4()).await.unwrap().is_none());
+    assert!(
+      db.oauth_scope()
+        .scope_info(Uuid::new_v4())
+        .await
+        .unwrap()
+        .is_none()
+    );
 
     assert_eq!(db.oauth_scope().list_simple().await.unwrap().len(), 1);
   }
@@ -352,9 +379,21 @@ mod test {
   #[tokio::test]
   async fn edit_scope_updates_fields_and_policies() {
     let db = test_db().await;
-    let p1 = db.oauth_policy().create_policy("P1".into(), "c".into(), "d".into()).await.unwrap();
-    let p2 = db.oauth_policy().create_policy("P2".into(), "c".into(), "d".into()).await.unwrap();
-    let scope = db.oauth_scope().create_scope("S".into(), "s".into(), vec![p1]).await.unwrap();
+    let p1 = db
+      .oauth_policy()
+      .create_policy("P1".into(), "c".into(), "d".into())
+      .await
+      .unwrap();
+    let p2 = db
+      .oauth_policy()
+      .create_policy("P2".into(), "c".into(), "d".into())
+      .await
+      .unwrap();
+    let scope = db
+      .oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![p1])
+      .await
+      .unwrap();
 
     db.oauth_scope()
       .edit_scope(scope, "S2".into(), "s2".into(), vec![p2])
@@ -371,7 +410,11 @@ mod test {
   #[tokio::test]
   async fn delete_scope_removes_it() {
     let db = test_db().await;
-    let id = db.oauth_scope().create_scope("S".into(), "s".into(), vec![]).await.unwrap();
+    let id = db
+      .oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![])
+      .await
+      .unwrap();
     db.oauth_scope().delete_scope(id).await.unwrap();
     assert!(matches!(
       db.oauth_scope().get_scope(id).await,
@@ -382,12 +425,38 @@ mod test {
   #[tokio::test]
   async fn exists_checks_ignore_same_id() {
     let db = test_db().await;
-    let id = db.oauth_scope().create_scope("Name".into(), "scp".into(), vec![]).await.unwrap();
+    let id = db
+      .oauth_scope()
+      .create_scope("Name".into(), "scp".into(), vec![])
+      .await
+      .unwrap();
 
-    assert!(db.oauth_scope().scope_exists("Name".into(), Uuid::new_v4()).await.unwrap());
-    assert!(!db.oauth_scope().scope_exists("Name".into(), id).await.unwrap());
-    assert!(db.oauth_scope().scope_exists_by_scope("scp".into(), Uuid::new_v4()).await.unwrap());
-    assert!(!db.oauth_scope().scope_exists_by_scope("scp".into(), id).await.unwrap());
+    assert!(
+      db.oauth_scope()
+        .scope_exists("Name".into(), Uuid::new_v4())
+        .await
+        .unwrap()
+    );
+    assert!(
+      !db
+        .oauth_scope()
+        .scope_exists("Name".into(), id)
+        .await
+        .unwrap()
+    );
+    assert!(
+      db.oauth_scope()
+        .scope_exists_by_scope("scp".into(), Uuid::new_v4())
+        .await
+        .unwrap()
+    );
+    assert!(
+      !db
+        .oauth_scope()
+        .scope_exists_by_scope("scp".into(), id)
+        .await
+        .unwrap()
+    );
   }
 
   #[tokio::test]
@@ -401,8 +470,14 @@ mod test {
       .create_policy("P".into(), "role".into(), "default_value".into())
       .await
       .unwrap();
-    db.oauth_scope().create_scope("S".into(), "s".into(), vec![policy]).await.unwrap();
-    db.oauth_policy().add_content(policy, group, "admin".into()).await.unwrap();
+    db.oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![policy])
+      .await
+      .unwrap();
+    db.oauth_policy()
+      .add_content(policy, group, "admin".into())
+      .await
+      .unwrap();
 
     // user is in `group` -> picks the group-specific content
     let values = db
@@ -432,10 +507,19 @@ mod test {
       .create_policy("P".into(), "role".into(), "def".into())
       .await
       .unwrap();
-    db.oauth_scope().create_scope("S".into(), "s".into(), vec![policy]).await.unwrap();
+    db.oauth_scope()
+      .create_scope("S".into(), "s".into(), vec![policy])
+      .await
+      .unwrap();
     // index 0 for g1, index 1 for g2
-    db.oauth_policy().add_content(policy, g1, "first".into()).await.unwrap();
-    db.oauth_policy().add_content(policy, g2, "second".into()).await.unwrap();
+    db.oauth_policy()
+      .add_content(policy, g1, "first".into())
+      .await
+      .unwrap();
+    db.oauth_policy()
+      .add_content(policy, g2, "second".into())
+      .await
+      .unwrap();
 
     // member of both groups -> min_by_key(index) selects the index-0 content
     let values = db

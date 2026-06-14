@@ -124,7 +124,16 @@ mod test {
     .await
     .unwrap();
     let scope = db.oauth_scope().by_name("S").await.unwrap().unwrap();
-    assert_eq!(db.oauth_scope().scope_info(scope).await.unwrap().unwrap().policies.len(), 1);
+    assert_eq!(
+      db.oauth_scope()
+        .scope_info(scope)
+        .await
+        .unwrap()
+        .unwrap()
+        .policies
+        .len(),
+      1
+    );
   }
 
   #[tokio::test]

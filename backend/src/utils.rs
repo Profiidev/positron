@@ -122,7 +122,11 @@ mod test {
     let mut sorted = perms.clone();
     sorted.sort_unstable();
     sorted.dedup();
-    assert_eq!(sorted.len(), perms.len(), "permissions contained duplicates");
+    assert_eq!(
+      sorted.len(),
+      perms.len(),
+      "permissions contained duplicates"
+    );
   }
 
   #[test]

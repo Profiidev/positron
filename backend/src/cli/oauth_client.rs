@@ -137,7 +137,14 @@ mod test {
 
     create("App", "openid").run(db.clone()).await.unwrap();
     let id = db.oauth_client().by_name("App").await.unwrap().unwrap();
-    assert_eq!(db.oauth_client().client_default_scope(id).await.unwrap().len(), 1);
+    assert_eq!(
+      db.oauth_client()
+        .client_default_scope(id)
+        .await
+        .unwrap()
+        .len(),
+      1
+    );
 
     // duplicate name
     assert!(create("App", "openid").run(db).await.is_err());

@@ -207,8 +207,12 @@ mod test {
   /// handlers build their TOTP instances.
   fn current_code(base32_secret: &str) -> String {
     let totp = TOTP::from_rfc6238(
-      Rfc6238::with_defaults(Secret::Encoded(base32_secret.to_string()).to_bytes().unwrap())
-        .unwrap(),
+      Rfc6238::with_defaults(
+        Secret::Encoded(base32_secret.to_string())
+          .to_bytes()
+          .unwrap(),
+      )
+      .unwrap(),
     )
     .unwrap();
     totp.generate_current().unwrap()

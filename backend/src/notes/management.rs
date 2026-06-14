@@ -262,10 +262,7 @@ mod test {
   async fn list_requires_authentication() {
     let s = setup().await;
     let app = app(s.db, s.jwt, s.upd);
-    let resp = app
-      .oneshot(request("GET", "/", None, None))
-      .await
-      .unwrap();
+    let resp = app.oneshot(request("GET", "/", None, None)).await.unwrap();
     // no auth cookie -> request is rejected before reaching the handler
     assert!(resp.status().is_client_error());
   }
@@ -305,7 +302,12 @@ mod test {
   #[tokio::test]
   async fn info_returns_note_for_owner_and_404_for_stranger() {
     let s = setup().await;
-    let note = s.db.notes().create(s.user, "T".into(), vec![]).await.unwrap();
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
 
     let app = app(s.db.clone(), s.jwt, s.upd);
     let resp = app
@@ -334,7 +336,12 @@ mod test {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
-    let note = s.db.notes().create(s.user, "Old".into(), vec![]).await.unwrap();
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "Old".into(), vec![])
+      .await
+      .unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     // owner can edit
@@ -350,7 +357,13 @@ mod test {
       .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
-      s.db.notes().info(note, s.user).await.unwrap().unwrap().title,
+      s.db
+        .notes()
+        .info(note, s.user)
+        .await
+        .unwrap()
+        .unwrap()
+        .title,
       "New"
     );
 
@@ -370,7 +383,12 @@ mod test {
   #[tokio::test]
   async fn delete_as_owner_removes_note() {
     let s = setup().await;
-    let note = s.db.notes().create(s.user, "T".into(), vec![]).await.unwrap();
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     let resp = app
@@ -390,7 +408,12 @@ mod test {
   async fn share_updates_shared_users() {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
-    let note = s.db.notes().create(s.user, "T".into(), vec![]).await.unwrap();
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "T".into(), vec![])
+      .await
+      .unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     let resp = app
