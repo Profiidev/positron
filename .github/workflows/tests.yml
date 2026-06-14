@@ -12,11 +12,6 @@ jobs:
         with:
           components: clippy,rustfmt
 
-      - uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
-        with:
-          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-          version: 1.0
-
       - name: Cache cargo and rust files
         id: rust_cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
@@ -26,7 +21,7 @@ jobs:
 
       - uses: taiki-e/install-action@nextest
       - name: "Backend Test"
-        run: cargo nextest run --workspace --all-features
+        run: cd backend && cargo nextest run --all-features
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
