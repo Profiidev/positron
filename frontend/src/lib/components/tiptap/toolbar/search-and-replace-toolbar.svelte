@@ -11,7 +11,7 @@
   import * as Tooltip from '@profidev/pleiades/components/ui/tooltip';
   import { cn } from '@profidev/pleiades/utils';
   import type { Editor } from '@tiptap/core';
-  import { isValidSearchPattern } from '../extensions/search-and-replace';
+  import { isValidSearchPattern } from '../extensions/regex-check';
   import ToolbarOverflowTrigger from './toolbar-overflow-trigger.svelte';
 
   let {
