@@ -30,6 +30,27 @@ jobs:
           path: ${{ github.workspace }}/target/nextest/default/junit-backend.xml
           retention-days: 5
 
+  frontend_unit:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: bahmutov/npm-install@v1
+      - name: Generate svelte data
+        run: |
+          echo "BACKEND_URL=http://localhost:8000" > frontend/.env
+          cd frontend && npm run sync && cd ..
+
+      - name: Run tests
+        run: cd frontend && npm run test -- --reporter junit --reporter default --outputFile test-results-frontend-unit.xml
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-frontend-unit
+          path: ${{ github.workspace }}/test-results-frontend-unit.xml
+          retention-days: 5
+
   comment_results:
     name: Comment Results to PR
     runs-on: ubuntu-latest
