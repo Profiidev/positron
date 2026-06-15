@@ -12,8 +12,9 @@
     "sync": "svelte-kit sync",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "api": "openapi-ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run && npm run test:e2e",
+    "test:watch": "vitest",
+    "test:e2e": "playwright install && playwright test"
   },
   "dependencies": {
     "@profidev/pleiades": "1.9.7",
@@ -41,6 +42,7 @@
     "@fontsource-variable/geist": "5.2.9",
     "@hey-api/openapi-ts": "0.98.2",
     "@lucide/svelte": "1.17.0",
+    "@playwright/test": "^1.60.0",
     "@sveltejs/adapter-node": "5.5.4",
     "@sveltejs/kit": "2.65.0",
     "@sveltejs/vite-plugin-svelte": "7.1.2",

@@ -12,7 +12,8 @@ const config = {
     adapter: adapter(),
     alias: {
       $mocks: 'src/tests/mocks',
-      $routes: 'src/routes'
+      $routes: 'src/routes',
+      $test_helpers: 'src/tests/_helpers'
     }
   },
 

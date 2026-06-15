@@ -5,6 +5,8 @@
     pkg-config
     librsvg
     webkitgtk_4_1
+    playwright-test
+    playwright-driver
   ];
 
   android = {
