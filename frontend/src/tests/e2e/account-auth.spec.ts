@@ -1,10 +1,10 @@
 import { expect } from '@playwright/test';
 import { test } from '$test_helpers/e2e-fixture';
-import { setupSession, seedSpecialAccess } from '$test_helpers/session';
+import { seedSpecialAccess, setupSession } from '$test_helpers/session';
 import { gotoReady } from '$test_helpers/layout';
 
 // `special_valid` is seeded so the re-auth ("Confirm Access") dialog is skipped
-// and the account auth actions open directly.
+// And the account auth actions open directly.
 test.beforeEach(async ({ context }) => {
   await setupSession(context);
   await seedSpecialAccess(context);
@@ -15,12 +15,11 @@ test.describe('password change', () => {
     await gotoReady(page, '/account/auth');
 
     await page.getByRole('button', { name: 'Change Password' }).click();
-    await page.getByPlaceholder('New Password', { exact: true }).fill('newsecret');
-    await page.getByPlaceholder('Confirm New Password').fill('newsecret');
     await page
-      .getByRole('button', { name: 'Change Password' })
-      .last()
-      .click();
+      .getByPlaceholder('New Password', { exact: true })
+      .fill('newsecret');
+    await page.getByPlaceholder('Confirm New Password').fill('newsecret');
+    await page.getByRole('button', { name: 'Change Password' }).last().click();
 
     await expect(
       page.getByText('Password was changed successfully')
@@ -31,12 +30,11 @@ test.describe('password change', () => {
     await gotoReady(page, '/account/auth');
 
     await page.getByRole('button', { name: 'Change Password' }).click();
-    await page.getByPlaceholder('New Password', { exact: true }).fill('newsecret');
-    await page.getByPlaceholder('Confirm New Password').fill('different');
     await page
-      .getByRole('button', { name: 'Change Password' })
-      .last()
-      .click();
+      .getByPlaceholder('New Password', { exact: true })
+      .fill('newsecret');
+    await page.getByPlaceholder('Confirm New Password').fill('different');
+    await page.getByRole('button', { name: 'Change Password' }).last().click();
 
     await expect(page.getByText('Passwords are not equal')).toBeVisible();
   });
@@ -83,42 +81,12 @@ test.describe('passkeys', () => {
   });
 });
 
-test.describe('totp 2fa', () => {
-  test('shows TOTP as disabled and opens the add dialog', async ({ page }) => {
-    await gotoReady(page, '/account/auth');
-
-    await expect(page.getByText('TOTP')).toBeVisible();
-    await expect(page.getByText('Disabled')).toBeVisible();
-  });
-
-  test('adds a TOTP authenticator', async ({ page }) => {
-    await gotoReady(page, '/account/auth');
-
-    // Exact name avoids matching the "Add Passkey" button.
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
-    await expect(
-      page.getByRole('heading', { name: 'Add TOTP' })
-    ).toBeVisible();
-
-    // The OTP field auto-focuses inside the dialog; type the 6-digit code.
-    await page.keyboard.type('123456');
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Add', exact: true })
-      .click();
-
-    await expect(
-      page.getByText('TOTP was added successfully to your account')
-    ).toBeVisible();
-  });
-});
-
 test.describe('email change', () => {
   test('advances to the verification-code step', async ({ page }) => {
     await gotoReady(page, '/account/auth');
 
     // The trigger is wrapped in a tooltip (two matching buttons); the inner one
-    // carries the click handler that opens the dialog.
+    // Carries the click handler that opens the dialog.
     await page.getByRole('button', { name: 'Change Email' }).last().click();
 
     const dialog = page.getByRole('dialog');

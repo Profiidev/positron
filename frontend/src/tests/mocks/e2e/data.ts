@@ -39,10 +39,6 @@ export const isSetupOf = (cookies: Record<string, string>) =>
 export const authConfig = { mail_enabled: true };
 export const accountSettings = { o_auth_instant_confirm: false };
 export const mailActive = { active: true };
-/** `mock_mail=off` cookie disables mail, unlocking the admin-managed user
- * password/email/avatar controls that hide when mail is configured. */
-export const mailActiveOf = (cookies: Record<string, string>) =>
-  cookies.mock_mail === 'off' ? { active: false } : mailActive;
 export const mailSettings = {
   from_env: [] as string[],
   settings: {
@@ -192,7 +188,7 @@ export const groupDetails = {
 };
 
 // A non-admin group, so the detail page renders the editable permissions
-// matrix (the admin group hides it).
+// Matrix (the admin group hides it).
 export const groupStaffDetails = {
   admin_group: 'group-admins',
   group: {
@@ -228,7 +224,7 @@ export const noteDetails = {
 
 export const simpleUsers = { default: [simpleUser], empty: [] as unknown[] };
 // The note owner (simpleUser) plus another user, so the note's share control
-// has someone to share with (the owner is filtered out of the options).
+// Has someone to share with (the owner is filtered out of the options).
 export const noteUsers = {
   default: [simpleUser, { id: 'user-2', name: 'Cara User' }],
   empty: [] as unknown[]

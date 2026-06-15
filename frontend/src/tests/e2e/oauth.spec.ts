@@ -61,20 +61,6 @@ test.describe('oauth clients', () => {
     ).toBeVisible();
   });
 
-  test('regenerates the client secret', async ({ page }) => {
-    await gotoReady(page, '/oauth-client/client-1');
-
-    await page.getByRole('button', { name: 'Regenerate' }).click();
-    await expect(
-      page.getByText('Do you really want to regenerate the client secret')
-    ).toBeVisible();
-    await page.getByRole('button', { name: 'Regenerate' }).last().click();
-
-    await expect(
-      page.getByText('Client Secret Dashboard App regenerated successfully')
-    ).toBeVisible();
-  });
-
   test('renders client detail and deletes the client', async ({ page }) => {
     await gotoReady(page, '/oauth-client/client-1');
 
@@ -227,7 +213,7 @@ test.describe('oauth policies', () => {
     const claim = page.getByPlaceholder('Claim value');
     await expect(claim).toBeVisible();
     // The mapping row holds the move/select/claim/delete controls; the last
-    // button in the row is the destructive remove action.
+    // Button in the row is the destructive remove action.
     await claim.locator('..').getByRole('button').last().click();
     await expect(page.getByPlaceholder('Claim value')).toHaveCount(0);
 

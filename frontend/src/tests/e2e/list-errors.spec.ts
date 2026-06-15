@@ -6,7 +6,7 @@ import { gotoReady } from '$test_helpers/layout';
 test.beforeEach(async ({ context }) => setupSession(context));
 
 // Detail pages redirect back to their list with `?error=...` when a record
-// fails to load; the list surfaces that as a toast and cleans the URL.
+// Fails to load; the list surfaces that as a toast and cleans the URL.
 test.describe('list error toasts', () => {
   test('shows a not-found toast on the users list', async ({ page }) => {
     await gotoReady(page, '/users?error=not_found');

@@ -37,20 +37,8 @@ export const setupSession = async (
  * as already re-authenticated and skip the "Confirm Access" dialog.
  */
 export const seedSpecialAccess = async (context: BrowserContext) => {
-  await context.addCookies([
-    { name: 'special_valid', url: URL, value: '1' }
-  ]);
+  await context.addCookies([{ name: 'special_valid', url: URL, value: '1' }]);
   await seedDocumentCookie(context, 'special_valid=1');
-};
-
-/**
- * Seeds the `mock_mail=off` cookie so the `mailActive` endpoint reports mail as
- * unconfigured. Admin-managed user controls (reset password, change email,
- * reset avatar) only render when mail is off.
- */
-export const seedMailInactive = async (context: BrowserContext) => {
-  await context.addCookies([{ name: 'mock_mail', url: URL, value: 'off' }]);
-  await seedDocumentCookie(context, 'mock_mail=off');
 };
 
 /**

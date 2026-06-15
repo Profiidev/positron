@@ -96,7 +96,7 @@ test.describe('group detail', () => {
     const listApods = page.getByRole('checkbox', { name: 'List APODs' });
     await expect(listApods).not.toBeChecked();
     // The checkbox sits at the row's right edge inside a scroll area; dispatch
-    // the click directly so Firefox doesn't stall on pointer actionability.
+    // The click directly so Firefox doesn't stall on pointer actionability.
     await listApods.dispatchEvent('click');
     await expect(listApods).toBeChecked();
 

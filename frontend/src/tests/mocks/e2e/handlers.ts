@@ -42,7 +42,7 @@ export const handlers = [
   gen.infoMswHandler(() => j(data.adminUser)),
   gen.authConfigMswHandler(() => j(data.authConfig)),
   gen.accountSettingsMswHandler(() => j(data.accountSettings)),
-  gen.mailActiveMswHandler(({ cookies }) => j(data.mailActiveOf(cookies))),
+  gen.mailActiveMswHandler(() => j(data.mailActive)),
   gen.getMailSettingsMswHandler(() => j(data.mailSettings)),
   gen.siteUrlMswHandler(() => j(data.siteUrl)),
   gen.keyMswHandler(() => j({ key: 'test-public-key' })),
@@ -71,9 +71,7 @@ export const handlers = [
   gen.listUsersSimpleMswHandler(({ cookies }) =>
     j(data.simpleUsers[scn(cookies)])
   ),
-  gen.listUsersNoteMswHandler(({ cookies }) =>
-    j(data.noteUsers[scn(cookies)])
-  ),
+  gen.listUsersNoteMswHandler(({ cookies }) => j(data.noteUsers[scn(cookies)])),
   gen.listGroupsOAuthClientMswHandler(({ cookies }) =>
     j(data.simpleGroups[scn(cookies)])
   ),
@@ -93,8 +91,10 @@ export const handlers = [
   // Details.
   gen.groupInfoMswHandler(({ params }) =>
     // The uuid is a path param; return a non-admin group for group-staff so its
-    // editable permissions matrix renders (the admin group hides it).
-    j(params.uuid === 'group-staff' ? data.groupStaffDetails : data.groupDetails)
+    // Editable permissions matrix renders (the admin group hides it).
+    j(
+      params.uuid === 'group-staff' ? data.groupStaffDetails : data.groupDetails
+    )
   ),
   gen.userInfoMswHandler(() => j(data.userDetails)),
   gen.infoOauthClientMswHandler(() => j(data.oauthClientDetails)),

@@ -10,7 +10,7 @@ test.describe('note editor', () => {
     await gotoReady(page, '/notes/note-1');
 
     // The collaborative editor loads asynchronously; wait for the ProseMirror
-    // content area and the formatting toolbar to appear.
+    // Content area and the formatting toolbar to appear.
     const editor = page.locator('.ProseMirror');
     await expect(editor).toBeVisible();
     await expect(editor).toHaveAttribute('contenteditable', 'true');
