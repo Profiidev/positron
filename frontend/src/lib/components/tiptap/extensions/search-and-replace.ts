@@ -2,6 +2,7 @@ import { type Editor as CoreEditor, Extension, type Range } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { getRegex } from './regex-check';
 
 export interface SearchAndReplaceStorage {
   searchTerm: string;
@@ -63,34 +64,6 @@ interface TextNodeWithPosition {
   text: string;
   pos: number;
 }
-
-const getRegex = (
-  searchString: string,
-  disableRegex: boolean,
-  caseSensitive: boolean
-): RegExp => {
-  const escapedString = disableRegex
-    ? searchString.replace(/[-/\\^$*+?.()|[\]{}]/g, String.raw`\$&`)
-    : searchString;
-  return new RegExp(escapedString, caseSensitive ? 'gu' : 'gui');
-};
-
-export const isValidSearchPattern = (
-  searchString: string,
-  useRegex: boolean,
-  caseSensitive: boolean
-): boolean => {
-  if (!searchString || !useRegex) {
-    return true;
-  }
-
-  try {
-    getRegex(searchString, false, caseSensitive);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 interface ProcessedSearches {
   decorationsToReturn: DecorationSet;

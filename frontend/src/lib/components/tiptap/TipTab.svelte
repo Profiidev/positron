@@ -1,13 +1,10 @@
 <script lang="ts">
   import './tiptap.css';
   import { onDestroy, onMount } from 'svelte';
-  import { extensions, getRandomColor } from './config';
+  import { getRandomColor } from './color';
   import EditorToolbar from './toolbar/EditorToolbar.svelte';
-  import { EditorContent, Editor } from 'svelte-tiptap';
-  import Collaboration from '@tiptap/extension-collaboration';
-  import CollaborationCaret from '@tiptap/extension-collaboration-caret';
-  import * as Y from 'yjs';
-  import { WebsocketProvider } from 'y-websocket';
+  import { EditorContent, type Editor } from 'svelte-tiptap';
+  import type { WebsocketProvider } from 'y-websocket';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import type { NoteActiveEditor } from '$lib/components/notes/types';
 
@@ -30,7 +27,6 @@
   } = $props();
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
-  const doc = new Y.Doc();
   let provider: WebsocketProvider | undefined = undefined;
   const userColor = getRandomColor();
 
@@ -71,7 +67,12 @@
     setLocalAwarenessUser();
   });
 
-  onMount(() => {
+  onMount(async () => {
+    const Doc = (await import('yjs')).Doc;
+    const doc = new Doc();
+
+    const { WebsocketProvider } = await import('y-websocket');
+
     provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
       disableBc: true
     });
@@ -79,6 +80,14 @@
 
     setLocalAwarenessUser();
     syncActiveEditors();
+
+    const extensions = (await import('./config')).extensions;
+    const Collaboration = (await import('@tiptap/extension-collaboration'))
+      .default;
+    const CollaborationCaret = (
+      await import('@tiptap/extension-collaboration-caret')
+    ).default;
+    const Editor = (await import('svelte-tiptap')).Editor;
 
     editorState.editor = new Editor({
       extensions: [
