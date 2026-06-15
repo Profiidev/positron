@@ -13,6 +13,19 @@ export const gotoReady = async (page: Page, path: string) => {
 };
 
 /**
+ * Opens the navigation sidebar when it is collapsed behind a trigger. On mobile
+ * viewports the sidebar renders as an off-canvas sheet whose links are not in
+ * the DOM until it is opened; the `Toggle Sidebar` button (`md:hidden`) is only
+ * visible there. On desktop the sidebar is always expanded, so this is a no-op.
+ */
+export const openSidebar = async (page: Page) => {
+  const trigger = page.getByRole('button', { name: 'Toggle Sidebar' });
+  if (await trigger.isVisible()) {
+    await trigger.click();
+  }
+};
+
+/**
  * Asserts the document does not scroll horizontally. Playwright runs every test
  * across the desktop and mobile viewports defined in `playwright.config.ts`, so
  * this catches layout overflow that only shows up on small screens. Internal

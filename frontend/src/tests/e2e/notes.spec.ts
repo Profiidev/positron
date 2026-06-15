@@ -52,14 +52,7 @@ test.describe('note detail', () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test('deletes a note through the confirmation dialog', async ({
-    page
-  }, testInfo) => {
-    test.skip(
-      (testInfo.project.use.viewport?.width ?? 0) < 1024,
-      'the delete label is icon-only on small viewports'
-    );
-
+  test('deletes a note through the confirmation dialog', async ({ page }) => {
     await gotoReady(page, '/notes/note-1');
 
     await page.getByRole('button', { name: 'Delete' }).click();

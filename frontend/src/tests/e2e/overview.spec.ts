@@ -1,7 +1,11 @@
 import { expect } from '@playwright/test';
 import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
-import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
+import {
+  expectNoHorizontalOverflow,
+  gotoReady,
+  openSidebar
+} from '$test_helpers/layout';
 
 test.beforeEach(async ({ context }) => {
   await setupSession(context);
@@ -14,13 +18,9 @@ test('overview page renders inside the app shell', async ({ page }) => {
   await expectNoHorizontalOverflow(page);
 });
 
-test('sidebar wires up the navigation targets', async ({ page }, testInfo) => {
-  test.skip(
-    (testInfo.project.use.viewport?.width ?? 0) < 1024,
-    'sidebar is behind a trigger on mobile'
-  );
-
+test('sidebar wires up the navigation targets', async ({ page }) => {
   await gotoReady(page, '/');
+  await openSidebar(page);
 
   for (const href of [
     '/notes',
@@ -37,15 +37,9 @@ test('sidebar wires up the navigation targets', async ({ page }, testInfo) => {
   }
 });
 
-test('navigating to notes from the sidebar works on desktop', async ({
-  page
-}, testInfo) => {
-  test.skip(
-    (testInfo.project.use.viewport?.width ?? 0) < 1024,
-    'sidebar is behind a trigger on mobile'
-  );
-
+test('navigating to notes from the sidebar works', async ({ page }) => {
   await gotoReady(page, '/');
+  await openSidebar(page);
   await page.locator('a[href="/notes"]').first().click();
 
   await expect(page).toHaveURL(/\/notes/);
