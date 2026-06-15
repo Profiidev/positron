@@ -22,7 +22,7 @@ export default defineConfig(() => ({
   test: {
     clearMocks: true,
     environment: 'jsdom',
-    include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-    setupFiles: ['./vitest-setup.ts']
+    include: ['src/tests/**/*.{test,spec}.{js,ts}'],
+    setupFiles: ['./vitest-setup.ts', './src/mocks/setup.ts']
   }
 }));
