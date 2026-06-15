@@ -64,8 +64,24 @@ jobs:
           echo "BACKEND_URL=http://localhost:8000" > frontend/.env
           cd frontend && npm run sync && cd ..
 
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').dependencies['@playwright/test'].version)")" >> $GITHUB_ENV
+      - name: Cache playwright binaries
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: cd frontend && npx playwright install --with-deps && cd ..
+
+      - name: Install system dependencies for WebKit
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: cd frontend && npx playwright install-deps webkit && cd ..
 
       - name: Run tests
         run: cd frontend && npm run test:e2e
