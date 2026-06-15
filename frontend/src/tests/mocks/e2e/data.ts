@@ -26,6 +26,16 @@ export const isSetup = {
   storage_backend: 'local'
 };
 
+/** Returned when the `mock_setup=pending` cookie is set, so /setup renders. */
+export const isSetupPending = {
+  db_backend: 'sqlite',
+  is_setup: false,
+  storage_backend: 'local'
+};
+
+export const isSetupOf = (cookies: Record<string, string>) =>
+  cookies.mock_setup === 'pending' ? isSetupPending : isSetup;
+
 export const authConfig = { mail_enabled: true };
 export const accountSettings = { o_auth_instant_confirm: false };
 export const mailActive = { active: true };

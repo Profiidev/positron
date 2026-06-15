@@ -27,7 +27,7 @@ const scn = (cookies: Record<string, string>) => data.scenarioOf(cookies);
 export const handlers = [
   updaterWs.addEventListener('connection', () => {}),
 
-  gen.isSetupMswHandler(() => j(data.isSetup)),
+  gen.isSetupMswHandler(({ cookies }) => j(data.isSetupOf(cookies))),
   gen.getOidcSettingsMswHandler(() => j(data.oidcSettings)),
   gen.infoMswHandler(() => j(data.adminUser)),
   gen.authConfigMswHandler(() => j(data.authConfig)),
