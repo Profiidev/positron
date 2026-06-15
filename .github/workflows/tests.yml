@@ -42,7 +42,7 @@ jobs:
           cd frontend && npm run sync && cd ..
 
       - name: Run tests
-        run: cd frontend && npm run test -- --reporter junit --reporter default --outputFile test-results-frontend-unit.xml
+        run: cd frontend && npm run test:unit -- --reporter junit --reporter default --outputFile test-results-frontend-unit.xml
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
