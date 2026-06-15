@@ -37,7 +37,7 @@ export const calculateVisibleCount = (
   const availableWithOverflow = containerWidth - overflowButtonWidth - gap;
   let visibleCount = 0;
 
-  for (let i = 0; i < itemCount; i++) {
+  for (let i = 0; i < itemCount; i += 1) {
     const nextWidth = totalWidth(itemWidths, i + 1, gap);
     if (nextWidth > availableWithOverflow) {
       break;
