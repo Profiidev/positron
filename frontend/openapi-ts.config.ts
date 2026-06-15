@@ -1,4 +1,5 @@
 import { defineConfig } from '@hey-api/openapi-ts';
+import { defineConfig as msw } from './src/tests/mocks/msw-plugin';
 
 export default defineConfig({
   input: 'http://localhost:5175/openapi.json',
@@ -23,6 +24,7 @@ export default defineConfig({
       baseUrl: '',
       name: '@hey-api/client-fetch',
       runtimeConfigPath: '$lib/backend/config'
-    }
+    },
+    msw()
   ]
 });

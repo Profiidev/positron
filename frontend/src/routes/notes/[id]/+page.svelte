@@ -193,6 +193,7 @@
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
+      aria-label="Delete"
     >
       <Trash />
       <span class="hidden lg:inline">Delete</span>
