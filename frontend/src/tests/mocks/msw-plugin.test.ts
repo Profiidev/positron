@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { HttpResponse } from 'msw';
 import { isSetup } from '$lib/client';
 import { isSetupMswHandler } from '$lib/client/msw.gen';
-import { server } from './server';
+import { server } from '$mocks/server';
 
 // End-to-end check of the generated MSW handler factories: register a mock for
 // An operation, call the real generated SDK function, assert the mocked data

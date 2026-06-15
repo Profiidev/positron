@@ -23,6 +23,10 @@ export default defineConfig(() => ({
     clearMocks: true,
     environment: 'jsdom',
     include: ['src/tests/**/*.{test,spec}.{js,ts}'],
-    setupFiles: ['./vitest-setup.ts', './src/mocks/setup.ts']
+    setupFiles: [
+      './src/tests/setup/vitest-setup.ts',
+      './src/tests/setup/vitest-setup-sveltekit.ts',
+      './src/tests/mocks/setup.ts'
+    ]
   }
 }));

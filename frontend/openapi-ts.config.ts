@@ -1,5 +1,5 @@
 import { defineConfig } from '@hey-api/openapi-ts';
-import { defineConfig as msw } from './src/mocks/msw-plugin';
+import { defineConfig as msw } from './src/tests/mocks/msw-plugin';
 
 export default defineConfig({
   input: 'http://localhost:5175/openapi.json',

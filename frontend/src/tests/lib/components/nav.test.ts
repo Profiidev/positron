@@ -1,0 +1,72 @@
+import { describe, expect, it } from 'vitest';
+import { items, noSidebarPaths } from '$lib/components/nav.svelte';
+import { Permission } from '$lib/permissions.svelte';
+
+const allItems = items.flatMap((group) => group.items);
+const permissionValues = new Set<string>(Object.values(Permission));
+
+describe('nav items', () => {
+  it('defines the four top-level groups in order', () => {
+    expect(items.map((g) => g.label)).toEqual([
+      'Overview',
+      'Services',
+      'OAuth / Oidc',
+      'Administration'
+    ]);
+  });
+
+  it('gives every group a label and at least one item', () => {
+    for (const group of items) {
+      expect(group.label).toBeTruthy();
+      expect(group.items.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives every item a label, an icon and an absolute href', () => {
+    for (const item of allItems) {
+      expect(item.label).toBeTruthy();
+      expect(item.icon).toBeTruthy();
+      expect(item.href.startsWith('/')).toBe(true);
+    }
+  });
+
+  it('has unique hrefs', () => {
+    const hrefs = allItems.map((i) => i.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
+  it('only references valid permissions when one is required', () => {
+    for (const item of allItems) {
+      if (item.requiredPermission !== undefined) {
+        expect(permissionValues.has(item.requiredPermission)).toBe(true);
+      }
+    }
+  });
+
+  it('leaves the Overview and Notes entries public (no permission)', () => {
+    const overview = allItems.find((i) => i.href === '/');
+    const notes = allItems.find((i) => i.href === '/notes');
+    expect(overview?.requiredPermission).toBeUndefined();
+    expect(notes?.requiredPermission).toBeUndefined();
+  });
+});
+
+describe('noSidebarPaths', () => {
+  it('lists only absolute paths', () => {
+    for (const path of noSidebarPaths) {
+      expect(path.startsWith('/')).toBe(true);
+    }
+  });
+
+  it('hides the sidebar on the auth/onboarding flows', () => {
+    expect(noSidebarPaths).toEqual(
+      expect.arrayContaining(['/login', '/setup', '/oauth', '/auth/app'])
+    );
+  });
+
+  it('never hides the sidebar on a path that has a nav item', () => {
+    for (const item of allItems) {
+      expect(noSidebarPaths).not.toContain(item.href);
+    }
+  });
+});
