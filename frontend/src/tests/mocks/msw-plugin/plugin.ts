@@ -22,7 +22,7 @@ export const handler: MswPlugin['Handler'] = ({ plugin }) => {
 
   // The generated fetch client, used to read the configured `baseUrl`.
   const client = plugin.symbol('client', {
-    external: './client.gen'
+    external: '$mocks/msw-runtime'
   });
 
   // oxlint-disable-next-line no-array-for-each

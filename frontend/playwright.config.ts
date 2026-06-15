@@ -31,5 +31,9 @@ export default defineConfig({
     ['junit', { outputFile: 'test-results/frontend-e2e.xml' }]
   ],
   testMatch: 'src/tests/e2e/**/*.{test,spec}.{js,ts}',
-  webServer: { command: 'npm run build && npm run preview', port: 4173 }
+  use: { baseURL: 'http://localhost:4173' },
+  webServer: {
+    command: 'npm run preview',
+    port: 4173
+  }
 });

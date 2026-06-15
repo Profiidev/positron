@@ -67,6 +67,9 @@ jobs:
       - name: Install Playwright Browsers
         run: cd frontend && npx playwright install --with-deps && cd ..
 
+      - name: Build Frontend
+        run: cd frontend && npm run build && cd ..
+
       - name: Run tests
         run: cd frontend && npm run test:e2e
 

@@ -4,6 +4,10 @@ import {
   type PathParams,
   http
 } from 'msw';
+import { type Client, createClient, createConfig } from '$lib/client/client';
+import type { ClientOptions } from '$lib/client/types.gen';
+
+export const client: Client = createClient(createConfig<ClientOptions>());
 
 /**
  * Runtime support for the generated `msw.gen.ts` factories.
