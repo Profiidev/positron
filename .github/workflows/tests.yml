@@ -63,7 +63,7 @@ jobs:
       - name: Find E2E Test Files
         id: find_files
         run: |
-          FILES=$(find frontend/src/tests/e2e -name '*.spec.ts' -exec basename {} \;)
+          FILES=$(find frontend/src/tests/e2e -name '*.spec.ts' -exec basename {} \; | jq -R . | jq -s -c .)
           echo "Found files: $FILES"
           echo "FILES=$FILES" >> $GITHUB_OUTPUT
 
