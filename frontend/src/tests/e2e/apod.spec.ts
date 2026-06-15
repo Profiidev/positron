@@ -31,11 +31,9 @@ test.describe('apod today', () => {
 });
 
 test.describe('apod library', () => {
-  test('lists the selected images', async ({ page }) => {
+  test('lists the selected images', async ({ page, context }) => {
+    await setupSession(context);
     await gotoReady(page, '/apod/list');
-
-    // Wait 10 seconds to ensure the images are loaded
-    await page.waitForTimeout(10_000);
 
     await expect(page.getByText('Spiral Galaxy')).toBeVisible();
     await expect(page.getByText('Nebula')).toBeVisible();
