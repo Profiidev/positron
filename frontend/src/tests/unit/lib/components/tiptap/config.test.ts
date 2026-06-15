@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { extensions, getRandomColor } from '$lib/components/tiptap/config';
+import { extensions } from '$lib/components/tiptap/config';
+import { getRandomColor } from '$lib/components/tiptap/color';
 
 const PALETTE = [
   '#958DF1',
