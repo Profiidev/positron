@@ -196,8 +196,11 @@ export const userDetails = {
   uuid: 'user-1'
 };
 
+// oxlint-disable-next-line prefer-destructuring
 export const oauthClientDetails = oauthClients.default[0];
+// oxlint-disable-next-line prefer-destructuring
 export const oauthScopeDetails = oauthScopes.default[0];
+// oxlint-disable-next-line prefer-destructuring
 export const oauthPolicyDetails = oauthPolicies.default[0];
 export const noteDetails = {
   id: 'note-1',

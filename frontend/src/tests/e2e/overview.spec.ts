@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -32,6 +32,7 @@ test('sidebar wires up the navigation targets', async ({ page }, testInfo) => {
     '/groups',
     '/settings'
   ]) {
+    // oxlint-disable-next-line no-await-in-loop
     await expect(page.locator(`a[href="${href}"]`).first()).toBeAttached();
   }
 });

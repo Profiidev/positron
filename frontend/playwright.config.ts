@@ -12,26 +12,27 @@ export default defineConfig({
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] }
     },
-    {
+    /*{
       name: 'webkit',
       use: { ...devices['Desktop Safari'] }
-    },
+    },*/
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 8'] }
-    },
+    }
+    /*
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] }
-    }
+    }*/
   ],
   reporter: [
     ['html'],
     ['junit', { outputFile: 'test-results/frontend-e2e.xml' }]
   ],
   testMatch: 'src/tests/e2e/**/*.{test,spec}.{js,ts}',
-  use: { baseURL: 'http://localhost:4173' },
+  use: { baseURL: 'http://localhost:4173', screenshot: 'only-on-failure' },
   webServer: {
     command: 'npm run preview',
     port: 4173

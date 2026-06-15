@@ -14,8 +14,8 @@ const TEST_BASE_URL = 'http://localhost';
 // (e.g. assets) are let through.
 beforeAll(() => {
   // The MSW handlers (msw.gen.ts) read their `baseUrl` from the mock client,
-  // while the app's `load` functions issue requests through the generated SDK,
-  // which uses the `client.gen` client. Pin both to the same origin so request
+  // While the app's `load` functions issue requests through the generated SDK,
+  // Which uses the `client.gen` client. Pin both to the same origin so request
   // URLs and handler patterns stay aligned.
   client.setConfig({ ...client.getConfig(), baseUrl: TEST_BASE_URL });
   appClient.setConfig({ ...appClient.getConfig(), baseUrl: TEST_BASE_URL });

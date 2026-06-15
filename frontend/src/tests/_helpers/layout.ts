@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page, expect } from '@playwright/test';
 
 /**
  * Navigates and waits for the network to settle. SvelteKit only attaches its
@@ -22,7 +22,7 @@ export const gotoReady = async (page: Page, path: string) => {
 export const expectNoHorizontalOverflow = async (page: Page) => {
   const overflow = await page.evaluate(() => {
     const el = document.documentElement;
-    return { scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
+    return { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth };
   });
 
   expect(

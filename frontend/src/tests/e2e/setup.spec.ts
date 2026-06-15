@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { seedSetupPending } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -12,10 +12,8 @@ test.describe('first-run setup', () => {
     await gotoReady(page, '/setup');
 
     await expect(page.getByText('Disclaimer', { exact: true })).toBeVisible();
-    await expect(
-      page.getByText('I have read the disclaimer')
-    ).toBeVisible();
-    // the detected backend is surfaced from the isSetup response.
+    await expect(page.getByText('I have read the disclaimer')).toBeVisible();
+    // The detected backend is surfaced from the isSetup response.
     await expect(page.getByText('sqlite')).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
@@ -27,8 +25,8 @@ test.describe('first-run setup', () => {
 });
 
 test('redirects away from /setup once provisioned', async ({ page }) => {
-  // no mock_setup cookie => isSetup reports a provisioned (and unauthenticated)
-  // instance, so /setup bounces to / and then to /login.
+  // No mock_setup cookie => isSetup reports a provisioned (and unauthenticated)
+  // Instance, so /setup bounces to / and then to /login.
   await gotoReady(page, '/setup');
   await expect(page).toHaveURL(/\/login/);
 });

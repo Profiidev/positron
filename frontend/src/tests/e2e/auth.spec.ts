@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -13,11 +13,11 @@ test.describe('login page', () => {
     await expect(page.getByPlaceholder('mail@example.com')).toBeVisible();
     await expect(page.getByPlaceholder('Your password')).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Login', exact: true })
+      page.getByRole('button', { exact: true, name: 'Login' })
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Passkey' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'App Login' })).toBeVisible();
-    // mail is enabled in the mock config, so the reset link is shown.
+    // Mail is enabled in the mock config, so the reset link is shown.
     await expect(
       page.getByRole('link', { name: 'Forgot your password?' })
     ).toBeVisible();
@@ -30,9 +30,9 @@ test.describe('login page', () => {
 
     await page.getByPlaceholder('mail@example.com').fill('not-an-email');
     await page.getByPlaceholder('Your password').fill('secret');
-    await page.getByRole('button', { name: 'Login', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-    // invalid input is rejected, so the form stays on the login page.
+    // Invalid input is rejected, so the form stays on the login page.
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -40,7 +40,7 @@ test.describe('login page', () => {
     await gotoReady(page, '/login');
 
     await page.getByPlaceholder('mail@example.com').fill('user@example.com');
-    await page.getByRole('button', { name: 'Login', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
     await expect(page).toHaveURL(/\/login/);
   });
@@ -105,7 +105,7 @@ test.describe('reset password', () => {
       .getByPlaceholder('Confirm your new password')
       .fill('different-secret');
     await page
-      .getByRole('button', { name: 'Reset Password', exact: true })
+      .getByRole('button', { exact: true, name: 'Reset Password' })
       .click();
 
     await expect(page.getByText('Passwords do not match')).toBeVisible();
@@ -118,7 +118,7 @@ test.describe('reset password', () => {
     await page.getByPlaceholder('Enter your new password').fill('123');
     await page.getByPlaceholder('Confirm your new password').fill('123');
     await page
-      .getByRole('button', { name: 'Reset Password', exact: true })
+      .getByRole('button', { exact: true, name: 'Reset Password' })
       .click();
 
     await expect(

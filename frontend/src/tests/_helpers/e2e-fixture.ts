@@ -14,6 +14,7 @@ export const test = testBase.extend<Fixtures>({
 
   // A fixture you use to control the network in your tests.
   network: [
+    // oxlint-disable-next-line no-shadow
     async ({ context, handlers }, use) => {
       const network = defineNetworkFixture({
         context,

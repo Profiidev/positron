@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -41,7 +41,7 @@ test.describe('user create', () => {
     await page.getByPlaceholder('Enter email').fill('not-an-email');
     await page.getByRole('button', { name: 'Create' }).click();
 
-    // invalid input is rejected, so we stay on the create page.
+    // Invalid input is rejected, so we stay on the create page.
     await expect(page).toHaveURL(/\/users\/create/);
   });
 });
@@ -70,7 +70,7 @@ test.describe('user detail', () => {
       page.getByText('Do you really want to delete the user Bob User?')
     ).toBeVisible();
 
-    // the dialog confirm button is the second "Delete" button on the page.
+    // The dialog confirm button is the second "Delete" button on the page.
     await page.getByRole('button', { name: 'Delete' }).last().click();
 
     await expect(page).toHaveURL(/\/users$/);

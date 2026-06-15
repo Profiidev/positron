@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectPageFits } from '$test_helpers/layout';
 

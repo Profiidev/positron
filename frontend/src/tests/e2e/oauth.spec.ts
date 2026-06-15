@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -108,7 +108,7 @@ test.describe('oauth scopes', () => {
     await expect(page.getByRole('heading', { name: /Scope:/ })).toContainText(
       'profile'
     );
-    // the mocked scope ("profile") is a built-in default and cannot be removed.
+    // The mocked scope ("profile") is a built-in default and cannot be removed.
     await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
   });
 });

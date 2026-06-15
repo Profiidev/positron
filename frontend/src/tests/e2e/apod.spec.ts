@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -17,10 +17,8 @@ test.describe('apod today', () => {
     await expect(page.getByRole('tab', { name: 'Today' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Library' })).toBeVisible();
     await expect(page.getByText('Spiral Galaxy')).toBeVisible();
-    // the mocked image is already chosen, so the control offers to deselect.
-    await expect(
-      page.getByRole('button', { name: 'Deselect' })
-    ).toBeVisible();
+    // The mocked image is already chosen, so the control offers to deselect.
+    await expect(page.getByRole('button', { name: 'Deselect' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -35,6 +33,9 @@ test.describe('apod today', () => {
 test.describe('apod library', () => {
   test('lists the selected images', async ({ page }) => {
     await gotoReady(page, '/apod/list');
+
+    // Wait 10 seconds to ensure the images are loaded
+    await page.waitForTimeout(10_000);
 
     await expect(page.getByText('Spiral Galaxy')).toBeVisible();
     await expect(page.getByText('Nebula')).toBeVisible();

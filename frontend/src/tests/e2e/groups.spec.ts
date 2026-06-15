@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e_fixture';
+import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
@@ -46,7 +46,7 @@ test.describe('group create', () => {
 
     await page.getByRole('button', { name: 'Create' }).click();
 
-    // submission is blocked by validation, so we stay on the create page.
+    // Submission is blocked by validation, so we stay on the create page.
     await expect(page).toHaveURL(/\/groups\/create/);
   });
 });

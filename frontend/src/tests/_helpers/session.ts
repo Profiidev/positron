@@ -10,8 +10,9 @@ const URL = 'http://localhost:4173';
  * intercepted fetches, so we also seed them through an init script to make the
  * scenario deterministic across every browser project.
  */
-const seedDocumentCookie = (context: BrowserContext, cookie: string) =>
+const seedDocumentCookie = async (context: BrowserContext, cookie: string) =>
   context.addInitScript((value) => {
+    // oxlint-disable-next-line no-document-cookie
     document.cookie = `${value}; path=/`;
   }, cookie);
 
