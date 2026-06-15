@@ -81,6 +81,34 @@ test.describe('passkeys', () => {
   });
 });
 
+test.describe('totp 2fa', () => {
+  test('shows TOTP as disabled and opens the add dialog', async ({ page }) => {
+    await gotoReady(page, '/account/auth');
+
+    await expect(page.getByText('TOTP')).toBeVisible();
+    await expect(page.getByText('Disabled')).toBeVisible();
+  });
+
+  test('adds a TOTP authenticator', async ({ page }) => {
+    await gotoReady(page, '/account/auth');
+
+    // Exact name avoids matching the "Add Passkey" button.
+    await page.getByRole('button', { exact: true, name: 'Add' }).click();
+    await expect(page.getByRole('heading', { name: 'Add TOTP' })).toBeVisible();
+
+    // The OTP field auto-focuses inside the dialog; type the 6-digit code.
+    await page.keyboard.type('123456');
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { exact: true, name: 'Add' })
+      .click();
+
+    await expect(
+      page.getByText('TOTP was added successfully to your account')
+    ).toBeVisible();
+  });
+});
+
 test.describe('email change', () => {
   test('advances to the verification-code step', async ({ page }) => {
     await gotoReady(page, '/account/auth');

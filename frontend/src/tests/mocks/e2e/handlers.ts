@@ -33,6 +33,7 @@ const scn = (cookies: Record<string, string>) => data.scenarioOf(cookies);
 
 export const handlers = [
   updaterWs.addEventListener('connection', () => {}),
+  // oxlint-disable-next-line no-shadow
   appLoginWs.addEventListener('connection', ({ client }) => {
     client.send('device-login-code');
   }),

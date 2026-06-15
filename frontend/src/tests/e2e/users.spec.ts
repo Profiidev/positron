@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from '$test_helpers/e2e-fixture';
-import { setupSession, seedMailInactive } from '$test_helpers/session';
+import { seedMailInactive, setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
 test.beforeEach(async ({ context }) => setupSession(context));
@@ -92,7 +92,7 @@ test.describe('user detail', () => {
 
 test.describe('user detail (mail disabled)', () => {
   // With mail off, the admin can reset the password/avatar and change the email
-  // directly from the detail page.
+  // Directly from the detail page.
   test.beforeEach(async ({ context }) => seedMailInactive(context));
 
   test('resets the avatar', async ({ page }) => {
@@ -109,7 +109,7 @@ test.describe('user detail (mail disabled)', () => {
     await page.getByPlaceholder('Enter new password').fill('brandnewpass');
     await page
       .getByRole('dialog')
-      .getByRole('button', { name: 'Reset', exact: true })
+      .getByRole('button', { exact: true, name: 'Reset' })
       .click();
 
     await expect(
@@ -122,8 +122,10 @@ test.describe('user detail (mail disabled)', () => {
 
     await page.getByRole('button', { name: 'Change Email' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByPlaceholder('mail@example.com').fill('bob.new@example.com');
-    await dialog.getByRole('button', { name: 'Change', exact: true }).click();
+    await dialog
+      .getByPlaceholder('mail@example.com')
+      .fill('bob.new@example.com');
+    await dialog.getByRole('button', { exact: true, name: 'Change' }).click();
 
     await expect(
       page.getByText('Email for user Bob User changed successfully')

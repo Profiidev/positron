@@ -44,7 +44,7 @@ test.describe('first-run setup', () => {
     await page.getByRole('button', { name: 'Finish' }).click();
 
     // Completing setup invalidates and navigates to `/`, which (without an auth
-    // cookie) redirects to the login page.
+    // Cookie) redirects to the login page.
     await expect(page).toHaveURL(/\/login/);
   });
 

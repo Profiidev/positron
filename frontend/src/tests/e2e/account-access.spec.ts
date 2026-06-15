@@ -4,7 +4,7 @@ import { setupSession } from '$test_helpers/session';
 import { gotoReady } from '$test_helpers/layout';
 
 // No `special_valid` seeded here, so the account auth actions must first pass
-// through the "Confirm Access" re-authentication dialog.
+// Through the "Confirm Access" re-authentication dialog.
 test.beforeEach(async ({ context }) => setupSession(context));
 
 test.describe('confirm access gate', () => {
