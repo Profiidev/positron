@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   reporter: [
-    ['list'],
+    ['html'],
     ['junit', { outputFile: 'test-results/frontend-e2e.xml' }]
   ],
   testMatch: 'src/tests/e2e/**/*.{test,spec}.{js,ts}',

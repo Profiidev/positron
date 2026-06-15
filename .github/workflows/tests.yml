@@ -25,6 +25,7 @@ jobs:
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: test-results-backend
           path: ${{ github.workspace }}/target/nextest/default/junit-backend.xml
@@ -46,6 +47,7 @@ jobs:
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: test-results-frontend-unit
           path: ${{ github.workspace }}/frontend/test-results-frontend-unit.xml
@@ -62,19 +64,32 @@ jobs:
           echo "BACKEND_URL=http://localhost:8000" > frontend/.env
           cd frontend && npm run sync && cd ..
 
+      - name: Install Playwright Browsers
+        run: cd frontend && npx playwright install --with-deps && cd ..
+
       - name: Run tests
         run: cd frontend && npm run test:e2e
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: test-results-frontend-e2e
           path: ${{ github.workspace }}/frontend/test-results/frontend-e2e.xml
           retention-days: 5
 
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-report-frontend-e2e
+          path: ${{ github.workspace }}/frontend/playwright-report/
+          retention-days: 5
+
   comment_results:
     name: Comment Results to PR
     runs-on: ubuntu-latest
+    if: always()
     needs:
       - backend_test
       - frontend_unit

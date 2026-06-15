@@ -11,3 +11,4 @@ vite.config.ts.timestamp-*
 target
 # Playwright
 test-results
+playwright-report
