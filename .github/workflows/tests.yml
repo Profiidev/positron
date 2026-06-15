@@ -53,9 +53,27 @@ jobs:
           path: ${{ github.workspace }}/frontend/test-results-frontend-unit.xml
           retention-days: 5
 
+  frontend_e2e_find_files:
+    name: Find E2E Test Files
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.find_files.outputs.FILES }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Find E2E Test Files
+        id: find_files
+        run: |
+          FILES=$(find frontend/src/tests/e2e -name '*.spec.ts' -exec basename {} \;)
+          echo "Found files: $FILES"
+          echo "FILES=$FILES" >> $GITHUB_OUTPUT
+
   frontend_e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
+    needs: frontend_e2e_find_files
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.frontend_e2e_find_files.outputs.files) }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - uses: bahmutov/npm-install@v1
@@ -71,21 +89,25 @@ jobs:
         run: cd frontend && npm run build && cd ..
 
       - name: Run tests
-        run: cd frontend && npm run test:e2e
+        run: cd frontend && npm run test:e2e src/tests/e2e/${{ matrix.file }}
+
+      - name: Rename JUnit Report
+        run: |
+          mv ${{ github.workspace }}/frontend/test-results/frontend-e2e.xml ${{ github.workspace }}/frontend/test-results/frontend-e2e-${{ matrix.file }}.xml
 
       - name: Upload Test Result File
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: test-results-frontend-e2e
-          path: ${{ github.workspace }}/frontend/test-results/frontend-e2e.xml
+          name: test-results-frontend-e2e-${{ matrix.file }}
+          path: ${{ github.workspace }}/frontend/test-results/frontend-e2e-${{ matrix.file }}.xml
           retention-days: 5
 
       - name: Upload Test Report
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: test-report-frontend-e2e
+          name: test-report-frontend-e2e-${{ matrix.file }}
           path: ${{ github.workspace }}/frontend/playwright-report/
           retention-days: 5
 
