@@ -32,6 +32,18 @@ export const setupSession = async (
 };
 
 /**
+ * Seeds the `special_valid` cookie that `AccessConfirm` polls for. With it set,
+ * the account auth flows (password / email / passkey changes) treat the session
+ * as already re-authenticated and skip the "Confirm Access" dialog.
+ */
+export const seedSpecialAccess = async (context: BrowserContext) => {
+  await context.addCookies([
+    { name: 'special_valid', url: URL, value: '1' }
+  ]);
+  await seedDocumentCookie(context, 'special_valid=1');
+};
+
+/**
  * Seeds only the `mock_setup=pending` cookie (and no auth cookie) so the
  * `isSetup` endpoint reports an un-provisioned instance. Used by the /setup
  * tests, where the first-run wizard must render instead of redirecting away.

@@ -64,6 +64,17 @@ test.describe('note detail', () => {
     await expect(page.getByText('Title updated')).toBeVisible();
   });
 
+  test('shares the note with another user', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Share' }).click();
+    await expect(page.getByPlaceholder('Search people...')).toBeVisible();
+    await page.getByRole('option', { name: 'Cara User' }).click();
+
+    // The share update is debounced (~500ms) before it persists.
+    await expect(page.getByText('Shared users updated')).toBeVisible();
+  });
+
   test('deletes a note through the confirmation dialog', async ({ page }) => {
     await gotoReady(page, '/notes/note-1');
 

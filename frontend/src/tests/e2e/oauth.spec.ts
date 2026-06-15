@@ -193,6 +193,36 @@ test.describe('oauth policies', () => {
     ).toBeVisible();
   });
 
+  test('edits a group-mapping claim value and saves', async ({ page }) => {
+    await gotoReady(page, '/oauth-policy/policy-1');
+
+    await expect(page.getByText('Group Mapping')).toBeVisible();
+    const claim = page.getByPlaceholder('Claim value');
+    await expect(claim).toHaveValue('admin');
+    await claim.fill('superadmin');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('Policy Group Policy updated successfully')
+    ).toBeVisible();
+  });
+
+  test('removes a group mapping and saves', async ({ page }) => {
+    await gotoReady(page, '/oauth-policy/policy-1');
+
+    const claim = page.getByPlaceholder('Claim value');
+    await expect(claim).toBeVisible();
+    // The mapping row holds the move/select/claim/delete controls; the last
+    // button in the row is the destructive remove action.
+    await claim.locator('..').getByRole('button').last().click();
+    await expect(page.getByPlaceholder('Claim value')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+    await expect(
+      page.getByText('Policy Group Policy updated successfully')
+    ).toBeVisible();
+  });
+
   test('renders policy detail and deletes the policy', async ({ page }) => {
     await gotoReady(page, '/oauth-policy/policy-1');
 

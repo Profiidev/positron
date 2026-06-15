@@ -84,4 +84,29 @@ test.describe('group detail', () => {
       page.getByText('Group Admins updated successfully')
     ).toBeVisible();
   });
+
+  test('toggles a permission checkbox on a non-admin group', async ({
+    page
+  }) => {
+    await gotoReady(page, '/groups/group-staff');
+
+    // The admin group hides the matrix; a non-admin group exposes it.
+    await expect(page.getByText('Permissions')).toBeVisible();
+
+    const listApods = page.getByRole('checkbox', { name: 'List APODs' });
+    await expect(listApods).not.toBeChecked();
+    // The checkbox sits at the row's right edge inside a scroll area; dispatch
+    // the click directly so Firefox doesn't stall on pointer actionability.
+    await listApods.dispatchEvent('click');
+    await expect(listApods).toBeChecked();
+
+    // The footer submit can be overlapped by the scroll-area viewport on
+    // Firefox, so dispatch the click directly to trigger the form submit.
+    await page
+      .getByRole('button', { name: 'Save Changes' })
+      .dispatchEvent('click');
+    await expect(
+      page.getByText('Group Staff updated successfully')
+    ).toBeVisible();
+  });
 });

@@ -12,6 +12,13 @@ import * as data from './data';
 const updaterWs = ws.link('*/api/ws/updater');
 
 /**
+ * App-login device channel. The login page opens this socket and renders a QR
+ * code from the first message it receives, so emit a fake device code on
+ * connection to drive the "App Login" flow.
+ */
+const appLoginWs = ws.link('*/api/auth/app/device_login');
+
+/**
  * Reuses the generated `*MswHandler` factories (the same mock api the unit
  * tests use). The factories build their URL from the client's `baseUrl`; in the
  * preview server every `/api/*` request is host-rewritten to the backend by
@@ -26,6 +33,9 @@ const scn = (cookies: Record<string, string>) => data.scenarioOf(cookies);
 
 export const handlers = [
   updaterWs.addEventListener('connection', () => {}),
+  appLoginWs.addEventListener('connection', ({ client }) => {
+    client.send('device-login-code');
+  }),
 
   gen.isSetupMswHandler(({ cookies }) => j(data.isSetupOf(cookies))),
   gen.getOidcSettingsMswHandler(() => j(data.oidcSettings)),
@@ -62,7 +72,7 @@ export const handlers = [
     j(data.simpleUsers[scn(cookies)])
   ),
   gen.listUsersNoteMswHandler(({ cookies }) =>
-    j(data.simpleUsers[scn(cookies)])
+    j(data.noteUsers[scn(cookies)])
   ),
   gen.listGroupsOAuthClientMswHandler(({ cookies }) =>
     j(data.simpleGroups[scn(cookies)])
@@ -81,7 +91,11 @@ export const handlers = [
   ),
 
   // Details.
-  gen.groupInfoMswHandler(() => j(data.groupDetails)),
+  gen.groupInfoMswHandler(({ params }) =>
+    // The uuid is a path param; return a non-admin group for group-staff so its
+    // editable permissions matrix renders (the admin group hides it).
+    j(params.uuid === 'group-staff' ? data.groupStaffDetails : data.groupDetails)
+  ),
   gen.userInfoMswHandler(() => j(data.userDetails)),
   gen.infoOauthClientMswHandler(() => j(data.oauthClientDetails)),
   gen.infoOAuthScopeMswHandler(() => j(data.oauthScopeDetails)),

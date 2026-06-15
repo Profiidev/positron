@@ -187,6 +187,18 @@ export const groupDetails = {
   }
 };
 
+// A non-admin group, so the detail page renders the editable permissions
+// matrix (the admin group hides it).
+export const groupStaffDetails = {
+  admin_group: 'group-admins',
+  group: {
+    id: 'group-staff',
+    name: 'Staff',
+    permissions: [] as Permission[],
+    users: [] as unknown[]
+  }
+};
+
 export const userDetails = {
   email: 'bob@example.com',
   groups: [simpleGroup],
@@ -211,6 +223,12 @@ export const noteDetails = {
 };
 
 export const simpleUsers = { default: [simpleUser], empty: [] as unknown[] };
+// The note owner (simpleUser) plus another user, so the note's share control
+// has someone to share with (the owner is filtered out of the options).
+export const noteUsers = {
+  default: [simpleUser, { id: 'user-2', name: 'Cara User' }],
+  empty: [] as unknown[]
+};
 export const simpleGroups = { default: [simpleGroup], empty: [] as unknown[] };
 export const simpleScopes = { default: [simpleScope], empty: [] as unknown[] };
 export const simplePolicies = {
