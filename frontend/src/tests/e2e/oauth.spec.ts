@@ -61,6 +61,20 @@ test.describe('oauth clients', () => {
     ).toBeVisible();
   });
 
+  test('regenerates the client secret', async ({ page }) => {
+    await gotoReady(page, '/oauth-client/client-1');
+
+    await page.getByRole('button', { name: 'Regenerate' }).click();
+    await expect(
+      page.getByText('Do you really want to regenerate the client secret')
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Regenerate' }).last().click();
+
+    await expect(
+      page.getByText('Client Secret Dashboard App regenerated successfully')
+    ).toBeVisible();
+  });
+
   test('renders client detail and deletes the client', async ({ page }) => {
     await gotoReady(page, '/oauth-client/client-1');
 

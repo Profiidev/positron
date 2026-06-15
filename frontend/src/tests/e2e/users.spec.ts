@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from '$test_helpers/e2e-fixture';
-import { setupSession } from '$test_helpers/session';
+import { setupSession, seedMailInactive } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
 
 test.beforeEach(async ({ context }) => setupSession(context));
@@ -87,5 +87,46 @@ test.describe('user detail', () => {
     await page.getByRole('button', { name: 'Delete' }).last().click();
 
     await expect(page).toHaveURL(/\/users$/);
+  });
+});
+
+test.describe('user detail (mail disabled)', () => {
+  // With mail off, the admin can reset the password/avatar and change the email
+  // directly from the detail page.
+  test.beforeEach(async ({ context }) => seedMailInactive(context));
+
+  test('resets the avatar', async ({ page }) => {
+    await gotoReady(page, '/users/user-1');
+
+    await page.getByRole('button', { name: 'Reset Avatar' }).click();
+    await expect(page.getByText('Avatar reset successfully')).toBeVisible();
+  });
+
+  test('resets the password through the dialog', async ({ page }) => {
+    await gotoReady(page, '/users/user-1');
+
+    await page.getByRole('button', { name: 'Reset Password' }).click();
+    await page.getByPlaceholder('Enter new password').fill('brandnewpass');
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Reset', exact: true })
+      .click();
+
+    await expect(
+      page.getByText('Password for user Bob User reset successfully')
+    ).toBeVisible();
+  });
+
+  test('changes the email through the dialog', async ({ page }) => {
+    await gotoReady(page, '/users/user-1');
+
+    await page.getByRole('button', { name: 'Change Email' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByPlaceholder('mail@example.com').fill('bob.new@example.com');
+    await dialog.getByRole('button', { name: 'Change', exact: true }).click();
+
+    await expect(
+      page.getByText('Email for user Bob User changed successfully')
+    ).toBeVisible();
   });
 });
