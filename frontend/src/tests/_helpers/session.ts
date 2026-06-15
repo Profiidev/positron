@@ -52,3 +52,13 @@ export const seedSetupPending = async (context: BrowserContext) => {
   ]);
   await seedDocumentCookie(context, 'mock_setup=pending');
 };
+
+/**
+ * Seeds the `mock_mail=off` cookie so the `mailActive` endpoint reports mail as
+ * unconfigured. Admin-managed user controls (reset password, change email,
+ * reset avatar) only render when mail is off.
+ */
+export const seedMailInactive = async (context: BrowserContext) => {
+  await context.addCookies([{ name: 'mock_mail', url: URL, value: 'off' }]);
+  await seedDocumentCookie(context, 'mock_mail=off');
+};

@@ -14,11 +14,15 @@ test.describe('password change', () => {
   test('changes the password with matching values', async ({ page }) => {
     await gotoReady(page, '/account/auth');
 
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByRole('button', { name: 'Change Password' }).click();
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page
       .getByPlaceholder('New Password', { exact: true })
       .fill('newsecret');
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByPlaceholder('Confirm New Password').fill('newsecret');
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByRole('button', { name: 'Change Password' }).last().click();
 
     await expect(
@@ -29,11 +33,15 @@ test.describe('password change', () => {
   test('rejects mismatched passwords', async ({ page }) => {
     await gotoReady(page, '/account/auth');
 
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByRole('button', { name: 'Change Password' }).click();
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page
       .getByPlaceholder('New Password', { exact: true })
       .fill('newsecret');
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByPlaceholder('Confirm New Password').fill('different');
+    // oxlint-disable-line capitalization-comments, oxfmt-disable-line
     await page.getByRole('button', { name: 'Change Password' }).last().click();
 
     await expect(page.getByText('Passwords are not equal')).toBeVisible();

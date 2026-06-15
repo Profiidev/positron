@@ -39,6 +39,10 @@ export const isSetupOf = (cookies: Record<string, string>) =>
 export const authConfig = { mail_enabled: true };
 export const accountSettings = { o_auth_instant_confirm: false };
 export const mailActive = { active: true };
+/** `mock_mail=off` cookie disables mail, unlocking the admin-managed user
+ * password/email/avatar controls that hide when mail is configured. */
+export const mailActiveOf = (cookies: Record<string, string>) =>
+  cookies.mock_mail === 'off' ? { active: false } : mailActive;
 export const mailSettings = {
   from_env: [] as string[],
   settings: {
