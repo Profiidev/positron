@@ -4,7 +4,7 @@ import General from '$routes/account/general/+page.svelte';
 import Settings from '$routes/account/settings/+page.svelte';
 import Auth from '$routes/account/auth/+page.svelte';
 
-const P =  async <T,>(v: T) => Promise.resolve(v);
+const pr = async <T>(v: T) => Promise.resolve(v);
 const user = {
   email: 'a@b.com',
   name: 'Bob',
@@ -18,18 +18,18 @@ const r = (Cmp: any, data: unknown) => render(Cmp, { data } as any);
 
 describe('account pages', () => {
   it('general settings renders its heading and username field', () => {
-    r(General, { user: P(user) });
+    r(General, { user: pr(user) });
     expect(screen.getByText('General Settings')).toBeInTheDocument();
     expect(screen.getByText('Username')).toBeInTheDocument();
   });
 
   it('settings renders its heading', () => {
-    r(Settings, { settings: P({ o_auth_instant_confirm: false }) });
+    r(Settings, { settings: pr({ o_auth_instant_confirm: false }) });
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('auth renders its heading', () => {
-    r(Auth, { mailActive: P(false), passkeys: P([]), user: P(user) });
+    r(Auth, { mailActive: pr(false), passkeys: pr([]), user: pr(user) });
     expect(screen.getByText('Authentication')).toBeInTheDocument();
   });
 });

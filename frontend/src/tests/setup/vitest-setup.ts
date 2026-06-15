@@ -46,7 +46,7 @@ class MemoryStorage {
     this.#map.delete(key);
   }
   setItem(key: string, value: string) {
-    this.#map.set(key, String(value));
+    this.#map.set(key, value);
   }
 }
 if (!globalThis.localStorage) {

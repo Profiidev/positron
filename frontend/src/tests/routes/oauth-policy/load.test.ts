@@ -21,7 +21,9 @@ describe('oauth-policy detail load', () => {
       params: { uuid: 'p1' }
     });
     expect(result.uuid).toBe('p1');
-    await expect(result.policyRes).resolves.toMatchObject({ data: { name: 'p' } });
+    await expect(result.policyRes).resolves.toMatchObject({
+      data: { name: 'p' }
+    });
     await expect(result.groupsPromise).resolves.toBeDefined();
   });
 });

@@ -9,7 +9,9 @@ const anyArg = (v: unknown) => v as any;
 
 describe('handleFetch', () => {
   it('rewrites /api/* requests to the backend and copies the cookie', async () => {
-    const fetch = vi.fn(async (_req: Request) => new Response('ok', { status: 200 }));
+    const fetch = vi.fn(
+      async (_req: Request) => new Response('ok', { status: 200 })
+    );
     const request = new Request('http://frontend/api/user');
     const event = anyArg({
       request: new Request('http://frontend/api/user', {
@@ -19,26 +21,30 @@ describe('handleFetch', () => {
 
     const res = await handleFetch(anyArg({ event, fetch, request }));
 
-    const forwarded = fetch.mock.calls[0][0];
+    const [[forwarded]] = fetch.mock.calls;
     expect(new URL(forwarded.url).host).toBe('backend:9000');
     expect(forwarded.headers.get('cookie')).toBe('centaurus_jwt=1');
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
   });
 
   it('does not rewrite non-/api requests but still adds CORS', async () => {
-    const fetch = vi.fn(async (_req: Request) => new Response('ok', { status: 200 }));
+    const fetch = vi.fn(
+      async (_req: Request) => new Response('ok', { status: 200 })
+    );
     const request = new Request('http://frontend/assets/logo.png');
     const event = anyArg({ request: new Request('http://frontend/assets') });
 
     const res = await handleFetch(anyArg({ event, fetch, request }));
 
-    const forwarded = fetch.mock.calls[0][0];
+    const [[forwarded]] = fetch.mock.calls;
     expect(new URL(forwarded.url).host).toBe('frontend');
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
   });
 
   it('preserves the upstream status', async () => {
-    const fetch = vi.fn(async (_req: Request) => new Response(null, { status: 418 }));
+    const fetch = vi.fn(
+      async (_req: Request) => new Response(null, { status: 418 })
+    );
     const res = await handleFetch(
       anyArg({
         event: { request: new Request('http://frontend/api/x') },

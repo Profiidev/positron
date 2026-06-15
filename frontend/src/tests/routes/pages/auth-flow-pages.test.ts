@@ -6,7 +6,7 @@ import Oauth from '$routes/oauth/+page.svelte';
 import AuthApp from '$routes/auth/app/+page.svelte';
 import Logout from '$routes/oauth/logout/+page.svelte';
 
-const P =  async <T,>(v: T) => Promise.resolve(v);
+const pr = async <T>(v: T) => Promise.resolve(v);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const r = (Cmp: any, data: unknown) => render(Cmp, { data } as any);
 
@@ -25,8 +25,8 @@ describe('auth-flow pages', () => {
     r(Oauth, {
       location: null,
       oauthOptions: { code: 'c', name: 'App' },
-      settings: P({ o_auth_instant_confirm: false }),
-      user: P(undefined)
+      settings: pr({ o_auth_instant_confirm: false }),
+      user: pr(undefined)
     });
     expect(screen.getByText(/Log in to/)).toBeInTheDocument();
   });
@@ -35,7 +35,7 @@ describe('auth-flow pages', () => {
     r(AuthApp, {
       auth: { authType: 'app', challenge: 'c' },
       code: null,
-      user: P(undefined)
+      user: pr(undefined)
     });
     expect(screen.getByText(/Log in to Positron App/)).toBeInTheDocument();
   });
@@ -43,7 +43,7 @@ describe('auth-flow pages', () => {
   it('oauth logout renders without a target', () => {
     const { container } = r(Logout, {
       oauthLogout: undefined,
-      user: P(undefined)
+      user: pr(undefined)
     });
     expect(container.innerHTML.length).toBeGreaterThan(0);
   });

@@ -46,7 +46,9 @@ describe('groups table columns', () => {
   });
 
   it('disables actions when the user lacks group:edit', () => {
-    const user = { permissions: [Permission.GROUP_VIEW] } as unknown as UserInfo;
+    const user = {
+      permissions: [Permission.GROUP_VIEW]
+    } as unknown as UserInfo;
     const props = actionsProps(
       { deleteGroup: () => {}, user },
       { id: 'g1', permissions: [] }

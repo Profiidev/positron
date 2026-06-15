@@ -3,7 +3,9 @@ import { render, screen } from '@testing-library/svelte';
 import type { ColumnDef } from '@tanstack/table-core';
 import Table from '$lib/components/table/Table.svelte';
 
-interface Row { name: string }
+interface Row {
+  name: string;
+}
 
 const columns = (): ColumnDef<Row>[] => [
   {

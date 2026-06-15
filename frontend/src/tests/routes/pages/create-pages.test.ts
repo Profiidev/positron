@@ -8,7 +8,7 @@ import ScopeCreate from '$routes/oauth-scope/create/+page.svelte';
 import UserCreate from '$routes/users/create/+page.svelte';
 import ApodDate from '$routes/apod/[date]/+page.svelte';
 
-const P =  async <T,>(v: T) => Promise.resolve(v);
+const pr = async <T>(v: T) => Promise.resolve(v);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mounts = (Cmp: any, data: unknown) => {
@@ -24,20 +24,21 @@ describe('create pages mount', () => {
     mounts(ClientCreate, {
       client_id: undefined,
       client_secret: undefined,
-      scopes: P([])
+      scopes: pr([])
     }));
   it('oauth-policy create', () => mounts(PolicyCreate, { uuid: undefined }));
   it('oauth-scope create', () =>
-    mounts(ScopeCreate, { policies: P([]), uuid: undefined }));
-  it('user create', () => mounts(UserCreate, { mailActive: P(false), uuid: undefined }));
+    mounts(ScopeCreate, { policies: pr([]), uuid: undefined }));
+  it('user create', () =>
+    mounts(UserCreate, { mailActive: pr(false), uuid: undefined }));
 });
 
 describe('apod [date] page mounts', () => {
   it('renders with image info', () => {
-    mounts(ApodDate, { apodInfo: P({ title: 'Galaxy' }), date: '2024-01-02' });
+    mounts(ApodDate, { apodInfo: pr({ title: 'Galaxy' }), date: '2024-01-02' });
   });
 
   it('renders when the image is unavailable', () => {
-    mounts(ApodDate, { apodInfo: P(null), date: '2024-01-02' });
+    mounts(ApodDate, { apodInfo: pr(null), date: '2024-01-02' });
   });
 });

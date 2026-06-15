@@ -9,12 +9,12 @@ vi.mock('$app/navigation', () => ({
   afterNavigate: vi.fn(),
   beforeNavigate: vi.fn(),
   disableScrollHandling: vi.fn(),
-  goto: vi.fn( async () => Promise.resolve()),
-  invalidate: vi.fn( async () => Promise.resolve()),
-  invalidateAll: vi.fn( async () => Promise.resolve()),
+  goto: vi.fn(async () => Promise.resolve()),
+  invalidate: vi.fn(async () => Promise.resolve()),
+  invalidateAll: vi.fn(async () => Promise.resolve()),
   onNavigate: vi.fn(),
-  preloadCode: vi.fn( async () => Promise.resolve()),
-  preloadData: vi.fn( async () => Promise.resolve()),
+  preloadCode: vi.fn(async () => Promise.resolve()),
+  preloadData: vi.fn(async () => Promise.resolve()),
   pushState: vi.fn(),
   replaceState: vi.fn()
 }));
@@ -32,10 +32,15 @@ vi.mock('$app/stores', async () => {
   });
   const navigating = readable(null);
   const updated = {
-    check:  async () => Promise.resolve(false),
+    check: async () => Promise.resolve(false),
     subscribe: readable(false).subscribe
   };
-  return { getStores: () => ({ navigating, page, updated }), navigating, page, updated };
+  return {
+    getStores: () => ({ navigating, page, updated }),
+    navigating,
+    page,
+    updated
+  };
 });
 
 vi.mock('$app/state', () => ({

@@ -9,7 +9,7 @@ const ev = (props: Record<string, unknown>) => props as any;
 
 describe('apod/+page.server.ts load', () => {
   it("redirects to today's apod page", async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const [today] = new Date().toISOString().split('T');
     const redirect = await catchRedirect(() => redirectLoad());
     expect(redirect.status).toBe(302);
     expect(redirect.location).toBe(`/apod/${today}`);

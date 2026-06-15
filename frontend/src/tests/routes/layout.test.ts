@@ -52,11 +52,11 @@ describe('+layout.ts load', () => {
   });
 });
 
-describe('+layout.server.ts load', () => {
-  const cookies = (value?: string) => ({ get: () => value });
+const cookies = (value?: string) => ({ get: () => value });
 
+describe('+layout.server.ts load', () => {
   it('redirects to /login when unauthenticated on a protected path', async () => {
-    const redirect = await catchRedirect(() =>
+    const redirect = await catchRedirect(async () =>
       layoutServerLoad(
         ev({ cookies: cookies(), url: new URL('http://x/users') })
       )

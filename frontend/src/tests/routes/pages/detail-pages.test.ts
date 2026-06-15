@@ -6,9 +6,9 @@ import ScopeDetail from '$routes/oauth-scope/[uuid]/+page.svelte';
 import ClientDetail from '$routes/oauth-client/[uuid]/+page.svelte';
 import UserDetail from '$routes/users/[uuid]/+page.svelte';
 
-const P =  async <T,>(v: T) => Promise.resolve(v);
-const ok =  async <T,>(d: T) => P({ data: d, response: { status: 200 } });
-const user = P({
+const pr = async <T>(v: T) => Promise.resolve(v);
+const ok = async <T>(d: T) => pr({ data: d, response: { status: 200 } });
+const user = pr({
   email: 'a@b.com',
   name: 'Admin',
   permissions: [],
@@ -26,7 +26,7 @@ const mounts = (Cmp: any, data: unknown) => {
 describe('detail [uuid] pages mount with resolved data', () => {
   it('group detail', () => {
     mounts(GroupDetail, {
-      groupRes: P({
+      groupRes: pr({
         data: {
           admin_group: 'a',
           group: { name: 'g', permissions: [], users: [] }
@@ -40,8 +40,8 @@ describe('detail [uuid] pages mount with resolved data', () => {
 
   it('oauth-policy detail', () => {
     mounts(PolicyDetail, {
-      groupsPromise: P([]),
-      policyRes: P({
+      groupsPromise: pr([]),
+      policyRes: pr({
         data: { claim: 'c', content: [], default: 'd', name: 'p' }
       }),
       user,
@@ -51,8 +51,8 @@ describe('detail [uuid] pages mount with resolved data', () => {
 
   it('oauth-scope detail', () => {
     mounts(ScopeDetail, {
-      policiesPromise: P([]),
-      scopeRes: P({ data: { name: 's', policies: [], scope: 's' } }),
+      policiesPromise: pr([]),
+      scopeRes: pr({ data: { name: 's', policies: [], scope: 's' } }),
       user,
       uuid: 's1'
     });
@@ -60,7 +60,7 @@ describe('detail [uuid] pages mount with resolved data', () => {
 
   it('oauth-client detail', () => {
     mounts(ClientDetail, {
-      clientRes: P({
+      clientRes: pr({
         data: {
           additional_redirect_uris: [],
           default_scope: [],
@@ -71,20 +71,20 @@ describe('detail [uuid] pages mount with resolved data', () => {
           user_access: []
         }
       }),
-      groupsPromise: P([]),
-      scopesPromise: P([]),
+      groupsPromise: pr([]),
+      scopesPromise: pr([]),
       secret: undefined,
-      sitePromise: P(''),
+      sitePromise: pr(''),
       user,
-      usersPromise: P([]),
+      usersPromise: pr([]),
       uuid: 'c1'
     });
   });
 
   it('user detail', () => {
     mounts(UserDetail, {
-      groupsPromise: P([]),
-      mailActivePromise: P(false),
+      groupsPromise: pr([]),
+      mailActivePromise: pr(false),
       user,
       userInfoPromise: ok({ groups: [], name: 'u', permissions: [] }),
       uuid: 'u1'

@@ -31,7 +31,9 @@ describe('oauth-scope detail load', () => {
       params: { uuid: 's1' }
     });
     expect(result.uuid).toBe('s1');
-    await expect(result.scopeRes).resolves.toMatchObject({ data: { name: 's' } });
+    await expect(result.scopeRes).resolves.toMatchObject({
+      data: { name: 's' }
+    });
     await expect(result.policiesPromise).resolves.toBeDefined();
   });
 });

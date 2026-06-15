@@ -4,10 +4,10 @@ import { jsonFetch, runLoad } from '../../_helpers/load';
 
 describe('login load', () => {
   it('short-circuits with the error when one is in the query', async () => {
-    const result = await runLoad(
-      load,
-      { fetch: jsonFetch(null), url: new URL('http://x/login?error=boom') }
-    );
+    const result = await runLoad(load, {
+      fetch: jsonFetch(null),
+      url: new URL('http://x/login?error=boom')
+    });
     expect(result).toEqual({ error: 'boom' });
   });
 

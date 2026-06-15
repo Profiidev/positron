@@ -3,9 +3,9 @@ import { login, totpSchema } from '$routes/login/schema.svelte';
 
 describe('login schema', () => {
   it('accepts a valid email and password', () => {
-    expect(
-      login.safeParse({ email: 'a@b.com', password: 'pw' }).success
-    ).toBe(true);
+    expect(login.safeParse({ email: 'a@b.com', password: 'pw' }).success).toBe(
+      true
+    );
   });
 
   it('rejects an invalid email', () => {

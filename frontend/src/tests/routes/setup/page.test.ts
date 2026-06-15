@@ -7,7 +7,7 @@ const event = (fetch: typeof globalThis.fetch) => ({ fetch }) as any;
 
 describe('setup load', () => {
   it('redirects to / when setup is already complete', async () => {
-    const redirect = await catchRedirect(() =>
+    const redirect = await catchRedirect(async () =>
       load(
         event(
           jsonFetch({

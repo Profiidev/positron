@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const invalidate = vi.fn( async (_arg: unknown) => Promise.resolve());
+const invalidate = vi.fn(async (_arg: unknown) => Promise.resolve());
 const connect = vi.fn((_user: string, _handler: unknown) => {});
 const disconnect = vi.fn(() => {});
 
 vi.mock('$app/navigation', () => ({
-  invalidate:  async (arg: unknown) => invalidate(arg)
+  invalidate: async (arg: unknown) => invalidate(arg)
 }));
 vi.mock('@profidev/pleiades/backend', () => ({
   connectWebsocket: (user: string, handler: unknown) => connect(user, handler),
   disconnectWebsocket: () => disconnect()
 }));
 
-const { UpdateType, connectWebsocket, disconnectWebsocket } = await import(
-  '$lib/backend/updater.svelte'
-);
+const { UpdateType, connectWebsocket, disconnectWebsocket } =
+  await import('$lib/backend/updater.svelte');
 
 type Handler = (msg: { type: string; uuid?: string }, user: string) => void;
 

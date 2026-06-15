@@ -23,7 +23,10 @@ export const runLoad = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> => load(event as never);
 
-interface ThrownRedirect { status: number; location: string }
+interface ThrownRedirect {
+  status: number;
+  location: string;
+}
 
 /**
  * Runs `fn` and returns the SvelteKit redirect it throws. Fails if `fn` does

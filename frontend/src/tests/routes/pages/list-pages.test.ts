@@ -8,7 +8,7 @@ import Clients from '$routes/oauth-client/+page.svelte';
 import Scopes from '$routes/oauth-scope/+page.svelte';
 import Policies from '$routes/oauth-policy/+page.svelte';
 
-const P =  async <T,>(v: T) => Promise.resolve(v);
+const pr = async <T>(v: T) => Promise.resolve(v);
 
 // [component, heading, data]
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,32 +17,37 @@ const pages: [string, Component<any>, string, unknown][] = [
     'groups',
     Groups,
     'Groups',
-    { admin_group: P(undefined), error: null, groups: P([]), user: P(undefined) }
+    {
+      admin_group: pr(undefined),
+      error: null,
+      groups: pr([]),
+      user: pr(undefined)
+    }
   ],
-  ['notes', Notes, 'Notes', { error: null, notes: P([]) }],
+  ['notes', Notes, 'Notes', { error: null, notes: pr([]) }],
   [
     'users',
     Users,
     'Users',
-    { error: null, user: P(undefined), users: P([]) }
+    { error: null, user: pr(undefined), users: pr([]) }
   ],
   [
     'oauth-client',
     Clients,
     'OAuth / Oidc Clients',
-    { clients: P([]), error: null, user: P(undefined) }
+    { clients: pr([]), error: null, user: pr(undefined) }
   ],
   [
     'oauth-scope',
     Scopes,
     'OAuth / Oidc Scopes',
-    { error: null, scopes: P([]), user: P(undefined) }
+    { error: null, scopes: pr([]), user: pr(undefined) }
   ],
   [
     'oauth-policy',
     Policies,
     'OAuth / Oidc Policies',
-    { error: null, policies: P([]), user: P(undefined) }
+    { error: null, policies: pr([]), user: pr(undefined) }
   ]
 ];
 

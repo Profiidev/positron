@@ -17,7 +17,7 @@ describe('login +page.server load', () => {
   });
 
   it('redirects an authenticated user with oauth code+name to /oauth', async () => {
-    const redirect = await catchRedirect(() =>
+    const redirect = await catchRedirect(async () =>
       load(
         ev({
           cookies: cookies('jwt'),
@@ -29,7 +29,7 @@ describe('login +page.server load', () => {
   });
 
   it('redirects an authenticated user with an auth param to /auth/*', async () => {
-    const redirect = await catchRedirect(() =>
+    const redirect = await catchRedirect(async () =>
       load(
         ev({ cookies: cookies('jwt'), url: new URL('http://x/login?auth=app') })
       )
@@ -38,7 +38,7 @@ describe('login +page.server load', () => {
   });
 
   it('redirects an authenticated user on /login to /', async () => {
-    const redirect = await catchRedirect(() =>
+    const redirect = await catchRedirect(async () =>
       load(ev({ cookies: cookies('jwt'), url: new URL('http://x/login') }))
     );
     expect(redirect.location).toBe('/');

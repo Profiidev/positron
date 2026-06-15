@@ -79,10 +79,10 @@ describe('calculateVisibleCount', () => {
   });
 });
 
-describe('cleanupSeparatorVisibility', () => {
-  const sep = (id: string): ToolbarOverflowItem => ({ id, isSeparator: true });
-  const item = (id: string): ToolbarOverflowItem => ({ id });
+const sep = (id: string): ToolbarOverflowItem => ({ id, isSeparator: true });
+const item = (id: string): ToolbarOverflowItem => ({ id });
 
+describe('cleanupSeparatorVisibility', () => {
   it('hides everything past the visible count', () => {
     const items = [item('a'), item('b'), item('c')];
     expect(cleanupSeparatorVisibility(items, 2)).toEqual([true, true, false]);
