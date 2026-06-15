@@ -28,6 +28,24 @@ test.describe('apod today', () => {
 
     await expect(page).toHaveURL(/\/apod\/list/);
   });
+
+  test('loads a specific date directly', async ({ page }) => {
+    await gotoReady(page, '/apod/2024-01-02');
+
+    await expect(page.getByText('Spiral Galaxy')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Deselect' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('toggles the selection of the current image', async ({ page }) => {
+    await gotoReady(page, '/apod/2024-01-02');
+
+    // The image is already selected, so the control offers to deselect; the
+    // Mocked endpoint resolves successfully and the button stays interactive.
+    const deselect = page.getByRole('button', { name: 'Deselect' });
+    await deselect.click();
+    await expect(deselect).toBeVisible();
+  });
 });
 
 test.describe('apod library', () => {

@@ -48,6 +48,19 @@ test.describe('oauth clients', () => {
     await expect(page).toHaveURL(/\/oauth-client\/create/);
   });
 
+  test('saves changes to a client', async ({ page }) => {
+    await gotoReady(page, '/oauth-client/client-1');
+
+    const name = page.getByPlaceholder('Enter client name');
+    await expect(name).toHaveValue('Dashboard App');
+    await name.fill('Dashboard App 2');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('Client Dashboard App updated successfully')
+    ).toBeVisible();
+  });
+
   test('renders client detail and deletes the client', async ({ page }) => {
     await gotoReady(page, '/oauth-client/client-1');
 
@@ -102,6 +115,19 @@ test.describe('oauth scopes', () => {
     await expect(page).toHaveURL(/\/oauth-scope\/create/);
   });
 
+  test('saves changes to a scope', async ({ page }) => {
+    await gotoReady(page, '/oauth-scope/scope-1');
+
+    const name = page.getByPlaceholder('Enter scope name');
+    await expect(name).toHaveValue('profile');
+    await name.fill('profile renamed');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('Scope profile updated successfully')
+    ).toBeVisible();
+  });
+
   test('disables deletion of a default scope', async ({ page }) => {
     await gotoReady(page, '/oauth-scope/scope-1');
 
@@ -152,6 +178,19 @@ test.describe('oauth policies', () => {
     await page.getByRole('button', { name: 'Create' }).click();
 
     await expect(page).toHaveURL(/\/oauth-policy\/create/);
+  });
+
+  test('saves changes to a policy', async ({ page }) => {
+    await gotoReady(page, '/oauth-policy/policy-1');
+
+    const name = page.getByPlaceholder('Enter policy name');
+    await expect(name).toHaveValue('Group Policy');
+    await name.fill('Group Policy 2');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('Policy Group Policy updated successfully')
+    ).toBeVisible();
   });
 
   test('renders policy detail and deletes the policy', async ({ page }) => {

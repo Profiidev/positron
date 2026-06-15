@@ -62,6 +62,19 @@ test.describe('user detail', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('saves changes to a user', async ({ page }) => {
+    await gotoReady(page, '/users/user-1');
+
+    const name = page.getByPlaceholder('Enter user name');
+    await expect(name).toHaveValue('Bob User');
+    await name.fill('Bob Updated');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('User Bob User updated successfully')
+    ).toBeVisible();
+  });
+
   test('deletes a user through the confirmation dialog', async ({ page }) => {
     await gotoReady(page, '/users/user-1');
 

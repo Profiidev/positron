@@ -47,6 +47,17 @@ test.describe('account settings', () => {
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
+
+  test('saves the oauth confirmation setting', async ({ page }) => {
+    await gotoReady(page, '/account/settings');
+
+    await page.getByRole('switch').first().click();
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('General settings saved successfully')
+    ).toBeVisible();
+  });
 });
 
 test.describe('account authentication', () => {

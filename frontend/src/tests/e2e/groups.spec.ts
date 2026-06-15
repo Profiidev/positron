@@ -71,4 +71,17 @@ test.describe('group detail', () => {
 
     await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
   });
+
+  test('saves changes to a group', async ({ page }) => {
+    await gotoReady(page, '/groups/group-admins');
+
+    const name = page.getByPlaceholder('Enter group name');
+    await expect(name).toHaveValue('Admins');
+    await name.fill('Administrators');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(
+      page.getByText('Group Admins updated successfully')
+    ).toBeVisible();
+  });
 });

@@ -52,6 +52,18 @@ test.describe('note detail', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('saves a renamed title on blur', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    const title = page.getByPlaceholder('Note title');
+    await expect(title).toHaveValue('My First Note');
+    await title.fill('Renamed Note');
+    // Pressing Enter blurs the input, which triggers the title save.
+    await title.press('Enter');
+
+    await expect(page.getByText('Title updated')).toBeVisible();
+  });
+
   test('deletes a note through the confirmation dialog', async ({ page }) => {
     await gotoReady(page, '/notes/note-1');
 
