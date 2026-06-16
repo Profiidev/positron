@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { load as layoutLoad } from '$routes/+layout';
 import { load as layoutServerLoad } from '$routes/+layout.server';
+import { noAuthPaths } from '$lib/components/nav.svelte';
 import { catchRedirect, jsonFetch } from '$test_helpers/load';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,12 +65,25 @@ describe('+layout.server.ts load', () => {
     expect(redirect).toMatchObject({ location: '/login', status: 302 });
   });
 
-  it('allows an unauthenticated user on a public path', async () => {
-    const result = await layoutServerLoad(
-      ev({ cookies: cookies(), url: new URL('http://x/login') })
-    );
-    expect(result).toBeUndefined();
-  });
+  it.each(noAuthPaths)(
+    'allows an unauthenticated user on the public path %s',
+    async (path) => {
+      const result = await layoutServerLoad(
+        ev({ cookies: cookies(), url: new URL(`http://x${path}`) })
+      );
+      expect(result).toBeUndefined();
+    }
+  );
+
+  it.each(noAuthPaths)(
+    'allows an authenticated user on the public path %s',
+    async (path) => {
+      const result = await layoutServerLoad(
+        ev({ cookies: cookies('jwt'), url: new URL(`http://x${path}`) })
+      );
+      expect(result).toBeUndefined();
+    }
+  );
 
   it('allows an authenticated user anywhere', async () => {
     const result = await layoutServerLoad(

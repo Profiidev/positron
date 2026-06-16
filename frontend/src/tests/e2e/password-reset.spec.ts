@@ -5,7 +5,7 @@ import { test } from '$test_helpers/e2e-fixture';
 import { gotoReady } from '$test_helpers/layout';
 
 // Token as it would appear in the link a user clicks from the password-reset
-// email: `https://<app>/password/reset?token=<token>`.
+// Email: `https://<app>/password/reset?token=<token>`.
 const RESET_TOKEN = 'email-reset-token';
 
 test.describe('password reset from an email link', () => {
@@ -14,20 +14,20 @@ test.describe('password reset from an email link', () => {
     network
   }) => {
     // A user clicking the reset link from their inbox is NOT logged in, so the
-    // backend's token check fails. The default e2e catch-all returns `{}` for
+    // Backend's token check fails. The default e2e catch-all returns `{}` for
     // `test_token` (which leaves `valid` undefined and hides the redirect), so
-    // we model the real, logged-out response explicitly.
+    // We model the real, logged-out response explicitly.
     network.use(
       gen.testTokenMswHandler(() =>
-        HttpResponse.json({ valid: false, exp_short: false })
+        HttpResponse.json({ exp_short: false, valid: false })
       )
     );
 
     await gotoReady(page, `/password/reset?token=${RESET_TOKEN}`);
 
     // BUG: the root layout's `onMount` redirects any session with an invalid
-    // token to `/login`, with no exemption for `/password/reset`. So the user
-    // never reaches the reset form and these assertions currently fail.
+    // Token to `/login`, with no exemption for `/password/reset`. So the user
+    // Never reaches the reset form and these assertions currently fail.
     await expect(page).toHaveURL(/\/password\/reset/);
     await expect(
       page.getByText('Enter your new password below to reset your password')
@@ -46,7 +46,7 @@ test.describe('password reset from an email link', () => {
       .fill('new-password-123');
 
     await page
-      .getByRole('button', { name: 'Reset Password', exact: true })
+      .getByRole('button', { exact: true, name: 'Reset Password' })
       .click();
 
     await expect(
