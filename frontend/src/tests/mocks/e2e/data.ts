@@ -1,10 +1,21 @@
 import { Permission } from '$lib/permissions.svelte';
 
 /** Scenario name read from the `mock_scenario` cookie (set by the e2e tests). */
-export type Scenario = 'default' | 'empty';
+export type Scenario = 'default' | 'empty' | 'readonly';
 
-export const scenarioOf = (cookies: Record<string, string>): Scenario =>
+/**
+ * List data only varies between `default` and `empty`; the `readonly` scenario
+ * reuses the default lists and only changes the note *detail* payload (see
+ * `isReadonlyNote`), so a viewer can be exercised without new list fixtures.
+ */
+export const scenarioOf = (
+  cookies: Record<string, string>
+): 'default' | 'empty' =>
   cookies.mock_scenario === 'empty' ? 'empty' : 'default';
+
+/** True when the note detail should be served as a view-only (can_edit) note. */
+export const isReadonlyNote = (cookies: Record<string, string>): boolean =>
+  cookies.mock_scenario === 'readonly';
 
 /** Admin user with every permission, so admin pages render full controls. */
 export const adminUser = {
@@ -95,6 +106,7 @@ export const users = {
 export const notes = {
   default: [
     {
+      can_edit: true,
       id: 'note-1',
       is_owner: true,
       owner: simpleUser,
@@ -219,10 +231,22 @@ export const oauthScopeDetails = oauthScopes.default[0];
 // oxlint-disable-next-line prefer-destructuring
 export const oauthPolicyDetails = oauthPolicies.default[0];
 export const noteDetails = {
+  can_edit: true,
   id: 'note-1',
   is_owner: true,
   owner: simpleUser,
   shared_with: [],
+  title: 'My First Note'
+};
+
+// A note owned by someone else and shared with the current user as view-only.
+// Both is_owner (share/title/delete locked) and can_edit (editor locked) false.
+export const noteDetailsReadonly = {
+  can_edit: false,
+  id: 'note-1',
+  is_owner: false,
+  owner: { id: 'user-2', name: 'Cara User' },
+  shared_with: [{ ...simpleUser, access: 'view' as const }],
   title: 'My First Note'
 };
 

@@ -101,7 +101,11 @@ export const handlers = [
   gen.infoOauthClientMswHandler(() => j(data.oauthClientDetails)),
   gen.infoOAuthScopeMswHandler(() => j(data.oauthScopeDetails)),
   gen.infoOAuthPolicyMswHandler(() => j(data.oauthPolicyDetails)),
-  gen.infoNoteMswHandler(() => j(data.noteDetails)),
+  gen.infoNoteMswHandler(({ cookies }) =>
+    j(
+      data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
+    )
+  ),
 
   // Mutations return a generic success so submit flows resolve.
   gen.createGroupMswHandler(() => j({ uuid: 'group-new' })),

@@ -1,17 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import ShareControl from '$lib/components/notes/NoteShareControl.svelte';
-import type { SimpleUserInfo } from '$lib/client';
+import type { SharedUserInfo, SimpleUserInfo } from '$lib/client';
 
-const users = (n: number): SimpleUserInfo[] =>
-  Array.from(
-    { length: n },
-    (_, i) => ({ id: `u${i}`, name: `User${i}` }) as unknown as SimpleUserInfo
-  );
+const shareableUsers: SimpleUserInfo[] = [
+  { id: 'u1', name: 'Alice' },
+  { id: 'u2', name: 'Bob' },
+  { id: 'u3', name: 'Cara' }
+];
+
+const shared = (users: SharedUserInfo[]) => users;
 
 const base = {
-  onSelectChange: vi.fn(),
-  shareableUsers: users(3)
+  onShareChange: vi.fn(),
+  shareableUsers
 };
 
 describe('NoteShareControl (editable)', () => {
@@ -21,12 +23,25 @@ describe('NoteShareControl (editable)', () => {
   });
 
   it.each([1, 3])('shows the shared count for %i user(s)', (n) => {
-    render(ShareControl, { ...base, selected: users(n) });
+    render(ShareControl, {
+      ...base,
+      selected: shared(
+        shareableUsers.slice(0, n).map((user) => ({
+          ...user,
+          access: 'edit' as const
+        }))
+      )
+    });
     expect(screen.getByText(`${n} shared`)).toBeInTheDocument();
   });
 
   it('shows a "+N" badge beyond four shared users', () => {
-    render(ShareControl, { ...base, selected: users(6) });
+    const selected = Array.from({ length: 6 }, (_, i) => ({
+      access: 'edit' as const,
+      id: `u${i}`,
+      name: `User${i}`
+    }));
+    render(ShareControl, { ...base, selected });
     expect(screen.getByText('6 shared')).toBeInTheDocument();
     expect(screen.getByText('+2')).toBeInTheDocument();
   });
@@ -34,6 +49,60 @@ describe('NoteShareControl (editable)', () => {
   it('disables the trigger while saving', () => {
     render(ShareControl, { ...base, saving: true, selected: [] });
     expect(screen.getByRole('button')).toBeDisabled();
+  });
+
+  it('adds a user with edit access when Edit is clicked', async () => {
+    const onShareChange = vi.fn();
+    render(ShareControl, { ...base, onShareChange, selected: [] });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+
+    expect(onShareChange).toHaveBeenCalledWith([
+      { access: 'edit', userId: 'u1' }
+    ]);
+  });
+
+  it('adds a user with view access when View is clicked', async () => {
+    const onShareChange = vi.fn();
+    render(ShareControl, { ...base, onShareChange, selected: [] });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
+
+    expect(onShareChange).toHaveBeenCalledWith([
+      { access: 'view', userId: 'u1' }
+    ]);
+  });
+
+  it('revokes share when the active permission is clicked again', async () => {
+    const onShareChange = vi.fn();
+    render(ShareControl, {
+      ...base,
+      onShareChange,
+      selected: [{ access: 'edit', id: 'u1', name: 'Alice' }]
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+
+    expect(onShareChange).toHaveBeenCalledWith([]);
+  });
+
+  it('switches permission when the inactive button is clicked', async () => {
+    const onShareChange = vi.fn();
+    render(ShareControl, {
+      ...base,
+      onShareChange,
+      selected: [{ access: 'edit', id: 'u1', name: 'Alice' }]
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
+    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
+
+    expect(onShareChange).toHaveBeenCalledWith([
+      { access: 'view', userId: 'u1' }
+    ]);
   });
 });
 
@@ -45,7 +114,16 @@ describe('NoteShareControl (readonly)', () => {
   });
 
   it('shows the shared count without a button', () => {
-    render(ShareControl, { ...base, readonly: true, selected: users(2) });
+    render(ShareControl, {
+      ...base,
+      readonly: true,
+      selected: shared(
+        shareableUsers.slice(0, 2).map((user) => ({
+          ...user,
+          access: 'view' as const
+        }))
+      )
+    });
     expect(screen.getByText('2 shared')).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
   });

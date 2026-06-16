@@ -69,10 +69,40 @@ test.describe('note detail', () => {
 
     await page.getByRole('button', { name: 'Share' }).click();
     await expect(page.getByPlaceholder('Search people...')).toBeVisible();
-    await page.getByRole('option', { name: 'Cara User' }).click();
+    await page
+      .getByRole('option', { name: 'Cara User' })
+      .getByRole('button', { name: 'Edit' })
+      .click();
 
     // The share update is debounced (~500ms) before it persists.
     await expect(page.getByText('Shared users updated')).toBeVisible();
+  });
+
+  test('shares the note as view-only', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Share' }).click();
+    await expect(page.getByPlaceholder('Search people...')).toBeVisible();
+    await page
+      .getByRole('option', { name: 'Cara User' })
+      .getByRole('button', { name: 'View' })
+      .click();
+
+    await expect(page.getByText('Shared users updated')).toBeVisible();
+  });
+
+  test('locks the editor for a view-only note', async ({ context, page }) => {
+    await setupSession(context, 'readonly');
+    await gotoReady(page, '/notes/note-1');
+
+    // A non-owner viewer cannot rename, delete or re-share the note.
+    await expect(page.getByPlaceholder('Note title')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Share' })).toHaveCount(0);
+
+    // The editor renders read-only with no contenteditable surface.
+    const editor = page.locator('.ProseMirror').first();
+    await expect(editor).toHaveAttribute('contenteditable', 'false');
   });
 
   test('deletes a note through the confirmation dialog', async ({ page }) => {

@@ -1,11 +1,24 @@
+use std::collections::HashMap;
+
 use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
-use entity::{note, note_user, prelude::*, user};
+use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
-use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, IntoActiveModel, TransactionTrait, prelude::*,
-};
+use sea_orm::{ActiveValue::Set, Condition, ConnectionTrait, TransactionTrait, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+pub struct SharedUserInfo {
+  pub id: Uuid,
+  pub name: String,
+  pub access: NoteShareAccess,
+}
+
+#[derive(Deserialize, JsonSchema, PartialEq, Clone, Debug)]
+pub struct NoteShareEntry {
+  pub user_id: Uuid,
+  pub access: NoteShareAccess,
+}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct NoteInfo {
@@ -13,8 +26,9 @@ pub struct NoteInfo {
   pub title: String,
   pub preview: String,
   pub owner: SimpleUserInfo,
-  pub shared_with: Vec<SimpleUserInfo>,
+  pub shared_with: Vec<SharedUserInfo>,
   pub is_owner: bool,
+  pub can_edit: bool,
 }
 
 struct NoteOwnerLink;
@@ -51,16 +65,44 @@ impl<'db> NoteTable<'db> {
     Ok(count > 0)
   }
 
-  pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<Uuid>> {
-    let shared_users: Vec<Uuid> = note_user::Entity::find()
+  pub async fn can_edit(&self, user_id: Uuid, note_id: Uuid) -> Result<bool> {
+    if self.is_owner(user_id, note_id).await? {
+      return Ok(true);
+    }
+
+    let row = note_user::Entity::find()
+      .filter(note_user::Column::Note.eq(note_id))
+      .filter(note_user::Column::User.eq(user_id))
+      .one(self.db)
+      .await?;
+
+    Ok(row.is_some_and(|r| r.access == NoteShareAccess::Edit))
+  }
+
+  pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<NoteShareEntry>> {
+    let shared_users = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
       .all(self.db)
       .await?
       .into_iter()
-      .map(|row| row.user)
+      .map(|row| NoteShareEntry {
+        user_id: row.user,
+        access: row.access,
+      })
       .collect();
 
     Ok(shared_users)
+  }
+
+  pub async fn shared_user_ids(&self, note_id: Uuid) -> Result<Vec<Uuid>> {
+    Ok(
+      self
+        .shared_users(note_id)
+        .await?
+        .into_iter()
+        .map(|s| s.user_id)
+        .collect(),
+    )
   }
 
   pub async fn is_owner(&self, user_id: Uuid, note_id: Uuid) -> Result<bool> {
@@ -71,6 +113,35 @@ impl<'db> NoteTable<'db> {
       .await?;
 
     Ok(count > 0)
+  }
+
+  async fn shared_with_for_notes(
+    &self,
+    note_ids: &[Uuid],
+  ) -> Result<HashMap<Uuid, Vec<SharedUserInfo>>> {
+    if note_ids.is_empty() {
+      return Ok(HashMap::new());
+    }
+
+    let rows = note_user::Entity::find()
+      .filter(note_user::Column::Note.is_in(note_ids.to_vec()))
+      .find_also_related(user::Entity)
+      .all(self.db)
+      .await?;
+
+    let mut map: HashMap<Uuid, Vec<SharedUserInfo>> = HashMap::new();
+    for (share, user) in rows {
+      let Some(user) = user else {
+        continue;
+      };
+      map.entry(share.note).or_default().push(SharedUserInfo {
+        id: user.id,
+        name: user.name,
+        access: share.access,
+      });
+    }
+
+    Ok(map)
   }
 
   pub async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<NoteInfo>> {
@@ -92,20 +163,24 @@ impl<'db> NoteTable<'db> {
       .all(self.db)
       .await?;
 
-    let notes: Vec<note::Model> = notes_with_owners
-      .iter()
-      .map(|(note, _)| note.clone())
-      .collect();
-
-    let shared_users = notes
-      .load_many_to_many(user::Entity, note_user::Entity, self.db)
-      .await?;
+    let note_ids: Vec<Uuid> = notes_with_owners.iter().map(|(note, _)| note.id).collect();
+    let shared_by_note = self.shared_with_for_notes(&note_ids).await?;
 
     notes_with_owners
       .into_iter()
-      .zip(shared_users)
-      .map(|((note, owners), shared)| {
+      .map(|(note, owners)| {
         let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+        let is_owner = note.owner == user_id;
+        let can_edit = is_owner
+          || shared_by_note
+            .get(&note.id)
+            .map(|shares| {
+              shares
+                .iter()
+                .any(|s| s.id == user_id && s.access == NoteShareAccess::Edit)
+            })
+            .unwrap_or(false);
+
         Ok(NoteInfo {
           id: note.id,
           title: note.title,
@@ -114,14 +189,9 @@ impl<'db> NoteTable<'db> {
             id: owner.id,
             name: owner.name,
           },
-          shared_with: shared
-            .into_iter()
-            .map(|u| SimpleUserInfo {
-              id: u.id,
-              name: u.name,
-            })
-            .collect(),
-          is_owner: note.owner == user_id,
+          shared_with: shared_by_note.get(&note.id).cloned().unwrap_or_default(),
+          is_owner,
+          can_edit,
         })
       })
       .collect::<Result<Vec<_>>>()
@@ -145,13 +215,17 @@ impl<'db> NoteTable<'db> {
       .all(self.db)
       .await?
       .into_iter()
-      .filter_map(|(_, user)| {
-        user.map(|u| SimpleUserInfo {
+      .filter_map(|(share, user)| {
+        user.map(|u| SharedUserInfo {
           id: u.id,
           name: u.name,
+          access: share.access,
         })
       })
       .collect();
+
+    let is_owner = note.owner == user_id;
+    let can_edit = is_owner || self.can_edit(user_id, note_id).await?;
 
     Ok(Some(NoteInfo {
       id: note.id,
@@ -162,11 +236,12 @@ impl<'db> NoteTable<'db> {
         name: owner.name,
       },
       shared_with,
-      is_owner: note.owner == user_id,
+      is_owner,
+      can_edit,
     }))
   }
 
-  pub async fn create(&self, owner: Uuid, title: String, shared_with: Vec<Uuid>) -> Result<Uuid> {
+  pub async fn create(&self, owner: Uuid, title: String) -> Result<Uuid> {
     let id = Uuid::new_v4();
     let txn = self.db.begin().await?;
 
@@ -179,8 +254,6 @@ impl<'db> NoteTable<'db> {
     }
     .insert(&txn)
     .await?;
-
-    replace_shared_users(&txn, id, owner, shared_with).await?;
 
     txn.commit().await?;
 
@@ -209,7 +282,7 @@ impl<'db> NoteTable<'db> {
     &self,
     note_id: Uuid,
     owner: Uuid,
-    shared_with: Vec<Uuid>,
+    shared_with: Vec<NoteShareEntry>,
   ) -> Result<()> {
     let txn = self.db.begin().await?;
     replace_shared_users(&txn, note_id, owner, shared_with).await?;
@@ -245,14 +318,17 @@ async fn replace_shared_users<C: ConnectionTrait>(
   conn: &C,
   note_id: Uuid,
   owner: Uuid,
-  shared_with: Vec<Uuid>,
+  shared_with: Vec<NoteShareEntry>,
 ) -> Result<()> {
   note_user::Entity::delete_many()
     .filter(note_user::Column::Note.eq(note_id))
     .exec(conn)
     .await?;
 
-  let users: Vec<Uuid> = shared_with.into_iter().filter(|id| *id != owner).collect();
+  let users: Vec<_> = shared_with
+    .into_iter()
+    .filter(|s| s.user_id != owner)
+    .collect();
 
   if users.is_empty() {
     return Ok(());
@@ -260,12 +336,10 @@ async fn replace_shared_users<C: ConnectionTrait>(
 
   let models = users
     .into_iter()
-    .map(|user_id| {
-      note_user::Model {
-        note: note_id,
-        user: user_id,
-      }
-      .into_active_model()
+    .map(|s| note_user::ActiveModel {
+      note: Set(note_id),
+      user: Set(s.user_id),
+      access: Set(s.access),
     })
     .collect::<Vec<_>>();
 
@@ -276,11 +350,28 @@ async fn replace_shared_users<C: ConnectionTrait>(
 
 #[cfg(test)]
 mod test {
+  use entity::sea_orm_active_enums::NoteShareAccess;
+
   use crate::db::{
     DBTrait,
+    notes::NoteShareEntry,
     test::{insert_user, test_db},
   };
   use uuid::Uuid;
+
+  fn edit(id: Uuid) -> NoteShareEntry {
+    NoteShareEntry {
+      user_id: id,
+      access: NoteShareAccess::Edit,
+    }
+  }
+
+  fn view(id: Uuid) -> NoteShareEntry {
+    NoteShareEntry {
+      user_id: id,
+      access: NoteShareAccess::View,
+    }
+  }
 
   #[tokio::test]
   async fn create_inserts_note_and_excludes_owner_from_shared() {
@@ -288,16 +379,16 @@ mod test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let shared = insert_user(&db, "shared", "shared@x.com").await;
 
+    let id = db.notes().create(owner, "Title".into()).await.unwrap();
     // owner is intentionally also in shared_with and must be filtered out
-    let id = db
-      .notes()
-      .create(owner, "Title".into(), vec![shared, owner])
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(owner), edit(shared)])
       .await
       .unwrap();
 
     assert!(db.notes().is_owner(owner, id).await.unwrap());
     let shared_users = db.notes().shared_users(id).await.unwrap();
-    assert_eq!(shared_users, vec![shared]);
+    assert_eq!(shared_users, vec![edit(shared)]);
   }
 
   #[tokio::test]
@@ -305,11 +396,7 @@ mod test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
 
-    let id = db
-      .notes()
-      .create(owner, "Title".into(), vec![])
-      .await
-      .unwrap();
+    let id = db.notes().create(owner, "Title".into()).await.unwrap();
 
     assert!(db.notes().shared_users(id).await.unwrap().is_empty());
   }
@@ -319,7 +406,7 @@ mod test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let other = insert_user(&db, "other", "other@x.com").await;
-    let id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
 
     assert!(db.notes().is_owner(owner, id).await.unwrap());
     assert!(!db.notes().is_owner(other, id).await.unwrap());
@@ -333,9 +420,9 @@ mod test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let shared = insert_user(&db, "shared", "shared@x.com").await;
     let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
-    let id = db
-      .notes()
-      .create(owner, "T".into(), vec![shared])
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(shared)])
       .await
       .unwrap();
 
@@ -348,20 +435,39 @@ mod test {
   }
 
   #[tokio::test]
+  async fn can_edit_owner_edit_and_view_only() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let editor = insert_user(&db, "editor", "editor@x.com").await;
+    let viewer = insert_user(&db, "viewer", "viewer@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(editor), view(viewer)])
+      .await
+      .unwrap();
+
+    assert!(db.notes().can_edit(owner, id).await.unwrap());
+    assert!(db.notes().can_edit(editor, id).await.unwrap());
+    assert!(!db.notes().can_edit(viewer, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+  }
+
+  #[tokio::test]
   async fn list_for_user_returns_owned_and_shared_with_flags() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let friend = insert_user(&db, "friend", "friend@x.com").await;
 
-    let owned = db
-      .notes()
-      .create(owner, "Owned".into(), vec![friend])
+    let owned = db.notes().create(owner, "Owned".into()).await.unwrap();
+    // a note owned by friend, shared with owner as view-only
+    let shared = db.notes().create(friend, "Shared".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(owned, owner, vec![edit(friend)])
       .await
       .unwrap();
-    // a note owned by friend, shared with owner
-    let shared = db
-      .notes()
-      .create(friend, "Shared".into(), vec![owner])
+    db.notes()
+      .set_shared_users(shared, friend, vec![view(owner)])
       .await
       .unwrap();
 
@@ -371,12 +477,15 @@ mod test {
 
     let owned_info = notes.iter().find(|n| n.id == owned).unwrap();
     assert!(owned_info.is_owner);
+    assert!(owned_info.can_edit);
     assert_eq!(owned_info.owner.id, owner);
     assert_eq!(owned_info.shared_with.len(), 1);
     assert_eq!(owned_info.shared_with[0].id, friend);
+    assert_eq!(owned_info.shared_with[0].access, NoteShareAccess::Edit);
 
     let shared_info = notes.iter().find(|n| n.id == shared).unwrap();
     assert!(!shared_info.is_owner);
+    assert!(!shared_info.can_edit);
     assert_eq!(shared_info.owner.id, friend);
   }
 
@@ -392,9 +501,9 @@ mod test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let shared = insert_user(&db, "shared", "shared@x.com").await;
-    let id = db
-      .notes()
-      .create(owner, "Title".into(), vec![shared])
+    let id = db.notes().create(owner, "Title".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![view(shared)])
       .await
       .unwrap();
 
@@ -402,11 +511,14 @@ mod test {
     assert_eq!(info.title, "Title");
     assert_eq!(info.owner.id, owner);
     assert!(info.is_owner);
+    assert!(info.can_edit);
     assert_eq!(info.shared_with.len(), 1);
+    assert_eq!(info.shared_with[0].access, NoteShareAccess::View);
 
-    // viewed by the shared user -> is_owner false
+    // viewed by the shared user -> is_owner false, can_edit false
     let info_shared = db.notes().info(id, shared).await.unwrap().unwrap();
     assert!(!info_shared.is_owner);
+    assert!(!info_shared.can_edit);
 
     // unknown note -> None
     assert!(
@@ -422,11 +534,7 @@ mod test {
   async fn edit_title_updates_or_errors() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let id = db
-      .notes()
-      .create(owner, "Old".into(), vec![])
-      .await
-      .unwrap();
+    let id = db.notes().create(owner, "Old".into()).await.unwrap();
 
     db.notes().edit_title(id, "New".into()).await.unwrap();
     let info = db.notes().info(id, owner).await.unwrap().unwrap();
@@ -445,15 +553,14 @@ mod test {
   async fn set_shared_users_replaces_existing() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let a = insert_user(&db, "a", "a@x.com").await;
     let b = insert_user(&db, "b", "b@x.com").await;
-    let id = db.notes().create(owner, "T".into(), vec![a]).await.unwrap();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
 
     db.notes()
-      .set_shared_users(id, owner, vec![b])
+      .set_shared_users(id, owner, vec![view(b)])
       .await
       .unwrap();
-    assert_eq!(db.notes().shared_users(id).await.unwrap(), vec![b]);
+    assert_eq!(db.notes().shared_users(id).await.unwrap(), vec![view(b)]);
 
     // clearing shares
     db.notes()
@@ -467,7 +574,7 @@ mod test {
   async fn content_roundtrip_and_missing() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
 
     // freshly created note has empty content
     assert!(db.notes().get_content(id).await.unwrap().is_empty());
@@ -495,11 +602,7 @@ mod test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let shared = insert_user(&db, "shared", "shared@x.com").await;
-    let id = db
-      .notes()
-      .create(owner, "T".into(), vec![shared])
-      .await
-      .unwrap();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
 
     db.notes().delete(id).await.unwrap();
     assert!(db.notes().info(id, owner).await.unwrap().is_none());

@@ -239,7 +239,6 @@ export type MailSettingsResponse = {
 };
 
 export type NoteCreateReq = {
-  shared_with?: Array<string>;
   title: string;
 };
 
@@ -257,11 +256,12 @@ export type NoteEditReq = {
 };
 
 export type NoteInfo = {
+  can_edit: boolean;
   id: string;
   is_owner: boolean;
   owner: SimpleUserInfo;
   preview: string;
-  shared_with: Array<SimpleUserInfo>;
+  shared_with: Array<SharedUserInfo>;
   title: string;
 };
 
@@ -269,9 +269,19 @@ export type NotePath = {
   uuid: string;
 };
 
+export const NoteShareAccess = { VIEW: 'view', EDIT: 'edit' } as const;
+
+export type NoteShareAccess =
+  (typeof NoteShareAccess)[keyof typeof NoteShareAccess];
+
+export type NoteShareEntry = {
+  access: NoteShareAccess;
+  user_id: string;
+};
+
 export type NoteShareReq = {
   note_id: string;
-  shared_with: Array<string>;
+  shared_with: Array<NoteShareEntry>;
 };
 
 export type OAuthClientEditReq = {
@@ -409,6 +419,12 @@ export type SetupPayload = {
   admin_email: string;
   admin_password: string;
   admin_username: string;
+};
+
+export type SharedUserInfo = {
+  access: NoteShareAccess;
+  id: string;
+  name: string;
 };
 
 export type SimpleGroupInfo = {

@@ -16,7 +16,7 @@
     inOverflowMenu?: boolean;
   } = $props();
 
-  const isDisabled = $derived(!editor.can().chain().focus().redo().run());
+  const isDisabled = $derived(!editor.can().chain().focus().redo?.().run());
 
   const handleClick = () => {
     editor.chain().focus().redo().run();

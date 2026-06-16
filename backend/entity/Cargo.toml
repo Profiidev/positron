@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 sea-orm = "1.1.20"
 serde = { version = "1.0.228", features = ["derive"] }
+schemars = { version = "1.2.1", features = ["uuid1"] }
 
 [lib]
 name = "entity"

@@ -11,7 +11,7 @@ use axum::{
   body::Bytes,
   extract::{
     FromRequestParts,
-    ws::{Message, WebSocket},
+    ws::{Message as WsMessage, WebSocket},
   },
 };
 use centaurus::{db::init::Connection, error::Result, eyre::Context};
@@ -29,13 +29,13 @@ use tokio::{
 use uuid::Uuid;
 use yrs::{
   AsyncTransact, Doc, ReadTxn, StateVector, Subscription, Update,
-  encoding::write::Write,
+  encoding::{read::Cursor, write::Write},
   sync::{
-    Awareness, DefaultProtocol,
-    protocol::{AsyncProtocol, MSG_SYNC, MSG_SYNC_UPDATE},
+    Awareness, DefaultProtocol, Message as YrsMessage, SyncMessage,
+    protocol::{AsyncProtocol, Error as SyncError, MSG_SYNC, MSG_SYNC_UPDATE, MessageReader},
   },
   updates::{
-    decoder::Decode,
+    decoder::{Decode, DecoderV1},
     encoder::{Encode, Encoder, EncoderV1},
   },
 };
@@ -52,7 +52,7 @@ pub struct NoteEditing {
 
 pub struct NoteState {
   doc: Arc<Mutex<Awareness>>,
-  sender: Sender<Message>,
+  sender: Sender<WsMessage>,
   #[allow(dead_code)]
   doc_subscription: Subscription,
   #[allow(dead_code)]
@@ -95,7 +95,7 @@ impl NoteEditing {
           encoder.write_var(MSG_SYNC);
           encoder.write_var(MSG_SYNC_UPDATE);
           encoder.write_buf(&update.update);
-          let _ = sender.send(Message::Binary(Bytes::from_owner(encoder.to_vec())));
+          let _ = sender.send(WsMessage::Binary(Bytes::from_owner(encoder.to_vec())));
         }
       })
       .context("failed to observe update")?;
@@ -121,7 +121,7 @@ impl NoteEditing {
           };
 
           let payload = yrs::sync::Message::Awareness(upgrade).encode_v1();
-          let _ = sender.send(Message::Binary(Bytes::from_owner(payload)));
+          let _ = sender.send(WsMessage::Binary(Bytes::from_owner(payload)));
         }
       }
     });
@@ -165,7 +165,7 @@ impl NoteEditing {
 }
 
 impl NoteState {
-  pub fn receiver(&self) -> Receiver<Message> {
+  pub fn receiver(&self) -> Receiver<WsMessage> {
     self.sender.subscribe()
   }
 
@@ -179,7 +179,7 @@ impl NoteState {
 
     for msg in msgs {
       let payload = msg.encode_v1();
-      ws.send(Message::Binary(Bytes::from_owner(payload)))
+      ws.send(WsMessage::Binary(Bytes::from_owner(payload)))
         .await
         .context("failed to send message")?;
     }
@@ -187,25 +187,32 @@ impl NoteState {
     Ok(())
   }
 
-  pub async fn handle_message(&self, msg: Message, ws: &mut WebSocket) {
-    let Message::Binary(data) = msg else {
+  pub async fn handle_message(&self, msg: WsMessage, ws: &mut WebSocket, can_edit: bool) {
+    let WsMessage::Binary(data) = msg else {
       return;
     };
 
     let mut awareness = self.doc.lock().await;
-    let Ok(res) = DefaultProtocol
-      .handle(&mut awareness, data.as_bytes())
-      .await
-    else {
+    let res = if can_edit {
+      DefaultProtocol
+        .handle(&mut awareness, data.as_bytes())
+        .await
+        .map(|msgs| msgs.into_iter().collect::<Vec<_>>())
+    } else {
+      handle_read_only_message(&mut awareness, data.as_bytes()).await
+    };
+    let Ok(res) = res else {
       return;
     };
     drop(awareness);
 
-    self.save_counter.fetch_add(1, Ordering::Relaxed);
+    if can_edit {
+      self.save_counter.fetch_add(1, Ordering::Relaxed);
+    }
 
     for msg in res {
       let payload = msg.encode_v1();
-      if let Err(e) = ws.send(Message::Binary(Bytes::from_owner(payload))).await {
+      if let Err(e) = ws.send(WsMessage::Binary(Bytes::from_owner(payload))).await {
         tracing::warn!("failed to send message: {}", e);
       }
     }
@@ -248,6 +255,33 @@ impl NoteState {
   }
 }
 
+async fn handle_read_only_message(
+  awareness: &mut Awareness,
+  data: &[u8],
+) -> std::result::Result<Vec<YrsMessage>, SyncError> {
+  let mut decoder = DecoderV1::new(Cursor::new(data));
+  let reader = MessageReader::new(&mut decoder);
+  let mut responses = Vec::new();
+
+  for result in reader {
+    let message = result?;
+    let allowed = matches!(
+      message,
+      YrsMessage::Sync(SyncMessage::SyncStep1(_))
+        | YrsMessage::Awareness(_)
+        | YrsMessage::AwarenessQuery
+    );
+    if !allowed {
+      continue;
+    }
+    if let Some(response) = DefaultProtocol.handle_message(awareness, message).await? {
+      responses.push(response);
+    }
+  }
+
+  Ok(responses)
+}
+
 #[cfg(test)]
 mod note_editing_test {
   use super::NoteEditing;
@@ -262,7 +296,7 @@ mod note_editing_test {
   async fn get_or_open_note_caches_same_state() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -292,7 +326,7 @@ mod note_editing_test {
   async fn close_note_keeps_open_while_subscribers_remain() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     // two subscribers
@@ -317,7 +351,7 @@ mod note_editing_test {
   async fn save_persists_document_content_and_preview() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -332,12 +366,143 @@ mod note_editing_test {
   async fn receiver_subscribes_to_the_note_channel() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
     // a fresh subscriber has no buffered messages
     let mut rx = state.receiver();
     assert!(rx.try_recv().is_err());
+  }
+
+  #[tokio::test]
+  async fn read_only_client_updates_are_ignored() {
+    use super::{YrsMessage, handle_read_only_message};
+    use yrs::{
+      Doc, GetString, ReadTxn, StateVector, Text, Transact,
+      sync::SyncMessage,
+      updates::encoder::{Encode, Encoder, EncoderV1},
+    };
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    {
+      let awareness = state.doc.lock().await;
+      let txt = awareness.doc().get_or_insert_text("default");
+      txt.insert(&mut awareness.doc().transact_mut(), 0, "seed");
+    }
+
+    let hacker_doc = Doc::new();
+    let txt = hacker_doc.get_or_insert_text("default");
+    txt.insert(&mut hacker_doc.transact_mut(), 0, "hacked");
+    let update = hacker_doc
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default());
+
+    let mut encoder = EncoderV1::new();
+    YrsMessage::Sync(SyncMessage::Update(update)).encode(&mut encoder);
+    let payload = encoder.to_vec();
+
+    let mut awareness = state.doc.lock().await;
+    handle_read_only_message(&mut awareness, &payload)
+      .await
+      .unwrap();
+    drop(awareness);
+
+    let awareness = state.doc.lock().await;
+    let txt = awareness.doc().get_or_insert_text("default");
+    assert_eq!(txt.get_string(&awareness.doc().transact()), "seed");
+  }
+
+  #[tokio::test]
+  async fn read_only_client_sync_step2_is_ignored() {
+    use super::{YrsMessage, handle_read_only_message};
+    use yrs::{
+      Doc, GetString, ReadTxn, StateVector, Text, Transact,
+      sync::SyncMessage,
+      updates::encoder::{Encode, Encoder, EncoderV1},
+    };
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    {
+      let awareness = state.doc.lock().await;
+      let txt = awareness.doc().get_or_insert_text("default");
+      txt.insert(&mut awareness.doc().transact_mut(), 0, "seed");
+    }
+
+    // SyncStep2 carries the same payload as an Update; read-only must reject it.
+    let hacker_doc = Doc::new();
+    let txt = hacker_doc.get_or_insert_text("default");
+    txt.insert(&mut hacker_doc.transact_mut(), 0, "hacked");
+    let update = hacker_doc
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default());
+
+    let mut encoder = EncoderV1::new();
+    YrsMessage::Sync(SyncMessage::SyncStep2(update)).encode(&mut encoder);
+    let payload = encoder.to_vec();
+
+    let mut awareness = state.doc.lock().await;
+    handle_read_only_message(&mut awareness, &payload)
+      .await
+      .unwrap();
+    drop(awareness);
+
+    let awareness = state.doc.lock().await;
+    let txt = awareness.doc().get_or_insert_text("default");
+    assert_eq!(txt.get_string(&awareness.doc().transact()), "seed");
+  }
+
+  #[tokio::test]
+  async fn read_only_client_can_still_read_via_sync_step1() {
+    use super::{YrsMessage, handle_read_only_message};
+    use yrs::{
+      StateVector, Text, Transact,
+      sync::SyncMessage,
+      updates::encoder::{Encode, Encoder, EncoderV1},
+    };
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    {
+      let awareness = state.doc.lock().await;
+      let txt = awareness.doc().get_or_insert_text("default");
+      txt.insert(&mut awareness.doc().transact_mut(), 0, "seed");
+    }
+
+    // SyncStep1 (state request) must still be answered so viewers can read.
+    let mut encoder = EncoderV1::new();
+    YrsMessage::Sync(SyncMessage::SyncStep1(StateVector::default())).encode(&mut encoder);
+    let payload = encoder.to_vec();
+
+    let mut awareness = state.doc.lock().await;
+    let res = handle_read_only_message(&mut awareness, &payload)
+      .await
+      .unwrap();
+    drop(awareness);
+
+    // the server replies with a SyncStep2 carrying the current document state
+    assert!(
+      res
+        .iter()
+        .any(|m| matches!(m, YrsMessage::Sync(SyncMessage::SyncStep2(_)))),
+      "read-only SyncStep1 should produce a SyncStep2 reply"
+    );
   }
 }

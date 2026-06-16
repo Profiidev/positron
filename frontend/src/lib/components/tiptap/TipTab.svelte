@@ -6,23 +6,31 @@
   import { EditorContent, type Editor } from 'svelte-tiptap';
   import type { WebsocketProvider } from 'y-websocket';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
+  import { cn } from '@profidev/pleiades/utils';
   import type { NoteActiveEditor } from '$lib/components/notes/types';
 
   type AwarenessUser = {
-    id?: string;
     name?: string;
     color?: string;
+  };
+
+  type AwarenessState = {
+    user?: AwarenessUser;
+    canEdit?: boolean;
+    userId?: string;
   };
 
   let {
     id,
     username,
     userId,
+    editable = true,
     activeEditors = $bindable()
   }: {
     id: string;
     username?: string;
     userId?: string;
+    editable?: boolean;
     activeEditors?: NoteActiveEditor[];
   } = $props();
 
@@ -30,9 +38,13 @@
   let provider: WebsocketProvider | undefined = undefined;
   const userColor = getRandomColor();
 
-  const setLocalAwarenessUser = () => {
-    provider?.awareness.setLocalStateField('user', {
-      id: userId,
+  const setLocalAwarenessState = () => {
+    if (!provider) return;
+    provider.awareness.setLocalStateField('canEdit', editable);
+    if (userId) {
+      provider.awareness.setLocalStateField('userId', userId);
+    }
+    provider.awareness.setLocalStateField('user', {
       name: username ?? 'Unknown',
       color: userColor
     });
@@ -47,12 +59,13 @@
     provider.awareness.getStates().forEach((state, clientId) => {
       if (clientId === localClientId) return;
 
-      const user = state?.user as AwarenessUser | undefined;
-      if (!user?.name) return;
+      const awareness = state as AwarenessState | undefined;
+      const user = awareness?.user;
+      if (!user?.name || awareness?.canEdit !== true) return;
 
       editors.push({
         clientId,
-        id: user.id,
+        id: awareness.userId,
         name: user.name,
         color: user.color
       });
@@ -61,10 +74,23 @@
     activeEditors = editors;
   };
 
+  const onAwarenessChange = () => {
+    if (provider?.awareness.getLocalState()?.canEdit !== editable) {
+      setLocalAwarenessState();
+    }
+    syncActiveEditors();
+  };
+
   $effect(() => {
     username;
     userId;
-    setLocalAwarenessUser();
+    editable;
+    setLocalAwarenessState();
+  });
+
+  $effect(() => {
+    editable;
+    editorState.editor?.setEditable(editable);
   });
 
   onMount(async () => {
@@ -76,9 +102,9 @@
     provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
       disableBc: true
     });
-    provider.awareness.on('change', syncActiveEditors);
+    provider.awareness.on('change', onAwarenessChange);
 
-    setLocalAwarenessUser();
+    setLocalAwarenessState();
     syncActiveEditors();
 
     const extensions = (await import('./config')).extensions;
@@ -104,6 +130,7 @@
           }
         })
       ] as any,
+      editable,
       editorProps: {
         attributes: {
           class: 'max-w-full focus:outline-none'
@@ -117,11 +144,12 @@
   });
 
   const cleanup = () => {
-    provider?.awareness.off('change', syncActiveEditors);
+    provider?.awareness.off('change', onAwarenessChange);
     editorState.editor?.destroy();
     provider?.destroy();
     provider = undefined;
     activeEditors = [];
+    editorState = { editor: null };
   };
 
   onDestroy(cleanup);
@@ -133,12 +161,17 @@
   <div
     class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border pb-[60px] sm:pb-0"
   >
-    {/* @ts-ignore */ null}
-    <EditorToolbar editor={editorState.editor} />
+    {#if editable && editorState.editor}
+      {/* @ts-ignore */ null}
+      <EditorToolbar editor={editorState.editor} />
+    {/if}
     <ScrollArea class="min-h-0 grow">
       <EditorContent
         editor={editorState.editor}
-        class="flex min-h-full w-full min-w-full cursor-text"
+        class={cn(
+          'flex min-h-full w-full min-w-full',
+          editable ? 'cursor-text' : 'cursor-default'
+        )}
       />
     </ScrollArea>
   </div>
