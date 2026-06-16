@@ -102,7 +102,9 @@ export const handlers = [
   gen.infoOAuthScopeMswHandler(() => j(data.oauthScopeDetails)),
   gen.infoOAuthPolicyMswHandler(() => j(data.oauthPolicyDetails)),
   gen.infoNoteMswHandler(({ cookies }) =>
-    j(data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails)
+    j(
+      data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
+    )
   ),
 
   // Mutations return a generic success so submit flows resolve.
