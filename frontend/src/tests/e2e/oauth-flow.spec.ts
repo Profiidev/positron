@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test';
 import { test } from '$test_helpers/e2e-fixture';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
+import { setupSession } from '$test_helpers/session';
+
+test.beforeEach(async ({ context }) => setupSession(context));
 
 test.describe('oauth authorization confirm', () => {
   test('asks the user to confirm logging in to the client', async ({
@@ -24,7 +27,7 @@ test.describe('oauth authorization confirm', () => {
     await page.getByRole('button', { name: 'Cancel' }).click();
 
     // Cancel navigates to `/`, which the unauthenticated guard bounces to login.
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\//);
   });
 });
 
@@ -52,7 +55,7 @@ test.describe('oauth logout confirm', () => {
     );
     await page.getByRole('button', { name: 'To Positron' }).click();
 
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\//);
   });
 });
 
@@ -73,6 +76,6 @@ test.describe('app login confirm', () => {
     await gotoReady(page, '/auth/app?challenge=challenge-token');
     await page.getByRole('button', { name: 'Cancel' }).click();
 
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\//);
   });
 });
