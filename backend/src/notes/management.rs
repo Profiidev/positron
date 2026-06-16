@@ -153,12 +153,16 @@ async fn share(
     bail!(FORBIDDEN, "forbidden");
   }
 
-  let mut users = vec![auth.user_id];
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
+  users.push(auth.user_id);
   users.extend(req.shared_with.iter().map(|s| s.user_id));
 
   db.notes()
     .set_shared_users(req.note_id, auth.user_id, req.shared_with)
     .await?;
+
+  users.sort_unstable();
+  users.dedup();
 
   notify_note_update(&updater, users, req.note_id).await;
 

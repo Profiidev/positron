@@ -35,14 +35,17 @@ async fn notes_websocket(
   }
 
   let can_edit = db.notes().can_edit(auth.user_id, uuid).await?;
-  if !can_edit {
-    bail!(FORBIDDEN, "you do not have permission to edit this note");
-  }
 
-  Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid)))
+  Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid, can_edit)))
 }
 
-async fn handle_socket(mut ws: WebSocket, state: NoteEditing, db: Connection, note_id: Uuid) {
+async fn handle_socket(
+  mut ws: WebSocket,
+  state: NoteEditing,
+  db: Connection,
+  note_id: Uuid,
+  can_edit: bool,
+) {
   let doc_state = match state.get_or_open_note(note_id, &db).await {
     Ok(arc) => arc,
     Err(e) => {
@@ -64,7 +67,7 @@ async fn handle_socket(mut ws: WebSocket, state: NoteEditing, db: Connection, no
         match msg {
            Some(Ok(Message::Close(_)) | Err(_)) | None => break,
            Some(Ok(msg)) => {
-             doc_state.handle_message(msg, &mut ws).await;
+             doc_state.handle_message(msg, &mut ws, can_edit).await;
            }
         }
       }

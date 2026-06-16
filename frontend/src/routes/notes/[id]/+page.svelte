@@ -201,7 +201,7 @@
     />
     {#if note}
       <div
-        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:pl-1.5 lg:pr-2.5 lg:pl-1"
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:px-1 lg:pr-2.5 lg:pl-1"
         title={`Owner: ${note.owner.name}`}
       >
         <UserAvatar
@@ -228,13 +228,15 @@
     </Button>
   </div>
   <div class="flex min-h-0 grow flex-col space-y-4">
-    <TipTab
-      id={data.id}
-      username={userInfo?.name}
-      userId={userInfo?.uuid}
-      editable={note?.can_edit ?? false}
-      bind:activeEditors
-    />
+    {#if note}
+      <TipTab
+        id={data.id}
+        username={userInfo?.name}
+        userId={userInfo?.uuid}
+        editable={note.can_edit}
+        bind:activeEditors
+      />
+    {/if}
   </div>
 </div>
 <FormDialog

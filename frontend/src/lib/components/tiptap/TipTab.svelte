@@ -6,6 +6,7 @@
   import { EditorContent, type Editor } from 'svelte-tiptap';
   import type { WebsocketProvider } from 'y-websocket';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
+  import { cn } from '@profidev/pleiades/utils';
   import type { NoteActiveEditor } from '$lib/components/notes/types';
 
   type AwarenessUser = {
@@ -18,11 +19,13 @@
     id,
     username,
     userId,
+    editable = true,
     activeEditors = $bindable()
   }: {
     id: string;
     username?: string;
     userId?: string;
+    editable?: boolean;
     activeEditors?: NoteActiveEditor[];
   } = $props();
 
@@ -67,6 +70,11 @@
     setLocalAwarenessUser();
   });
 
+  $effect(() => {
+    editable;
+    editorState.editor?.setEditable(editable);
+  });
+
   onMount(async () => {
     const Doc = (await import('yjs')).Doc;
     const doc = new Doc();
@@ -104,6 +112,7 @@
           }
         })
       ] as any,
+      editable,
       editorProps: {
         attributes: {
           class: 'max-w-full focus:outline-none'
@@ -122,6 +131,7 @@
     provider?.destroy();
     provider = undefined;
     activeEditors = [];
+    editorState = { editor: null };
   };
 
   onDestroy(cleanup);
@@ -133,12 +143,17 @@
   <div
     class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border pb-[60px] sm:pb-0"
   >
-    {/* @ts-ignore */ null}
-    <EditorToolbar editor={editorState.editor} />
+    {#if editable && editorState.editor}
+      {/* @ts-ignore */ null}
+      <EditorToolbar editor={editorState.editor} />
+    {/if}
     <ScrollArea class="min-h-0 grow">
       <EditorContent
         editor={editorState.editor}
-        class="flex min-h-full w-full min-w-full cursor-text"
+        class={cn(
+          'flex min-h-full w-full min-w-full',
+          editable ? 'cursor-text' : 'cursor-default'
+        )}
       />
     </ScrollArea>
   </div>

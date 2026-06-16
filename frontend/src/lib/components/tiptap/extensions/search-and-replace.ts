@@ -383,6 +383,10 @@ export const SearchAndReplace = Extension.create<
         },
         state: {
           apply({ doc, docChanged }, oldState) {
+            if (!editor.storage.searchAndReplace) {
+              return oldState;
+            }
+
             const {
               searchTerm,
               selectedResult,
