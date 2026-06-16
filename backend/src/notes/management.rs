@@ -17,7 +17,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-  db::{DBTrait, notes::NoteInfo},
+  db::{
+    DBTrait,
+    notes::{NoteInfo, NoteShareEntry},
+  },
   utils::{UpdateMessage, Updater},
 };
 
@@ -39,8 +42,6 @@ async fn list(auth: JwtAuth, db: Connection) -> Result<Json<Vec<NoteInfo>>> {
 #[derive(Deserialize, JsonSchema)]
 struct NoteCreateReq {
   title: String,
-  #[serde(default)]
-  shared_with: Vec<Uuid>,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -54,16 +55,9 @@ async fn create(
   updater: Updater,
   Json(req): Json<NoteCreateReq>,
 ) -> Result<Json<NoteCreateRes>> {
-  let mut users = Vec::with_capacity(req.shared_with.len() + 1);
-  users.push(auth.user_id);
-  users.extend_from_slice(&req.shared_with);
+  let id = db.notes().create(auth.user_id, req.title).await?;
 
-  let id = db
-    .notes()
-    .create(auth.user_id, req.title, req.shared_with)
-    .await?;
-
-  notify_note_update(&updater, users, id).await;
+  notify_note_update(&updater, vec![auth.user_id], id).await;
 
   Ok(Json(NoteCreateRes { id }))
 }
@@ -87,6 +81,7 @@ async fn info(
   };
 
   note.is_owner = note.owner.id == auth.user_id;
+  note.can_edit = note.is_owner || db.notes().can_edit(auth.user_id, uuid).await?;
 
   Ok(Json(note))
 }
@@ -109,7 +104,7 @@ async fn edit(
 
   db.notes().edit_title(req.note_id, req.title).await?;
 
-  let mut users = db.notes().shared_users(req.note_id).await?;
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
   users.push(auth.user_id);
 
   notify_note_update(&updater, users, req.note_id).await;
@@ -132,7 +127,7 @@ async fn delete(
     bail!(FORBIDDEN, "forbidden");
   }
 
-  let mut users = db.notes().shared_users(req.note_id).await?;
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
   users.push(auth.user_id);
 
   db.notes().delete(req.note_id).await?;
@@ -145,7 +140,7 @@ async fn delete(
 #[derive(Deserialize, JsonSchema)]
 struct NoteShareReq {
   note_id: Uuid,
-  shared_with: Vec<Uuid>,
+  shared_with: Vec<NoteShareEntry>,
 }
 
 async fn share(
@@ -159,7 +154,7 @@ async fn share(
   }
 
   let mut users = vec![auth.user_id];
-  users.extend_from_slice(&req.shared_with);
+  users.extend(req.shared_with.iter().map(|s| s.user_id));
 
   db.notes()
     .set_shared_users(req.note_id, auth.user_id, req.shared_with)
@@ -184,8 +179,11 @@ async fn notify_note_update(updater: &Updater, users: Vec<Uuid>, note_id: Uuid) 
 
 #[cfg(test)]
 mod test {
+  use entity::sea_orm_active_enums::NoteShareAccess;
+
   use crate::db::{
     DBTrait,
+    notes::NoteShareEntry,
     test::{auth_cookie, auth_state, body_json, insert_user, test_db, updater},
   };
   use axum::{
@@ -297,17 +295,13 @@ mod test {
     assert_eq!(body.as_array().unwrap().len(), 1);
     assert_eq!(body[0]["title"], "My note");
     assert_eq!(body[0]["is_owner"], true);
+    assert_eq!(body[0]["can_edit"], true);
   }
 
   #[tokio::test]
   async fn info_returns_note_for_owner_and_404_for_stranger() {
     let s = setup().await;
-    let note = s
-      .db
-      .notes()
-      .create(s.user, "T".into(), vec![])
-      .await
-      .unwrap();
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
 
     let app = app(s.db.clone(), s.jwt, s.upd);
     let resp = app
@@ -316,7 +310,9 @@ mod test {
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(body_json(resp).await["title"], "T");
+    let body = body_json(resp).await;
+    assert_eq!(body["title"], "T");
+    assert_eq!(body["can_edit"], true);
 
     // unknown note id -> 404
     let resp = app
@@ -332,16 +328,46 @@ mod test {
   }
 
   #[tokio::test]
+  async fn info_view_only_share_has_can_edit_false() {
+    let s = setup().await;
+    let viewer = insert_user(&s.db, "viewer", "v@x.com").await;
+    let viewer_cookie = auth_cookie(&s.jwt, viewer);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .notes()
+      .set_shared_users(
+        note,
+        s.user,
+        vec![NoteShareEntry {
+          user_id: viewer,
+          access: NoteShareAccess::View,
+        }],
+      )
+      .await
+      .unwrap();
+
+    let app = app(s.db.clone(), s.jwt, s.upd);
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}"),
+        Some(&viewer_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["can_edit"], false);
+    assert_eq!(body["is_owner"], false);
+  }
+
+  #[tokio::test]
   async fn edit_title_as_owner_and_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
-    let note = s
-      .db
-      .notes()
-      .create(s.user, "Old".into(), vec![])
-      .await
-      .unwrap();
+    let note = s.db.notes().create(s.user, "Old".into()).await.unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     // owner can edit
@@ -383,12 +409,7 @@ mod test {
   #[tokio::test]
   async fn delete_as_owner_removes_note() {
     let s = setup().await;
-    let note = s
-      .db
-      .notes()
-      .create(s.user, "T".into(), vec![])
-      .await
-      .unwrap();
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     let resp = app
@@ -408,12 +429,7 @@ mod test {
   async fn share_updates_shared_users() {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
-    let note = s
-      .db
-      .notes()
-      .create(s.user, "T".into(), vec![])
-      .await
-      .unwrap();
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(s.db.clone(), s.jwt, s.upd);
 
     let resp = app
@@ -421,12 +437,21 @@ mod test {
         "PUT",
         "/share",
         Some(&s.cookie),
-        Some(json!({ "note_id": note, "shared_with": [friend] })),
+        Some(json!({
+          "note_id": note,
+          "shared_with": [{ "user_id": friend, "access": "edit" }]
+        })),
       ))
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(s.db.notes().shared_users(note).await.unwrap(), vec![friend]);
+    assert_eq!(
+      s.db.notes().shared_users(note).await.unwrap(),
+      vec![NoteShareEntry {
+        user_id: friend,
+        access: NoteShareAccess::Edit
+      }]
+    );
   }
 
   #[tokio::test]

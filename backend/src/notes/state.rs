@@ -262,7 +262,7 @@ mod note_editing_test {
   async fn get_or_open_note_caches_same_state() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -292,7 +292,7 @@ mod note_editing_test {
   async fn close_note_keeps_open_while_subscribers_remain() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     // two subscribers
@@ -317,7 +317,7 @@ mod note_editing_test {
   async fn save_persists_document_content_and_preview() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -332,7 +332,7 @@ mod note_editing_test {
   async fn receiver_subscribes_to_the_note_channel() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
-    let note_id = db.notes().create(owner, "T".into(), vec![]).await.unwrap();
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let editing = NoteEditing::init();
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();

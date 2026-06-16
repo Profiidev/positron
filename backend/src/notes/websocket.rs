@@ -34,6 +34,11 @@ async fn notes_websocket(
     bail!(NOT_FOUND, "note not found");
   }
 
+  let can_edit = db.notes().can_edit(auth.user_id, uuid).await?;
+  if !can_edit {
+    bail!(FORBIDDEN, "you do not have permission to edit this note");
+  }
+
   Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid)))
 }
 
