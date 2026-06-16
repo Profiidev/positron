@@ -1,39 +1,61 @@
 <script lang="ts">
   import * as Popover from '@profidev/pleiades/components/ui/popover';
   import * as Command from '@profidev/pleiades/components/ui/command';
+  import { Button } from '@profidev/pleiades/components/ui/button';
   import { cn } from '@profidev/pleiades/utils';
   import Users from '@lucide/svelte/icons/users';
-  import Check from '@lucide/svelte/icons/check';
-  import type { SimpleUserInfo } from '$lib/client';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import type {
+    NoteShareAccess,
+    SharedUserInfo,
+    SimpleUserInfo
+  } from '$lib/client';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
+
+  type ShareEntry = { userId: string; access: NoteShareAccess };
 
   let {
     shareableUsers,
     selected,
-    onSelectChange,
+    onShareChange,
     readonly = false,
     saving = false
   }: {
     shareableUsers: SimpleUserInfo[];
-    selected: SimpleUserInfo[];
-    onSelectChange: (selected: string[]) => void;
+    selected: SharedUserInfo[];
+    onShareChange: (shares: ShareEntry[]) => void;
     readonly?: boolean;
     saving?: boolean;
   } = $props();
 
   let open = $state(false);
-  let selectedIds = $derived(selected.map((user) => user.id));
+
+  const shares = $derived(
+    selected.map((user) => ({ userId: user.id, access: user.access }))
+  );
 
   const extraCount = $derived(Math.max(0, selected.length - 4));
 
-  const toggleUser = (id: string) => {
-    if (selectedIds.includes(id)) {
-      selectedIds = selectedIds.filter((userId) => userId !== id);
-    } else {
-      selectedIds = [...selectedIds, id];
+  const shareForUser = (userId: string) =>
+    shares.find((share) => share.userId === userId);
+
+  const setAccess = (userId: string, access: NoteShareAccess) => {
+    const current = shareForUser(userId);
+    if (!current) {
+      onShareChange([...shares, { userId, access }]);
+      return;
     }
-    onSelectChange(selectedIds);
+    if (current.access === access) {
+      onShareChange(shares.filter((share) => share.userId !== userId));
+      return;
+    }
+    onShareChange(
+      shares.map((share) =>
+        share.userId === userId ? { userId, access } : share
+      )
+    );
   };
 </script>
 
@@ -95,10 +117,10 @@
           <ScrollArea class="mt-1 grow">
             <Command.Empty>No people found</Command.Empty>
             {#each shareableUsers as user (user.id)}
+              {@const share = shareForUser(user.id)}
               <Command.Item
                 value={user.name}
-                onSelect={() => toggleUser(user.id)}
-                class="[&_svg.cn-command-item-indicator]:hidden!"
+                class="gap-2 [&_svg.cn-command-item-indicator]:hidden!"
               >
                 <UserAvatar
                   userId={user.id}
@@ -108,12 +130,36 @@
                 <span class="min-w-0 flex-1 truncate font-medium">
                   {user.name}
                 </span>
-                <Check
-                  class={cn(
-                    'mr-2 ml-auto size-4',
-                    !selectedIds.includes(user.id) && 'text-transparent!'
-                  )}
-                />
+                <div
+                  class="bg-muted flex shrink-0 rounded-md p-0.5 border"
+                  role="group"
+                  aria-label="Share access"
+                >
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={share?.access === 'view' ? 'default' : 'ghost'}
+                    onclick={(event) => {
+                      event.stopPropagation();
+                      setAccess(user.id, 'view');
+                    }}
+                  >
+                    <Eye class="size-3.5" />
+                    View
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={share?.access === 'edit' ? 'default' : 'ghost'}
+                    onclick={(event) => {
+                      event.stopPropagation();
+                      setAccess(user.id, 'edit');
+                    }}
+                  >
+                    <Pencil class="size-3.5" />
+                    Edit
+                  </Button>
+                </div>
               </Command.Item>
             {/each}
           </ScrollArea>

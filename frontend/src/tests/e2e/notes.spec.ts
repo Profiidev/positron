@@ -69,7 +69,7 @@ test.describe('note detail', () => {
 
     await page.getByRole('button', { name: 'Share' }).click();
     await expect(page.getByPlaceholder('Search people...')).toBeVisible();
-    await page.getByRole('option', { name: 'Cara User' }).click();
+    await page.getByRole('option', { name: 'Cara User' }).getByRole('button', { name: 'Edit' }).click();
 
     // The share update is debounced (~500ms) before it persists.
     await expect(page.getByText('Shared users updated')).toBeVisible();

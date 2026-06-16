@@ -13,6 +13,8 @@
     editNote,
     shareNote,
     type NoteInfo,
+    type NoteShareAccess,
+    type SharedUserInfo,
     type SimpleUserInfo,
     type UserInfo
   } from '$lib/client';
@@ -33,7 +35,7 @@
   let readonly = $derived(!note?.is_owner);
   let shareSaving = $state(false);
   let title = $state('');
-  let sharedWithUsers = $state<SimpleUserInfo[]>([]);
+  let sharedWithUsers = $state<SharedUserInfo[]>([]);
   let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
     $state(undefined);
   let userInfo: UserInfo | undefined = $state(undefined);
@@ -97,14 +99,34 @@
     }
   };
 
-  const onSharedChange = async (selected: string[]) => {
+  const toSharedUserInfo = (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ): SharedUserInfo[] =>
+    shares.map((share) => {
+      const user = shareableUsers.find(
+        (candidate) => candidate.id === share.userId
+      );
+
+      return {
+        id: share.userId,
+        name: user?.name ?? '',
+        access: share.access
+      };
+    });
+
+  const onSharedChange = async (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ) => {
     if (!note || readonly) return;
 
     shareSaving = true;
     const res = await shareNote({
       body: {
         note_id: note.id,
-        shared_with: selected
+        shared_with: shares.map((share) => ({
+          user_id: share.userId,
+          access: share.access
+        }))
       }
     });
     shareSaving = false;
@@ -113,15 +135,21 @@
       sharedWithUsers = note.shared_with;
       toast.error('Failed to update shared users');
     } else {
+      const updated = toSharedUserInfo(shares);
+      sharedWithUsers = updated;
+      note = { ...note, shared_with: updated };
       toast.success('Shared users updated');
     }
   };
 
-  const handleShareSelectChange = (selected: string[]) => {
+  const handleShareChange = (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ) => {
+    sharedWithUsers = toSharedUserInfo(shares);
     if (sharedUpdateTimeout) clearTimeout(sharedUpdateTimeout);
     sharedUpdateTimeout = setTimeout(() => {
-      onSharedChange(selected);
-    }, 500);
+      onSharedChange(shares);
+    }, 750);
   };
 
   const deleteItemConfirm = async () => {
@@ -167,7 +195,7 @@
     <NoteShareControl
       {shareableUsers}
       selected={sharedWithUsers}
-      onSelectChange={handleShareSelectChange}
+      onShareChange={handleShareChange}
       {readonly}
       saving={shareSaving}
     />
@@ -204,6 +232,7 @@
       id={data.id}
       username={userInfo?.name}
       userId={userInfo?.uuid}
+      editable={note?.can_edit ?? false}
       bind:activeEditors
     />
   </div>

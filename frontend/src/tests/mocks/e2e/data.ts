@@ -95,6 +95,7 @@ export const users = {
 export const notes = {
   default: [
     {
+      can_edit: true,
       id: 'note-1',
       is_owner: true,
       owner: simpleUser,
@@ -219,6 +220,7 @@ export const oauthScopeDetails = oauthScopes.default[0];
 // oxlint-disable-next-line prefer-destructuring
 export const oauthPolicyDetails = oauthPolicies.default[0];
 export const noteDetails = {
+  can_edit: true,
   id: 'note-1',
   is_owner: true,
   owner: simpleUser,
