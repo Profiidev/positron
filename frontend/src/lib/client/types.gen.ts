@@ -284,6 +284,10 @@ export type NoteShareReq = {
   shared_with: Array<NoteShareEntry>;
 };
 
+export type NotesConfigRes = {
+  max_per_user: number;
+};
+
 export type OAuthClientEditReq = {
   additional_redirect_uris: Array<string>;
   client_id: string;
@@ -3405,3 +3409,28 @@ export type ShareNoteResponses = {
    */
   200: unknown;
 };
+
+export type NotesConfigData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/config';
+};
+
+export type NotesConfigErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type NotesConfigResponses = {
+  200: NotesConfigRes;
+};
+
+export type NotesConfigResponse =
+  NotesConfigResponses[keyof NotesConfigResponses];

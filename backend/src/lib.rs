@@ -97,7 +97,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   oauth_management::init(&db).await;
 
   router = endpoints::user::state(router);
-  router = notes::state(router);
+  router = notes::state(router, &config);
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;
@@ -141,7 +141,7 @@ mod test {
     // Cover the cheap, infallible state() layers and the well-known router.
     let config = test_config();
     let mut router = ApiRouter::new().nest("/.well-known", well_known::router());
-    router = notes::state(router);
+    router = notes::state(router, &config);
     router = services::state(router, &config).await;
     router = oauth::state(router, &config).await;
     router = storage::state(router, &config).await;

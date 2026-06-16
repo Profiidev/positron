@@ -189,6 +189,9 @@ import type {
   MailActiveData,
   MailActiveErrors,
   MailActiveResponses,
+  NotesConfigData,
+  NotesConfigErrors,
+  NotesConfigResponses,
   PasswordAuthenticateData,
   PasswordAuthenticateErrors,
   PasswordSpecialAccessData,
@@ -1600,3 +1603,12 @@ export const shareNote = <ThrowOnError extends boolean = false>(
       ...options.headers
     }
   });
+
+export const notesConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<NotesConfigData, ThrowOnError>
+): RequestResult<NotesConfigResponses, NotesConfigErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    NotesConfigResponses,
+    NotesConfigErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/config', ...options });

@@ -2,7 +2,7 @@ use aide::axum::{
   ApiRouter,
   routing::{delete_with, get_with, post_with, put_with},
 };
-use axum::{Json, extract::Path};
+use axum::{Extension, Json, extract::Path};
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
@@ -21,6 +21,7 @@ use crate::{
     DBTrait,
     notes::{NoteInfo, NoteShareEntry},
   },
+  notes::NotesLimits,
   utils::{UpdateMessage, Updater},
 };
 
@@ -33,6 +34,21 @@ pub fn router() -> ApiRouter {
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
+    .api_route("/config", get_with(notes_config, |op| op.id("notesConfig")))
+}
+
+#[derive(Serialize, JsonSchema)]
+struct NotesConfigRes {
+  max_per_user: u32,
+}
+
+async fn notes_config(
+  _auth: JwtAuth,
+  Extension(limits): Extension<NotesLimits>,
+) -> Result<Json<NotesConfigRes>> {
+  Ok(Json(NotesConfigRes {
+    max_per_user: limits.max_per_user,
+  }))
 }
 
 async fn list(auth: JwtAuth, db: Connection) -> Result<Json<Vec<NoteInfo>>> {
@@ -53,8 +69,13 @@ async fn create(
   auth: JwtAuth,
   db: Connection,
   updater: Updater,
+  Extension(limits): Extension<NotesLimits>,
   Json(req): Json<NoteCreateReq>,
 ) -> Result<Json<NoteCreateRes>> {
+  if db.notes().count_owned(auth.user_id).await? >= limits.max_per_user as u64 {
+    bail!(CONFLICT, "note limit reached");
+  }
+
   let id = db.notes().create(auth.user_id, req.title).await?;
 
   notify_note_update(&updater, vec![auth.user_id], id).await;
@@ -185,6 +206,8 @@ async fn notify_note_update(updater: &Updater, users: Vec<Uuid>, note_id: Uuid) 
 mod test {
   use entity::sea_orm_active_enums::NoteShareAccess;
 
+  use crate::notes::NotesLimits;
+
   use crate::db::{
     DBTrait,
     notes::NoteShareEntry,
@@ -206,7 +229,12 @@ mod test {
 
   use crate::utils::UpdateMessage;
 
-  fn app(db: Connection, jwt: JwtState, upd: Updater<UpdateMessage>) -> Router {
+  fn app(
+    db: Connection,
+    jwt: JwtState,
+    upd: Updater<UpdateMessage>,
+    limits: NotesLimits,
+  ) -> Router {
     Router::new()
       .route(
         "/",
@@ -218,6 +246,8 @@ mod test {
       .route("/{uuid}", get(super::info))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
+      .route("/config", get(super::notes_config))
+      .layer(Extension(limits))
       .layer(Extension(upd))
       .layer(Extension(jwt))
       .layer(Extension(db))
@@ -263,7 +293,7 @@ mod test {
   #[tokio::test]
   async fn list_requires_authentication() {
     let s = setup().await;
-    let app = app(s.db, s.jwt, s.upd);
+    let app = app(s.db, s.jwt, s.upd, NotesLimits { max_per_user: 20 });
     let resp = app.oneshot(request("GET", "/", None, None)).await.unwrap();
     // no auth cookie -> request is rejected before reaching the handler
     assert!(resp.status().is_client_error());
@@ -272,7 +302,7 @@ mod test {
   #[tokio::test]
   async fn create_then_list_note() {
     let s = setup().await;
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     let resp = app
       .clone()
@@ -307,7 +337,7 @@ mod test {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
 
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
     let resp = app
       .clone()
       .oneshot(request("GET", &format!("/{note}"), Some(&s.cookie), None))
@@ -350,7 +380,7 @@ mod test {
       .await
       .unwrap();
 
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
     let resp = app
       .oneshot(request(
         "GET",
@@ -372,7 +402,7 @@ mod test {
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
     let note = s.db.notes().create(s.user, "Old".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     // owner can edit
     let resp = app
@@ -414,7 +444,7 @@ mod test {
   async fn delete_as_owner_removes_note() {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     let resp = app
       .oneshot(request(
@@ -434,7 +464,7 @@ mod test {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     let resp = app
       .oneshot(request(
@@ -465,7 +495,7 @@ mod test {
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
     let victim = insert_user(&s.db, "victim", "v@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     let resp = app
       .oneshot(request(
@@ -489,7 +519,7 @@ mod test {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd);
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     for access in ["edit", "view"] {
       let resp = app
@@ -518,10 +548,39 @@ mod test {
   }
 
   #[tokio::test]
+  async fn create_returns_conflict_when_note_limit_reached() {
+    let s = setup().await;
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 1 });
+
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "POST",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "title": "First" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let resp = app
+      .oneshot(request(
+        "POST",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "title": "Second" })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+  }
+
+  #[tokio::test]
   async fn list_users_returns_all_users() {
     let s = setup().await;
     insert_user(&s.db, "second", "second@x.com").await;
-    let app = app(s.db, s.jwt, s.upd);
+    let app = app(s.db, s.jwt, s.upd, NotesLimits { max_per_user: 20 });
 
     let resp = app
       .oneshot(request("GET", "/users", Some(&s.cookie), None))

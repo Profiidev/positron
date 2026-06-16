@@ -54,6 +54,9 @@ pub struct Config {
 
   //services
   pub apod_api_key: String,
+
+  //notes
+  pub notes_max_per_user: u32,
 }
 
 impl Default for Config {
@@ -70,6 +73,7 @@ impl Default for Config {
       oidc_refresh_exp: 604800,
       storage: StorageConfig::default(),
       apod_api_key: "DEMO_KEY".to_string(),
+      notes_max_per_user: 20,
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
       auth: AuthConfig {
@@ -142,6 +146,17 @@ mod test {
     assert_eq!(config.oidc_refresh_exp, 604800);
     assert_eq!(config.assetlinks, "{}");
     assert_eq!(config.auth.auth_jwt_expiration, 60 * 60 * 24 * 31);
+    assert_eq!(config.notes_max_per_user, 20);
+  }
+
+  #[test]
+  fn parse_reads_notes_max_per_user() {
+    set("DB_URL", "postgres://localhost/db");
+    set("STORAGE_PATH", "/tmp/positron-test");
+    set("NOTES_MAX_PER_USER", "5");
+
+    let config = Config::parse();
+    assert_eq!(config.notes_max_per_user, 5);
   }
 
   #[test]

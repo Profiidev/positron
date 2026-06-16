@@ -105,6 +105,15 @@ impl<'db> NoteTable<'db> {
     )
   }
 
+  pub async fn count_owned(&self, owner: Uuid) -> Result<u64> {
+    Ok(
+      note::Entity::find()
+        .filter(note::Column::Owner.eq(owner))
+        .count(self.db)
+        .await?,
+    )
+  }
+
   pub async fn is_owner(&self, user_id: Uuid, note_id: Uuid) -> Result<bool> {
     let count = note::Entity::find()
       .filter(note::Column::Id.eq(note_id))

@@ -6,6 +6,34 @@ use serde_json::Value;
 use uuid::Uuid;
 
 #[tokio::test]
+async fn note_create_respects_per_user_limit() {
+  unsafe {
+    std::env::set_var("NOTES_MAX_PER_USER", "2");
+  }
+  let (server, _) = TestServer::start_with_admin().await;
+
+  for title in ["First note", "Second note"] {
+    let resp = server
+      .post("/notes/management", serde_json::json!({ "title": title }))
+      .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+  }
+
+  let resp = server
+    .post(
+      "/notes/management",
+      serde_json::json!({ "title": "Third note" }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+  let resp = server.get("/notes/management/config").await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let config: Value = resp.json().await.unwrap();
+  assert_eq!(config["max_per_user"], 2);
+}
+
+#[tokio::test]
 async fn notes_crud_flow() {
   let (server, _) = TestServer::start_with_admin().await;
 
