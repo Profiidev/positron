@@ -459,6 +459,65 @@ mod test {
   }
 
   #[tokio::test]
+  async fn share_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let victim = insert_user(&s.db, "victim", "v@x.com").await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share",
+        Some(&stranger_cookie),
+        Some(json!({
+          "note_id": note,
+          "shared_with": [{ "user_id": victim, "access": "edit" }]
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    // shares are untouched
+    assert!(s.db.notes().shared_users(note).await.unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn share_can_downgrade_edit_to_view() {
+    let s = setup().await;
+    let friend = insert_user(&s.db, "friend", "f@x.com").await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd);
+
+    for access in ["edit", "view"] {
+      let resp = app
+        .clone()
+        .oneshot(request(
+          "PUT",
+          "/share",
+          Some(&s.cookie),
+          Some(json!({
+            "note_id": note,
+            "shared_with": [{ "user_id": friend, "access": access }]
+          })),
+        ))
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    assert_eq!(
+      s.db.notes().shared_users(note).await.unwrap(),
+      vec![NoteShareEntry {
+        user_id: friend,
+        access: NoteShareAccess::View
+      }]
+    );
+  }
+
+  #[tokio::test]
   async fn list_users_returns_all_users() {
     let s = setup().await;
     insert_user(&s.db, "second", "second@x.com").await;

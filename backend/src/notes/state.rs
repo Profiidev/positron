@@ -418,4 +418,91 @@ mod note_editing_test {
     let txt = awareness.doc().get_or_insert_text("default");
     assert_eq!(txt.get_string(&awareness.doc().transact()), "seed");
   }
+
+  #[tokio::test]
+  async fn read_only_client_sync_step2_is_ignored() {
+    use super::{YrsMessage, handle_read_only_message};
+    use yrs::{
+      Doc, GetString, ReadTxn, StateVector, Text, Transact,
+      sync::SyncMessage,
+      updates::encoder::{Encode, Encoder, EncoderV1},
+    };
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    {
+      let awareness = state.doc.lock().await;
+      let txt = awareness.doc().get_or_insert_text("default");
+      txt.insert(&mut awareness.doc().transact_mut(), 0, "seed");
+    }
+
+    // SyncStep2 carries the same payload as an Update; read-only must reject it.
+    let hacker_doc = Doc::new();
+    let txt = hacker_doc.get_or_insert_text("default");
+    txt.insert(&mut hacker_doc.transact_mut(), 0, "hacked");
+    let update = hacker_doc
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default());
+
+    let mut encoder = EncoderV1::new();
+    YrsMessage::Sync(SyncMessage::SyncStep2(update)).encode(&mut encoder);
+    let payload = encoder.to_vec();
+
+    let mut awareness = state.doc.lock().await;
+    handle_read_only_message(&mut awareness, &payload)
+      .await
+      .unwrap();
+    drop(awareness);
+
+    let awareness = state.doc.lock().await;
+    let txt = awareness.doc().get_or_insert_text("default");
+    assert_eq!(txt.get_string(&awareness.doc().transact()), "seed");
+  }
+
+  #[tokio::test]
+  async fn read_only_client_can_still_read_via_sync_step1() {
+    use super::{YrsMessage, handle_read_only_message};
+    use yrs::{
+      StateVector, Text, Transact,
+      sync::SyncMessage,
+      updates::encoder::{Encode, Encoder, EncoderV1},
+    };
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let editing = NoteEditing::init();
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    {
+      let awareness = state.doc.lock().await;
+      let txt = awareness.doc().get_or_insert_text("default");
+      txt.insert(&mut awareness.doc().transact_mut(), 0, "seed");
+    }
+
+    // SyncStep1 (state request) must still be answered so viewers can read.
+    let mut encoder = EncoderV1::new();
+    YrsMessage::Sync(SyncMessage::SyncStep1(StateVector::default())).encode(&mut encoder);
+    let payload = encoder.to_vec();
+
+    let mut awareness = state.doc.lock().await;
+    let res = handle_read_only_message(&mut awareness, &payload)
+      .await
+      .unwrap();
+    drop(awareness);
+
+    // the server replies with a SyncStep2 carrying the current document state
+    assert!(
+      res
+        .iter()
+        .any(|m| matches!(m, YrsMessage::Sync(SyncMessage::SyncStep2(_)))),
+      "read-only SyncStep1 should produce a SyncStep2 reply"
+    );
+  }
 }
