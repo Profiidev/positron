@@ -54,7 +54,7 @@ test.describe('note create', () => {
   test('shows a limit error when create returns conflict', async ({ page }) => {
     await page.route('**/api/notes/management', async (route) => {
       if (route.request().method() === 'POST') {
-        await route.fulfill({ status: 409, body: '{}' });
+        await route.fulfill({ body: '{}', status: 409 });
         return;
       }
       await route.continue();

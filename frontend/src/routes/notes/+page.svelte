@@ -84,9 +84,7 @@
       class="ml-auto cursor-pointer"
       href={atNoteLimit ? undefined : '/notes/create'}
       disabled={atNoteLimit}
-      title={atNoteLimit
-        ? `Note limit reached (${maxPerUser})`
-        : undefined}
+      title={atNoteLimit ? `Note limit reached (${maxPerUser})` : undefined}
     >
       <Plus />
       Create

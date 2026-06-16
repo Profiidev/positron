@@ -113,12 +113,23 @@ export const users = {
 };
 
 export const notesConfig = {
+  'at-limit': { max_per_user: 1 },
   default: { max_per_user: 20 },
-  empty: { max_per_user: 20 },
-  'at-limit': { max_per_user: 1 }
+  empty: { max_per_user: 20 }
 };
 
 export const notes = {
+  'at-limit': [
+    {
+      can_edit: true,
+      id: 'note-1',
+      is_owner: true,
+      owner: simpleUser,
+      preview: 'First note preview',
+      shared_with: [],
+      title: 'My First Note'
+    }
+  ],
   default: [
     {
       can_edit: true,
@@ -130,18 +141,7 @@ export const notes = {
       title: 'My First Note'
     }
   ],
-  empty: [] as unknown[],
-  'at-limit': [
-    {
-      can_edit: true,
-      id: 'note-1',
-      is_owner: true,
-      owner: simpleUser,
-      preview: 'First note preview',
-      shared_with: [],
-      title: 'My First Note'
-    }
-  ]
+  empty: [] as unknown[]
 };
 
 export const oauthClients = {
