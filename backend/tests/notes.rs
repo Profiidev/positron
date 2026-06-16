@@ -133,8 +133,12 @@ async fn share_note_with_edit_access() {
     )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);
-  let viewer_id =
-    Uuid::parse_str(resp.json::<Value>().await.unwrap()["uuid"].as_str().unwrap()).unwrap();
+  let viewer_id = Uuid::parse_str(
+    resp.json::<Value>().await.unwrap()["uuid"]
+      .as_str()
+      .unwrap(),
+  )
+  .unwrap();
 
   let resp = server
     .post(
@@ -184,8 +188,12 @@ async fn view_only_share_has_can_edit_false() {
     )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);
-  let viewer_id =
-    Uuid::parse_str(resp.json::<Value>().await.unwrap()["uuid"].as_str().unwrap()).unwrap();
+  let viewer_id = Uuid::parse_str(
+    resp.json::<Value>().await.unwrap()["uuid"]
+      .as_str()
+      .unwrap(),
+  )
+  .unwrap();
 
   let resp = server
     .post(

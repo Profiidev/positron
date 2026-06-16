@@ -23,26 +23,23 @@ describe('NoteShareControl (editable)', () => {
   });
 
   it.each([1, 3])('shows the shared count for %i user(s)', (n) => {
-    render(
-      ShareControl,
-      {
-        ...base,
-        selected: shared(
-          shareableUsers.slice(0, n).map((user) => ({
-            ...user,
-            access: 'edit' as const
-          }))
-        )
-      }
-    );
+    render(ShareControl, {
+      ...base,
+      selected: shared(
+        shareableUsers.slice(0, n).map((user) => ({
+          ...user,
+          access: 'edit' as const
+        }))
+      )
+    });
     expect(screen.getByText(`${n} shared`)).toBeInTheDocument();
   });
 
   it('shows a "+N" badge beyond four shared users', () => {
     const selected = Array.from({ length: 6 }, (_, i) => ({
+      access: 'edit' as const,
       id: `u${i}`,
-      name: `User${i}`,
-      access: 'edit' as const
+      name: `User${i}`
     }));
     render(ShareControl, { ...base, selected });
     expect(screen.getByText('6 shared')).toBeInTheDocument();
@@ -62,7 +59,7 @@ describe('NoteShareControl (editable)', () => {
     await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
 
     expect(onShareChange).toHaveBeenCalledWith([
-      { userId: 'u1', access: 'edit' }
+      { access: 'edit', userId: 'u1' }
     ]);
   });
 
@@ -74,7 +71,7 @@ describe('NoteShareControl (editable)', () => {
     await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
 
     expect(onShareChange).toHaveBeenCalledWith([
-      { userId: 'u1', access: 'view' }
+      { access: 'view', userId: 'u1' }
     ]);
   });
 
@@ -83,7 +80,7 @@ describe('NoteShareControl (editable)', () => {
     render(ShareControl, {
       ...base,
       onShareChange,
-      selected: [{ id: 'u1', name: 'Alice', access: 'edit' }]
+      selected: [{ access: 'edit', id: 'u1', name: 'Alice' }]
     });
 
     await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
@@ -97,14 +94,14 @@ describe('NoteShareControl (editable)', () => {
     render(ShareControl, {
       ...base,
       onShareChange,
-      selected: [{ id: 'u1', name: 'Alice', access: 'edit' }]
+      selected: [{ access: 'edit', id: 'u1', name: 'Alice' }]
     });
 
     await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
     await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
 
     expect(onShareChange).toHaveBeenCalledWith([
-      { userId: 'u1', access: 'view' }
+      { access: 'view', userId: 'u1' }
     ]);
   });
 });

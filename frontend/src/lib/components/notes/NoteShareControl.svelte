@@ -131,7 +131,7 @@
                   {user.name}
                 </span>
                 <div
-                  class="bg-muted flex shrink-0 rounded-md p-0.5 border"
+                  class="bg-muted flex shrink-0 rounded-md border p-0.5"
                   role="group"
                   aria-label="Share access"
                 >
