@@ -10,9 +10,14 @@
   import type { NoteActiveEditor } from '$lib/components/notes/types';
 
   type AwarenessUser = {
-    id?: string;
     name?: string;
     color?: string;
+  };
+
+  type AwarenessState = {
+    user?: AwarenessUser;
+    canEdit?: boolean;
+    userId?: string;
   };
 
   let {
@@ -33,9 +38,13 @@
   let provider: WebsocketProvider | undefined = undefined;
   const userColor = getRandomColor();
 
-  const setLocalAwarenessUser = () => {
-    provider?.awareness.setLocalStateField('user', {
-      id: userId,
+  const setLocalAwarenessState = () => {
+    if (!provider) return;
+    provider.awareness.setLocalStateField('canEdit', editable);
+    if (userId) {
+      provider.awareness.setLocalStateField('userId', userId);
+    }
+    provider.awareness.setLocalStateField('user', {
       name: username ?? 'Unknown',
       color: userColor
     });
@@ -50,12 +59,13 @@
     provider.awareness.getStates().forEach((state, clientId) => {
       if (clientId === localClientId) return;
 
-      const user = state?.user as AwarenessUser | undefined;
-      if (!user?.name) return;
+      const awareness = state as AwarenessState | undefined;
+      const user = awareness?.user;
+      if (!user?.name || awareness?.canEdit !== true) return;
 
       editors.push({
         clientId,
-        id: user.id,
+        id: awareness.userId,
         name: user.name,
         color: user.color
       });
@@ -64,10 +74,18 @@
     activeEditors = editors;
   };
 
+  const onAwarenessChange = () => {
+    if (provider?.awareness.getLocalState()?.canEdit !== editable) {
+      setLocalAwarenessState();
+    }
+    syncActiveEditors();
+  };
+
   $effect(() => {
     username;
     userId;
-    setLocalAwarenessUser();
+    editable;
+    setLocalAwarenessState();
   });
 
   $effect(() => {
@@ -84,9 +102,9 @@
     provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
       disableBc: true
     });
-    provider.awareness.on('change', syncActiveEditors);
+    provider.awareness.on('change', onAwarenessChange);
 
-    setLocalAwarenessUser();
+    setLocalAwarenessState();
     syncActiveEditors();
 
     const extensions = (await import('./config')).extensions;
@@ -126,7 +144,7 @@
   });
 
   const cleanup = () => {
-    provider?.awareness.off('change', syncActiveEditors);
+    provider?.awareness.off('change', onAwarenessChange);
     editorState.editor?.destroy();
     provider?.destroy();
     provider = undefined;
