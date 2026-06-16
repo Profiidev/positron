@@ -1,6 +1,5 @@
 <script lang="ts">
   import * as Avatar from '@profidev/pleiades/components/ui/avatar';
-  import type { SimpleUserInfo } from '$lib/client';
   import { avatarUrl } from '$lib/permissions.svelte';
 
   let {

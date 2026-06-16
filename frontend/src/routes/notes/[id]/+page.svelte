@@ -173,7 +173,7 @@
     />
     {#if note}
       <div
-        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:pl-1.5 lg:px-3.5"
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:pl-1.5 lg:pr-2.5 lg:pl-1"
         title={`Owner: ${note.owner.name}`}
       >
         <UserAvatar
