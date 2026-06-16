@@ -51,7 +51,12 @@ export const handlers = [
   // Lists (scenario-aware: `mock_scenario=empty` cookie => empty state).
   gen.listGroupsMswHandler(({ cookies }) => j(data.groups[scn(cookies)])),
   gen.listUsersMswHandler(({ cookies }) => j(data.users[scn(cookies)])),
-  gen.listNotesMswHandler(({ cookies }) => j(data.notes[scn(cookies)])),
+  gen.listNotesMswHandler(({ cookies }) =>
+    j(data.notes[data.notesScenarioOf(cookies)])
+  ),
+  gen.notesConfigMswHandler(({ cookies }) =>
+    j(data.notesConfig[data.notesScenarioOf(cookies)])
+  ),
   gen.listOauthClientsMswHandler(({ cookies }) =>
     j(data.oauthClients[scn(cookies)])
   ),
@@ -106,11 +111,17 @@ export const handlers = [
       data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
     )
   ),
+  gen.transferNoteMswHandler(({ cookies }) => {
+    if (cookies.mock_scenario === 'transfer-at-limit') {
+      return new HttpResponse(null, { status: 409 }) as never;
+    }
+    return new HttpResponse(null, { status: 200 }) as never;
+  }),
 
   // Mutations return a generic success so submit flows resolve.
   gen.createGroupMswHandler(() => j({ uuid: 'group-new' })),
   gen.createUserMswHandler(() => j({ uuid: 'user-new' })),
-  gen.createNoteMswHandler(() => j({ uuid: 'note-new' })),
+  gen.createNoteMswHandler(() => j({ id: 'note-new' })),
   gen.createOauthClientMswHandler(() =>
     j({ client_id: 'client-new', client_secret: 'secret' })
   ),

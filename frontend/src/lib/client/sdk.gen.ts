@@ -189,6 +189,9 @@ import type {
   MailActiveData,
   MailActiveErrors,
   MailActiveResponses,
+  NotesConfigData,
+  NotesConfigErrors,
+  NotesConfigResponses,
   PasswordAuthenticateData,
   PasswordAuthenticateErrors,
   PasswordSpecialAccessData,
@@ -258,6 +261,9 @@ import type {
   TotpStartSetupData,
   TotpStartSetupErrors,
   TotpStartSetupResponses,
+  TransferNoteData,
+  TransferNoteErrors,
+  TransferNoteResponses,
   UpdateAccountData,
   UpdateAccountErrors,
   UpdateAccountResponses,
@@ -1600,3 +1606,28 @@ export const shareNote = <ThrowOnError extends boolean = false>(
       ...options.headers
     }
   });
+
+export const transferNote = <ThrowOnError extends boolean = false>(
+  options: Options<TransferNoteData, ThrowOnError>
+): RequestResult<TransferNoteResponses, TransferNoteErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    TransferNoteResponses,
+    TransferNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management/transfer',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const notesConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<NotesConfigData, ThrowOnError>
+): RequestResult<NotesConfigResponses, NotesConfigErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    NotesConfigResponses,
+    NotesConfigErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/config', ...options });

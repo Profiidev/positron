@@ -19,7 +19,11 @@ const mounts = (Cmp: any, data: unknown) => {
 
 describe('create pages mount', () => {
   it('group create', () => mounts(GroupCreate, { uuid: undefined }));
-  it('note create', () => mounts(NoteCreate, { id: undefined }));
+  it('note create', () =>
+    mounts(NoteCreate, {
+      notes: pr([]),
+      notesConfig: pr({ max_per_user: 20 })
+    }));
   it('oauth-client create', () =>
     mounts(ClientCreate, {
       client_id: undefined,

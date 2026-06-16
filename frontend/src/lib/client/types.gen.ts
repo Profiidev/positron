@@ -284,6 +284,15 @@ export type NoteShareReq = {
   shared_with: Array<NoteShareEntry>;
 };
 
+export type NoteTransferReq = {
+  new_owner_id: string;
+  note_id: string;
+};
+
+export type NotesConfigRes = {
+  max_per_user: number;
+};
+
 export type OAuthClientEditReq = {
   additional_redirect_uris: Array<string>;
   client_id: string;
@@ -3405,3 +3414,67 @@ export type ShareNoteResponses = {
    */
   200: unknown;
 };
+
+export type TransferNoteData = {
+  body: NoteTransferReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/transfer';
+};
+
+export type TransferNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type TransferNoteError = TransferNoteErrors[keyof TransferNoteErrors];
+
+export type TransferNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type NotesConfigData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/config';
+};
+
+export type NotesConfigErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type NotesConfigResponses = {
+  200: NotesConfigRes;
+};
+
+export type NotesConfigResponse =
+  NotesConfigResponses[keyof NotesConfigResponses];

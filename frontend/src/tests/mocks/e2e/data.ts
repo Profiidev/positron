@@ -1,7 +1,12 @@
 import { Permission } from '$lib/permissions.svelte';
 
 /** Scenario name read from the `mock_scenario` cookie (set by the e2e tests). */
-export type Scenario = 'default' | 'empty' | 'readonly';
+export type Scenario =
+  | 'default'
+  | 'empty'
+  | 'readonly'
+  | 'at-limit'
+  | 'transfer-at-limit';
 
 /**
  * List data only varies between `default` and `empty`; the `readonly` scenario
@@ -12,6 +17,18 @@ export const scenarioOf = (
   cookies: Record<string, string>
 ): 'default' | 'empty' =>
   cookies.mock_scenario === 'empty' ? 'empty' : 'default';
+
+export const notesScenarioOf = (
+  cookies: Record<string, string>
+): 'default' | 'empty' | 'at-limit' => {
+  if (cookies.mock_scenario === 'empty') {
+    return 'empty';
+  }
+  if (cookies.mock_scenario === 'at-limit') {
+    return 'at-limit';
+  }
+  return 'default';
+};
 
 /** True when the note detail should be served as a view-only (can_edit) note. */
 export const isReadonlyNote = (cookies: Record<string, string>): boolean =>
@@ -103,7 +120,24 @@ export const users = {
   empty: [] as unknown[]
 };
 
+export const notesConfig = {
+  'at-limit': { max_per_user: 1 },
+  default: { max_per_user: 20 },
+  empty: { max_per_user: 20 }
+};
+
 export const notes = {
+  'at-limit': [
+    {
+      can_edit: true,
+      id: 'note-1',
+      is_owner: true,
+      owner: simpleUser,
+      preview: 'First note preview',
+      shared_with: [],
+      title: 'My First Note'
+    }
+  ],
   default: [
     {
       can_edit: true,

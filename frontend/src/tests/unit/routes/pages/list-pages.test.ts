@@ -24,7 +24,12 @@ const pages: [string, Component<any>, string, unknown][] = [
       user: pr(undefined)
     }
   ],
-  ['notes', Notes, 'Notes', { error: null, notes: pr([]) }],
+  [
+    'notes',
+    Notes,
+    'Notes',
+    { error: null, notes: pr([]), notesConfig: pr({ max_per_user: 20 }) }
+  ],
   [
     'users',
     Users,

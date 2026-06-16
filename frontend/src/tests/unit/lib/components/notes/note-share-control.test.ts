@@ -27,8 +27,9 @@ describe('NoteShareControl (editable)', () => {
       ...base,
       selected: shared(
         shareableUsers.slice(0, n).map((user) => ({
-          ...user,
-          access: 'edit' as const
+          access: 'edit' as const,
+          id: user.id,
+          name: user.name
         }))
       )
     });
@@ -119,8 +120,9 @@ describe('NoteShareControl (readonly)', () => {
       readonly: true,
       selected: shared(
         shareableUsers.slice(0, 2).map((user) => ({
-          ...user,
-          access: 'view' as const
+          access: 'view' as const,
+          id: user.id,
+          name: user.name
         }))
       )
     });
