@@ -323,6 +323,58 @@ async fn transfer_ownership_updates_roles() {
 }
 
 #[tokio::test]
+async fn transfer_forbidden_for_non_owner() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  // Admin owns the note.
+  let resp = server
+    .post(
+      "/notes/management",
+      serde_json::json!({ "title": "Admin note" }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let note_id =
+    Uuid::parse_str(resp.json::<Value>().await.unwrap()["id"].as_str().unwrap()).unwrap();
+
+  // A second user who does not own the note tries to transfer it to themselves.
+  let email = format!("{}@example.com", common::unique("stranger"));
+  let password = server.encrypt_password("strangerpass1").await;
+  let resp = server
+    .post(
+      "/user/management",
+      serde_json::json!({
+        "name": "Stranger",
+        "email": email,
+        "password": password,
+      }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let stranger_id = Uuid::parse_str(
+    resp.json::<Value>().await.unwrap()["uuid"]
+      .as_str()
+      .unwrap(),
+  )
+  .unwrap();
+
+  server.clear_cookies();
+  let resp = server.login(&email, "strangerpass1").await;
+  assert_eq!(resp.status(), StatusCode::OK);
+
+  let resp = server
+    .put(
+      "/notes/management/transfer",
+      serde_json::json!({
+        "note_id": note_id,
+        "new_owner_id": stranger_id
+      }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn transfer_rejects_recipient_at_note_limit() {
   unsafe {
     std::env::set_var("NOTES_MAX_PER_USER", "1");

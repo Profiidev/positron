@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import TransferControl from '$lib/components/notes/NoteTransferOwnerControl.svelte';
 import type { SimpleUserInfo } from '$lib/client';
 
@@ -57,5 +57,37 @@ describe('NoteTransferOwnerControl', () => {
         name: 'Transfer ownership from Alice Owner'
       })
     ).toBeDisabled();
+  });
+
+  it('shows the empty state when there are no candidates', async () => {
+    render(TransferControl, { ...base, candidateUsers: [] });
+
+    await fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Transfer ownership from Alice Owner'
+      })
+    );
+
+    expect(screen.getByText('No people found')).toBeInTheDocument();
+    expect(screen.queryByRole('option')).toBeNull();
+  });
+
+  it('closes the candidate list after a selection', async () => {
+    render(TransferControl, base);
+
+    await fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Transfer ownership from Alice Owner'
+      })
+    );
+    expect(screen.getByPlaceholderText('Search people...')).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole('option', { name: /Bob User/ }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByPlaceholderText('Search people...')
+      ).not.toBeInTheDocument()
+    );
   });
 });

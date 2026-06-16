@@ -719,6 +719,57 @@ mod test {
   }
 
   #[tokio::test]
+  async fn transfer_succeeds_when_recipient_below_limit() {
+    let s = setup().await;
+    let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
+    // Recipient already owns one note; the limit of 2 still leaves room.
+    s.db
+      .notes()
+      .create(recipient, "Owned".into())
+      .await
+      .unwrap();
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 2 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": recipient
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(s.db.notes().is_owner(recipient, note).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn transfer_to_unknown_user_fails() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": Uuid::new_v4()
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_ne!(resp.status(), StatusCode::OK);
+    assert!(s.db.notes().is_owner(s.user, note).await.unwrap());
+  }
+
+  #[tokio::test]
   async fn list_users_returns_all_users() {
     let s = setup().await;
     insert_user(&s.db, "second", "second@x.com").await;

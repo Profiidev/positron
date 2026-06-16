@@ -756,6 +756,55 @@ mod test {
   }
 
   #[tokio::test]
+  async fn transfer_owner_fails_for_missing_note() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
+
+    assert!(
+      db.notes()
+        .transfer_owner(Uuid::new_v4(), owner, recipient)
+        .await
+        .is_err()
+    );
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_fails_for_missing_recipient() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    assert!(
+      db.notes()
+        .transfer_owner(id, owner, Uuid::new_v4())
+        .await
+        .is_err()
+    );
+    // The note stays with the original owner and gains no stray shares.
+    assert!(db.notes().is_owner(owner, id).await.unwrap());
+    assert!(db.notes().shared_users(id).await.unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_rejects_non_owner_initiator() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+    let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // `stranger` is not the note owner, so the transfer must be rejected.
+    assert!(
+      db.notes()
+        .transfer_owner(id, stranger, recipient)
+        .await
+        .is_err()
+    );
+    assert!(db.notes().is_owner(owner, id).await.unwrap());
+  }
+
+  #[tokio::test]
   async fn delete_removes_note_and_shares() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
