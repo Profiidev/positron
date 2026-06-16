@@ -20,12 +20,15 @@ export const scenarioOf = (
 
 export const notesScenarioOf = (
   cookies: Record<string, string>
-): 'default' | 'empty' | 'at-limit' =>
-  cookies.mock_scenario === 'empty'
-    ? 'empty'
-    : cookies.mock_scenario === 'at-limit'
-      ? 'at-limit'
-      : 'default';
+): 'default' | 'empty' | 'at-limit' => {
+  if (cookies.mock_scenario === 'empty') {
+    return 'empty';
+  }
+  if (cookies.mock_scenario === 'at-limit') {
+    return 'at-limit';
+  }
+  return 'default';
+};
 
 /** True when the note detail should be served as a view-only (can_edit) note. */
 export const isReadonlyNote = (cookies: Record<string, string>): boolean =>

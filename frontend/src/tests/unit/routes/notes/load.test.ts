@@ -4,14 +4,21 @@ import { load as createLoad } from '$routes/notes/create/+page';
 import { load as detailLoad } from '$routes/notes/[id]/+page';
 import { jsonFetch, runLoad } from '$test_helpers/load';
 
+const urlOf = (input: RequestInfo | URL): string => {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+};
+
 const notesFetch =
   (notes: unknown, config: unknown): typeof fetch =>
   async (input) => {
-    const url = typeof input === 'string' ? input : input.url;
-    const body = url.includes('/config') ? config : notes;
-    return new Response(JSON.stringify(body), {
-      headers: { 'content-type': 'application/json' }
-    });
+    const body = urlOf(input).includes('/config') ? config : notes;
+    return Response.json(body);
   };
 
 describe('notes list load', () => {

@@ -51,6 +51,59 @@ test.describe('note create', () => {
     await expect(page).toHaveURL(/\/notes\/create/);
   });
 
+  test('navigates to the new note when creating the last allowed note', async ({
+    page
+  }) => {
+    await page.route('**/api/notes/management**', async (route) => {
+      const url = route.request().url();
+      const method = route.request().method();
+
+      // Config caps the user at a single note so the create page allows it.
+      if (method === 'GET' && url.endsWith('/config')) {
+        await route.fulfill({ json: { max_per_user: 1 } });
+        return;
+      }
+
+      // Creating returns the id the page then navigates to.
+      if (method === 'POST') {
+        await route.fulfill({ json: { id: 'note-new' } });
+        return;
+      }
+
+      // The detail page loads the freshly created note.
+      if (method === 'GET' && url.endsWith('/note-new')) {
+        await route.fulfill({
+          json: {
+            can_edit: true,
+            id: 'note-new',
+            is_owner: true,
+            owner: { id: 'user-admin', name: 'Ada Admin' },
+            shared_with: [],
+            title: 'Final note'
+          }
+        });
+        return;
+      }
+
+      // The notes list starts empty so the limit is not yet reached.
+      if (method === 'GET' && url.endsWith('/management')) {
+        await route.fulfill({ json: [] });
+        return;
+      }
+
+      // Everything else (e.g. the share user list) falls through to MSW.
+      await route.fallback();
+    });
+
+    await gotoReady(page, '/notes/create');
+
+    await page.getByPlaceholder('Enter note title').fill('Final note');
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    await expect(page).toHaveURL(/\/notes\/note-new$/);
+    await expect(page.getByPlaceholder('Note title')).toHaveValue('Final note');
+  });
+
   test('shows a limit error when create returns conflict', async ({ page }) => {
     await page.route('**/api/notes/management', async (route) => {
       if (route.request().method() === 'POST') {
@@ -141,28 +194,11 @@ test.describe('note detail', () => {
   test('transfers ownership through the confirmation dialog', async ({
     page
   }) => {
-    let transferred = false;
+    let transferRequest: { note_id: string; new_owner_id: string } | undefined =
+      undefined;
     await page.route('**/api/notes/management/transfer', async (route) => {
+      transferRequest = route.request().postDataJSON();
       await route.fulfill({ body: '{}', status: 200 });
-      transferred = true;
-    });
-    await page.route('**/api/notes/management/note-1', async (route) => {
-      if (route.request().method() === 'GET' && transferred) {
-        await route.fulfill({
-          body: JSON.stringify({
-            can_edit: true,
-            id: 'note-1',
-            is_owner: false,
-            owner: { id: 'user-2', name: 'Cara User' },
-            shared_with: [{ access: 'edit', id: 'user-1', name: 'Bob User' }],
-            title: 'My First Note'
-          }),
-          contentType: 'application/json',
-          status: 200
-        });
-        return;
-      }
-      await route.continue();
     });
 
     await gotoReady(page, '/notes/note-1');
@@ -178,8 +214,16 @@ test.describe('note detail', () => {
     ).toBeVisible();
     await page.getByRole('button', { name: 'Transfer' }).last().click();
 
+    /*
+     * Owner controls only flip once the backend pushes a `Note` update over the
+     * websocket (a no-op in e2e), so assert the success toast plus that the
+     * transfer request carried the chosen new owner.
+     */
     await expect(page.getByText('Ownership transferred')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
+    expect(transferRequest).toEqual({
+      new_owner_id: 'user-2',
+      note_id: 'note-1'
+    });
   });
 
   test('shows a limit error when transfer returns conflict', async ({

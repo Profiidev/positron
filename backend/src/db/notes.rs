@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, Condition, ConnectionTrait, QueryOrder, TransactionTrait, prelude::*};
+use sea_orm::{
+  ActiveValue::Set, Condition, ConnectionTrait, QueryOrder, TransactionTrait, prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -749,12 +751,7 @@ mod test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    assert!(
-      db.notes()
-        .transfer_owner(id, owner, owner)
-        .await
-        .is_err()
-    );
+    assert!(db.notes().transfer_owner(id, owner, owner).await.is_err());
     assert!(db.notes().is_owner(owner, id).await.unwrap());
   }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { toast } from '@profidev/pleiades/components/util/general';
   import type { Stage } from '@profidev/pleiades/components/form/types';
@@ -8,7 +9,7 @@
 
   const { data } = $props();
 
-  $effect(() => {
+  onMount(() => {
     Promise.all([data.notes, data.notesConfig]).then(([notes, config]) => {
       const maxPerUser = config?.max_per_user;
       const ownedCount = notes.filter((n) => n.is_owner).length;

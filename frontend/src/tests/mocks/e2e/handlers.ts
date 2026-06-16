@@ -121,7 +121,7 @@ export const handlers = [
   // Mutations return a generic success so submit flows resolve.
   gen.createGroupMswHandler(() => j({ uuid: 'group-new' })),
   gen.createUserMswHandler(() => j({ uuid: 'user-new' })),
-  gen.createNoteMswHandler(() => j({ uuid: 'note-new' })),
+  gen.createNoteMswHandler(() => j({ id: 'note-new' })),
   gen.createOauthClientMswHandler(() =>
     j({ client_id: 'client-new', client_secret: 'secret' })
   ),
