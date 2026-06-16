@@ -6,7 +6,11 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { items, noSidebarPaths } from '$lib/components/nav.svelte';
+  import {
+    items,
+    noSidebarPaths,
+    noAuthPaths
+  } from '$lib/components/nav.svelte';
   import { setMode } from 'mode-watcher';
   import { logout, refreshToken, testToken, type UserInfo } from '$lib/client';
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
@@ -38,7 +42,7 @@
       };
       // can also be undefined if there was an error
       if (valid === false) {
-        if (!blockRedirect) {
+        if (!blockRedirect && !noAuthPaths.includes(page.url.pathname)) {
           if (data.oauthOptions.code && data.oauthOptions.name) {
             goto(
               '/login?code=' +
