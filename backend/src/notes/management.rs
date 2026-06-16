@@ -34,6 +34,7 @@ pub fn router() -> ApiRouter {
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
+    .api_route("/transfer", put_with(transfer, |op| op.id("transferNote")))
     .api_route("/config", get_with(notes_config, |op| op.id("notesConfig")))
 }
 
@@ -190,6 +191,47 @@ async fn share(
   Ok(())
 }
 
+#[derive(Deserialize, JsonSchema)]
+struct NoteTransferReq {
+  note_id: Uuid,
+  new_owner_id: Uuid,
+}
+
+async fn transfer(
+  auth: JwtAuth,
+  db: Connection,
+  updater: Updater,
+  Extension(limits): Extension<NotesLimits>,
+  Json(req): Json<NoteTransferReq>,
+) -> Result<()> {
+  if !db.notes().is_owner(auth.user_id, req.note_id).await? {
+    bail!(FORBIDDEN, "forbidden");
+  }
+
+  if req.new_owner_id == auth.user_id {
+    bail!(BAD_REQUEST, "cannot transfer to self");
+  }
+
+  if db.notes().count_owned(req.new_owner_id).await? >= limits.max_per_user as u64 {
+    bail!(CONFLICT, "note limit reached");
+  }
+
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
+  users.push(auth.user_id);
+  users.push(req.new_owner_id);
+
+  db.notes()
+    .transfer_owner(req.note_id, auth.user_id, req.new_owner_id)
+    .await?;
+
+  users.sort_unstable();
+  users.dedup();
+
+  notify_note_update(&updater, users, req.note_id).await;
+
+  Ok(())
+}
+
 async fn list_users(_auth: JwtAuth, db: Connection) -> Result<Json<Vec<SimpleUserInfo>>> {
   let users = db.user().list_users_simple().await?;
   Ok(Json(users))
@@ -246,6 +288,7 @@ mod test {
       .route("/{uuid}", get(super::info))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
+      .route("/transfer", axum::routing::put(super::transfer))
       .route("/config", get(super::notes_config))
       .layer(Extension(limits))
       .layer(Extension(upd))
@@ -574,6 +617,105 @@ mod test {
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::CONFLICT);
+  }
+
+  #[tokio::test]
+  async fn transfer_as_owner_updates_ownership() {
+    let s = setup().await;
+    let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": recipient
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(!s.db.notes().is_owner(s.user, note).await.unwrap());
+    assert!(s.db.notes().is_owner(recipient, note).await.unwrap());
+    assert!(s.db.notes().can_edit(s.user, note).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn transfer_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&stranger_cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": recipient
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert!(s.db.notes().is_owner(s.user, note).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn transfer_rejects_self_transfer() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": s.user
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+  }
+
+  #[tokio::test]
+  async fn transfer_returns_conflict_when_recipient_at_limit() {
+    let s = setup().await;
+    let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
+    s.db
+      .notes()
+      .create(recipient, "Owned".into())
+      .await
+      .unwrap();
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 1 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/transfer",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "new_owner_id": recipient
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    assert!(s.db.notes().is_owner(s.user, note).await.unwrap());
   }
 
   #[tokio::test]

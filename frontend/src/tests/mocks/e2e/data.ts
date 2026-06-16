@@ -1,7 +1,7 @@
 import { Permission } from '$lib/permissions.svelte';
 
 /** Scenario name read from the `mock_scenario` cookie (set by the e2e tests). */
-export type Scenario = 'default' | 'empty' | 'readonly' | 'at-limit';
+export type Scenario = 'default' | 'empty' | 'readonly' | 'at-limit' | 'transfer-at-limit';
 
 /**
  * List data only varies between `default` and `empty`; the `readonly` scenario

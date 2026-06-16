@@ -111,6 +111,12 @@ export const handlers = [
       data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
     )
   ),
+  gen.transferNoteMswHandler(({ cookies }) => {
+    if (cookies.mock_scenario === 'transfer-at-limit') {
+      return new HttpResponse(null, { status: 409 }) as never;
+    }
+    return new HttpResponse(null, { status: 200 }) as never;
+  }),
 
   // Mutations return a generic success so submit flows resolve.
   gen.createGroupMswHandler(() => j({ uuid: 'group-new' })),

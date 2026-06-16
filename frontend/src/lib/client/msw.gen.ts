@@ -183,6 +183,8 @@ import type {
   TotpRemoveData,
   TotpStartSetupData,
   TotpStartSetupResponse,
+  TransferNoteData,
+  TransferNoteError,
   UpdateAccountData,
   UpdateAccountError,
   UpdateAvatarData,
@@ -754,6 +756,12 @@ export const shareNoteMswHandler = wrapMswHandler<
   ShareNoteError,
   ShareNoteData
 >('/api/notes/management/share', 'put', client.getConfig);
+
+export const transferNoteMswHandler = wrapMswHandler<
+  never,
+  TransferNoteError,
+  TransferNoteData
+>('/api/notes/management/transfer', 'put', client.getConfig);
 
 export const notesConfigMswHandler = wrapMswHandler<
   NotesConfigResponse,

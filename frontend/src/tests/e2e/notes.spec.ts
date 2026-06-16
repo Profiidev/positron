@@ -129,10 +129,73 @@ test.describe('note detail', () => {
     await expect(page.getByPlaceholder('Note title')).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Share' })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: /Transfer ownership/ })
+    ).toHaveCount(0);
 
     // The editor renders read-only with no contenteditable surface.
     const editor = page.locator('.ProseMirror').first();
     await expect(editor).toHaveAttribute('contenteditable', 'false');
+  });
+
+  test('transfers ownership through the confirmation dialog', async ({ page }) => {
+    let transferred = false;
+    await page.route('**/api/notes/management/transfer', async (route) => {
+      await route.fulfill({ status: 200, body: '{}' });
+      transferred = true;
+    });
+    await page.route('**/api/notes/management/note-1', async (route) => {
+      if (route.request().method() === 'GET' && transferred) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            can_edit: true,
+            id: 'note-1',
+            is_owner: false,
+            owner: { id: 'user-2', name: 'Cara User' },
+            shared_with: [{ access: 'edit', id: 'user-1', name: 'Bob User' }],
+            title: 'My First Note'
+          })
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await gotoReady(page, '/notes/note-1');
+
+    await page
+      .getByRole('button', { name: 'Transfer ownership from Bob User' })
+      .click();
+    await page.getByRole('option', { name: 'Cara User' }).click();
+    await expect(
+      page.getByText(
+        'Transfer ownership of "My First Note" to Cara User? You will remain an editor but lose owner controls.'
+      )
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Transfer' }).last().click();
+
+    await expect(page.getByText('Ownership transferred')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+
+  test('shows a limit error when transfer returns conflict', async ({
+    context,
+    page
+  }) => {
+    await setupSession(context, 'transfer-at-limit');
+    await gotoReady(page, '/notes/note-1');
+
+    await page
+      .getByRole('button', { name: 'Transfer ownership from Bob User' })
+      .click();
+    await page.getByRole('option', { name: 'Cara User' }).click();
+    await page.getByRole('button', { name: 'Transfer' }).last().click();
+
+    await expect(
+      page.getByText('Cara User has reached the maximum number of notes.')
+    ).toBeVisible();
   });
 
   test('deletes a note through the confirmation dialog', async ({ page }) => {

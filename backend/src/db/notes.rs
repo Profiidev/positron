@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, Condition, ConnectionTrait, TransactionTrait, prelude::*};
+use sea_orm::{ActiveValue::Set, Condition, ConnectionTrait, QueryOrder, TransactionTrait, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -82,6 +82,7 @@ impl<'db> NoteTable<'db> {
   pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<NoteShareEntry>> {
     let shared_users = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
+      .order_by_asc(note_user::Column::User)
       .all(self.db)
       .await?
       .into_iter()
@@ -299,6 +300,69 @@ impl<'db> NoteTable<'db> {
     Ok(())
   }
 
+  pub async fn transfer_owner(
+    &self,
+    note_id: Uuid,
+    current_owner: Uuid,
+    new_owner: Uuid,
+  ) -> Result<()> {
+    if current_owner == new_owner {
+      return Err(DbErr::Custom("cannot transfer to self".into()).into());
+    }
+
+    let txn = self.db.begin().await?;
+
+    let note = Note::find_by_id(note_id)
+      .one(&txn)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?;
+
+    if note.owner != current_owner {
+      return Err(DbErr::Custom("forbidden".into()).into());
+    }
+
+    if User::find_by_id(new_owner).one(&txn).await?.is_none() {
+      return Err(DbErr::RecordNotFound("user not found".into()).into());
+    }
+
+    let mut active: note::ActiveModel = note.into();
+    active.owner = Set(new_owner);
+    active.update(&txn).await?;
+
+    let current_shares = note_user::Entity::find()
+      .filter(note_user::Column::Note.eq(note_id))
+      .all(&txn)
+      .await?
+      .into_iter()
+      .map(|row| NoteShareEntry {
+        user_id: row.user,
+        access: row.access,
+      })
+      .collect::<Vec<_>>();
+
+    let mut new_shares: Vec<NoteShareEntry> = current_shares
+      .into_iter()
+      .filter(|share| share.user_id != new_owner)
+      .collect();
+
+    if let Some(entry) = new_shares
+      .iter_mut()
+      .find(|share| share.user_id == current_owner)
+    {
+      entry.access = NoteShareAccess::Edit;
+    } else {
+      new_shares.push(NoteShareEntry {
+        user_id: current_owner,
+        access: NoteShareAccess::Edit,
+      });
+    }
+
+    replace_shared_users(&txn, note_id, new_owner, new_shares).await?;
+    txn.commit().await?;
+
+    Ok(())
+  }
+
   pub async fn set_content(&self, note_id: Uuid, content: Vec<u8>, preview: String) -> Result<()> {
     let mut note: note::ActiveModel = Note::find_by_id(note_id)
       .one(self.db)
@@ -359,7 +423,8 @@ async fn replace_shared_users<C: ConnectionTrait>(
 
 #[cfg(test)]
 mod test {
-  use entity::sea_orm_active_enums::NoteShareAccess;
+  use entity::{note_user, sea_orm_active_enums::NoteShareAccess};
+  use sea_orm::{ActiveModelTrait, Set};
 
   use crate::db::{
     DBTrait,
@@ -604,6 +669,93 @@ mod test {
         .await
         .is_err()
     );
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_updates_owner_and_shares() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
+    let viewer = insert_user(&db, "viewer", "viewer@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![view(viewer), edit(recipient)])
+      .await
+      .unwrap();
+
+    db.notes()
+      .transfer_owner(id, owner, recipient)
+      .await
+      .unwrap();
+
+    assert!(!db.notes().is_owner(owner, id).await.unwrap());
+    assert!(db.notes().is_owner(recipient, id).await.unwrap());
+    assert!(db.notes().can_edit(owner, id).await.unwrap());
+
+    let mut shares = db.notes().shared_users(id).await.unwrap();
+    let mut expected = vec![edit(owner), view(viewer)];
+    shares.sort_by_key(|share| share.user_id);
+    expected.sort_by_key(|share| share.user_id);
+    assert_eq!(shares, expected);
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_removes_recipient_from_shares() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![view(recipient)])
+      .await
+      .unwrap();
+
+    db.notes()
+      .transfer_owner(id, owner, recipient)
+      .await
+      .unwrap();
+
+    let shares = db.notes().shared_users(id).await.unwrap();
+    assert_eq!(shares, vec![edit(owner)]);
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_upgrades_previous_owner_share_to_edit() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    note_user::ActiveModel {
+      note: Set(id),
+      user: Set(owner),
+      access: Set(NoteShareAccess::View),
+    }
+    .insert(&db.0)
+    .await
+    .unwrap();
+
+    db.notes()
+      .transfer_owner(id, owner, recipient)
+      .await
+      .unwrap();
+
+    let shares = db.notes().shared_users(id).await.unwrap();
+    assert_eq!(shares, vec![edit(owner)]);
+  }
+
+  #[tokio::test]
+  async fn transfer_owner_rejects_self_transfer() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    assert!(
+      db.notes()
+        .transfer_owner(id, owner, owner)
+        .await
+        .is_err()
+    );
+    assert!(db.notes().is_owner(owner, id).await.unwrap());
   }
 
   #[tokio::test]

@@ -261,6 +261,9 @@ import type {
   TotpStartSetupData,
   TotpStartSetupErrors,
   TotpStartSetupResponses,
+  TransferNoteData,
+  TransferNoteErrors,
+  TransferNoteResponses,
   UpdateAccountData,
   UpdateAccountErrors,
   UpdateAccountResponses,
@@ -1597,6 +1600,22 @@ export const shareNote = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/notes/management/share',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const transferNote = <ThrowOnError extends boolean = false>(
+  options: Options<TransferNoteData, ThrowOnError>
+): RequestResult<TransferNoteResponses, TransferNoteErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    TransferNoteResponses,
+    TransferNoteErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management/transfer',
     ...options,
     headers: {
       'Content-Type': 'application/json',

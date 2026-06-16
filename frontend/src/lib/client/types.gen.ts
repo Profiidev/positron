@@ -284,6 +284,11 @@ export type NoteShareReq = {
   shared_with: Array<NoteShareEntry>;
 };
 
+export type NoteTransferReq = {
+  new_owner_id: string;
+  note_id: string;
+};
+
 export type NotesConfigRes = {
   max_per_user: number;
 };
@@ -3404,6 +3409,45 @@ export type ShareNoteErrors = {
 export type ShareNoteError = ShareNoteErrors[keyof ShareNoteErrors];
 
 export type ShareNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type TransferNoteData = {
+  body: NoteTransferReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/transfer';
+};
+
+export type TransferNoteErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type TransferNoteError = TransferNoteErrors[keyof TransferNoteErrors];
+
+export type TransferNoteResponses = {
   /**
    * no content
    */
