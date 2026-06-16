@@ -138,17 +138,17 @@ test.describe('note detail', () => {
     await expect(editor).toHaveAttribute('contenteditable', 'false');
   });
 
-  test('transfers ownership through the confirmation dialog', async ({ page }) => {
+  test('transfers ownership through the confirmation dialog', async ({
+    page
+  }) => {
     let transferred = false;
     await page.route('**/api/notes/management/transfer', async (route) => {
-      await route.fulfill({ status: 200, body: '{}' });
+      await route.fulfill({ body: '{}', status: 200 });
       transferred = true;
     });
     await page.route('**/api/notes/management/note-1', async (route) => {
       if (route.request().method() === 'GET' && transferred) {
         await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
           body: JSON.stringify({
             can_edit: true,
             id: 'note-1',
@@ -156,7 +156,9 @@ test.describe('note detail', () => {
             owner: { id: 'user-2', name: 'Cara User' },
             shared_with: [{ access: 'edit', id: 'user-1', name: 'Bob User' }],
             title: 'My First Note'
-          })
+          }),
+          contentType: 'application/json',
+          status: 200
         });
         return;
       }

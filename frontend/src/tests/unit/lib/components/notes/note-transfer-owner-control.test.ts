@@ -11,9 +11,9 @@ const candidateUsers: SimpleUserInfo[] = [
 ];
 
 const base = {
-  owner,
   candidateUsers,
-  onTransfer: vi.fn()
+  onTransfer: vi.fn(),
+  owner
 };
 
 describe('NoteTransferOwnerControl', () => {
@@ -26,7 +26,9 @@ describe('NoteTransferOwnerControl', () => {
     render(TransferControl, base);
 
     await fireEvent.click(
-      screen.getByRole('button', { name: 'Transfer ownership from Alice Owner' })
+      screen.getByRole('button', {
+        name: 'Transfer ownership from Alice Owner'
+      })
     );
 
     expect(screen.getByPlaceholderText('Search people...')).toBeInTheDocument();
@@ -39,7 +41,9 @@ describe('NoteTransferOwnerControl', () => {
     render(TransferControl, { ...base, onTransfer });
 
     await fireEvent.click(
-      screen.getByRole('button', { name: 'Transfer ownership from Alice Owner' })
+      screen.getByRole('button', {
+        name: 'Transfer ownership from Alice Owner'
+      })
     );
     await fireEvent.click(screen.getByRole('option', { name: /Cara User/ }));
 
@@ -49,7 +53,9 @@ describe('NoteTransferOwnerControl', () => {
   it('disables the trigger while saving', () => {
     render(TransferControl, { ...base, saving: true });
     expect(
-      screen.getByRole('button', { name: 'Transfer ownership from Alice Owner' })
+      screen.getByRole('button', {
+        name: 'Transfer ownership from Alice Owner'
+      })
     ).toBeDisabled();
   });
 });
