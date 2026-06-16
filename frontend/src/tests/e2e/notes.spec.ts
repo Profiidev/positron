@@ -21,6 +21,16 @@ test.describe('notes list', () => {
 
     await expect(page.getByText('No notes yet')).toBeVisible();
   });
+
+  test('disables create when the note limit is reached', async ({
+    context,
+    page
+  }) => {
+    await setupSession(context, 'at-limit');
+    await gotoReady(page, '/notes');
+
+    await expect(page.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
 });
 
 test.describe('note create', () => {
@@ -38,6 +48,26 @@ test.describe('note create', () => {
 
     await page.getByRole('button', { name: 'Create' }).click();
 
+    await expect(page).toHaveURL(/\/notes\/create/);
+  });
+
+  test('shows a limit error when create returns conflict', async ({ page }) => {
+    await page.route('**/api/notes/management', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({ status: 409, body: '{}' });
+        return;
+      }
+      await route.continue();
+    });
+
+    await gotoReady(page, '/notes/create');
+
+    await page.getByPlaceholder('Enter note title').fill('Another note');
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    await expect(
+      page.getByText('You have reached the maximum number of notes.')
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/notes\/create/);
   });
 });

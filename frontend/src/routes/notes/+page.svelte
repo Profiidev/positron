@@ -14,6 +14,7 @@
   const { data } = $props();
 
   let notes: NoteInfo[] | undefined = $state();
+  let maxPerUser: number | undefined = $state();
   let selected: NoteInfo | undefined = $state();
   let deleteOpen = $state(false);
   let isLoading = $state(false);
@@ -23,6 +24,17 @@
       notes = list;
     });
   });
+
+  $effect(() => {
+    data.notesConfig.then((config) => {
+      maxPerUser = config?.max_per_user;
+    });
+  });
+
+  const ownedCount = $derived(notes?.filter((n) => n.is_owner).length ?? 0);
+  const atNoteLimit = $derived(
+    maxPerUser !== undefined && ownedCount >= maxPerUser
+  );
 
   $effect(() => {
     if (data.error) {
@@ -68,7 +80,14 @@
 <div class="flex max-h-screen flex-col p-4">
   <div class="ml-7 flex items-center md:m-0">
     <h3 class="text-xl font-medium">Notes</h3>
-    <Button class="ml-auto cursor-pointer" href="/notes/create">
+    <Button
+      class="ml-auto cursor-pointer"
+      href={atNoteLimit ? undefined : '/notes/create'}
+      disabled={atNoteLimit}
+      title={atNoteLimit
+        ? `Note limit reached (${maxPerUser})`
+        : undefined}
+    >
       <Plus />
       Create
     </Button>

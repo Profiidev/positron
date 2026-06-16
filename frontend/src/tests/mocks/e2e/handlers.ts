@@ -51,7 +51,12 @@ export const handlers = [
   // Lists (scenario-aware: `mock_scenario=empty` cookie => empty state).
   gen.listGroupsMswHandler(({ cookies }) => j(data.groups[scn(cookies)])),
   gen.listUsersMswHandler(({ cookies }) => j(data.users[scn(cookies)])),
-  gen.listNotesMswHandler(({ cookies }) => j(data.notes[scn(cookies)])),
+  gen.listNotesMswHandler(({ cookies }) =>
+    j(data.notes[data.notesScenarioOf(cookies)])
+  ),
+  gen.notesConfigMswHandler(({ cookies }) =>
+    j(data.notesConfig[data.notesScenarioOf(cookies)])
+  ),
   gen.listOauthClientsMswHandler(({ cookies }) =>
     j(data.oauthClients[scn(cookies)])
   ),
