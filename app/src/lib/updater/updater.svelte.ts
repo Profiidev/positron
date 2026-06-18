@@ -29,7 +29,7 @@ export const isConnected = () => connected;
 const handleMessage = (message: UpdateMessage) => {
   switch (message.type) {
     case UpdateMessageType.TokenInvalid: {
-      if (page.url.pathname !== '/auth') {
+      if (page.route.id !== '/auth') {
         goto('/auth').catch(() => {});
       }
       break;

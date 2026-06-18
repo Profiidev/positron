@@ -42,7 +42,7 @@
       };
       // can also be undefined if there was an error
       if (valid === false) {
-        if (!blockRedirect && !noAuthPaths.includes(page.url.pathname)) {
+        if (!blockRedirect && !noAuthPaths.includes(page.route.id ?? '')) {
           if (data.oauthOptions.code && data.oauthOptions.name) {
             goto(
               '/login?code=' +
@@ -50,12 +50,12 @@
                 '&name=' +
                 data.oauthOptions.name
             );
-          } else if (page.url.pathname.startsWith('/auth/')) {
+          } else if (page.route.id?.startsWith('/auth/')) {
             const challenge = data.auth.challenge
               ? `&challenge=${data.auth.challenge}`
               : '';
             goto(
-              `/login?auth=${page.url.pathname.replace('/auth/', '')}${challenge}`
+              `/login?auth=${page.route.id?.replace('/auth/', '')}${challenge}`
             );
           } else {
             goto('/login');
@@ -74,7 +74,7 @@
       let { data: status, error } = await data.setupStatus;
       if (error) return;
 
-      if (!status?.is_setup && page.url.pathname !== '/setup') {
+      if (!status?.is_setup && page.route.id !== '/setup') {
         blockRedirect = true;
         await goto('/setup');
         blockRedirect = false;
@@ -86,7 +86,7 @@
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-{#if noSidebarPaths.includes(page.url.pathname)}
+{#if noSidebarPaths.includes(page.route.id ?? '')}
   {@render children()}
 {:else}
   <Sidebar
