@@ -37,7 +37,6 @@ describe('user detail load', () => {
     await expect(result.userInfoPromise).resolves.toMatchObject({
       data: { name: 'Bob' }
     });
-    await expect(result.mailActivePromise).resolves.toBe(true);
     await expect(result.groupsPromise).resolves.toBeDefined();
   });
 });

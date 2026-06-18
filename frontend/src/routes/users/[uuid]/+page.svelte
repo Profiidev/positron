@@ -3,7 +3,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
-  import { avatarUrl, Permission } from '$lib/permissions.svelte';
+  import { Permission } from '$lib/permissions.svelte';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
@@ -46,7 +46,6 @@
   let isLoading = $state(false);
   let readonly = $state(true);
   let allowSpecialEdit = $state(false);
-  let mailActive = $state(false);
   let userInfo: DetailUserInfo | undefined = $state();
   let groups: SimpleGroupInfo[] = $state([]);
   let form: BaseForm<typeof userSettings> | undefined = $state();
@@ -69,12 +68,6 @@
       allowSpecialEdit = detailUserInfo.permissions.every((perm) =>
         user.permissions.includes(perm)
       );
-    });
-  });
-
-  $effect(() => {
-    data.mailActivePromise.then((res) => {
-      mailActive = res;
     });
   });
 
@@ -198,7 +191,7 @@
         {userInfo.name}
       {/if}
     </h3>
-    {#if !mailActive && allowSpecialEdit}
+    {#if allowSpecialEdit}
       <Button
         variant="secondary"
         class="mr-2 ml-auto cursor-pointer"
@@ -210,8 +203,7 @@
       </Button>
     {/if}
     <Button
-      class={'cursor-pointer' +
-        (mailActive || !allowSpecialEdit ? ' ml-auto' : '')}
+      class={'cursor-pointer' + (!allowSpecialEdit ? ' ml-auto' : '')}
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
@@ -273,7 +265,7 @@
                   readonly
                   value={userInfo?.email}
                 />
-                {#if !mailActive && allowSpecialEdit}
+                {#if allowSpecialEdit}
                   <Button
                     variant="secondary"
                     class="cursor-pointer"

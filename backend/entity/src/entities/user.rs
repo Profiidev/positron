@@ -14,6 +14,8 @@ pub struct Model {
   pub salt: String,
   pub oidc_user: bool,
   pub totp: Option<String>,
+  #[sea_orm(unique)]
+  pub oidc_subject: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
