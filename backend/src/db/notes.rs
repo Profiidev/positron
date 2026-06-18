@@ -187,8 +187,7 @@ impl<'db> NoteTable<'db> {
       .filter(
         Condition::any()
           .add(note::Column::Owner.eq(user_id))
-          .add(note::Column::Id.is_in(shared_note_ids))
-          .add(note::Column::PublicAccess.is_not_null()),
+          .add(note::Column::Id.is_in(shared_note_ids)),
       )
       .find_also_linked(NoteOwnerLink)
       .all(self.db)
@@ -893,5 +892,168 @@ mod test {
 
     // deleting a non-existent note is a no-op (Ok)
     db.notes().delete(Uuid::new_v4()).await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn public_access_get_set_and_clear() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // fresh note has no public access
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+
+    // set to view
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().get_public_access(id).await.unwrap(),
+      Some(NoteShareAccess::View)
+    );
+
+    // overwrite with edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().get_public_access(id).await.unwrap(),
+      Some(NoteShareAccess::Edit)
+    );
+
+    // clear it again
+    db.notes().set_public_access(id, None).await.unwrap();
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn get_public_access_none_for_unknown_note() {
+    let db = test_db().await;
+    assert_eq!(
+      db.notes().get_public_access(Uuid::new_v4()).await.unwrap(),
+      None
+    );
+  }
+
+  #[tokio::test]
+  async fn set_public_access_fails_for_missing_note() {
+    let db = test_db().await;
+    assert!(
+      db.notes()
+        .set_public_access(Uuid::new_v4(), Some(NoteShareAccess::View))
+        .await
+        .is_err()
+    );
+  }
+
+  #[tokio::test]
+  async fn public_access_grants_has_access_and_can_edit_to_strangers() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // without public access a stranger has neither access nor edit rights
+    assert!(!db.notes().has_access(stranger, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+
+    // public view -> has access but cannot edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert!(db.notes().has_access(stranger, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+
+    // public edit -> can also edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    assert!(db.notes().has_access(stranger, id).await.unwrap());
+    assert!(db.notes().can_edit(stranger, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn public_edit_does_not_downgrade_existing_edit_share() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let editor = insert_user(&db, "editor", "editor@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(editor)])
+      .await
+      .unwrap();
+
+    // public view set; an explicit edit share still wins for that user
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert!(db.notes().can_edit(editor, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn list_for_user_not_includes_public_notes_not_owned_or_shared() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+
+    let public = db.notes().create(owner, "Public".into()).await.unwrap();
+    db.notes()
+      .set_public_access(public, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+
+    // a public note is reachable via its share link, not by listing: a stranger
+    // who neither owns nor is shared on it must not see it in their note list
+    let notes = db.notes().list_for_user(stranger).await.unwrap();
+    assert!(notes.is_empty());
+
+    // the owner still sees their own note, with public_access populated
+    let owner_notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(owner_notes.len(), 1);
+    assert_eq!(owner_notes[0].id, public);
+    assert_eq!(owner_notes[0].public_access, Some(NoteShareAccess::View));
+  }
+
+  #[tokio::test]
+  async fn info_public_some_and_none() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "Title".into()).await.unwrap();
+
+    // not public -> None
+    assert!(db.notes().info_public(id).await.unwrap().is_none());
+
+    // unknown note -> None
+    assert!(
+      db.notes()
+        .info_public(Uuid::new_v4())
+        .await
+        .unwrap()
+        .is_none()
+    );
+
+    // public view -> can_edit false, owner populated
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    let info = db.notes().info_public(id).await.unwrap().unwrap();
+    assert_eq!(info.id, id);
+    assert_eq!(info.title, "Title");
+    assert_eq!(info.owner.id, owner);
+    assert!(!info.can_edit);
+
+    // public edit -> can_edit true
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    let info = db.notes().info_public(id).await.unwrap().unwrap();
+    assert!(info.can_edit);
   }
 }

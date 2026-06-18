@@ -240,4 +240,51 @@ mod tests {
     tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     assert!(rx.try_recv().is_err());
   }
+
+  #[tokio::test]
+  async fn send_to_note_fans_out_to_all_subscribers() {
+    let (state, updater) = PublicNoteUpdateState::init();
+    let note_id = Uuid::new_v4();
+    let (_a, mut rx_a) = state.create_session(note_id).await;
+    let (_b, mut rx_b) = state.create_session(note_id).await;
+
+    updater
+      .send_to_note(
+        note_id,
+        PublicNoteUpdateMessage::PublicAccess {
+          access: Some(NoteShareAccess::Edit),
+        },
+      )
+      .await;
+
+    let expected = Some(PublicNoteUpdateMessage::PublicAccess {
+      access: Some(NoteShareAccess::Edit),
+    });
+    assert_eq!(rx_a.recv().await, expected);
+    assert_eq!(rx_b.recv().await, expected);
+  }
+
+  #[tokio::test]
+  async fn send_to_note_does_not_leak_to_other_notes() {
+    let (state, updater) = PublicNoteUpdateState::init();
+    let note_a = Uuid::new_v4();
+    let note_b = Uuid::new_v4();
+    let (_a, mut rx_a) = state.create_session(note_a).await;
+    let (_b, mut rx_b) = state.create_session(note_b).await;
+
+    updater
+      .send_to_note(
+        note_a,
+        PublicNoteUpdateMessage::PublicAccess { access: None },
+      )
+      .await;
+
+    assert_eq!(
+      rx_a.recv().await,
+      Some(PublicNoteUpdateMessage::PublicAccess { access: None })
+    );
+    // a subscriber on a different note must not receive the message
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    assert!(rx_b.try_recv().is_err());
+  }
 }

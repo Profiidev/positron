@@ -342,6 +342,7 @@ mod test {
           .delete(super::delete),
       )
       .route("/{uuid}", get(super::info))
+      .route("/{uuid}/public", get(super::info_public))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
       .route("/share/public", axum::routing::put(super::share_public))
@@ -742,6 +743,156 @@ mod test {
       .unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn share_public_for_unknown_note_is_forbidden() {
+    let s = setup().await;
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // a note that does not exist is not owned by the caller -> forbidden
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": Uuid::new_v4(),
+          "public_access": "view"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn info_public_returns_note_for_public_share() {
+    let s = setup().await;
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "Public T".into())
+      .await
+      .unwrap();
+    s.db
+      .notes()
+      .set_public_access(note, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // no auth cookie required for the public info endpoint
+    let resp = app
+      .oneshot(request("GET", &format!("/{note}/public"), None, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["id"], note.to_string());
+    assert_eq!(body["title"], "Public T");
+    assert_eq!(body["owner"]["id"], s.user.to_string());
+    assert_eq!(body["can_edit"], true);
+  }
+
+  #[tokio::test]
+  async fn info_public_not_found_when_not_public() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // private note -> 404 even for the owner
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "GET",
+        &format!("/{note}/public"),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    // unknown note -> 404
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{}/public", Uuid::new_v4()),
+        None,
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn info_grants_access_to_stranger_for_public_note() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // before going public the stranger is denied
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "GET",
+        &format!("/{note}"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    s.db
+      .notes()
+      .set_public_access(note, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+
+    // now the stranger may read it; can_edit stays false for view access
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["is_owner"], false);
+    assert_eq!(body["can_edit"], false);
+    assert_eq!(body["public_access"], "view");
   }
 
   #[tokio::test]
