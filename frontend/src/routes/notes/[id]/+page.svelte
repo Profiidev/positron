@@ -178,9 +178,7 @@
     } else {
       publicAccess = access;
       note = { ...note, public_access: access };
-      toast.success(
-        access ? 'Public access updated' : 'Public access removed'
-      );
+      toast.success(access ? 'Public access updated' : 'Public access removed');
     }
   };
 

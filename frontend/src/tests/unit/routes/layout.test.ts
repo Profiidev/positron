@@ -58,9 +58,7 @@ const cookies = (value?: string) => ({ get: () => value });
 describe('+layout.server.ts load', () => {
   it('redirects to /login when unauthenticated on a protected path', async () => {
     const redirect = await catchRedirect(async () =>
-      layoutServerLoad(
-        ev({ cookies: cookies(), url: new URL('http://x/users') })
-      )
+      layoutServerLoad(ev({ cookies: cookies(), route: { id: '/users' } }))
     );
     expect(redirect).toMatchObject({ location: '/login', status: 302 });
   });
@@ -69,7 +67,7 @@ describe('+layout.server.ts load', () => {
     'allows an unauthenticated user on the public path %s',
     async (path) => {
       const result = await layoutServerLoad(
-        ev({ cookies: cookies(), url: new URL(`http://x${path}`) })
+        ev({ cookies: cookies(), route: { id: path } })
       );
       expect(result).toBeUndefined();
     }
@@ -79,7 +77,7 @@ describe('+layout.server.ts load', () => {
     'allows an authenticated user on the public path %s',
     async (path) => {
       const result = await layoutServerLoad(
-        ev({ cookies: cookies('jwt'), url: new URL(`http://x${path}`) })
+        ev({ cookies: cookies('jwt'), route: { id: path } })
       );
       expect(result).toBeUndefined();
     }
@@ -87,7 +85,7 @@ describe('+layout.server.ts load', () => {
 
   it('allows an authenticated user anywhere', async () => {
     const result = await layoutServerLoad(
-      ev({ cookies: cookies('jwt'), url: new URL('http://x/users') })
+      ev({ cookies: cookies('jwt'), route: { id: '/users' } })
     );
     expect(result).toBeUndefined();
   });

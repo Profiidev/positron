@@ -179,7 +179,9 @@ test.describe('note detail', () => {
     await gotoReady(page, '/notes/note-1');
 
     // A non-owner viewer cannot rename, delete or re-share the note.
-    await expect(page.getByPlaceholder('Note title')).toBeDisabled();
+    await expect(page.getByPlaceholder('Note title')).toHaveAttribute(
+      'readonly'
+    );
     await expect(page.getByRole('button', { name: 'Delete' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Share' })).toHaveCount(0);
     await expect(

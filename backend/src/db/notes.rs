@@ -439,10 +439,9 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn get_public_access(&self, note_id: Uuid) -> Result<Option<NoteShareAccess>> {
-    let note: note::Model = Note::find_by_id(note_id)
-      .one(self.db)
-      .await?
-      .ok_or(DbErr::RecordNotFound("note not found".into()))?;
+    let Some(note) = Note::find_by_id(note_id).one(self.db).await? else {
+      return Ok(None);
+    };
 
     Ok(note.public_access)
   }

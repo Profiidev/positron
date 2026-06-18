@@ -13,8 +13,8 @@ const shared = (users: SharedUserInfo[]) => users;
 
 const base = {
   noteId: 'note-1',
-  onShareChange: vi.fn(),
   onPublicAccessChange: vi.fn(),
+  onShareChange: vi.fn(),
   shareableUsers
 };
 
