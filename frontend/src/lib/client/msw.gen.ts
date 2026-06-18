@@ -168,6 +168,8 @@ import type {
   SetGoodApodError,
   ShareNoteData,
   ShareNoteError,
+  ShareNotePublicData,
+  ShareNotePublicError,
   SiteUrlData,
   SiteUrlResponse2,
   StartAuthenticationData,
@@ -764,6 +766,12 @@ export const shareNoteMswHandler = wrapMswHandler<
   ShareNoteError,
   ShareNoteData
 >('/api/notes/management/share', 'put', client.getConfig);
+
+export const shareNotePublicMswHandler = wrapMswHandler<
+  never,
+  ShareNotePublicError,
+  ShareNotePublicData
+>('/api/notes/management/share/public', 'put', client.getConfig);
 
 export const transferNoteMswHandler = wrapMswHandler<
   never,

@@ -29,6 +29,7 @@ pub struct NoteInfo {
   pub preview: String,
   pub owner: SimpleUserInfo,
   pub shared_with: Vec<SharedUserInfo>,
+  pub public_access: Option<NoteShareAccess>,
   pub is_owner: bool,
   pub can_edit: bool,
 }
@@ -210,6 +211,7 @@ impl<'db> NoteTable<'db> {
             name: owner.name,
           },
           shared_with: shared_by_note.get(&note.id).cloned().unwrap_or_default(),
+          public_access: note.public_access,
           is_owner,
           can_edit,
         })
@@ -256,6 +258,7 @@ impl<'db> NoteTable<'db> {
         name: owner.name,
       },
       shared_with,
+      public_access: note.public_access,
       is_owner,
       can_edit,
     }))
@@ -432,6 +435,23 @@ impl<'db> NoteTable<'db> {
       .ok_or(DbErr::RecordNotFound("note not found".into()))?;
 
     Ok(note.public_access)
+  }
+
+  pub async fn set_public_access(
+    &self,
+    note_id: Uuid,
+    public_access: Option<NoteShareAccess>,
+  ) -> Result<()> {
+    let mut note: note::ActiveModel = Note::find_by_id(note_id)
+      .one(self.db)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?
+      .into();
+
+    note.public_access = Set(public_access);
+    note.update(self.db).await?;
+
+    Ok(())
   }
 }
 

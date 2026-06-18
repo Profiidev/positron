@@ -38,6 +38,10 @@ pub fn router() -> ApiRouter {
     )
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
+    .api_route(
+      "/share/public",
+      put_with(share_public, |op| op.id("shareNotePublic")),
+    )
     .api_route("/transfer", put_with(transfer, |op| op.id("transferNote")))
     .api_route("/config", get_with(notes_config, |op| op.id("notesConfig")))
 }
@@ -204,6 +208,34 @@ async fn share(
 }
 
 #[derive(Deserialize, JsonSchema)]
+struct NotePublicShareReq {
+  note_id: Uuid,
+  public_access: Option<entity::sea_orm_active_enums::NoteShareAccess>,
+}
+
+async fn share_public(
+  auth: JwtAuth,
+  db: Connection,
+  updater: Updater,
+  Json(req): Json<NotePublicShareReq>,
+) -> Result<()> {
+  if !db.notes().is_owner(auth.user_id, req.note_id).await? {
+    bail!(FORBIDDEN, "forbidden");
+  }
+
+  db.notes()
+    .set_public_access(req.note_id, req.public_access)
+    .await?;
+
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
+  users.push(auth.user_id);
+
+  notify_note_update(&updater, users, req.note_id).await;
+
+  Ok(())
+}
+
+#[derive(Deserialize, JsonSchema)]
 struct NoteTransferReq {
   note_id: Uuid,
   new_owner_id: Uuid,
@@ -300,6 +332,7 @@ mod test {
       .route("/{uuid}", get(super::info))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
+      .route("/share/public", axum::routing::put(super::share_public))
       .route("/transfer", axum::routing::put(super::transfer))
       .route("/config", get(super::notes_config))
       .layer(Extension(limits))
@@ -567,6 +600,71 @@ mod test {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     // shares are untouched
     assert!(s.db.notes().shared_users(note).await.unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn share_public_updates_public_access() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "edit"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+      s.db.notes().get_public_access(note).await.unwrap(),
+      Some(NoteShareAccess::Edit)
+    );
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": null
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn share_public_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&stranger_cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "view"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
   }
 
   #[tokio::test]

@@ -12,6 +12,7 @@
     deleteNote,
     editNote,
     shareNote,
+    shareNotePublic,
     transferNote,
     type NoteInfo,
     type NoteShareAccess,
@@ -39,9 +40,13 @@
   let users: SimpleUserInfo[] | undefined = $state();
   let readonly = $derived(!note?.is_owner);
   let shareSaving = $state(false);
+  let publicAccessSaving = $state(false);
   let title = $state('');
   let sharedWithUsers = $state<SharedUserInfo[]>([]);
+  let publicAccess = $state<NoteShareAccess | null>(null);
   let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
+    $state(undefined);
+  let publicUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
     $state(undefined);
   let userInfo: UserInfo | undefined = $state(undefined);
   let activeEditors = $state<NoteActiveEditor[]>([]);
@@ -64,6 +69,7 @@
       note = res.data;
       title = res.data.title;
       sharedWithUsers = res.data.shared_with;
+      publicAccess = res.data.public_access ?? null;
     });
   });
 
@@ -157,6 +163,35 @@
     }, 750);
   };
 
+  const onPublicAccessChange = async (access: NoteShareAccess | null) => {
+    if (!note || readonly) return;
+
+    publicAccessSaving = true;
+    const res = await shareNotePublic({
+      body: { note_id: note.id, public_access: access }
+    });
+    publicAccessSaving = false;
+
+    if (res.error) {
+      publicAccess = note.public_access ?? null;
+      toast.error('Failed to update public access');
+    } else {
+      publicAccess = access;
+      note = { ...note, public_access: access };
+      toast.success(
+        access ? 'Public access updated' : 'Public access removed'
+      );
+    }
+  };
+
+  const handlePublicAccessChange = (access: NoteShareAccess | null) => {
+    publicAccess = access;
+    if (publicUpdateTimeout) clearTimeout(publicUpdateTimeout);
+    publicUpdateTimeout = setTimeout(() => {
+      onPublicAccessChange(access);
+    }, 750);
+  };
+
   const deleteItemConfirm = async () => {
     if (!note) return;
     isLoading = true;
@@ -224,11 +259,14 @@
     <NoteActiveEditorsIndicator editors={activeEditors} />
 
     <NoteShareControl
+      noteId={note?.id ?? data.id}
       {shareableUsers}
       selected={sharedWithUsers}
+      {publicAccess}
       onShareChange={handleShareChange}
+      onPublicAccessChange={handlePublicAccessChange}
       {readonly}
-      saving={shareSaving}
+      saving={shareSaving || publicAccessSaving}
     />
     {#if note && !readonly}
       <NoteTransferOwnerControl

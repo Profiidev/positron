@@ -12,7 +12,9 @@ const shareableUsers: SimpleUserInfo[] = [
 const shared = (users: SharedUserInfo[]) => users;
 
 const base = {
+  noteId: 'note-1',
   onShareChange: vi.fn(),
+  onPublicAccessChange: vi.fn(),
   shareableUsers
 };
 
@@ -57,7 +59,7 @@ describe('NoteShareControl (editable)', () => {
     render(ShareControl, { ...base, onShareChange, selected: [] });
 
     await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
-    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1]);
 
     expect(onShareChange).toHaveBeenCalledWith([
       { access: 'edit', userId: 'u1' }
@@ -69,7 +71,7 @@ describe('NoteShareControl (editable)', () => {
     render(ShareControl, { ...base, onShareChange, selected: [] });
 
     await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
-    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
+    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[1]);
 
     expect(onShareChange).toHaveBeenCalledWith([
       { access: 'view', userId: 'u1' }
@@ -85,7 +87,7 @@ describe('NoteShareControl (editable)', () => {
     });
 
     await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
-    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1]);
 
     expect(onShareChange).toHaveBeenCalledWith([]);
   });
@@ -99,11 +101,32 @@ describe('NoteShareControl (editable)', () => {
     });
 
     await fireEvent.click(screen.getByRole('button', { name: /1 shared/ }));
-    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
+    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[1]);
 
     expect(onShareChange).toHaveBeenCalledWith([
       { access: 'view', userId: 'u1' }
     ]);
+  });
+
+  it('toggles public view access', async () => {
+    const onPublicAccessChange = vi.fn();
+    render(ShareControl, { ...base, onPublicAccessChange, selected: [] });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0]);
+
+    expect(onPublicAccessChange).toHaveBeenCalledWith('view');
+  });
+
+  it('shows copy link when public access is enabled', async () => {
+    render(ShareControl, {
+      ...base,
+      publicAccess: 'view',
+      selected: []
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Public' }));
+    expect(screen.getByText('Copy share link')).toBeInTheDocument();
   });
 });
 
