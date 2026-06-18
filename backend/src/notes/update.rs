@@ -64,7 +64,10 @@ impl PublicNoteUpdateState {
     (Self { sessions }, PublicNoteUpdater(sender))
   }
 
-  async fn create_session(&self, note_id: Uuid) -> (Uuid, Receiver<PublicNoteUpdateMessage>) {
+  pub(crate) async fn create_session(
+    &self,
+    note_id: Uuid,
+  ) -> (Uuid, Receiver<PublicNoteUpdateMessage>) {
     let (send, recv) = mpsc::channel(100);
     let note_sessions = self.sessions.entry(note_id).or_default();
     let uuid = Uuid::new_v4();

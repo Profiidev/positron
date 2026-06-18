@@ -302,7 +302,9 @@ async fn notify_note_update(updater: &Updater, users: Vec<Uuid>, note_id: Uuid) 
 mod test {
   use entity::sea_orm_active_enums::NoteShareAccess;
 
-  use crate::notes::{NotesLimits, PublicNoteUpdater, update::PublicNoteUpdateState};
+  use crate::notes::{
+    NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, update::PublicNoteUpdateState,
+  };
 
   use crate::db::{
     DBTrait,
@@ -743,6 +745,49 @@ mod test {
       .unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn share_public_notifies_public_subscribers() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+
+    // a public visitor is subscribed to this note's update channel
+    let (state, public_upd) = PublicNoteUpdateState::init();
+    let (_session, mut rx) = state.create_session(note).await;
+
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "edit"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // the subscriber receives the new public access level
+    let msg = tokio::time::timeout(std::time::Duration::from_secs(1), rx.recv())
+      .await
+      .expect("subscriber should receive an update");
+    assert_eq!(
+      msg,
+      Some(PublicNoteUpdateMessage::PublicAccess {
+        access: Some(NoteShareAccess::Edit),
+      })
+    );
   }
 
   #[tokio::test]

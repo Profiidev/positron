@@ -40,6 +40,25 @@ test.describe('public share page (anonymous visitor)', () => {
     await expect(editor).toBeVisible();
     await expect(editor).toHaveAttribute('contenteditable', 'true');
   });
+
+  test('redirects to /login when the public note fails to load', async ({
+    context,
+    page
+  }) => {
+    await seedPublicShareVisitor(context, 'view');
+    // The public note info endpoint fails -> the page toasts and bounces to /login
+    await page.route(
+      '**/api/notes/management/note-1/public',
+      async (route) => {
+        await route.fulfill({ body: '{}', status: 404 });
+      }
+    );
+
+    await page.goto('/notes/share/note-1');
+
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByText('Failed to load note')).toBeVisible();
+  });
 });
 
 test.describe('public share page (authenticated user)', () => {
@@ -72,5 +91,40 @@ test.describe('public access control (owner)', () => {
     await expect(
       page.getByRole('button', { name: 'Copy share link' })
     ).toBeVisible();
+  });
+
+  test('rolls back and toasts when enabling public access fails', async ({
+    page
+  }) => {
+    await page.context().clearCookies();
+    await setupSession(page.context());
+    // The public-share write fails -> the optimistic state must roll back
+    await page.route(
+      '**/api/notes/management/share/public',
+      async (route) => {
+        if (route.request().method() === 'PUT') {
+          await route.fulfill({ body: '{}', status: 500 });
+          return;
+        }
+        await route.continue();
+      }
+    );
+
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Share' }).click();
+    await page
+      .getByRole('group', { name: 'Public share access' })
+      .getByRole('button', { name: 'View' })
+      .click();
+
+    // The failed write surfaces an error toast and reverts the optimistic
+    // Public state, so the copy-share-link affordance disappears again
+    await expect(
+      page.getByText('Failed to update public access')
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Copy share link' })
+    ).toBeHidden();
   });
 });
