@@ -19,7 +19,7 @@ use uuid::Uuid;
 use crate::{
   db::{
     DBTrait,
-    notes::{NoteInfo, NoteShareEntry},
+    notes::{NoteInfo, NoteInfoPublic, NoteShareEntry},
   },
   notes::NotesLimits,
   utils::{UpdateMessage, Updater},
@@ -32,6 +32,10 @@ pub fn router() -> ApiRouter {
     .api_route("/", put_with(edit, |op| op.id("editNote")))
     .api_route("/", delete_with(delete, |op| op.id("deleteNote")))
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
+    .api_route(
+      "/{uuid}/public",
+      get_with(info_public, |op| op.id("infoNoteShare")),
+    )
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
     .api_route("/transfer", put_with(transfer, |op| op.id("transferNote")))
@@ -98,12 +102,20 @@ async fn info(
     bail!(NOT_FOUND, "note not found");
   }
 
-  let Some(mut note) = db.notes().info(uuid, auth.user_id).await? else {
+  let Some(note) = db.notes().info(uuid, auth.user_id).await? else {
     bail!(NOT_FOUND, "note not found");
   };
 
-  note.is_owner = note.owner.id == auth.user_id;
-  note.can_edit = note.is_owner || db.notes().can_edit(auth.user_id, uuid).await?;
+  Ok(Json(note))
+}
+
+async fn info_public(
+  db: Connection,
+  Path(NotePath { uuid }): Path<NotePath>,
+) -> Result<Json<NoteInfoPublic>> {
+  let Some(note) = db.notes().info_public(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
 
   Ok(Json(note))
 }

@@ -265,6 +265,13 @@ export type NoteInfo = {
   title: string;
 };
 
+export type NoteInfoPublic = {
+  can_edit: boolean;
+  id: string;
+  owner: SimpleUserInfo;
+  title: string;
+};
+
 export type NotePath = {
   uuid: string;
 };
@@ -3350,6 +3357,33 @@ export type InfoNoteResponses = {
 };
 
 export type InfoNoteResponse = InfoNoteResponses[keyof InfoNoteResponses];
+
+export type InfoNoteShareData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/management/{uuid}/public';
+};
+
+export type InfoNoteShareErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoNoteShareResponses = {
+  200: NoteInfoPublic;
+};
+
+export type InfoNoteShareResponse =
+  InfoNoteShareResponses[keyof InfoNoteShareResponses];
 
 export type ListUsersNoteData = {
   body?: never;

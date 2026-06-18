@@ -118,6 +118,9 @@ import type {
   InfoNoteData,
   InfoNoteErrors,
   InfoNoteResponses,
+  InfoNoteShareData,
+  InfoNoteShareErrors,
+  InfoNoteShareResponses,
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
@@ -1581,6 +1584,15 @@ export const infoNote = <ThrowOnError extends boolean = false>(
     InfoNoteErrors,
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}', ...options });
+
+export const infoNoteShare = <ThrowOnError extends boolean = false>(
+  options: Options<InfoNoteShareData, ThrowOnError>
+): RequestResult<InfoNoteShareResponses, InfoNoteShareErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    InfoNoteShareResponses,
+    InfoNoteShareErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/{uuid}/public', ...options });
 
 export const listUsersNote = <ThrowOnError extends boolean = false>(
   options?: Options<ListUsersNoteData, ThrowOnError>

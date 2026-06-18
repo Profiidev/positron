@@ -33,6 +33,14 @@ pub struct NoteInfo {
   pub can_edit: bool,
 }
 
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct NoteInfoPublic {
+  pub id: Uuid,
+  pub title: String,
+  pub owner: SimpleUserInfo,
+  pub can_edit: bool,
+}
+
 struct NoteOwnerLink;
 
 impl Linked for NoteOwnerLink {
@@ -253,6 +261,34 @@ impl<'db> NoteTable<'db> {
     }))
   }
 
+  pub async fn info_public(&self, note_id: Uuid) -> Result<Option<NoteInfoPublic>> {
+    let res = Note::find_by_id(note_id)
+      .find_also_linked(NoteOwnerLink)
+      .one(self.db)
+      .await?;
+
+    let Some((note, owners)) = res else {
+      return Ok(None);
+    };
+
+    let Some(access) = note.public_access else {
+      return Ok(None);
+    };
+
+    let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+    let can_edit = access == NoteShareAccess::Edit;
+
+    Ok(Some(NoteInfoPublic {
+      id: note.id,
+      title: note.title,
+      owner: SimpleUserInfo {
+        id: owner.id,
+        name: owner.name,
+      },
+      can_edit,
+    }))
+  }
+
   pub async fn create(&self, owner: Uuid, title: String) -> Result<Uuid> {
     let id = Uuid::new_v4();
     let txn = self.db.begin().await?;
@@ -263,6 +299,7 @@ impl<'db> NoteTable<'db> {
       content: Set(Vec::new()),
       preview: Set("".into()),
       owner: Set(owner),
+      public_access: Set(None),
     }
     .insert(&txn)
     .await?;
@@ -386,6 +423,15 @@ impl<'db> NoteTable<'db> {
       .ok_or(DbErr::RecordNotFound("note not found".into()))?;
 
     Ok(note.content)
+  }
+
+  pub async fn get_public_access(&self, note_id: Uuid) -> Result<Option<NoteShareAccess>> {
+    let note: note::Model = Note::find_by_id(note_id)
+      .one(self.db)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?;
+
+    Ok(note.public_access)
   }
 }
 

@@ -86,6 +86,8 @@ import type {
   InfoData,
   InfoNoteData,
   InfoNoteResponse,
+  InfoNoteShareData,
+  InfoNoteShareResponse,
   InfoOauthClientData,
   InfoOauthClientResponse,
   InfoOAuthPolicyData,
@@ -744,6 +746,12 @@ export const infoNoteMswHandler = wrapMswHandler<
   never,
   InfoNoteData
 >('/api/notes/management/{uuid}', 'get', client.getConfig);
+
+export const infoNoteShareMswHandler = wrapMswHandler<
+  InfoNoteShareResponse,
+  never,
+  InfoNoteShareData
+>('/api/notes/management/{uuid}/public', 'get', client.getConfig);
 
 export const listUsersNoteMswHandler = wrapMswHandler<
   ListUsersNoteResponse,

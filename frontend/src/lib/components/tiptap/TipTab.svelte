@@ -25,13 +25,15 @@
     username,
     userId,
     editable = true,
-    activeEditors = $bindable()
+    activeEditors = $bindable(),
+    wsPath = '/api/notes/websocket'
   }: {
     id: string;
     username?: string;
     userId?: string;
     editable?: boolean;
     activeEditors?: NoteActiveEditor[];
+    wsPath?: string;
   } = $props();
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
@@ -99,7 +101,7 @@
 
     const { WebsocketProvider } = await import('y-websocket');
 
-    provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
+    provider = new WebsocketProvider(wsPath, id, doc, {
       disableBc: true
     });
     provider.awareness.on('change', onAwarenessChange);

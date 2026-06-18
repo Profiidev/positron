@@ -8,6 +8,7 @@ use axum::{
   routing::get,
 };
 use centaurus::{backend::auth::jwt_auth::JwtAuth, bail, db::init::Connection, error::Result};
+use entity::sea_orm_active_enums::NoteShareAccess;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -15,7 +16,9 @@ use uuid::Uuid;
 use crate::{db::DBTrait, notes::state::NoteEditing};
 
 pub fn router() -> ApiRouter {
-  ApiRouter::new().route("/{uuid}", get(notes_websocket))
+  ApiRouter::new()
+    .route("/{uuid}", get(notes_websocket))
+    .route("/public/{uuid}", get(public_share_websocket))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -36,6 +39,20 @@ async fn notes_websocket(
 
   let can_edit = db.notes().can_edit(auth.user_id, uuid).await?;
 
+  Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid, can_edit)))
+}
+
+async fn public_share_websocket(
+  state: NoteEditing,
+  Path(NotePath { uuid }): Path<NotePath>,
+  db: Connection,
+  ws: WebSocketUpgrade,
+) -> Result<Response> {
+  let Some(access) = db.notes().get_public_access(uuid).await? else {
+    bail!("no public access");
+  };
+
+  let can_edit = access == NoteShareAccess::Edit;
   Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid, can_edit)))
 }
 

@@ -212,7 +212,7 @@
       class="bg-background! mr-auto w-full min-w-0 flex-1 border-none text-xl! md:max-w-70"
       bind:value={title}
       placeholder="Note title"
-      disabled={readonly || titleSaving}
+      readonly={readonly || titleSaving}
       onblur={saveTitle}
       onkeydown={(event) => {
         if (event.key === 'Enter') {

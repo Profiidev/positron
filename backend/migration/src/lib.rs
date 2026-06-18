@@ -11,6 +11,7 @@ mod m20260507_102052_user_ext;
 mod m20260605_071137_oauth_client_pkce;
 mod m20260611_120000_create_note_table;
 mod m20260616_120000_note_user_access;
+mod m20260618_120000_note_public_share;
 
 pub struct Migrator;
 
@@ -35,6 +36,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20260605_071137_oauth_client_pkce::Migration),
       Box::new(m20260611_120000_create_note_table::Migration),
       Box::new(m20260616_120000_note_user_access::Migration),
+      Box::new(m20260618_120000_note_public_share::Migration),
     ]
   }
 }
