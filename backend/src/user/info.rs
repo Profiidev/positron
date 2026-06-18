@@ -1,12 +1,13 @@
 use aide::axum::{ApiRouter, routing::get_with};
-use axum::Json;
+use axum::{Json, extract::Path};
 use centaurus::{
-  backend::{auth::jwt_auth::JwtAuth, endpoints::user::info::avatar_route},
+  backend::auth::jwt_auth::JwtAuth,
   db::{init::Connection, tables::ConnectionExt},
   error::Result,
 };
+use http::StatusCode;
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::db::DBTrait;
@@ -14,7 +15,7 @@ use crate::db::DBTrait;
 pub fn router() -> ApiRouter {
   ApiRouter::new()
     .api_route("/", get_with(info, |op| op.id("info")))
-    .api_route("/avatar/{uuid}", avatar_route())
+    .api_route("/avatar/{uuid}", get_with(avatar, |op| op.id("avatarById")))
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -101,4 +102,19 @@ mod test {
     let resp = app(db, jwt).oneshot(get_request(None)).await.unwrap();
     assert!(resp.status().is_client_error());
   }
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct AvatarPath {
+  uuid: Uuid,
+}
+
+async fn avatar(
+  Path(path): Path<AvatarPath>,
+  db: Connection,
+) -> Result<std::result::Result<Vec<u8>, StatusCode>> {
+  let Some(data) = db.user().get_user_avatar(path.uuid).await? else {
+    return Ok(Err(StatusCode::NOT_FOUND));
+  };
+  Ok(Ok(data))
 }
