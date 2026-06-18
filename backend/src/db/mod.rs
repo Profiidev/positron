@@ -99,6 +99,7 @@ pub mod test {
       salt: Set("salt".to_string()),
       oidc_user: Set(false),
       totp: Set(None),
+      oidc_subject: Set(None),
     })
     .exec(&conn.0)
     .await

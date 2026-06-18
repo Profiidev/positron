@@ -189,6 +189,7 @@ mod test {
       salt: Set(SALT.into()),
       oidc_user: Set(false),
       totp: Set(totp),
+      oidc_subject: Set(None),
     })
     .exec(&db.0)
     .await

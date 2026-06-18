@@ -37,6 +37,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20260611_120000_create_note_table::Migration),
       Box::new(m20260616_120000_note_user_access::Migration),
       Box::new(m20260618_120000_note_public_share::Migration),
+      Box::new(centaurus::db::migrations::m6_user_oidc_subject::Migration),
     ]
   }
 }
