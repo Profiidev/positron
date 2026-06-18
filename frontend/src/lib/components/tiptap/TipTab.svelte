@@ -159,7 +159,7 @@
 
 {#if editorState.editor}
   <div
-    class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border pb-[60px] sm:pb-0"
+    class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border"
   >
     {#if editable && editorState.editor}
       {/* @ts-ignore */ null}
