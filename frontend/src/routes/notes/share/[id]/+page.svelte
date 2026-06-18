@@ -7,6 +7,8 @@
   import type { NoteActiveEditor } from '$lib/components/notes/types';
   import { Input } from '@profidev/pleiades/components/ui/input';
   import { toast } from '@profidev/pleiades/components/util/general';
+  import { _UNKNOWN_EMAIL } from '$routes/+layout.js';
+  import { goto } from '$app/navigation';
 
   const { data } = $props();
 
@@ -24,6 +26,7 @@
     data.noteRes.then((res) => {
       if (!res.data) {
         toast.error('Failed to load note');
+        goto('/login');
         return;
       }
 
@@ -33,14 +36,16 @@
   });
 
   $effect(() => {
-    data.user
-      .then((userInfoData) => {
-        console.log(userInfoData);
-        userInfo = userInfoData;
-      })
-      .catch((e) => {
-        console.error(e);
-      });
+    data.user.then((userInfoData) => {
+      if (userInfoData.email === _UNKNOWN_EMAIL) {
+        userInfo = {
+          uuid: crypto.randomUUID(),
+          name: 'Anonymous'
+        };
+      } else {
+        goto(`/notes/${data.id}`);
+      }
+    });
   });
 </script>
 
