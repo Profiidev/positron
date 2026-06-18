@@ -34,6 +34,21 @@ export const notesScenarioOf = (
 export const isReadonlyNote = (cookies: Record<string, string>): boolean =>
   cookies.mock_scenario === 'readonly';
 
+/**
+ * The public-share page treats a user whose `info` falls back to the unknown
+ * email as an anonymous visitor (and keeps them on the page); any other user is
+ * redirected to the authenticated note view. The `mock_anon` cookie makes the
+ * `info` endpoint report no session so the anonymous branch renders.
+ */
+export const isAnonymous = (cookies: Record<string, string>): boolean =>
+  cookies.mock_anon === '1';
+
+/** `mock_public=edit` serves an editable public note; otherwise view-only. */
+export const publicNoteOf = (cookies: Record<string, string>) =>
+  cookies.mock_public === 'edit'
+    ? notePublicEditDetails
+    : notePublicViewDetails;
+
 /** Admin user with every permission, so admin pages render full controls. */
 export const adminUser = {
   email: 'admin@example.com',
@@ -282,6 +297,21 @@ export const noteDetailsReadonly = {
   owner: { id: 'user-2', name: 'Cara User' },
   shared_with: [{ ...simpleUser, access: 'view' as const }],
   title: 'My First Note'
+};
+
+// Public-share (`NoteInfoPublic`) payloads served by `infoNoteShare`. They
+// Carry no `is_owner`/`shared_with` — a public visitor only sees the title,
+// Owner and whether the share grants edit access.
+export const notePublicViewDetails = {
+  can_edit: false,
+  id: 'note-1',
+  owner: { id: 'user-2', name: 'Cara User' },
+  title: 'Shared Public Note'
+};
+
+export const notePublicEditDetails = {
+  ...notePublicViewDetails,
+  can_edit: true
 };
 
 export const simpleUsers = { default: [simpleUser], empty: [] as unknown[] };
