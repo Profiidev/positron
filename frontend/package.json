@@ -19,7 +19,7 @@
     "test:e2e:watch": "playwright test --watch"
   },
   "dependencies": {
-    "@profidev/pleiades": "1.9.7",
+    "@profidev/pleiades": "1.10.0",
     "@simplewebauthn/browser": "13.3.0",
     "@sveltejs/enhanced-img": "0.10.4",
     "@tiptap/core": "3.26.1",

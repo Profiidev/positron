@@ -93,7 +93,7 @@ impl PublicNoteUpdater {
 }
 
 pub fn router() -> ApiRouter {
-  ApiRouter::new().route("/public-updater/{uuid}", get(public_updater))
+  ApiRouter::new().route("/{uuid}", get(public_updater))
 }
 
 #[derive(Deserialize, JsonSchema)]

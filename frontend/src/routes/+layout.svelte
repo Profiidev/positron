@@ -2,7 +2,10 @@
   import { ModeWatcher } from '@profidev/pleiades/components/util/general';
   import { Toaster } from '@profidev/pleiades/components/ui/sonner';
   import '../app.css';
-  import { connectWebsocket } from '$lib/backend/updater.svelte';
+  import {
+    connectWebsocket,
+    disconnectWebsocket
+  } from '$lib/backend/updater.svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -99,6 +102,10 @@
     {items}
     logout={async () => {
       let res = await logout();
+      if (!res.error) {
+        disconnectWebsocket();
+      }
+
       return {
         error: res.error ? 'err' : undefined
       };

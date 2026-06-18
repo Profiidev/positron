@@ -67,6 +67,10 @@ impl<'db> NoteTable<'db> {
       return Ok(true);
     }
 
+    if self.get_public_access(note_id).await?.is_some() {
+      return Ok(true);
+    }
+
     let count = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
       .filter(note_user::Column::User.eq(user_id))
@@ -87,7 +91,12 @@ impl<'db> NoteTable<'db> {
       .one(self.db)
       .await?;
 
-    Ok(row.is_some_and(|r| r.access == NoteShareAccess::Edit))
+    if row.is_some_and(|r| r.access == NoteShareAccess::Edit) {
+      return Ok(true);
+    }
+
+    let access = self.get_public_access(note_id).await?;
+    Ok(access.is_some_and(|a| a == NoteShareAccess::Edit))
   }
 
   pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<NoteShareEntry>> {
@@ -178,7 +187,8 @@ impl<'db> NoteTable<'db> {
       .filter(
         Condition::any()
           .add(note::Column::Owner.eq(user_id))
-          .add(note::Column::Id.is_in(shared_note_ids)),
+          .add(note::Column::Id.is_in(shared_note_ids))
+          .add(note::Column::PublicAccess.is_not_null()),
       )
       .find_also_linked(NoteOwnerLink)
       .all(self.db)

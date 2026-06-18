@@ -1,8 +1,5 @@
 import { invalidate } from '$app/navigation';
-import {
-  connectWebsocket as connect,
-  disconnectWebsocket as disconnect
-} from '@profidev/pleiades/backend';
+import { createWebsocket } from '@profidev/pleiades/backend';
 
 export enum UpdateType {
   Settings = 'Settings',
@@ -36,8 +33,11 @@ export type UpdateMessage =
         | UpdateType.Apod;
     };
 
-export const connectWebsocket = (user: string) => connect(user, handleMessage);
-export const disconnectWebsocket = () => disconnect();
+const websocket = createWebsocket<UpdateMessage>();
+
+export const connectWebsocket = (user: string) =>
+  websocket.connect((msg) => handleMessage(msg, user));
+export const disconnectWebsocket = () => websocket.disconnect();
 
 const handleMessage = (msg: UpdateMessage, user: string) => {
   switch (msg.type) {

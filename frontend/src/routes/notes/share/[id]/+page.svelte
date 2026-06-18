@@ -9,6 +9,11 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import { _UNKNOWN_EMAIL } from '$routes/+layout.js';
   import { goto } from '$app/navigation';
+  import {
+    connectPublicNoteUpdater,
+    disconnectPublicNoteUpdater
+  } from '$lib/backend/public-note-updater.svelte.js';
+  import { onDestroy } from 'svelte';
 
   const { data } = $props();
 
@@ -32,6 +37,7 @@
 
       note = res.data;
       title = res.data.title;
+      connectPublicNoteUpdater(data.id);
     });
   });
 
@@ -47,7 +53,11 @@
       }
     });
   });
+
+  onDestroy(disconnectPublicNoteUpdater);
 </script>
+
+<svelte:window onbeforeunload={disconnectPublicNoteUpdater} />
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
   <div class="mb-0 flex min-w-0 items-center gap-2">

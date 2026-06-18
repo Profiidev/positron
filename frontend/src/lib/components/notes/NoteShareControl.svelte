@@ -203,7 +203,7 @@
       </div>
       <Command.Root>
         <Command.Input placeholder="Search people..." />
-        <Command.List class="flex overflow-hidden">
+        <Command.List class="flex overflow-hidden pt-1">
           <ScrollArea class="mt-1 grow">
             <Command.Empty>No people found</Command.Empty>
             {#each shareableUsers as user (user.id)}
