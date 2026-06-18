@@ -38,6 +38,8 @@
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
   let provider: WebsocketProvider | undefined = undefined;
+  let providerReady = $state(false);
+  let lastEditable = $state<boolean | undefined>(undefined);
   const userColor = getRandomColor();
 
   const setLocalAwarenessState = () => {
@@ -95,6 +97,18 @@
     editorState.editor?.setEditable(editable);
   });
 
+  $effect(() => {
+    if (!providerReady || !provider) return;
+
+    const next = editable;
+    if (lastEditable === undefined || next === lastEditable) return;
+
+    lastEditable = next;
+    provider.disconnect();
+    provider.connect();
+    setLocalAwarenessState();
+  });
+
   onMount(async () => {
     const Doc = (await import('yjs')).Doc;
     const doc = new Doc();
@@ -106,6 +120,8 @@
     });
     provider.awareness.on('change', onAwarenessChange);
 
+    lastEditable = editable;
+    providerReady = true;
     setLocalAwarenessState();
     syncActiveEditors();
 
@@ -146,6 +162,8 @@
   });
 
   const cleanup = () => {
+    providerReady = false;
+    lastEditable = undefined;
     provider?.awareness.off('change', onAwarenessChange);
     editorState.editor?.destroy();
     provider?.destroy();
