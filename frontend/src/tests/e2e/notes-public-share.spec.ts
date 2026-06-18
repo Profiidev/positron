@@ -47,12 +47,9 @@ test.describe('public share page (anonymous visitor)', () => {
   }) => {
     await seedPublicShareVisitor(context, 'view');
     // The public note info endpoint fails -> the page toasts and bounces to /login
-    await page.route(
-      '**/api/notes/management/note-1/public',
-      async (route) => {
-        await route.fulfill({ body: '{}', status: 404 });
-      }
-    );
+    await page.route('**/api/notes/management/note-1/public', async (route) => {
+      await route.fulfill({ body: '{}', status: 404 });
+    });
 
     await page.goto('/notes/share/note-1');
 
@@ -99,16 +96,13 @@ test.describe('public access control (owner)', () => {
     await page.context().clearCookies();
     await setupSession(page.context());
     // The public-share write fails -> the optimistic state must roll back
-    await page.route(
-      '**/api/notes/management/share/public',
-      async (route) => {
-        if (route.request().method() === 'PUT') {
-          await route.fulfill({ body: '{}', status: 500 });
-          return;
-        }
-        await route.continue();
+    await page.route('**/api/notes/management/share/public', async (route) => {
+      if (route.request().method() === 'PUT') {
+        await route.fulfill({ body: '{}', status: 500 });
+        return;
       }
-    );
+      await route.continue();
+    });
 
     await gotoReady(page, '/notes/note-1');
 
