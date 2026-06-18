@@ -19,9 +19,9 @@ use uuid::Uuid;
 use crate::{
   db::{
     DBTrait,
-    notes::{NoteInfo, NoteShareEntry},
+    notes::{NoteInfo, NoteInfoPublic, NoteShareEntry},
   },
-  notes::NotesLimits,
+  notes::{NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater},
   utils::{UpdateMessage, Updater},
 };
 
@@ -32,8 +32,16 @@ pub fn router() -> ApiRouter {
     .api_route("/", put_with(edit, |op| op.id("editNote")))
     .api_route("/", delete_with(delete, |op| op.id("deleteNote")))
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
+    .api_route(
+      "/{uuid}/public",
+      get_with(info_public, |op| op.id("infoNoteShare")),
+    )
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
+    .api_route(
+      "/share/public",
+      put_with(share_public, |op| op.id("shareNotePublic")),
+    )
     .api_route("/transfer", put_with(transfer, |op| op.id("transferNote")))
     .api_route("/config", get_with(notes_config, |op| op.id("notesConfig")))
 }
@@ -98,12 +106,20 @@ async fn info(
     bail!(NOT_FOUND, "note not found");
   }
 
-  let Some(mut note) = db.notes().info(uuid, auth.user_id).await? else {
+  let Some(note) = db.notes().info(uuid, auth.user_id).await? else {
     bail!(NOT_FOUND, "note not found");
   };
 
-  note.is_owner = note.owner.id == auth.user_id;
-  note.can_edit = note.is_owner || db.notes().can_edit(auth.user_id, uuid).await?;
+  Ok(Json(note))
+}
+
+async fn info_public(
+  db: Connection,
+  Path(NotePath { uuid }): Path<NotePath>,
+) -> Result<Json<NoteInfoPublic>> {
+  let Some(note) = db.notes().info_public(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
 
   Ok(Json(note))
 }
@@ -192,6 +208,44 @@ async fn share(
 }
 
 #[derive(Deserialize, JsonSchema)]
+struct NotePublicShareReq {
+  note_id: Uuid,
+  public_access: Option<entity::sea_orm_active_enums::NoteShareAccess>,
+}
+
+async fn share_public(
+  auth: JwtAuth,
+  db: Connection,
+  updater: Updater,
+  public_updater: PublicNoteUpdater,
+  Json(req): Json<NotePublicShareReq>,
+) -> Result<()> {
+  if !db.notes().is_owner(auth.user_id, req.note_id).await? {
+    bail!(FORBIDDEN, "forbidden");
+  }
+
+  db.notes()
+    .set_public_access(req.note_id, req.public_access.clone())
+    .await?;
+
+  public_updater
+    .send_to_note(
+      req.note_id,
+      PublicNoteUpdateMessage::PublicAccess {
+        access: req.public_access,
+      },
+    )
+    .await;
+
+  let mut users = db.notes().shared_user_ids(req.note_id).await?;
+  users.push(auth.user_id);
+
+  notify_note_update(&updater, users, req.note_id).await;
+
+  Ok(())
+}
+
+#[derive(Deserialize, JsonSchema)]
 struct NoteTransferReq {
   note_id: Uuid,
   new_owner_id: Uuid,
@@ -248,7 +302,9 @@ async fn notify_note_update(updater: &Updater, users: Vec<Uuid>, note_id: Uuid) 
 mod test {
   use entity::sea_orm_active_enums::NoteShareAccess;
 
-  use crate::notes::NotesLimits;
+  use crate::notes::{
+    NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, update::PublicNoteUpdateState,
+  };
 
   use crate::db::{
     DBTrait,
@@ -275,8 +331,10 @@ mod test {
     db: Connection,
     jwt: JwtState,
     upd: Updater<UpdateMessage>,
+    public_upd: PublicNoteUpdater,
     limits: NotesLimits,
   ) -> Router {
+    let (public_state, _) = PublicNoteUpdateState::init();
     Router::new()
       .route(
         "/",
@@ -286,10 +344,14 @@ mod test {
           .delete(super::delete),
       )
       .route("/{uuid}", get(super::info))
+      .route("/{uuid}/public", get(super::info_public))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
+      .route("/share/public", axum::routing::put(super::share_public))
       .route("/transfer", axum::routing::put(super::transfer))
       .route("/config", get(super::notes_config))
+      .layer(Extension(public_state))
+      .layer(Extension(public_upd))
       .layer(Extension(limits))
       .layer(Extension(upd))
       .layer(Extension(jwt))
@@ -314,6 +376,7 @@ mod test {
     db: Connection,
     jwt: JwtState,
     upd: Updater<UpdateMessage>,
+    public_upd: PublicNoteUpdater,
     user: Uuid,
     cookie: String,
   }
@@ -322,12 +385,14 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let upd = updater().await;
+    let (_, public_upd) = PublicNoteUpdateState::init();
     let user = insert_user(&db, "owner", "owner@x.com").await;
     let cookie = auth_cookie(&jwt, user);
     Setup {
       db,
       jwt,
       upd,
+      public_upd,
       user,
       cookie,
     }
@@ -336,7 +401,13 @@ mod test {
   #[tokio::test]
   async fn list_requires_authentication() {
     let s = setup().await;
-    let app = app(s.db, s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db,
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
     let resp = app.oneshot(request("GET", "/", None, None)).await.unwrap();
     // no auth cookie -> request is rejected before reaching the handler
     assert!(resp.status().is_client_error());
@@ -345,7 +416,13 @@ mod test {
   #[tokio::test]
   async fn create_then_list_note() {
     let s = setup().await;
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .clone()
@@ -380,7 +457,13 @@ mod test {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
 
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
     let resp = app
       .clone()
       .oneshot(request("GET", &format!("/{note}"), Some(&s.cookie), None))
@@ -423,7 +506,13 @@ mod test {
       .await
       .unwrap();
 
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
     let resp = app
       .oneshot(request(
         "GET",
@@ -445,7 +534,13 @@ mod test {
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
     let note = s.db.notes().create(s.user, "Old".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     // owner can edit
     let resp = app
@@ -487,7 +582,13 @@ mod test {
   async fn delete_as_owner_removes_note() {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -507,7 +608,13 @@ mod test {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -538,7 +645,13 @@ mod test {
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
     let victim = insert_user(&s.db, "victim", "v@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -558,11 +671,287 @@ mod test {
   }
 
   #[tokio::test]
+  async fn share_public_updates_public_access() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "edit"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+      s.db.notes().get_public_access(note).await.unwrap(),
+      Some(NoteShareAccess::Edit)
+    );
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": null
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn share_public_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&stranger_cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "view"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(s.db.notes().get_public_access(note).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn share_public_notifies_public_subscribers() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+
+    // a public visitor is subscribed to this note's update channel
+    let (state, public_upd) = PublicNoteUpdateState::init();
+    let (_session, mut rx) = state.create_session(note).await;
+
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": note,
+          "public_access": "edit"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // the subscriber receives the new public access level
+    let msg = tokio::time::timeout(std::time::Duration::from_secs(1), rx.recv())
+      .await
+      .expect("subscriber should receive an update");
+    assert_eq!(
+      msg,
+      Some(PublicNoteUpdateMessage::PublicAccess {
+        access: Some(NoteShareAccess::Edit),
+      })
+    );
+  }
+
+  #[tokio::test]
+  async fn share_public_for_unknown_note_is_forbidden() {
+    let s = setup().await;
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // a note that does not exist is not owned by the caller -> forbidden
+    let resp = app
+      .oneshot(request(
+        "PUT",
+        "/share/public",
+        Some(&s.cookie),
+        Some(json!({
+          "note_id": Uuid::new_v4(),
+          "public_access": "view"
+        })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn info_public_returns_note_for_public_share() {
+    let s = setup().await;
+    let note = s
+      .db
+      .notes()
+      .create(s.user, "Public T".into())
+      .await
+      .unwrap();
+    s.db
+      .notes()
+      .set_public_access(note, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // no auth cookie required for the public info endpoint
+    let resp = app
+      .oneshot(request("GET", &format!("/{note}/public"), None, None))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["id"], note.to_string());
+    assert_eq!(body["title"], "Public T");
+    assert_eq!(body["owner"]["id"], s.user.to_string());
+    assert_eq!(body["can_edit"], true);
+  }
+
+  #[tokio::test]
+  async fn info_public_not_found_when_not_public() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // private note -> 404 even for the owner
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "GET",
+        &format!("/{note}/public"),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    // unknown note -> 404
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{}/public", Uuid::new_v4()),
+        None,
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn info_grants_access_to_stranger_for_public_note() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
+
+    // before going public the stranger is denied
+    let resp = app
+      .clone()
+      .oneshot(request(
+        "GET",
+        &format!("/{note}"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    s.db
+      .notes()
+      .set_public_access(note, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+
+    // now the stranger may read it; can_edit stays false for view access
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["is_owner"], false);
+    assert_eq!(body["can_edit"], false);
+    assert_eq!(body["public_access"], "view");
+  }
+
+  #[tokio::test]
   async fn share_can_downgrade_edit_to_view() {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     for access in ["edit", "view"] {
       let resp = app
@@ -593,7 +982,13 @@ mod test {
   #[tokio::test]
   async fn create_returns_conflict_when_note_limit_reached() {
     let s = setup().await;
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 1 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 1 },
+    );
 
     let resp = app
       .clone()
@@ -624,7 +1019,13 @@ mod test {
     let s = setup().await;
     let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -651,7 +1052,13 @@ mod test {
     let stranger_cookie = auth_cookie(&s.jwt, stranger);
     let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -673,7 +1080,13 @@ mod test {
   async fn transfer_rejects_self_transfer() {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -700,7 +1113,13 @@ mod test {
       .await
       .unwrap();
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 1 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 1 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -729,7 +1148,13 @@ mod test {
       .await
       .unwrap();
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 2 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 2 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -751,7 +1176,13 @@ mod test {
   async fn transfer_to_unknown_user_fails() {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    let app = app(s.db.clone(), s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request(
@@ -773,7 +1204,13 @@ mod test {
   async fn list_users_returns_all_users() {
     let s = setup().await;
     insert_user(&s.db, "second", "second@x.com").await;
-    let app = app(s.db, s.jwt, s.upd, NotesLimits { max_per_user: 20 });
+    let app = app(
+      s.db,
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+    );
 
     let resp = app
       .oneshot(request("GET", "/users", Some(&s.cookie), None))

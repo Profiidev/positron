@@ -15,7 +15,7 @@
   $effect(() => {
     if (
       (!setupStatus || !setupStatus.url) &&
-      page.url.pathname !== '/setup' &&
+      page.route.id !== '/setup' &&
       setupStatus !== null
     ) {
       goto('/setup');
@@ -26,8 +26,8 @@
     if (
       authStatus !== undefined &&
       !authStatus &&
-      page.url.pathname !== '/auth' &&
-      page.url.pathname !== '/setup' &&
+      page.route.id !== '/auth' &&
+      page.route.id !== '/setup' &&
       authStatus !== null
     ) {
       goto('/auth');

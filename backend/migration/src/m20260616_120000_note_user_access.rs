@@ -71,7 +71,7 @@ enum NoteUser {
 }
 
 #[derive(DeriveIden)]
-enum NoteShareAccess {
+pub enum NoteShareAccess {
   #[sea_orm(iden = "note_share_access")]
   Enum,
   View,

@@ -86,6 +86,8 @@ import type {
   InfoData,
   InfoNoteData,
   InfoNoteResponse,
+  InfoNoteShareData,
+  InfoNoteShareResponse,
   InfoOauthClientData,
   InfoOauthClientResponse,
   InfoOAuthPolicyData,
@@ -166,6 +168,8 @@ import type {
   SetGoodApodError,
   ShareNoteData,
   ShareNoteError,
+  ShareNotePublicData,
+  ShareNotePublicError,
   SiteUrlData,
   SiteUrlResponse2,
   StartAuthenticationData,
@@ -745,6 +749,12 @@ export const infoNoteMswHandler = wrapMswHandler<
   InfoNoteData
 >('/api/notes/management/{uuid}', 'get', client.getConfig);
 
+export const infoNoteShareMswHandler = wrapMswHandler<
+  InfoNoteShareResponse,
+  never,
+  InfoNoteShareData
+>('/api/notes/management/{uuid}/public', 'get', client.getConfig);
+
 export const listUsersNoteMswHandler = wrapMswHandler<
   ListUsersNoteResponse,
   never,
@@ -756,6 +766,12 @@ export const shareNoteMswHandler = wrapMswHandler<
   ShareNoteError,
   ShareNoteData
 >('/api/notes/management/share', 'put', client.getConfig);
+
+export const shareNotePublicMswHandler = wrapMswHandler<
+  never,
+  ShareNotePublicError,
+  ShareNotePublicData
+>('/api/notes/management/share/public', 'put', client.getConfig);
 
 export const transferNoteMswHandler = wrapMswHandler<
   never,

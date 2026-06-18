@@ -88,7 +88,8 @@ describe('noAuthPaths', () => {
       '/setup',
       '/password',
       '/password/forgot',
-      '/password/reset'
+      '/password/reset',
+      '/notes/share/[id]'
     ]);
   });
 

@@ -25,17 +25,21 @@
     username,
     userId,
     editable = true,
-    activeEditors = $bindable()
+    activeEditors = $bindable(),
+    wsPath = '/api/notes/websocket'
   }: {
     id: string;
     username?: string;
     userId?: string;
     editable?: boolean;
     activeEditors?: NoteActiveEditor[];
+    wsPath?: string;
   } = $props();
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
   let provider: WebsocketProvider | undefined = undefined;
+  let providerReady = $state(false);
+  let lastEditable = $state<boolean | undefined>(undefined);
   const userColor = getRandomColor();
 
   const setLocalAwarenessState = () => {
@@ -93,17 +97,31 @@
     editorState.editor?.setEditable(editable);
   });
 
+  $effect(() => {
+    if (!providerReady || !provider) return;
+
+    const next = editable;
+    if (lastEditable === undefined || next === lastEditable) return;
+
+    lastEditable = next;
+    provider.disconnect();
+    provider.connect();
+    setLocalAwarenessState();
+  });
+
   onMount(async () => {
     const Doc = (await import('yjs')).Doc;
     const doc = new Doc();
 
     const { WebsocketProvider } = await import('y-websocket');
 
-    provider = new WebsocketProvider('/api/notes/websocket', id, doc, {
+    provider = new WebsocketProvider(wsPath, id, doc, {
       disableBc: true
     });
     provider.awareness.on('change', onAwarenessChange);
 
+    lastEditable = editable;
+    providerReady = true;
     setLocalAwarenessState();
     syncActiveEditors();
 
@@ -144,6 +162,8 @@
   });
 
   const cleanup = () => {
+    providerReady = false;
+    lastEditable = undefined;
     provider?.awareness.off('change', onAwarenessChange);
     editorState.editor?.destroy();
     provider?.destroy();
@@ -159,7 +179,7 @@
 
 {#if editorState.editor}
   <div
-    class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border pb-[60px] sm:pb-0"
+    class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border"
   >
     {#if editable && editorState.editor}
       {/* @ts-ignore */ null}

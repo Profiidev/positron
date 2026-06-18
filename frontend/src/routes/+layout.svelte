@@ -2,7 +2,10 @@
   import { ModeWatcher } from '@profidev/pleiades/components/util/general';
   import { Toaster } from '@profidev/pleiades/components/ui/sonner';
   import '../app.css';
-  import { connectWebsocket } from '$lib/backend/updater.svelte';
+  import {
+    connectWebsocket,
+    disconnectWebsocket
+  } from '$lib/backend/updater.svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -42,7 +45,7 @@
       };
       // can also be undefined if there was an error
       if (valid === false) {
-        if (!blockRedirect && !noAuthPaths.includes(page.url.pathname)) {
+        if (!blockRedirect && !noAuthPaths.includes(page.route.id ?? '')) {
           if (data.oauthOptions.code && data.oauthOptions.name) {
             goto(
               '/login?code=' +
@@ -50,12 +53,12 @@
                 '&name=' +
                 data.oauthOptions.name
             );
-          } else if (page.url.pathname.startsWith('/auth/')) {
+          } else if (page.route.id?.startsWith('/auth/')) {
             const challenge = data.auth.challenge
               ? `&challenge=${data.auth.challenge}`
               : '';
             goto(
-              `/login?auth=${page.url.pathname.replace('/auth/', '')}${challenge}`
+              `/login?auth=${page.route.id?.replace('/auth/', '')}${challenge}`
             );
           } else {
             goto('/login');
@@ -74,7 +77,7 @@
       let { data: status, error } = await data.setupStatus;
       if (error) return;
 
-      if (!status?.is_setup && page.url.pathname !== '/setup') {
+      if (!status?.is_setup && page.route.id !== '/setup') {
         blockRedirect = true;
         await goto('/setup');
         blockRedirect = false;
@@ -86,7 +89,7 @@
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-{#if noSidebarPaths.includes(page.url.pathname)}
+{#if noSidebarPaths.includes(page.route.id ?? '')}
   {@render children()}
 {:else}
   <Sidebar
@@ -99,6 +102,10 @@
     {items}
     logout={async () => {
       let res = await logout();
+      if (!res.error) {
+        disconnectWebsocket();
+      }
+
       return {
         error: res.error ? 'err' : undefined
       };

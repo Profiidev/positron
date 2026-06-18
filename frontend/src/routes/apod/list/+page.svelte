@@ -2,21 +2,14 @@
   import * as Tabs from '@profidev/pleiades/components/ui/tabs';
   import * as ScrollArea from '@profidev/pleiades/components/ui/scroll-area';
   import { Button } from '@profidev/pleiades/components/ui/button';
-  import type { DateTime as DateTimeType } from '@profidev/pleiades/util/time.svelte';
+  import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
   import type { ApodInfo } from '$lib/client';
   import { apodImageUrl } from '$lib/permissions.svelte.js';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
 
   const { data } = $props();
 
   let apods: ApodInfo[] | undefined = $state();
-  let DateTime: typeof DateTimeType | undefined = $state();
-
-  // TODO: remove in next pleiades release
-  onMount(async () => {
-    DateTime = (await import('luxon')).DateTime;
-  });
 
   $effect(() => {
     data.apodList.then(async (list) => {
@@ -63,9 +56,9 @@
               <p class="mt-1 ml-4">{apod.title}</p>
               <p class="text-muted-foreground ml-4">by {apod.user.name}</p>
               <p class="text-muted-foreground ml-4">
-                on {DateTime?.fromISO(apod.date.toString())
+                on {D.DateTime?.fromISO(apod.date.toString())
                   .setLocale('de')
-                  .toLocaleString(DateTime.DATE_MED)}
+                  .toLocaleString(D.DateTime.DATE_MED)}
               </p>
             </div>
           {:else}

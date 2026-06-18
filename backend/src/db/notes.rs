@@ -29,7 +29,16 @@ pub struct NoteInfo {
   pub preview: String,
   pub owner: SimpleUserInfo,
   pub shared_with: Vec<SharedUserInfo>,
+  pub public_access: Option<NoteShareAccess>,
   pub is_owner: bool,
+  pub can_edit: bool,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct NoteInfoPublic {
+  pub id: Uuid,
+  pub title: String,
+  pub owner: SimpleUserInfo,
   pub can_edit: bool,
 }
 
@@ -58,6 +67,10 @@ impl<'db> NoteTable<'db> {
       return Ok(true);
     }
 
+    if self.get_public_access(note_id).await?.is_some() {
+      return Ok(true);
+    }
+
     let count = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
       .filter(note_user::Column::User.eq(user_id))
@@ -78,7 +91,12 @@ impl<'db> NoteTable<'db> {
       .one(self.db)
       .await?;
 
-    Ok(row.is_some_and(|r| r.access == NoteShareAccess::Edit))
+    if row.is_some_and(|r| r.access == NoteShareAccess::Edit) {
+      return Ok(true);
+    }
+
+    let access = self.get_public_access(note_id).await?;
+    Ok(access.is_some_and(|a| a == NoteShareAccess::Edit))
   }
 
   pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<NoteShareEntry>> {
@@ -202,6 +220,7 @@ impl<'db> NoteTable<'db> {
             name: owner.name,
           },
           shared_with: shared_by_note.get(&note.id).cloned().unwrap_or_default(),
+          public_access: note.public_access,
           is_owner,
           can_edit,
         })
@@ -248,7 +267,36 @@ impl<'db> NoteTable<'db> {
         name: owner.name,
       },
       shared_with,
+      public_access: note.public_access,
       is_owner,
+      can_edit,
+    }))
+  }
+
+  pub async fn info_public(&self, note_id: Uuid) -> Result<Option<NoteInfoPublic>> {
+    let res = Note::find_by_id(note_id)
+      .find_also_linked(NoteOwnerLink)
+      .one(self.db)
+      .await?;
+
+    let Some((note, owners)) = res else {
+      return Ok(None);
+    };
+
+    let Some(access) = note.public_access else {
+      return Ok(None);
+    };
+
+    let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+    let can_edit = access == NoteShareAccess::Edit;
+
+    Ok(Some(NoteInfoPublic {
+      id: note.id,
+      title: note.title,
+      owner: SimpleUserInfo {
+        id: owner.id,
+        name: owner.name,
+      },
       can_edit,
     }))
   }
@@ -263,6 +311,7 @@ impl<'db> NoteTable<'db> {
       content: Set(Vec::new()),
       preview: Set("".into()),
       owner: Set(owner),
+      public_access: Set(None),
     }
     .insert(&txn)
     .await?;
@@ -386,6 +435,31 @@ impl<'db> NoteTable<'db> {
       .ok_or(DbErr::RecordNotFound("note not found".into()))?;
 
     Ok(note.content)
+  }
+
+  pub async fn get_public_access(&self, note_id: Uuid) -> Result<Option<NoteShareAccess>> {
+    let Some(note) = Note::find_by_id(note_id).one(self.db).await? else {
+      return Ok(None);
+    };
+
+    Ok(note.public_access)
+  }
+
+  pub async fn set_public_access(
+    &self,
+    note_id: Uuid,
+    public_access: Option<NoteShareAccess>,
+  ) -> Result<()> {
+    let mut note: note::ActiveModel = Note::find_by_id(note_id)
+      .one(self.db)
+      .await?
+      .ok_or(DbErr::RecordNotFound("note not found".into()))?
+      .into();
+
+    note.public_access = Set(public_access);
+    note.update(self.db).await?;
+
+    Ok(())
   }
 }
 
@@ -818,5 +892,168 @@ mod test {
 
     // deleting a non-existent note is a no-op (Ok)
     db.notes().delete(Uuid::new_v4()).await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn public_access_get_set_and_clear() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // fresh note has no public access
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+
+    // set to view
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().get_public_access(id).await.unwrap(),
+      Some(NoteShareAccess::View)
+    );
+
+    // overwrite with edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().get_public_access(id).await.unwrap(),
+      Some(NoteShareAccess::Edit)
+    );
+
+    // clear it again
+    db.notes().set_public_access(id, None).await.unwrap();
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn get_public_access_none_for_unknown_note() {
+    let db = test_db().await;
+    assert_eq!(
+      db.notes().get_public_access(Uuid::new_v4()).await.unwrap(),
+      None
+    );
+  }
+
+  #[tokio::test]
+  async fn set_public_access_fails_for_missing_note() {
+    let db = test_db().await;
+    assert!(
+      db.notes()
+        .set_public_access(Uuid::new_v4(), Some(NoteShareAccess::View))
+        .await
+        .is_err()
+    );
+  }
+
+  #[tokio::test]
+  async fn public_access_grants_has_access_and_can_edit_to_strangers() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // without public access a stranger has neither access nor edit rights
+    assert!(!db.notes().has_access(stranger, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+
+    // public view -> has access but cannot edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert!(db.notes().has_access(stranger, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+
+    // public edit -> can also edit
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    assert!(db.notes().has_access(stranger, id).await.unwrap());
+    assert!(db.notes().can_edit(stranger, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn public_edit_does_not_downgrade_existing_edit_share() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let editor = insert_user(&db, "editor", "editor@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(editor)])
+      .await
+      .unwrap();
+
+    // public view set; an explicit edit share still wins for that user
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert!(db.notes().can_edit(editor, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn list_for_user_not_includes_public_notes_not_owned_or_shared() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+
+    let public = db.notes().create(owner, "Public".into()).await.unwrap();
+    db.notes()
+      .set_public_access(public, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+
+    // a public note is reachable via its share link, not by listing: a stranger
+    // who neither owns nor is shared on it must not see it in their note list
+    let notes = db.notes().list_for_user(stranger).await.unwrap();
+    assert!(notes.is_empty());
+
+    // the owner still sees their own note, with public_access populated
+    let owner_notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(owner_notes.len(), 1);
+    assert_eq!(owner_notes[0].id, public);
+    assert_eq!(owner_notes[0].public_access, Some(NoteShareAccess::View));
+  }
+
+  #[tokio::test]
+  async fn info_public_some_and_none() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "Title".into()).await.unwrap();
+
+    // not public -> None
+    assert!(db.notes().info_public(id).await.unwrap().is_none());
+
+    // unknown note -> None
+    assert!(
+      db.notes()
+        .info_public(Uuid::new_v4())
+        .await
+        .unwrap()
+        .is_none()
+    );
+
+    // public view -> can_edit false, owner populated
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    let info = db.notes().info_public(id).await.unwrap().unwrap();
+    assert_eq!(info.id, id);
+    assert_eq!(info.title, "Title");
+    assert_eq!(info.owner.id, owner);
+    assert!(!info.can_edit);
+
+    // public edit -> can_edit true
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    let info = db.notes().info_public(id).await.unwrap().unwrap();
+    assert!(info.can_edit);
   }
 }

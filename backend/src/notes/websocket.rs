@@ -8,6 +8,7 @@ use axum::{
   routing::get,
 };
 use centaurus::{backend::auth::jwt_auth::JwtAuth, bail, db::init::Connection, error::Result};
+use entity::sea_orm_active_enums::NoteShareAccess;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -15,7 +16,9 @@ use uuid::Uuid;
 use crate::{db::DBTrait, notes::state::NoteEditing};
 
 pub fn router() -> ApiRouter {
-  ApiRouter::new().route("/{uuid}", get(notes_websocket))
+  ApiRouter::new()
+    .route("/{uuid}", get(notes_websocket))
+    .route("/public/{uuid}", get(public_share_websocket))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -36,6 +39,20 @@ async fn notes_websocket(
 
   let can_edit = db.notes().can_edit(auth.user_id, uuid).await?;
 
+  Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid, can_edit)))
+}
+
+async fn public_share_websocket(
+  state: NoteEditing,
+  Path(NotePath { uuid }): Path<NotePath>,
+  db: Connection,
+  ws: WebSocketUpgrade,
+) -> Result<Response> {
+  let Some(access) = db.notes().get_public_access(uuid).await? else {
+    bail!("no public access");
+  };
+
+  let can_edit = access == NoteShareAccess::Edit;
   Ok(ws.on_upgrade(move |ws| handle_socket(ws, state, db, uuid, can_edit)))
 }
 
@@ -103,9 +120,12 @@ mod test {
   use tower::ServiceExt;
   use uuid::Uuid;
 
+  use crate::db::{DBTrait, test::insert_user};
+
   fn app(db: Connection, jwt: JwtState) -> Router {
     Router::new()
       .route("/{uuid}", get(super::notes_websocket))
+      .route("/public/{uuid}", get(super::public_share_websocket))
       .layer(Extension(NoteEditing::init()))
       .layer(Extension(jwt))
       .layer(Extension(db))
@@ -136,6 +156,36 @@ mod test {
     let jwt = auth_state(&db).await;
     let resp = app(db, jwt)
       .oneshot(ws_request(&format!("/{}", Uuid::new_v4()), None))
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+
+  // NOTE: like `notes_websocket`, the public route's `get_public_access` guard
+  // sits behind the `WebSocketUpgrade` extractor, which returns 426 under
+  // `oneshot` (no `OnUpgrade` extension) before the handler body runs. So these
+  // only assert the route is wired and never panics; the guard's accept/reject
+  // behaviour is covered by the `db::notes` unit tests and the e2e suite.
+  #[tokio::test]
+  async fn public_websocket_route_handles_note_without_public_access() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let owner = insert_user(&db, "owner", "o@x.com").await;
+    let note = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let resp = app(db, jwt)
+      .oneshot(ws_request(&format!("/public/{note}"), None))
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+
+  #[tokio::test]
+  async fn public_websocket_route_handles_unknown_note() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let resp = app(db, jwt)
+      .oneshot(ws_request(&format!("/public/{}", Uuid::new_v4()), None))
       .await
       .unwrap();
     assert!(resp.status().is_client_error());

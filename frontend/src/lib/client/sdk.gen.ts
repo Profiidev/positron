@@ -118,6 +118,9 @@ import type {
   InfoNoteData,
   InfoNoteErrors,
   InfoNoteResponses,
+  InfoNoteShareData,
+  InfoNoteShareErrors,
+  InfoNoteShareResponses,
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
@@ -232,6 +235,9 @@ import type {
   SetGoodApodResponses,
   ShareNoteData,
   ShareNoteErrors,
+  ShareNotePublicData,
+  ShareNotePublicErrors,
+  ShareNotePublicResponses,
   ShareNoteResponses,
   SiteUrlData,
   SiteUrlErrors,
@@ -1582,6 +1588,15 @@ export const infoNote = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}', ...options });
 
+export const infoNoteShare = <ThrowOnError extends boolean = false>(
+  options: Options<InfoNoteShareData, ThrowOnError>
+): RequestResult<InfoNoteShareResponses, InfoNoteShareErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    InfoNoteShareResponses,
+    InfoNoteShareErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/{uuid}/public', ...options });
+
 export const listUsersNote = <ThrowOnError extends boolean = false>(
   options?: Options<ListUsersNoteData, ThrowOnError>
 ): RequestResult<ListUsersNoteResponses, ListUsersNoteErrors, ThrowOnError> =>
@@ -1600,6 +1615,26 @@ export const shareNote = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/notes/management/share',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const shareNotePublic = <ThrowOnError extends boolean = false>(
+  options: Options<ShareNotePublicData, ThrowOnError>
+): RequestResult<
+  ShareNotePublicResponses,
+  ShareNotePublicErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    ShareNotePublicResponses,
+    ShareNotePublicErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/management/share/public',
     ...options,
     headers: {
       'Content-Type': 'application/json',

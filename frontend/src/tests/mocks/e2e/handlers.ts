@@ -12,6 +12,13 @@ import * as data from './data';
 const updaterWs = ws.link('*/api/ws/updater');
 
 /**
+ * No-op mock for the public-note update channel. The public-share page opens
+ * this socket to learn when the owner revokes access; accept it and stay quiet
+ * so the page renders without a dangling connection error.
+ */
+const publicUpdaterWs = ws.link('*/api/notes/update/*');
+
+/**
  * App-login device channel. The login page opens this socket and renders a QR
  * code from the first message it receives, so emit a fake device code on
  * connection to drive the "App Login" flow.
@@ -33,6 +40,7 @@ const scn = (cookies: Record<string, string>) => data.scenarioOf(cookies);
 
 export const handlers = [
   updaterWs.addEventListener('connection', () => {}),
+  publicUpdaterWs.addEventListener('connection', () => {}),
   // oxlint-disable-next-line no-shadow
   appLoginWs.addEventListener('connection', ({ client }) => {
     client.send('device-login-code');
@@ -40,7 +48,11 @@ export const handlers = [
 
   gen.isSetupMswHandler(({ cookies }) => j(data.isSetupOf(cookies))),
   gen.getOidcSettingsMswHandler(() => j(data.oidcSettings)),
-  gen.infoMswHandler(() => j(data.adminUser)),
+  gen.infoMswHandler(({ cookies }) =>
+    data.isAnonymous(cookies)
+      ? (new HttpResponse(null, { status: 401 }) as never)
+      : j(data.adminUser)
+  ),
   gen.authConfigMswHandler(() => j(data.authConfig)),
   gen.accountSettingsMswHandler(() => j(data.accountSettings)),
   gen.mailActiveMswHandler(({ cookies }) => j(data.mailActiveOf(cookies))),
@@ -110,6 +122,10 @@ export const handlers = [
     j(
       data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
     )
+  ),
+  gen.infoNoteShareMswHandler(({ cookies }) => j(data.publicNoteOf(cookies))),
+  gen.shareNotePublicMswHandler(
+    () => new HttpResponse(null, { status: 200 }) as never
   ),
   gen.transferNoteMswHandler(({ cookies }) => {
     if (cookies.mock_scenario === 'transfer-at-limit') {

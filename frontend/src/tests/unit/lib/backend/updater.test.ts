@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invalidate = vi.fn(async (_arg: unknown) => Promise.resolve());
-const connect = vi.fn((_user: string, _handler: unknown) => {});
+const connect = vi.fn((_handler: unknown) => {});
 const disconnect = vi.fn(() => {});
 
 vi.mock('$app/navigation', () => ({
   invalidate: async (arg: unknown) => invalidate(arg)
 }));
 vi.mock('@profidev/pleiades/backend', () => ({
-  connectWebsocket: (user: string, handler: unknown) => connect(user, handler),
-  disconnectWebsocket: () => disconnect()
+  createWebsocket: () => ({
+    connect: (handler: unknown) => connect(handler),
+    disconnect: () => disconnect()
+  })
 }));
 
 const { UpdateType, connectWebsocket, disconnectWebsocket } =
@@ -20,7 +22,7 @@ type Handler = (msg: { type: string; uuid?: string }, user: string) => void;
 /** Registers the websocket and returns the message handler pleiades received. */
 const getHandler = (user = 'me'): Handler => {
   connectWebsocket(user);
-  return connect.mock.calls.at(-1)?.[1] as Handler;
+  return connect.mock.calls.at(-1)?.[0] as Handler;
 };
 
 /** All string urls passed to invalidate (ignores predicate-function calls). */
@@ -46,7 +48,7 @@ describe('UpdateType enum', () => {
 describe('connect / disconnect delegation', () => {
   it('registers the user and a handler with pleiades', () => {
     connectWebsocket('alice');
-    expect(connect).toHaveBeenCalledWith('alice', expect.any(Function));
+    expect(connect).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('delegates disconnect', () => {

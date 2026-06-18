@@ -9,7 +9,7 @@
   import Pencil from '@lucide/svelte/icons/pencil';
   import Trash from '@lucide/svelte/icons/trash';
   import { type SvelteComponent } from 'svelte';
-  import { DateTime } from '@profidev/pleiades/util/time.svelte';
+  import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import {
     passkeyCreateSchema,
@@ -240,15 +240,15 @@
           </div>
           <div class="flex space-x-1">
             <p class="text-muted-foreground text-sm">
-              Created on {DateTime?.fromISO(
+              Created on {D.DateTime?.fromISO(
                 passkey.created.toString()
-              ).toLocaleString(DateTime.DATE_MED)}
+              ).toLocaleString(D.DateTime.DATE_MED)}
             </p>
             <Separator orientation={'vertical'} />
             <p class="text-muted-foreground text-sm">
-              Last used on {DateTime?.fromISO(
+              Last used on {D.DateTime?.fromISO(
                 passkey.used.toString()
-              ).toLocaleString(DateTime.DATE_MED)}
+              ).toLocaleString(D.DateTime.DATE_MED)}
             </p>
           </div>
         </div>

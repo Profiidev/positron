@@ -261,12 +261,25 @@ export type NoteInfo = {
   is_owner: boolean;
   owner: SimpleUserInfo;
   preview: string;
+  public_access?: NoteShareAccess | null;
   shared_with: Array<SharedUserInfo>;
+  title: string;
+};
+
+export type NoteInfoPublic = {
+  can_edit: boolean;
+  id: string;
+  owner: SimpleUserInfo;
   title: string;
 };
 
 export type NotePath = {
   uuid: string;
+};
+
+export type NotePublicShareReq = {
+  note_id: string;
+  public_access?: NoteShareAccess | null;
 };
 
 export const NoteShareAccess = { VIEW: 'view', EDIT: 'edit' } as const;
@@ -3351,6 +3364,33 @@ export type InfoNoteResponses = {
 
 export type InfoNoteResponse = InfoNoteResponses[keyof InfoNoteResponses];
 
+export type InfoNoteShareData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/management/{uuid}/public';
+};
+
+export type InfoNoteShareErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoNoteShareResponses = {
+  200: NoteInfoPublic;
+};
+
+export type InfoNoteShareResponse =
+  InfoNoteShareResponses[keyof InfoNoteShareResponses];
+
 export type ListUsersNoteData = {
   body?: never;
   path?: never;
@@ -3409,6 +3449,46 @@ export type ShareNoteErrors = {
 export type ShareNoteError = ShareNoteErrors[keyof ShareNoteErrors];
 
 export type ShareNoteResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type ShareNotePublicData = {
+  body: NotePublicShareReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/management/share/public';
+};
+
+export type ShareNotePublicErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ShareNotePublicError =
+  ShareNotePublicErrors[keyof ShareNotePublicErrors];
+
+export type ShareNotePublicResponses = {
   /**
    * no content
    */

@@ -84,7 +84,8 @@ export const noAuthPaths = [
   '/setup',
   '/password',
   '/password/forgot',
-  '/password/reset'
+  '/password/reset',
+  '/notes/share/[id]'
 ];
 
 export const noSidebarPaths = [
