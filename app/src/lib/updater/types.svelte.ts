@@ -32,4 +32,5 @@ export type UpdateMessage =
   | {
       type: UpdateMessageType.ConfirmAuth;
       code: string;
+      redirect?: string;
     };

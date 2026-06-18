@@ -81,11 +81,16 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
         }
       }
       "login" => {
-        let code = link
-          .query_pairs()
-          .into_iter()
-          .find(|(k, _)| k == "code")
-          .map(|(_, v)| v.to_string());
+        let mut code = None;
+        let mut redirect = None;
+
+        for (key, value) in link.query_pairs() {
+          match key.as_ref() {
+            "code" => code = Some(value.to_string()),
+            "redirect" => redirect = Some(value.to_string()),
+            _ => {}
+          }
+        }
 
         let updater = handle.state::<Updater>();
 
@@ -95,7 +100,9 @@ async fn handle_links(handle: &AppHandle, links: Vec<Url>) {
           continue;
         };
 
-        updater.send(UpdateMessage::ConfirmAuth { code }).await;
+        updater
+          .send(UpdateMessage::ConfirmAuth { code, redirect })
+          .await;
       }
       _ => {}
     }

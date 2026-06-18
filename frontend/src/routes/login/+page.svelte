@@ -16,7 +16,8 @@
     cancelAppLogin,
     generateCodeChallenge,
     generateCodeVerifier,
-    getEncrypt
+    getEncrypt,
+    openAppLoginDeepLink
   } from '$lib/backend/auth.svelte';
   import {
     finishAuthentication,
@@ -42,6 +43,7 @@
   let mailEnabled = $state(false);
   let appError = $state(false);
   let qrCode = $state<string | undefined>(undefined);
+  let deviceCode = $state<string | undefined>(undefined);
 
   $effect(() => {
     data.config?.then((config) => {
@@ -214,6 +216,7 @@
       async (code) => {
         if (!initialCode) {
           initialCode = true;
+          deviceCode = code;
           const QRCode = await import('qrcode');
           qrCode = await QRCode.toDataURL(`positron://login?code=${code}`, {
             margin: 1,
@@ -248,7 +251,7 @@
       <Card.Title class="text-2xl">Login</Card.Title>
       <Card.Description
         >{qrCode
-          ? 'Scan the QR code with your Positron app to continue'
+          ? 'Scan the QR code with your Positron app, or open the app on this device'
           : totp
             ? 'Enter the 6-digit code from your authenticator app to continue'
             : 'Enter your login details below to login'}</Card.Description
@@ -335,9 +338,22 @@
         <Button
           class="mt-4 w-full cursor-pointer"
           variant="outline"
+          disabled={!deviceCode}
+          onclick={() => {
+            if (deviceCode) {
+              openAppLoginDeepLink(deviceCode, window.location.origin);
+            }
+          }}
+        >
+          Open in App
+        </Button>
+        <Button
+          class="mt-4 w-full cursor-pointer"
+          variant="outline"
           onclick={() => {
             cancelAppLogin();
             qrCode = undefined;
+            deviceCode = undefined;
             isLoading = false;
           }}
         >

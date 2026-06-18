@@ -7,15 +7,29 @@
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import { confirmCode, logout } from '$lib/commands/auth.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { userAvatarState, userInfoState } from '$lib/updater/state.svelte.js';
+  import {
+    setupStatusState,
+    userAvatarState,
+    userInfoState
+  } from '$lib/updater/state.svelte.js';
   import { isConnected } from '$lib/updater/updater.svelte.js';
   import { Badge } from '@profidev/pleiades/components/ui/badge';
+  import { openUrl } from '@tauri-apps/plugin-opener';
 
   const { data } = $props();
 
   const user = $derived(userInfoState.value);
   const avatar = $derived(userAvatarState.value);
+  const setupStatus = $derived(setupStatusState.value);
   let isLoading = $state(false);
+
+  const isAllowedRedirect = (redirect: string, serverUrl: string) => {
+    try {
+      return new URL(redirect).origin === new URL(serverUrl).origin;
+    } catch {
+      return false;
+    }
+  };
 
   const confirm = async () => {
     if (!data.code) return;
@@ -23,6 +37,13 @@
     const result = await confirmCode(data.code);
     if (result) {
       toast.success('Login confirmed successfully.');
+      if (
+        data.redirect &&
+        setupStatus?.url &&
+        isAllowedRedirect(data.redirect, setupStatus.url)
+      ) {
+        await openUrl(data.redirect);
+      }
       goto('/');
     } else {
       toast.error('Failed to confirm login.');

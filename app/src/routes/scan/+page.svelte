@@ -22,7 +22,15 @@
       const result = await scan({ formats: [Format.QRCode], windowed: true });
       const url = new URL(result.content);
       const code = url.searchParams.get('code');
-      goto(`/login?code=${code}`);
+      const redirect = url.searchParams.get('redirect');
+      const params = new URLSearchParams();
+      if (code) {
+        params.set('code', code);
+      }
+      if (redirect) {
+        params.set('redirect', redirect);
+      }
+      goto(`/login?${params.toString()}`);
     } catch {
       toast.error('Failed to scan QR code');
     }

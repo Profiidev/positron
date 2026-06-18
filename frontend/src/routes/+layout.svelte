@@ -14,7 +14,6 @@
     noSidebarPaths,
     noAuthPaths
   } from '$lib/components/nav.svelte';
-  import { setMode } from 'mode-watcher';
   import { logout, refreshToken, testToken, type UserInfo } from '$lib/client';
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
   import Atom from '@lucide/svelte/icons/atom';
@@ -35,7 +34,6 @@
   });
 
   onMount(() => {
-    setMode('dark');
     testToken().then(async ({ data: dataRaw }) => {
       let { valid, exp_short } = (dataRaw as
         | { valid: boolean; exp_short: boolean }
