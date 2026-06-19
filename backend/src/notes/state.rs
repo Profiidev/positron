@@ -28,7 +28,7 @@ use tokio::{
 };
 use uuid::Uuid;
 use yrs::{
-  AsyncTransact, Doc, ReadTxn, StateVector, Subscription, Update,
+  AsyncTransact, ClientID, Doc, ReadTxn, StateVector, Subscription, Update,
   encoding::{read::Cursor, write::Write},
   sync::{
     Awareness, DefaultProtocol, Message as YrsMessage, SyncMessage,
@@ -187,6 +187,23 @@ impl NoteState {
     Ok(())
   }
 
+  pub fn extract_client_id(&self, msg: &WsMessage) -> Option<ClientID> {
+    let WsMessage::Binary(data) = msg else {
+      return None;
+    };
+    let mut decoder = DecoderV1::new(Cursor::new(data.as_bytes()));
+    let reader = MessageReader::new(&mut decoder);
+
+    for result in reader {
+      let Ok(YrsMessage::Awareness(update)) = result else {
+        continue;
+      };
+      return update.clients.keys().next().copied();
+    }
+
+    None
+  }
+
   pub async fn handle_message(&self, msg: WsMessage, ws: &mut WebSocket, can_edit: bool) {
     let WsMessage::Binary(data) = msg else {
       return;
@@ -216,6 +233,11 @@ impl NoteState {
         tracing::warn!("failed to send message: {}", e);
       }
     }
+  }
+
+  pub async fn remove_client(&self, client_id: ClientID) {
+    let mut awareness = self.doc.lock().await;
+    awareness.remove_state(client_id);
   }
 
   pub async fn save(&self, db: &Connection, note_id: Uuid) -> Result<()> {

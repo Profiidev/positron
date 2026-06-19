@@ -12,6 +12,7 @@ use entity::sea_orm_active_enums::NoteShareAccess;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
+use yrs::ClientID;
 
 use crate::{db::DBTrait, notes::state::NoteEditing};
 
@@ -77,6 +78,7 @@ async fn handle_socket(
   }
 
   let mut receiver = doc_state.receiver();
+  let mut client_id: Option<ClientID> = None;
 
   loop {
     tokio::select! {
@@ -84,6 +86,10 @@ async fn handle_socket(
         match msg {
            Some(Ok(Message::Close(_)) | Err(_)) | None => break,
            Some(Ok(msg)) => {
+             if client_id.is_none() {
+               client_id = doc_state.extract_client_id(&msg);
+             }
+
              doc_state.handle_message(msg, &mut ws, can_edit).await;
            }
         }
@@ -97,6 +103,10 @@ async fn handle_socket(
         }
       }
     }
+  }
+
+  if let Some(client_id) = client_id {
+    doc_state.remove_client(client_id).await;
   }
 
   if let Err(e) = state.close_note(note_id, &db).await {
