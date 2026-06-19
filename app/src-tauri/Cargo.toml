@@ -1,6 +1,6 @@
 [package]
 name = "positron"
-version = "0.2.11"
+version = "0.2.12"
 description = "Companion app for Positron"
 authors = ["Profidev <92174452+Profiidev@users.noreply.github.com>"]
 edition = "2024"
