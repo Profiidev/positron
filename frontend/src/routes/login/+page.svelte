@@ -94,7 +94,7 @@
           : '';
         await goto(`/auth/${data.auth.authType}${challenge}`);
       } else {
-        await goto('/');
+        await goto(data.redirectTo);
       }
     });
   };
@@ -124,8 +124,7 @@
     } else if (!ret.data) {
       return { error: 'Login failed. Please try again.' };
     } else {
-      let user = ((await ret.response?.json()) as { user?: string } | undefined)
-        ?.user;
+      let user = (ret.data as { user?: string } | undefined)?.user;
       if (user) {
         loginSuccess(user);
       } else {
@@ -146,8 +145,7 @@
     } else if (!ret.data) {
       return { error: 'Failed to confirm code. Please try again.' };
     } else {
-      let user = ((await ret.response?.json()) as { user?: string } | undefined)
-        ?.user;
+      let user = (ret.data as { user?: string } | undefined)?.user;
       loginSuccess(user || '');
     }
   };

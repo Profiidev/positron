@@ -8,12 +8,13 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({
 
 const Page = (await import('$routes/login/+page.svelte')).default;
 
-const data = (error?: string) =>
+const data = (error?: string, redirectTo = '/') =>
   ({
     auth: { authType: null, challenge: null },
     config: Promise.resolve({ mail_enabled: false }),
     error,
-    oauthOptions: { code: null, name: null }
+    oauthOptions: { code: null, name: null },
+    redirectTo
   }) as never;
 
 afterEach(() => toastError.mockClear());

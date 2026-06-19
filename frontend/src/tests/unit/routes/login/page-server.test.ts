@@ -44,6 +44,30 @@ describe('login +page.server load', () => {
     expect(redirect.location).toBe('/');
   });
 
+  it('redirects an authenticated user on /login to the redirect target', async () => {
+    const redirect = await catchRedirect(async () =>
+      load(
+        ev({
+          cookies: cookies('jwt'),
+          url: new URL('http://x/login?redirect=%2Fusers')
+        })
+      )
+    );
+    expect(redirect.location).toBe('/users');
+  });
+
+  it('ignores an unsafe redirect param for authenticated users on /login', async () => {
+    const redirect = await catchRedirect(async () =>
+      load(
+        ev({
+          cookies: cookies('jwt'),
+          url: new URL('http://x/login?redirect=//evil.com')
+        })
+      )
+    );
+    expect(redirect.location).toBe('/');
+  });
+
   it('does not redirect an authenticated user already off /login', async () => {
     const result = await runLoad(load, {
       cookies: cookies('jwt'),

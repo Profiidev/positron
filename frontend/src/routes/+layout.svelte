@@ -18,6 +18,7 @@
   import Sidebar from '@profidev/pleiades/components/nav/sidebar/sidebar.svelte';
   import Atom from '@lucide/svelte/icons/atom';
   import { avatarUrl } from '$lib/permissions.svelte';
+  import { buildLoginUrl } from '$lib/redirect';
 
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
@@ -59,7 +60,7 @@
               `/login?auth=${page.route.id?.replace('/auth/', '')}${challenge}`
             );
           } else {
-            goto('/login');
+            goto(buildLoginUrl(page.url.pathname + page.url.search));
           }
         }
       } else {
