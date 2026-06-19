@@ -83,6 +83,15 @@ export const cancelAppLogin = () => {
   socket?.close();
 };
 
+export const openAppLoginDeepLink = (code: string, redirect: string) => {
+  const url = new URL('positron://login');
+  url.searchParams.set('code', code);
+  url.searchParams.set('redirect', redirect);
+  const link = document.createElement('a');
+  link.href = url.toString();
+  link.click();
+};
+
 const URL_SAFE_CHARS =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
 

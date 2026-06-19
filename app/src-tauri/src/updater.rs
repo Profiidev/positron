@@ -26,7 +26,10 @@ pub enum UpdateMessage {
   CodeExchangeMissingVerifier,
   AuthSuccess,
   ConfirmAuthMissingCode,
-  ConfirmAuth { code: String },
+  ConfirmAuth {
+    code: String,
+    redirect: Option<String>,
+  },
 }
 
 #[tauri::command]

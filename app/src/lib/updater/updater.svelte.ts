@@ -69,7 +69,11 @@ const handleMessage = (message: UpdateMessage) => {
       break;
     }
     case UpdateMessageType.ConfirmAuth: {
-      goto(`/login?code=${message.code}`).catch(() => {});
+      const params = new URLSearchParams({ code: message.code });
+      if (message.redirect) {
+        params.set('redirect', message.redirect);
+      }
+      goto(`/login?${params.toString()}`).catch(() => {});
       break;
     }
     case UpdateMessageType.ConfirmAuthMissingCode: {

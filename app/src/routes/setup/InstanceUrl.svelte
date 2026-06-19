@@ -37,6 +37,8 @@
       key="url"
       label="Instance URL"
       placeholder="https://positron.example.com"
+      autocapitalize="off"
+      autocorrect="off"
       {readonly}
       required
     />

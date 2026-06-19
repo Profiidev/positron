@@ -58,9 +58,34 @@ const cookies = (value?: string) => ({ get: () => value });
 describe('+layout.server.ts load', () => {
   it('redirects to /login when unauthenticated on a protected path', async () => {
     const redirect = await catchRedirect(async () =>
-      layoutServerLoad(ev({ cookies: cookies(), route: { id: '/users' } }))
+      layoutServerLoad(
+        ev({
+          cookies: cookies(),
+          route: { id: '/users' },
+          url: new URL('http://x/users')
+        })
+      )
     );
-    expect(redirect).toMatchObject({ location: '/login', status: 302 });
+    expect(redirect).toMatchObject({
+      location: '/login?redirect=%2Fusers',
+      status: 302
+    });
+  });
+
+  it('preserves the query string in the redirect param', async () => {
+    const redirect = await catchRedirect(async () =>
+      layoutServerLoad(
+        ev({
+          cookies: cookies(),
+          route: { id: '/users' },
+          url: new URL('http://x/users?tab=1')
+        })
+      )
+    );
+    expect(redirect).toMatchObject({
+      location: '/login?redirect=%2Fusers%3Ftab%3D1',
+      status: 302
+    });
   });
 
   it.each(noAuthPaths)(

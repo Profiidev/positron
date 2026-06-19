@@ -1,4 +1,6 @@
-import { expect } from '@playwright/test';
+import { type Page, expect } from '@playwright/test';
+import { HttpResponse } from 'msw';
+import * as gen from '$lib/client/msw.gen';
 import { test } from '$test_helpers/e2e-fixture';
 import { setupSession } from '$test_helpers/session';
 import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
@@ -63,6 +65,156 @@ test.describe('login page', () => {
     await gotoReady(page, '/login');
 
     await expect(page).not.toHaveURL(/\/login/);
+  });
+
+  test('redirects an authenticated user to the redirect target', async ({
+    context,
+    page
+  }) => {
+    await setupSession(context);
+    await gotoReady(page, '/login?redirect=%2Fusers');
+
+    await expect(page).toHaveURL(/\/users$/);
+  });
+
+  test('ignores an unsafe redirect param and lands on the app root', async ({
+    context,
+    page,
+    baseURL
+  }) => {
+    await setupSession(context);
+    // An open-redirect attempt must never leave the app; it falls back to '/'.
+    await gotoReady(page, '/login?redirect=%2F%2Fevil.com');
+
+    // Stayed on the app origin (not evil.com) and off /login.
+    expect(new URL(page.url()).host).toBe(new URL(baseURL!).host);
+    await expect(page).not.toHaveURL(/\/login/);
+  });
+
+  test('returns to the originally requested URL after login', async ({
+    page,
+    network
+  }) => {
+    network.use(
+      gen.passwordAuthenticateMswHandler(() =>
+        HttpResponse.json(
+          { user: 'user-uuid' },
+          {
+            headers: {
+              'Set-Cookie': 'centaurus_jwt=e2e-token; Path=/'
+            }
+          }
+        )
+      )
+    );
+
+    await gotoReady(page, '/users');
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fusers/);
+
+    await page.getByPlaceholder('mail@example.com').fill('user@example.com');
+    await page.getByPlaceholder('Your password').fill('secret');
+    await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+    await expect(page).toHaveURL(/\/users$/);
+  });
+});
+
+test.describe('totp login', () => {
+  // A password login for a 2FA-enabled account succeeds but returns no `user`,
+  // Which flips the form into the TOTP step instead of completing the login.
+  const totpRequiredAuth = () =>
+    gen.passwordAuthenticateMswHandler(() => HttpResponse.json({}));
+
+  const submitPassword = async (page: Page) => {
+    await page.getByPlaceholder('mail@example.com').fill('user@example.com');
+    await page.getByPlaceholder('Your password').fill('secret');
+    await page.getByRole('button', { exact: true, name: 'Login' }).click();
+  };
+
+  test('prompts for the TOTP code after a 2FA password login', async ({
+    page,
+    network
+  }) => {
+    network.use(totpRequiredAuth());
+
+    await gotoReady(page, '/login');
+    await submitPassword(page);
+
+    // The form swaps to the 6-digit prompt; the email/password inputs are gone.
+    await expect(
+      page.getByText('Enter the 6-digit code from your authenticator app')
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
+    await expect(page.getByPlaceholder('mail@example.com')).toHaveCount(0);
+
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('completes the login after a valid TOTP code', async ({
+    page,
+    network
+  }) => {
+    network.use(
+      totpRequiredAuth(),
+      gen.totpConfirmMswHandler(() =>
+        HttpResponse.json(
+          { user: 'user-uuid' },
+          { headers: { 'Set-Cookie': 'centaurus_jwt=e2e-token; Path=/' } }
+        )
+      )
+    );
+
+    await gotoReady(page, '/login?redirect=%2Fusers');
+    await submitPassword(page);
+
+    await expect(
+      page.getByText('Enter the 6-digit code from your authenticator app')
+    ).toBeVisible();
+
+    // The OTP field auto-focuses; type the 6-digit code and confirm.
+    await page.keyboard.type('123456');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await expect(page).toHaveURL(/\/users$/);
+  });
+
+  test('shows an error for an invalid TOTP code', async ({ page, network }) => {
+    network.use(
+      totpRequiredAuth(),
+      gen.totpConfirmMswHandler(() => HttpResponse.json({}, { status: 401 }))
+    );
+
+    await gotoReady(page, '/login');
+    await submitPassword(page);
+
+    await expect(
+      page.getByText('Enter the 6-digit code from your authenticator app')
+    ).toBeVisible();
+
+    await page.keyboard.type('123456');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await expect(page.getByText('Invalid code.')).toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('does not submit a code shorter than 6 digits', async ({
+    page,
+    network
+  }) => {
+    network.use(totpRequiredAuth());
+
+    await gotoReady(page, '/login');
+    await submitPassword(page);
+
+    await expect(
+      page.getByText('Enter the 6-digit code from your authenticator app')
+    ).toBeVisible();
+
+    await page.keyboard.type('123');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await expect(page.getByText('TOTP code must be 6 digits')).toBeVisible();
   });
 });
 
@@ -133,7 +285,12 @@ test.describe('auth guards', () => {
       page
     }) => {
       await gotoReady(page, path);
-      await expect(page).toHaveURL(/\/login/);
+      const redirect = encodeURIComponent(path);
+      await expect(page).toHaveURL(
+        new RegExp(
+          `/login\\?redirect=${redirect.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}`
+        )
+      );
     });
   }
 });
