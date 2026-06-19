@@ -111,7 +111,8 @@
       body: {
         email: formData.email,
         password: encrypt.encrypt(formData.password) || ''
-      }
+      },
+      parseAs: 'json'
     });
 
     if (!ret.data && ret.response?.status === 401) {
@@ -137,7 +138,8 @@
     let ret = await totpConfirm({
       body: {
         code: formData.code
-      }
+      },
+      parseAs: 'json'
     });
 
     if (!ret.data && ret.response?.status === 401) {
