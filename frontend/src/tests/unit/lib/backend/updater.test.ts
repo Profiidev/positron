@@ -17,7 +17,10 @@ vi.mock('@profidev/pleiades/backend', () => ({
 const { UpdateType, connectWebsocket, disconnectWebsocket } =
   await import('$lib/backend/updater.svelte');
 
-type Handler = (msg: { type: string; uuid?: string }, user: string) => void;
+type Handler = (
+  msg: { type: string; uuid?: string; note_id?: string },
+  user: string
+) => void;
 
 /** Registers the websocket and returns the message handler pleiades received. */
 const getHandler = (user = 'me'): Handler => {
@@ -41,6 +44,7 @@ describe('UpdateType enum', () => {
   it('exposes every update kind as a matching string', () => {
     expect(UpdateType.Settings).toBe('Settings');
     expect(UpdateType.Note).toBe('Note');
+    expect(UpdateType.NoteSnapshot).toBe('NoteSnapshot');
     expect(Object.values(UpdateType)).toContain('OAuthClient');
   });
 });
@@ -94,6 +98,18 @@ describe('handleMessage', () => {
     expect(invalidatedUrls()).toEqual([
       '/api/notes/management',
       '/api/notes/management/n1'
+    ]);
+  });
+
+  it('invalidates the snapshot list and info on a NoteSnapshot update', () => {
+    const handler = getHandler();
+    handler(
+      { note_id: 'n1', type: UpdateType.NoteSnapshot, uuid: 's1' },
+      'me'
+    );
+    expect(invalidatedUrls()).toEqual([
+      '/api/notes/snapshots/n1',
+      '/api/notes/snapshots/s1/info'
     ]);
   });
 

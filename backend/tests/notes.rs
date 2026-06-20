@@ -504,3 +504,133 @@ async fn edit_share_grants_can_edit_to_shared_user() {
     .await;
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
+
+// ---- note snapshots ----
+
+/// Creates a note as the current user and returns its id.
+async fn create_note(server: &TestServer, title: &str) -> Uuid {
+  let resp = server
+    .post("/notes/management", serde_json::json!({ "title": title }))
+    .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  Uuid::parse_str(resp.json::<Value>().await.unwrap()["id"].as_str().unwrap()).unwrap()
+}
+
+/// Registers a second user and logs in as them, returning their id.
+async fn register_and_login(server: &TestServer, prefix: &str, password: &str) -> Uuid {
+  let email = format!("{}@example.com", common::unique(prefix));
+  let encrypted = server.encrypt_password(password).await;
+  let resp = server
+    .post(
+      "/user/management",
+      serde_json::json!({ "name": prefix, "email": email, "password": encrypted }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let id = Uuid::parse_str(
+    resp.json::<Value>().await.unwrap()["uuid"]
+      .as_str()
+      .unwrap(),
+  )
+  .unwrap();
+
+  server.clear_cookies();
+  let resp = server.login(&email, password).await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  id
+}
+
+#[tokio::test]
+async fn snapshot_list_empty_for_owner_without_snapshots() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let note_id = create_note(&server, "Snapshot note").await;
+
+  let resp = server.get(&format!("/notes/snapshots/{note_id}")).await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  assert!(
+    resp
+      .json::<Value>()
+      .await
+      .unwrap()
+      .as_array()
+      .unwrap()
+      .is_empty()
+  );
+}
+
+#[tokio::test]
+async fn snapshot_list_requires_authentication() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let note_id = create_note(&server, "Snapshot note").await;
+
+  server.clear_cookies();
+  let resp = server.get(&format!("/notes/snapshots/{note_id}")).await;
+  assert!(!resp.status().is_success());
+}
+
+#[tokio::test]
+async fn snapshot_list_forbidden_for_non_owner() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let note_id = create_note(&server, "Owned note").await;
+
+  register_and_login(&server, "stranger", "strangerpass1").await;
+  let resp = server.get(&format!("/notes/snapshots/{note_id}")).await;
+  assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn snapshot_delete_unknown_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  let resp = server
+    .delete(
+      "/notes/snapshots",
+      serde_json::json!({ "snapshot_id": Uuid::new_v4() }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn snapshot_restore_unknown_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  let resp = server
+    .put(
+      "/notes/snapshots/restore",
+      serde_json::json!({ "snapshot_id": Uuid::new_v4() }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn snapshot_info_unknown_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  let resp = server
+    .get(&format!("/notes/snapshots/{}/info", Uuid::new_v4()))
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn snapshot_content_unknown_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  let resp = server
+    .get(&format!("/notes/snapshots/{}/content", Uuid::new_v4()))
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn snapshot_info_requires_authentication() {
+  let (server, _) = TestServer::start_with_admin().await;
+
+  server.clear_cookies();
+  let resp = server
+    .get(&format!("/notes/snapshots/{}/info", Uuid::new_v4()))
+    .await;
+  assert!(!resp.status().is_success());
+}

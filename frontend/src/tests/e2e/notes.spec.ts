@@ -258,3 +258,120 @@ test.describe('note detail', () => {
     await expect(page).toHaveURL(/\/notes$/);
   });
 });
+
+test.describe('note snapshots', () => {
+  test('shows the snapshot manager only for the owner', async ({
+    context,
+    page
+  }) => {
+    await gotoReady(page, '/notes/note-1');
+    await expect(
+      page.getByRole('button', { name: 'Snapshot manager' })
+    ).toBeVisible();
+
+    // A view-only viewer is not the owner, so the manager is hidden.
+    await setupSession(context, 'readonly');
+    await gotoReady(page, '/notes/note-1');
+    await expect(
+      page.getByRole('button', { name: 'Snapshot manager' })
+    ).toHaveCount(0);
+  });
+
+  test('opens a snapshot from the manager', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Snapshot manager' }).click();
+    await expect(page.getByPlaceholder('Search new owner...')).toBeVisible();
+    await page.getByRole('option').first().click();
+
+    await expect(page).toHaveURL(/\/notes\/note-1\/snapshot-1$/);
+  });
+
+  test('restores a snapshot from the manager', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Snapshot manager' }).click();
+    // The restore button lives inside the snapshot option (ArchiveRestore icon).
+    await page
+      .getByRole('option')
+      .first()
+      .getByRole('button')
+      .first()
+      .click();
+
+    await expect(
+      page.getByText('Do you really want to restore this snapshot')
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Restore' }).last().click();
+
+    await expect(page.getByText('Snapshot restored successfully')).toBeVisible();
+  });
+
+  test('deletes a snapshot from the manager', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1');
+
+    await page.getByRole('button', { name: 'Snapshot manager' }).click();
+    // The destructive delete button is the last button inside the option.
+    await page
+      .getByRole('option')
+      .first()
+      .getByRole('button')
+      .last()
+      .click();
+
+    await expect(
+      page.getByText('Do you really want to delete the snapshot')
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Delete' }).last().click();
+
+    await expect(page.getByText('Snapshot deleted successfully')).toBeVisible();
+  });
+
+  test('renders the snapshot view page with restore and delete', async ({
+    page
+  }) => {
+    await gotoReady(page, '/notes/note-1/snapshot-1');
+
+    await expect(page.getByText('My First Note:')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('restores from the snapshot view page', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1/snapshot-1');
+
+    await page.getByRole('button', { name: 'Restore' }).click();
+    await expect(
+      page.getByText('Do you really want to restore this snapshot')
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Restore' }).last().click();
+
+    await expect(page.getByText('Snapshot restored successfully')).toBeVisible();
+    await expect(page).toHaveURL(/\/notes\/note-1$/);
+  });
+
+  test('deletes from the snapshot view page', async ({ page }) => {
+    await gotoReady(page, '/notes/note-1/snapshot-1');
+
+    await page.getByRole('button', { name: 'Delete' }).click();
+    await expect(
+      page.getByText('Do you really want to delete the snapshot')
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Delete' }).last().click();
+
+    await expect(page.getByText('Snapshot deleted successfully')).toBeVisible();
+    await expect(page).toHaveURL(/\/notes\/note-1$/);
+  });
+
+  test('redirects to the note when the snapshot is missing', async ({
+    page
+  }) => {
+    await gotoReady(page, '/notes/note-1/snapshot-missing');
+
+    // The view page bounces back to the note with an error flag, which the note
+    // Page surfaces as a toast and then strips from the URL.
+    await expect(page).toHaveURL(/\/notes\/note-1$/);
+    await expect(page.getByText('Snapshot not found')).toBeVisible();
+  });
+});

@@ -17,6 +17,10 @@ const pages: { path: string; ready: (page: Page) => Locator }[] = [
     ready: (p) => p.getByPlaceholder('Enter note title')
   },
   { path: '/notes/note-1', ready: (p) => p.getByPlaceholder('Note title') },
+  {
+    path: '/notes/note-1/snapshot-1',
+    ready: (p) => p.getByRole('button', { name: 'Restore' })
+  },
 
   { path: '/apod', ready: (p) => p.getByRole('tab', { name: 'Today' }) },
   { path: '/apod/list', ready: (p) => p.getByRole('tab', { name: 'Library' }) },

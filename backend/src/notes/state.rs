@@ -539,6 +539,116 @@ mod note_editing_test {
   }
 
   #[tokio::test]
+  async fn restore_rebuilds_live_doc_from_snapshot_content() {
+    use yrs::{Doc, GetString, ReadTxn, StateVector, Transact, XmlFragment, XmlTextPrelim};
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // snapshot document carrying the content we want to restore to
+    let snapshot_doc = Doc::new();
+    {
+      let fragment = snapshot_doc.get_or_insert_xml_fragment("default");
+      let mut txn = snapshot_doc.transact_mut();
+      fragment.push_back(&mut txn, XmlTextPrelim::new("restored"));
+    }
+    let data = snapshot_doc
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default());
+
+    // live doc currently holds different content
+    {
+      let awareness = state.doc.lock().await;
+      let fragment = awareness.doc().get_or_insert_xml_fragment("default");
+      let mut txn = awareness.doc().transact_mut();
+      fragment.push_back(&mut txn, XmlTextPrelim::new("original"));
+    }
+
+    // restore through the public NoteEditing entry point (covers the lookup)
+    editing.restore(note_id, &data).await.unwrap();
+
+    let awareness = state.doc.lock().await;
+    let fragment = awareness.doc().get_or_insert_xml_fragment("default");
+    let content = fragment.get_string(&awareness.doc().transact());
+    assert!(
+      content.contains("restored") && !content.contains("original"),
+      "live doc should hold the restored content, got: {content}"
+    );
+  }
+
+  #[tokio::test]
+  async fn restore_on_unopened_note_is_noop() {
+    let db = test_db().await;
+    let _ = &db;
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    // note was never opened -> early return, data is never even decoded
+    editing
+      .restore(Uuid::new_v4(), b"not even valid yrs data")
+      .await
+      .unwrap();
+  }
+
+  #[tokio::test]
+  async fn save_creates_snapshot_when_overdue_then_skips_within_window() {
+    use crate::storage::StorageExt;
+    use yrs::{Text, Transact, XmlFragment, XmlTextPrelim};
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage.clone()).await;
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // seed enough content that the doc is non-trivial
+    {
+      let awareness = state.doc.lock().await;
+      let fragment = awareness.doc().get_or_insert_xml_fragment("default");
+      let mut txn = awareness.doc().transact_mut();
+      fragment.push_back(&mut txn, XmlTextPrelim::new("x".repeat(300).as_str()));
+    }
+
+    // fresh note has no prior snapshot -> last_snapshot defaults to the epoch,
+    // so the time gate is wide open and the first save creates a snapshot
+    state.save(&db, note_id).await.unwrap();
+    let snapshots = db.note_snapshot().list_for_note(note_id).await.unwrap();
+    assert_eq!(snapshots.len(), 1);
+    assert!(
+      storage
+        .note_snapshot()
+        .exists(note_id, snapshots[0].id)
+        .await
+        .unwrap(),
+      "snapshot bytes should be written to storage"
+    );
+
+    // change the content again and save immediately: within the 10-minute
+    // window the second save must not create another snapshot
+    {
+      let awareness = state.doc.lock().await;
+      let text = awareness.doc().get_or_insert_text("extra");
+      text.insert(&mut awareness.doc().transact_mut(), 0, "more");
+    }
+    state.save(&db, note_id).await.unwrap();
+    assert_eq!(
+      db.note_snapshot()
+        .list_for_note(note_id)
+        .await
+        .unwrap()
+        .len(),
+      1,
+      "no second snapshot should be created within the time window"
+    );
+  }
+
+  #[tokio::test]
   async fn read_only_client_updates_are_ignored() {
     use super::{YrsMessage, handle_read_only_message};
     use yrs::{

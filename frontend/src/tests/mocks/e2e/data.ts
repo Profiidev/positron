@@ -167,6 +167,28 @@ export const notes = {
   empty: [] as unknown[]
 };
 
+// Snapshot list (`NoteSnapshotInfo`) served by `listNoteSnapshots`. Only the
+// Owner sees these (the detail page guards on `is_owner`).
+export const noteSnapshots = {
+  default: [
+    {
+      created_at: '2024-01-02T00:00:00Z',
+      id: 'snapshot-1',
+      note_id: 'note-1',
+      preview: 'Snapshot preview'
+    }
+  ],
+  empty: [] as unknown[]
+};
+
+// Snapshot detail (`NoteSnapshotDetail`) served by `infoNoteSnapshot` on the
+// Snapshot view page.
+export const noteSnapshotDetail = {
+  created_at: '2024-01-02T00:00:00Z',
+  note_id: 'note-1',
+  title: 'My First Note'
+};
+
 export const oauthClients = {
   default: [
     {
