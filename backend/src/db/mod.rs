@@ -6,7 +6,7 @@ use oauth::{
 use services::apod::ApodTable;
 use user::{passkey::PasskeyTable, settings::SettingsTable};
 
-use crate::db::user::user_ext::UserExtTable;
+use crate::db::{notes::snapshot::NoteSnapshotTable, user::user_ext::UserExtTable};
 
 pub mod notes;
 pub mod oauth;
@@ -22,6 +22,7 @@ pub trait DBTrait {
   fn apod(&self) -> ApodTable<'_>;
   fn settings(&self) -> SettingsTable<'_>;
   fn notes(&self) -> NoteTable<'_>;
+  fn note_snapshot(&self) -> NoteSnapshotTable<'_>;
 }
 
 impl DBTrait for Connection {
@@ -55,6 +56,10 @@ impl DBTrait for Connection {
 
   fn notes(&self) -> NoteTable<'_> {
     NoteTable::new(&self.0)
+  }
+
+  fn note_snapshot(&self) -> NoteSnapshotTable<'_> {
+    NoteSnapshotTable::new(&self.0)
   }
 }
 

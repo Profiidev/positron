@@ -8,8 +8,6 @@ pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: Uuid,
   pub created_at: DateTime,
-  #[sea_orm(column_type = "VarBinary(StringLen::None)")]
-  pub content: Vec<u8>,
   pub preview: String,
   pub note: Uuid,
 }

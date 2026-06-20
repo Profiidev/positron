@@ -9,6 +9,8 @@ use sea_orm::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod snapshot;
+
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct SharedUserInfo {
   pub id: Uuid,

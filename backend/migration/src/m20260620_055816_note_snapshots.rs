@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(pk_uuid(NoteSnapshot::Id))
           .col(date_time(NoteSnapshot::CreatedAt))
-          .col(binary(NoteSnapshot::Content))
           .col(string(NoteSnapshot::Preview))
           .col(uuid(NoteSnapshot::Note))
           .foreign_key(
@@ -42,7 +41,6 @@ enum NoteSnapshot {
   Table,
   Id,
   CreatedAt,
-  Content,
   Preview,
   Note,
 }
