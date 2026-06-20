@@ -14,7 +14,7 @@ use axum::{
     ws::{Message as WsMessage, WebSocket},
   },
 };
-use centaurus::{db::init::Connection, error::Result, eyre::Context};
+use centaurus::{db::init::Connection, error::Result, eyre::Context, storage::FileStorage};
 use dashmap::DashMap;
 use image::EncodableLayout;
 use tokio::{
@@ -40,14 +40,15 @@ use yrs::{
   },
 };
 
-use crate::{db::DBTrait, notes::preview::render_preview};
+use crate::{db::DBTrait, notes::preview::render_preview, storage::StorageExt};
 
-const MB: usize = 1024 * 1024;
+pub const MB: usize = 1024 * 1024;
 
 #[derive(Clone, FromRequestParts)]
 #[from_request(via(Extension))]
 pub struct NoteEditing {
   docs: Arc<DashMap<Uuid, Arc<NoteState>>>,
+  storage: Arc<FileStorage>,
 }
 
 pub struct NoteState {
@@ -59,12 +60,14 @@ pub struct NoteState {
   awareness_subscription: Subscription,
   subscriber_count: AtomicUsize,
   save_counter: AtomicIsize,
+  storage: Arc<FileStorage>,
 }
 
 impl NoteEditing {
-  pub fn init() -> Self {
+  pub fn init(storage: FileStorage) -> Self {
     Self {
       docs: Arc::new(DashMap::new()),
+      storage: Arc::new(storage),
     }
   }
 
@@ -133,6 +136,7 @@ impl NoteEditing {
       doc_subscription,
       awareness_subscription,
       sender,
+      storage: self.storage.clone(),
     });
 
     state.clone().start_save_task(db.clone(), note_id);
@@ -255,6 +259,16 @@ impl NoteState {
     }
 
     let preview = render_preview(doc).await;
+
+    if false {
+      let snapshot_id = db.note_snapshot().create(note_id, preview.clone()).await?;
+      self
+        .storage
+        .note_snapshot()
+        .create(note_id, snapshot_id, &content)
+        .await?;
+    }
+
     db.notes().set_content(note_id, content, preview).await?;
 
     Ok(())
@@ -319,8 +333,9 @@ mod note_editing_test {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+    let storage = crate::storage::test::init_test_storage().await;
 
-    let editing = NoteEditing::init();
+    let editing = NoteEditing::init(storage);
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
     let second = editing.get_or_open_note(note_id, &db).await.unwrap();
 
@@ -331,7 +346,8 @@ mod note_editing_test {
   #[tokio::test]
   async fn get_or_open_note_errors_for_missing_note() {
     let db = test_db().await;
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     // no note row exists -> get_content fails -> error propagates
     assert!(editing.get_or_open_note(Uuid::new_v4(), &db).await.is_err());
   }
@@ -339,7 +355,8 @@ mod note_editing_test {
   #[tokio::test]
   async fn close_note_on_unopened_note_is_ok() {
     let db = test_db().await;
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     // closing a note that was never opened hits the early-return branch
     editing.close_note(Uuid::new_v4(), &db).await.unwrap();
   }
@@ -350,7 +367,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     // two subscribers
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
     let _second = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -375,7 +393,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     // an empty doc saves successfully (covers gc/encode/render_preview/set_content)
@@ -390,7 +409,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
     // a fresh subscriber has no buffered messages
     let mut rx = state.receiver();
@@ -410,7 +430,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {
@@ -454,7 +475,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {
@@ -499,7 +521,8 @@ mod note_editing_test {
     let owner = insert_user(&db, "owner", "owner@x.com").await;
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
-    let editing = NoteEditing::init();
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init(storage);
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {

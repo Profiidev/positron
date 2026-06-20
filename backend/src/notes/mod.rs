@@ -1,10 +1,12 @@
 use aide::axum::ApiRouter;
 use axum::Extension;
+use centaurus::storage::FileStorage;
 
 use crate::{config::Config, notes::state::NoteEditing};
 
 mod management;
 mod preview;
+mod snapshot;
 mod state;
 pub mod update;
 mod websocket;
@@ -27,16 +29,17 @@ impl NotesLimits {
 pub fn router() -> ApiRouter {
   ApiRouter::new()
     .nest("/management", management::router())
+    .nest("/snapshots", snapshot::router())
     .nest("/websocket", websocket::router())
     .nest("/update", update::router())
 }
 
-pub fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+pub fn state(router: ApiRouter, storage: FileStorage, config: &Config) -> ApiRouter {
   let (public_note_state, public_note_updater) = update::PublicNoteUpdateState::init();
 
   router
     .layer(Extension(public_note_state))
     .layer(Extension(public_note_updater))
     .layer(Extension(NotesLimits::from_config(config)))
-    .layer(Extension(NoteEditing::init()))
+    .layer(Extension(NoteEditing::init(storage)))
 }
