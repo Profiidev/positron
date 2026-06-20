@@ -425,19 +425,11 @@ mod test {
   #[tokio::test]
   async fn restore_succeeds_for_owner() {
     let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
-    s.db
-      .note_snapshot()
-      .create(note, "preview".into())
-      .await
-      .unwrap();
-    let snapshot_id = snapshot_ids(&s.db, note).await[0];
-    let app = app(
-      s.db.clone(),
-      s.jwt,
-      crate::storage::test::init_test_storage().await,
-    )
-    .await;
+    let snapshot_id =
+      create_snapshot_in_storage(&s.db, &storage, note, "preview", b"snapshot").await;
+    let app = app(s.db.clone(), s.jwt, storage).await;
 
     let resp = app
       .oneshot(request(

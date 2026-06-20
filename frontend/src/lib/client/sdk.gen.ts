@@ -58,6 +58,9 @@ import type {
   DeleteNoteData,
   DeleteNoteErrors,
   DeleteNoteResponses,
+  DeleteNoteSnapshotData,
+  DeleteNoteSnapshotErrors,
+  DeleteNoteSnapshotResponses,
   DeleteOauthClientData,
   DeleteOauthClientErrors,
   DeleteOauthClientResponses,
@@ -107,6 +110,8 @@ import type {
   GetMailSettingsData,
   GetMailSettingsErrors,
   GetMailSettingsResponses,
+  GetNoteSnapshotContentData,
+  GetNoteSnapshotContentErrors,
   GetOidcSettingsData,
   GetOidcSettingsErrors,
   GetOidcSettingsResponses,
@@ -156,6 +161,9 @@ import type {
   ListGroupsSimpleResponses,
   ListNotesData,
   ListNotesErrors,
+  ListNoteSnapshotsData,
+  ListNoteSnapshotsErrors,
+  ListNoteSnapshotsResponses,
   ListNotesResponses,
   ListOauthClientsData,
   ListOauthClientsErrors,
@@ -219,6 +227,9 @@ import type {
   ResetUserPasswordData,
   ResetUserPasswordErrors,
   ResetUserPasswordResponses,
+  RestoreNoteSnapshotData,
+  RestoreNoteSnapshotErrors,
+  RestoreNoteSnapshotResponses,
   RetrieveAppTokenData,
   RetrieveAppTokenErrors,
   SaveAccountSettingsData,
@@ -1666,3 +1677,65 @@ export const notesConfig = <ThrowOnError extends boolean = false>(
     NotesConfigErrors,
     ThrowOnError
   >({ url: '/api/notes/management/config', ...options });
+
+export const listNoteSnapshots = <ThrowOnError extends boolean = false>(
+  options: Options<ListNoteSnapshotsData, ThrowOnError>
+): RequestResult<
+  ListNoteSnapshotsResponses,
+  ListNoteSnapshotsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListNoteSnapshotsResponses,
+    ListNoteSnapshotsErrors,
+    ThrowOnError
+  >({ url: '/api/notes/snapshots/{note_uuid}', ...options });
+
+export const deleteNoteSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteNoteSnapshotData, ThrowOnError>
+): RequestResult<
+  DeleteNoteSnapshotResponses,
+  DeleteNoteSnapshotErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteNoteSnapshotResponses,
+    DeleteNoteSnapshotErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/snapshots',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const restoreNoteSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<RestoreNoteSnapshotData, ThrowOnError>
+): RequestResult<
+  RestoreNoteSnapshotResponses,
+  RestoreNoteSnapshotErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    RestoreNoteSnapshotResponses,
+    RestoreNoteSnapshotErrors,
+    ThrowOnError
+  >({
+    url: '/api/notes/snapshots/restore',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const getNoteSnapshotContent = <ThrowOnError extends boolean = false>(
+  options: Options<GetNoteSnapshotContentData, ThrowOnError>
+): RequestResult<unknown, GetNoteSnapshotContentErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    unknown,
+    GetNoteSnapshotContentErrors,
+    ThrowOnError
+  >({ url: '/api/notes/snapshots/{snapshot_id}/content', ...options });
