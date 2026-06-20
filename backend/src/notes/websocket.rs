@@ -138,7 +138,7 @@ mod test {
     Router::new()
       .route("/{uuid}", get(super::notes_websocket))
       .route("/public/{uuid}", get(super::public_share_websocket))
-      .layer(Extension(NoteEditing::init(storage)))
+      .layer(Extension(NoteEditing::init_test(storage).await))
       .layer(Extension(jwt))
       .layer(Extension(db))
   }

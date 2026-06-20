@@ -141,7 +141,6 @@ async fn restore(
     .await?;
 
   state.restore(snapshot.note, &data).await?;
-  // TODO notify users
 
   Ok(())
 }
@@ -208,6 +207,10 @@ mod test {
   use crate::storage::StorageExt;
 
   async fn app(db: Connection, jwt: JwtState, storage: FileStorage) -> Router {
+    let (_state, updater) =
+      centaurus::backend::endpoints::websocket::state::UpdateState::<crate::utils::UpdateMessage>::init()
+        .await;
+    let editing = crate::notes::state::NoteEditing::init(storage.clone(), updater.clone());
     Router::new()
       .route("/{note_uuid}", get(super::list))
       .route("/", axum::routing::delete(super::delete))
@@ -217,6 +220,8 @@ mod test {
       .layer(Extension(jwt))
       .layer(Extension(db))
       .layer(Extension(storage))
+      .layer(Extension(updater))
+      .layer(Extension(editing))
   }
 
   async fn create_snapshot_in_storage(

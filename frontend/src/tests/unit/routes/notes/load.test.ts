@@ -63,7 +63,8 @@ describe('note detail load', () => {
   it('passes the id through and resolves the note + users promises', async () => {
     const result = await runLoad(detailLoad, {
       fetch: jsonFetch({ title: 'Hi' }),
-      params: { id: 'n1' }
+      params: { id: 'n1' },
+      url: new URL('http://x/notes')
     });
     expect(result.id).toBe('n1');
     await expect(result.noteRes).resolves.toMatchObject({

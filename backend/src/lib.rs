@@ -150,7 +150,8 @@ mod test {
     let config = test_config();
     let mut router = ApiRouter::new().nest("/.well-known", well_known::router());
     let storage = storage::state(&config).await;
-    router = notes::state(router, storage.clone(), &config);
+    let (_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    router = notes::state(router, storage.clone(), updater, &config);
     router = services::state(router, &config).await;
     router = oauth::state(router, &config).await;
     router = well_known::state(router, &config).await;

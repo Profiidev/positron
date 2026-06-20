@@ -35,12 +35,13 @@ use tokio::{
 };
 use uuid::Uuid;
 use yrs::{
-  AsyncTransact, ClientID, Doc, ReadTxn, StateVector, Subscription, Update,
+  AsyncTransact, ClientID, Doc, ReadTxn, StateVector, Subscription, Update, XmlFragment, XmlOut,
   encoding::{read::Cursor, write::Write},
   sync::{
     Awareness, DefaultProtocol, Message as YrsMessage, SyncMessage,
     protocol::{AsyncProtocol, Error as SyncError, MSG_SYNC, MSG_SYNC_UPDATE, MessageReader},
   },
+  types::{AsPrelim, xml::XmlIn},
   updates::{
     decoder::{Decode, DecoderV1},
     encoder::{Encode, Encoder, EncoderV1},
@@ -91,6 +92,13 @@ impl NoteEditing {
       storage: Arc::new(storage),
       updater,
     }
+  }
+
+  #[cfg(test)]
+  pub async fn init_test(storage: FileStorage) -> Self {
+    let (_state, updater) =
+      centaurus::backend::endpoints::websocket::state::UpdateState::<UpdateMessage>::init().await;
+    Self::init(storage, updater)
   }
 
   pub async fn get_or_open_note(&self, note_id: Uuid, db: &Connection) -> Result<Arc<NoteState>> {
@@ -361,13 +369,44 @@ impl NoteState {
   }
 
   async fn restore(&self, data: &[u8]) -> Result<()> {
-    let awareness = self.doc.lock().await;
-    awareness
-      .doc()
+    // A snapshot is a full yrs document state. Applying it as an update onto the
+    // live doc only ever merges new operations in (CRDT can't move backwards), so
+    // restoring older content would be a no-op. Instead we rebuild the live doc's
+    // top-level fragment from the snapshot content as fresh operations: clear the
+    // current children and deep-copy the snapshot's children back in. This moves
+    // the doc forward in CRDT time while resulting in the old content, and the
+    // resulting update is broadcast to connected clients like any other edit.
+    let snapshot_doc = Doc::new();
+    snapshot_doc
       .transact_mut()
       .await
-      .apply_update(Update::decode_v1(data).context("failed to decode note content")?)
-      .context("failed to apply update")?;
+      .apply_update(Update::decode_v1(data).context("failed to decode snapshot")?)
+      .context("failed to apply snapshot update")?;
+
+    let children: Vec<XmlIn> = {
+      let txn = snapshot_doc.transact().await;
+      match txn.get_xml_fragment("default") {
+        Some(fragment) => fragment
+          .children(&txn)
+          .map(|node| match node {
+            XmlOut::Element(v) => XmlIn::Element(v.as_prelim(&txn)),
+            XmlOut::Fragment(v) => XmlIn::Fragment(v.as_prelim(&txn)),
+            XmlOut::Text(v) => XmlIn::Text(v.as_prelim(&txn)),
+          })
+          .collect(),
+        None => Vec::new(),
+      }
+    };
+
+    let awareness = self.doc.lock().await;
+    let doc = awareness.doc();
+    let fragment = doc.get_or_insert_xml_fragment("default");
+    let mut txn = doc.transact_mut().await;
+    let len = fragment.len(&txn);
+    fragment.remove_range(&mut txn, 0, len);
+    for child in children {
+      fragment.push_back(&mut txn, child);
+    }
 
     Ok(())
   }
@@ -417,7 +456,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
     let storage = crate::storage::test::init_test_storage().await;
 
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
     let second = editing.get_or_open_note(note_id, &db).await.unwrap();
 
@@ -429,7 +468,7 @@ mod note_editing_test {
   async fn get_or_open_note_errors_for_missing_note() {
     let db = test_db().await;
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     // no note row exists -> get_content fails -> error propagates
     assert!(editing.get_or_open_note(Uuid::new_v4(), &db).await.is_err());
   }
@@ -438,7 +477,7 @@ mod note_editing_test {
   async fn close_note_on_unopened_note_is_ok() {
     let db = test_db().await;
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     // closing a note that was never opened hits the early-return branch
     editing.close_note(Uuid::new_v4(), &db).await.unwrap();
   }
@@ -450,7 +489,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     // two subscribers
     let first = editing.get_or_open_note(note_id, &db).await.unwrap();
     let _second = editing.get_or_open_note(note_id, &db).await.unwrap();
@@ -476,7 +515,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     // an empty doc saves successfully (covers gc/encode/render_preview/set_content)
@@ -492,7 +531,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
     // a fresh subscriber has no buffered messages
     let mut rx = state.receiver();
@@ -513,7 +552,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {
@@ -558,7 +597,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {
@@ -604,7 +643,7 @@ mod note_editing_test {
     let note_id = db.notes().create(owner, "T".into()).await.unwrap();
 
     let storage = crate::storage::test::init_test_storage().await;
-    let editing = NoteEditing::init(storage);
+    let editing = NoteEditing::init_test(storage).await;
     let state = editing.get_or_open_note(note_id, &db).await.unwrap();
 
     {
