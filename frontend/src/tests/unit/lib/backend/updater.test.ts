@@ -103,10 +103,7 @@ describe('handleMessage', () => {
 
   it('invalidates the snapshot list and info on a NoteSnapshot update', () => {
     const handler = getHandler();
-    handler(
-      { note_id: 'n1', type: UpdateType.NoteSnapshot, uuid: 's1' },
-      'me'
-    );
+    handler({ note_id: 'n1', type: UpdateType.NoteSnapshot, uuid: 's1' }, 'me');
     expect(invalidatedUrls()).toEqual([
       '/api/notes/snapshots/n1',
       '/api/notes/snapshots/s1/info'

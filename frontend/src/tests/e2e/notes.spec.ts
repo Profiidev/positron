@@ -292,19 +292,16 @@ test.describe('note snapshots', () => {
 
     await page.getByRole('button', { name: 'Snapshot manager' }).click();
     // The restore button lives inside the snapshot option (ArchiveRestore icon).
-    await page
-      .getByRole('option')
-      .first()
-      .getByRole('button')
-      .first()
-      .click();
+    await page.getByRole('option').first().getByRole('button').first().click();
 
     await expect(
       page.getByText('Do you really want to restore this snapshot')
     ).toBeVisible();
     await page.getByRole('button', { name: 'Restore' }).last().click();
 
-    await expect(page.getByText('Snapshot restored successfully')).toBeVisible();
+    await expect(
+      page.getByText('Snapshot restored successfully')
+    ).toBeVisible();
   });
 
   test('deletes a snapshot from the manager', async ({ page }) => {
@@ -312,12 +309,7 @@ test.describe('note snapshots', () => {
 
     await page.getByRole('button', { name: 'Snapshot manager' }).click();
     // The destructive delete button is the last button inside the option.
-    await page
-      .getByRole('option')
-      .first()
-      .getByRole('button')
-      .last()
-      .click();
+    await page.getByRole('option').first().getByRole('button').last().click();
 
     await expect(
       page.getByText('Do you really want to delete the snapshot')
@@ -347,7 +339,9 @@ test.describe('note snapshots', () => {
     ).toBeVisible();
     await page.getByRole('button', { name: 'Restore' }).last().click();
 
-    await expect(page.getByText('Snapshot restored successfully')).toBeVisible();
+    await expect(
+      page.getByText('Snapshot restored successfully')
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/notes\/note-1$/);
   });
 

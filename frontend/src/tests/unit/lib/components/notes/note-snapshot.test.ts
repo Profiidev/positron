@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/svelte';
 import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
 import type { NoteSnapshotInfo } from '$lib/client';
 
@@ -79,7 +85,7 @@ describe('NoteSnapshot', () => {
     await fireEvent.click(restore);
 
     expect(onRestore).toHaveBeenCalledWith('snapshot-1');
-    // stopPropagation keeps the item's onSelect (onOpen) from firing.
+    // StopPropagation keeps the item's onSelect (onOpen) from firing.
     expect(onOpen).not.toHaveBeenCalled();
   });
 
