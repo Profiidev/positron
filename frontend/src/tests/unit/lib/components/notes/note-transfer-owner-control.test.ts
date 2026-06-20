@@ -31,7 +31,9 @@ describe('NoteTransferOwnerControl', () => {
       })
     );
 
-    expect(screen.getByPlaceholderText('Search new owner...')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Search new owner...')
+    ).toBeInTheDocument();
     expect(screen.getByText('Bob User')).toBeInTheDocument();
     expect(screen.getByText('Cara User')).toBeInTheDocument();
   });
@@ -80,7 +82,9 @@ describe('NoteTransferOwnerControl', () => {
         name: 'Transfer ownership from Alice Owner'
       })
     );
-    expect(screen.getByPlaceholderText('Search new owner...')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Search new owner...')
+    ).toBeInTheDocument();
 
     await fireEvent.click(screen.getByRole('option', { name: /Bob User/ }));
 

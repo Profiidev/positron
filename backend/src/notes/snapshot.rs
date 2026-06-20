@@ -207,9 +207,10 @@ mod test {
   use crate::storage::StorageExt;
 
   async fn app(db: Connection, jwt: JwtState, storage: FileStorage) -> Router {
-    let (_state, updater) =
-      centaurus::backend::endpoints::websocket::state::UpdateState::<crate::utils::UpdateMessage>::init()
-        .await;
+    let (_state, updater) = centaurus::backend::endpoints::websocket::state::UpdateState::<
+      crate::utils::UpdateMessage,
+    >::init()
+    .await;
     let editing = crate::notes::state::NoteEditing::init(storage.clone(), updater.clone());
     Router::new()
       .route("/{note_uuid}", get(super::list))
