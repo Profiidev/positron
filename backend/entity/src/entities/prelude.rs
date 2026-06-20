@@ -7,6 +7,7 @@ pub use super::group_user::Entity as GroupUser;
 pub use super::invalid_jwt::Entity as InvalidJwt;
 pub use super::key::Entity as Key;
 pub use super::note::Entity as Note;
+pub use super::note_snapshot::Entity as NoteSnapshot;
 pub use super::note_user::Entity as NoteUser;
 pub use super::o_auth_client::Entity as OAuthClient;
 pub use super::o_auth_client_additional_redirect_uri::Entity as OAuthClientAdditionalRedirectUri;
