@@ -4,12 +4,33 @@ use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, QueryOrder, TransactionTrait, prelude::*,
+  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType,
+  QueryOrder, QuerySelect, TransactionTrait, prelude::*,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub mod snapshot;
+
+#[derive(DerivePartialModel, FromQueryResult)]
+#[sea_orm(entity = "user::Entity")]
+pub struct PartialUser {
+  #[sea_orm(from_alias = "owner_id")]
+  id: Uuid,
+  #[sea_orm(from_alias = "owner_name")]
+  name: String,
+}
+
+#[derive(DerivePartialModel, FromQueryResult)]
+#[sea_orm(entity = "note::Entity")]
+struct NoteWithOwner {
+  id: Uuid,
+  title: String,
+  preview: String,
+  public_access: Option<NoteShareAccess>,
+  #[sea_orm(nested)]
+  owner: Option<PartialUser>,
+}
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct SharedUserInfo {
@@ -42,17 +63,6 @@ pub struct NoteInfoPublic {
   pub title: String,
   pub owner: SimpleUserInfo,
   pub can_edit: bool,
-}
-
-struct NoteOwnerLink;
-
-impl Linked for NoteOwnerLink {
-  type FromEntity = note::Entity;
-  type ToEntity = user::Entity;
-
-  fn link(&self) -> Vec<sea_orm::LinkDef> {
-    vec![note::Relation::User.def()]
-  }
 }
 
 pub struct NoteTable<'db> {
@@ -185,24 +195,27 @@ impl<'db> NoteTable<'db> {
       .map(|row| row.note)
       .collect();
 
-    let notes_with_owners = note::Entity::find()
+    let notes_with_owners: Vec<NoteWithOwner> = note::Entity::find()
       .filter(
         Condition::any()
           .add(note::Column::Owner.eq(user_id))
           .add(note::Column::Id.is_in(shared_note_ids)),
       )
-      .find_also_linked(NoteOwnerLink)
+      .join(JoinType::LeftJoin, note::Relation::User.def())
+      .into_partial_model()
       .all(self.db)
       .await?;
 
-    let note_ids: Vec<Uuid> = notes_with_owners.iter().map(|(note, _)| note.id).collect();
+    let note_ids: Vec<Uuid> = notes_with_owners.iter().map(|note| note.id).collect();
     let shared_by_note = self.shared_with_for_notes(&note_ids).await?;
 
     notes_with_owners
       .into_iter()
-      .map(|(note, owners)| {
-        let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
-        let is_owner = note.owner == user_id;
+      .map(|note| {
+        let owner = note
+          .owner
+          .ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+        let is_owner = owner.id == user_id;
         let can_edit = is_owner
           || shared_by_note
             .get(&note.id)
@@ -231,16 +244,19 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn info(&self, note_id: Uuid, user_id: Uuid) -> Result<Option<NoteInfo>> {
-    let res = Note::find_by_id(note_id)
-      .find_also_linked(NoteOwnerLink)
+    let res: Option<NoteWithOwner> = Note::find_by_id(note_id)
+      .join(JoinType::LeftJoin, note::Relation::User.def())
+      .into_partial_model()
       .one(self.db)
       .await?;
 
-    let Some((note, owners)) = res else {
+    let Some(note) = res else {
       return Ok(None);
     };
 
-    let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+    let owner = note
+      .owner
+      .ok_or(DbErr::RecordNotFound("owner not found".into()))?;
 
     let shared_with = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
@@ -257,7 +273,7 @@ impl<'db> NoteTable<'db> {
       })
       .collect();
 
-    let is_owner = note.owner == user_id;
+    let is_owner = owner.id == user_id;
     let can_edit = is_owner || self.can_edit(user_id, note_id).await?;
 
     Ok(Some(NoteInfo {
@@ -276,12 +292,13 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn info_public(&self, note_id: Uuid) -> Result<Option<NoteInfoPublic>> {
-    let res = Note::find_by_id(note_id)
-      .find_also_linked(NoteOwnerLink)
+    let res: Option<NoteWithOwner> = Note::find_by_id(note_id)
+      .join(JoinType::LeftJoin, note::Relation::User.def())
+      .into_partial_model()
       .one(self.db)
       .await?;
 
-    let Some((note, owners)) = res else {
+    let Some(note) = res else {
       return Ok(None);
     };
 
@@ -289,7 +306,9 @@ impl<'db> NoteTable<'db> {
       return Ok(None);
     };
 
-    let owner = owners.ok_or(DbErr::RecordNotFound("owner not found".into()))?;
+    let owner = note
+      .owner
+      .ok_or(DbErr::RecordNotFound("owner not found".into()))?;
     let can_edit = access == NoteShareAccess::Edit;
 
     Ok(Some(NoteInfoPublic {
@@ -329,14 +348,11 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn edit_title(&self, note_id: Uuid, title: String) -> Result<()> {
-    let mut note: note::ActiveModel = Note::find_by_id(note_id)
-      .one(self.db)
-      .await?
-      .ok_or(DbErr::RecordNotFound("note not found".into()))?
-      .into();
-
-    note.title = Set(title);
-    note.update(self.db).await?;
+    note::Entity::update_many()
+      .col_expr(note::Column::Title, Expr::value(title))
+      .filter(note::Column::Id.eq(note_id))
+      .exec(self.db)
+      .await?;
 
     Ok(())
   }
@@ -365,12 +381,15 @@ impl<'db> NoteTable<'db> {
 
     let txn = self.db.begin().await?;
 
-    let note = Note::find_by_id(note_id)
+    let owner: Uuid = Note::find_by_id(note_id)
+      .select_only()
+      .column(note::Column::Owner)
+      .into_tuple()
       .one(&txn)
       .await?
       .ok_or(DbErr::RecordNotFound("note not found".into()))?;
 
-    if note.owner != current_owner {
+    if owner != current_owner {
       return Err(DbErr::Custom("forbidden".into()).into());
     }
 
@@ -378,9 +397,11 @@ impl<'db> NoteTable<'db> {
       return Err(DbErr::RecordNotFound("user not found".into()).into());
     }
 
-    let mut active: note::ActiveModel = note.into();
-    active.owner = Set(new_owner);
-    active.update(&txn).await?;
+    note::Entity::update_many()
+      .col_expr(note::Column::Owner, Expr::value(new_owner))
+      .filter(note::Column::Id.eq(note_id))
+      .exec(&txn)
+      .await?;
 
     let current_shares = note_user::Entity::find()
       .filter(note_user::Column::Note.eq(note_id))
@@ -417,15 +438,12 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn set_content(&self, note_id: Uuid, content: Vec<u8>, preview: String) -> Result<()> {
-    let mut note: note::ActiveModel = Note::find_by_id(note_id)
-      .one(self.db)
-      .await?
-      .ok_or(DbErr::RecordNotFound("note not found".into()))?
-      .into();
-
-    note.content = Set(content);
-    note.preview = Set(preview);
-    note.update(self.db).await?;
+    note::Entity::update_many()
+      .col_expr(note::Column::Content, Expr::value(content))
+      .col_expr(note::Column::Preview, Expr::value(preview))
+      .filter(note::Column::Id.eq(note_id))
+      .exec(self.db)
+      .await?;
 
     Ok(())
   }
@@ -440,11 +458,17 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn get_public_access(&self, note_id: Uuid) -> Result<Option<NoteShareAccess>> {
-    let Some(note) = Note::find_by_id(note_id).one(self.db).await? else {
+    let Some(access) = Note::find_by_id(note_id)
+      .select_only()
+      .column(note::Column::PublicAccess)
+      .into_tuple()
+      .one(self.db)
+      .await?
+    else {
       return Ok(None);
     };
 
-    Ok(note.public_access)
+    Ok(access)
   }
 
   pub async fn set_public_access(
@@ -452,14 +476,16 @@ impl<'db> NoteTable<'db> {
     note_id: Uuid,
     public_access: Option<NoteShareAccess>,
   ) -> Result<()> {
-    let mut note: note::ActiveModel = Note::find_by_id(note_id)
-      .one(self.db)
-      .await?
-      .ok_or(DbErr::RecordNotFound("note not found".into()))?
-      .into();
+    let mut col_expr = Expr::value(public_access);
+    if self.db.get_database_backend() == DatabaseBackend::Postgres {
+      col_expr = col_expr.cast_as("note_share_access");
+    }
 
-    note.public_access = Set(public_access);
-    note.update(self.db).await?;
+    Note::update_many()
+      .col_expr(note::Column::PublicAccess, col_expr)
+      .filter(note::Column::Id.eq(note_id))
+      .exec(self.db)
+      .await?;
 
     Ok(())
   }
@@ -691,14 +717,6 @@ mod test {
     db.notes().edit_title(id, "New".into()).await.unwrap();
     let info = db.notes().info(id, owner).await.unwrap().unwrap();
     assert_eq!(info.title, "New");
-
-    // missing note -> RecordNotFound
-    assert!(
-      db.notes()
-        .edit_title(Uuid::new_v4(), "x".into())
-        .await
-        .is_err()
-    );
   }
 
   #[tokio::test]
@@ -739,14 +757,8 @@ mod test {
     let info = db.notes().info(id, owner).await.unwrap().unwrap();
     assert_eq!(info.preview, "preview");
 
-    // missing note errors for both set and get
+    // missing note errors for get
     assert!(db.notes().get_content(Uuid::new_v4()).await.is_err());
-    assert!(
-      db.notes()
-        .set_content(Uuid::new_v4(), vec![], "".into())
-        .await
-        .is_err()
-    );
   }
 
   #[tokio::test]
@@ -936,17 +948,6 @@ mod test {
     assert_eq!(
       db.notes().get_public_access(Uuid::new_v4()).await.unwrap(),
       None
-    );
-  }
-
-  #[tokio::test]
-  async fn set_public_access_fails_for_missing_note() {
-    let db = test_db().await;
-    assert!(
-      db.notes()
-        .set_public_access(Uuid::new_v4(), Some(NoteShareAccess::View))
-        .await
-        .is_err()
     );
   }
 

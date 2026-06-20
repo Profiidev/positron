@@ -26,6 +26,8 @@ impl<'db> NoteSnapshotTable<'db> {
       created_at: Set(Utc::now().naive_utc()),
     };
 
+    snapshot.insert(self.db).await?;
+
     Ok(())
   }
 }
