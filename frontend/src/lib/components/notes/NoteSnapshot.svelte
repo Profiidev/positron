@@ -31,13 +31,18 @@
   let open = $state(false);
 
   const openSnapshot = (snapshotId: string) => {
-    onOpen(snapshotId);
     open = false;
+    onOpen(snapshotId);
   };
 
   const restoreSnapshot = (snapshotId: string) => {
-    onRestore(snapshotId);
     open = false;
+    onRestore(snapshotId);
+  };
+
+  const deleteSnapshot = (snapshotId: string) => {
+    open = false;
+    onDelete(snapshotId);
   };
 </script>
 
@@ -109,7 +114,7 @@
                         variant="destructive"
                         onclick={(e) => {
                           e.stopPropagation();
-                          onDelete(snapshot.id);
+                          deleteSnapshot(snapshot.id);
                         }}
                       >
                         <Trash />

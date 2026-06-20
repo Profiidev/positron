@@ -12,6 +12,7 @@
     deleteNote,
     deleteNoteSnapshot,
     editNote,
+    restoreNoteSnapshot,
     shareNote,
     shareNotePublic,
     transferNote,
@@ -37,6 +38,10 @@
   let isLoading = $state(false);
   let transferOpen = $state(false);
   let transferSaving = $state(false);
+  let restoreOpen = $state(false);
+  let pendingRestore: string | undefined = $state();
+  let deleteSnapshotOpen = $state(false);
+  let pendingDeleteSnapshot: string | undefined = $state();
   let pendingNewOwner = $state<SimpleUserInfo | undefined>(undefined);
   let titleSaving = $state(false);
   let note: NoteInfo | undefined = $state();
@@ -257,6 +262,46 @@
     pendingNewOwner = undefined;
     toast.success('Ownership transferred');
   };
+
+  const restoreConfirm = async () => {
+    if (!pendingRestore) return;
+    isLoading = true;
+    const res = await restoreNoteSnapshot({
+      body: {
+        snapshot_id: pendingRestore
+      }
+    });
+    isLoading = false;
+
+    if (res.error) {
+      return { error: 'Failed to restore snapshot' };
+    } else {
+      toast.success(`Snapshot restored successfully`);
+      setTimeout(() => {
+        goto(`/notes/${data.id}`);
+      });
+    }
+  };
+
+  const deleteSnapshot = async () => {
+    if (!pendingDeleteSnapshot) return;
+    isLoading = true;
+    let ret = await deleteNoteSnapshot({
+      body: {
+        snapshot_id: pendingDeleteSnapshot
+      }
+    });
+    isLoading = false;
+
+    if (ret.error) {
+      return { error: 'Failed to delete snapshot' };
+    } else {
+      toast.success(`Snapshot deleted successfully`);
+      setTimeout(() => {
+        goto(`/notes/${data.id}`);
+      });
+    }
+  };
 </script>
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
@@ -325,19 +370,13 @@
         onOpen={(id) => {
           goto(`/notes/${data.id}/${id}`);
         }}
-        onRestore={() => {}}
-        onDelete={async (id) => {
-          let res = await deleteNoteSnapshot({
-            body: {
-              snapshot_id: id
-            }
-          });
-
-          if (res.error) {
-            toast.error('Failed to delete snapshot');
-          } else {
-            toast.success('Snapshot deleted');
-          }
+        onRestore={(id) => {
+          pendingRestore = id;
+          restoreOpen = true;
+        }}
+        onDelete={(id) => {
+          pendingDeleteSnapshot = id;
+          deleteSnapshotOpen = true;
         }}
       />
     {/if}
@@ -381,5 +420,24 @@
   onsubmit={transferConfirm}
   bind:open={transferOpen}
   bind:isLoading={transferSaving}
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Delete Snapshot"
+  description={`Do you really want to delete the snapshot ${note?.title}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteSnapshot}
+  bind:open={deleteSnapshotOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Restore Snapshot"
+  description={`Do you really want to restore this snapshot of ${note?.title}?`}
+  confirm="Restore"
+  onsubmit={restoreConfirm}
+  bind:open={restoreOpen}
+  bind:isLoading
   schema={z.object({})}
 />

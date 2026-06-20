@@ -9,6 +9,7 @@
   import { goto } from '$app/navigation';
   import {
     deleteNoteSnapshot,
+    getNoteSnapshotContent,
     restoreNoteSnapshot,
     type NoteSnapshotDetail
   } from '$lib/client';
@@ -19,7 +20,7 @@
 
   let isLoading = $state(false);
   let restoreOpen = $state(false);
-  let title = $state('');
+  let deleteSnapshotOpen = $state(false);
   let snapshot: NoteSnapshotDetail | undefined = $state();
   let snapData: Uint8Array | undefined = $state();
 
@@ -35,7 +36,21 @@
       }
 
       snapshot = res.data;
-      title = res.data.title;
+    });
+  });
+
+  $effect(() => {
+    getNoteSnapshotContent({
+      path: {
+        snapshot_id: data.snapshot
+      },
+      parseAs: 'arrayBuffer'
+    }).then((res) => {
+      if (!res.data || res.error) {
+        toast.error(`Failed to load snapshot content`);
+        return;
+      }
+      snapData = new Uint8Array(res.data as ArrayBuffer);
     });
   });
 
@@ -79,7 +94,7 @@
 </script>
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
-  <div class="mb-0 ml-7 flex h-9 min-w-0 items-center gap-2 md:m-0">
+  <div class="mb-0 ml-7 flex min-w-0 items-center gap-2 md:m-0">
     <Button
       size="icon"
       variant="ghost"
@@ -89,8 +104,10 @@
       <ArrowLeft class="size-5" />
     </Button>
 
-    <p class="text-xl">{snapshot?.title}:</p>
-    <p class="text-xl">
+    <p class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis">
+      {snapshot?.title}:
+    </p>
+    <p class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis">
       {snapshot
         ? D.DateTime?.fromISO(snapshot.created_at).toLocaleString(
             D.DateTime.DATETIME_MED_WITH_WEEKDAY,
@@ -112,7 +129,7 @@
     </Button>
     <Button
       class="shrink-0 cursor-pointer px-2 lg:px-2.5"
-      onclick={deleteSnapshot}
+      onclick={() => (deleteSnapshotOpen = true)}
       variant="destructive"
       disabled={isLoading}
       aria-label="Delete"
@@ -125,6 +142,16 @@
     <TipTabReadonly data={snapData ?? new Uint8Array()} />
   </div>
 </div>
+<FormDialog
+  title="Delete Snapshot"
+  description={`Do you really want to delete the snapshot ${snapshot?.title}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteSnapshot}
+  bind:open={deleteSnapshotOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
 <FormDialog
   title="Restore Snapshot"
   description={`Do you really want to restore this snapshot of ${snapshot?.title}?`}
