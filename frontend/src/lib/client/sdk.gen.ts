@@ -126,6 +126,9 @@ import type {
   InfoNoteShareData,
   InfoNoteShareErrors,
   InfoNoteShareResponses,
+  InfoNoteSnapshotData,
+  InfoNoteSnapshotErrors,
+  InfoNoteSnapshotResponses,
   InfoOauthClientData,
   InfoOauthClientErrors,
   InfoOauthClientResponses,
@@ -1730,6 +1733,19 @@ export const restoreNoteSnapshot = <ThrowOnError extends boolean = false>(
       ...options.headers
     }
   });
+
+export const infoNoteSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<InfoNoteSnapshotData, ThrowOnError>
+): RequestResult<
+  InfoNoteSnapshotResponses,
+  InfoNoteSnapshotErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    InfoNoteSnapshotResponses,
+    InfoNoteSnapshotErrors,
+    ThrowOnError
+  >({ url: '/api/notes/snapshots/{snapshot_id}/info', ...options });
 
 export const getNoteSnapshotContent = <ThrowOnError extends boolean = false>(
   options: Options<GetNoteSnapshotContentData, ThrowOnError>

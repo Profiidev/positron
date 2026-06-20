@@ -1,8 +1,8 @@
 use centaurus::error::Result;
 use chrono::{DateTime, Utc};
-use entity::note_snapshot;
+use entity::{note, note_snapshot};
 use schemars::JsonSchema;
-use sea_orm::{ActiveValue::Set, QueryOrder, prelude::*};
+use sea_orm::{ActiveValue::Set, QueryOrder, QuerySelect, prelude::*};
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -15,6 +15,13 @@ pub struct NoteSnapshotInfo {
   pub id: Uuid,
   pub note_id: Uuid,
   pub preview: String,
+  pub created_at: sea_orm::prelude::DateTime,
+}
+
+#[derive(Serialize, JsonSchema)]
+pub struct NoteSnapshotDetail {
+  pub title: String,
+  pub note_id: Uuid,
   pub created_at: sea_orm::prelude::DateTime,
 }
 
@@ -62,6 +69,29 @@ impl<'db> NoteSnapshotTable<'db> {
         .one(self.db)
         .await?,
     )
+  }
+
+  pub async fn info(&self, snapshot_id: Uuid) -> Result<Option<NoteSnapshotDetail>> {
+    let Some(snapshot) = self.find(snapshot_id).await? else {
+      return Ok(None);
+    };
+
+    let Some((title, note_id)) = note::Entity::find_by_id(snapshot.note)
+      .select_only()
+      .column(note::Column::Id)
+      .column(note::Column::Title)
+      .into_tuple()
+      .one(self.db)
+      .await?
+    else {
+      return Ok(None);
+    };
+
+    Ok(Some(NoteSnapshotDetail {
+      title,
+      note_id,
+      created_at: snapshot.created_at,
+    }))
   }
 
   pub async fn delete(&self, snapshot_id: Uuid) -> Result<bool> {

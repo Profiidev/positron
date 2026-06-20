@@ -91,6 +91,8 @@ import type {
   InfoNoteResponse,
   InfoNoteShareData,
   InfoNoteShareResponse,
+  InfoNoteSnapshotData,
+  InfoNoteSnapshotResponse,
   InfoOauthClientData,
   InfoOauthClientResponse,
   InfoOAuthPolicyData,
@@ -809,6 +811,12 @@ export const restoreNoteSnapshotMswHandler = wrapMswHandler<
   RestoreNoteSnapshotError,
   RestoreNoteSnapshotData
 >('/api/notes/snapshots/restore', 'put', client.getConfig);
+
+export const infoNoteSnapshotMswHandler = wrapMswHandler<
+  InfoNoteSnapshotResponse,
+  never,
+  InfoNoteSnapshotData
+>('/api/notes/snapshots/{snapshot_id}/info', 'get', client.getConfig);
 
 export const getNoteSnapshotContentMswHandler = wrapMswHandler<
   never,

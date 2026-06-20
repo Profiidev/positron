@@ -13,7 +13,10 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-  db::{DBTrait, notes::snapshot::NoteSnapshotInfo},
+  db::{
+    DBTrait,
+    notes::snapshot::{NoteSnapshotDetail, NoteSnapshotInfo},
+  },
   notes::state::MB,
   storage::StorageExt,
 };
@@ -28,6 +31,10 @@ pub fn router() -> ApiRouter {
     .api_route(
       "/restore",
       put_with(restore, |op| op.id("restoreNoteSnapshot")),
+    )
+    .api_route(
+      "/{snapshot_id}/info",
+      get_with(snapshot_info, |op| op.id("infoNoteSnapshot")),
     )
     .api_route(
       "/{snapshot_id}/content",
@@ -125,6 +132,20 @@ async fn restore(
   Ok(())
 }
 
+async fn snapshot_info(
+  auth: JwtAuth,
+  db: Connection,
+  Path(SnapshotPath { snapshot_id }): Path<SnapshotPath>,
+) -> Result<Json<NoteSnapshotDetail>> {
+  let Some(info) = db.note_snapshot().info(snapshot_id).await? else {
+    bail!(NOT_FOUND, "snapshot not found");
+  };
+
+  require_owner(&auth, &db, info.note_id).await?;
+
+  Ok(Json(info))
+}
+
 async fn content(
   auth: JwtAuth,
   db: Connection,
@@ -177,6 +198,7 @@ mod test {
       .route("/{note_uuid}", get(super::list))
       .route("/", axum::routing::delete(super::delete))
       .route("/restore", axum::routing::put(super::restore))
+      .route("/{snapshot_id}/info", get(super::snapshot_info))
       .route("/{snapshot_id}/content", get(super::content))
       .layer(Extension(jwt))
       .layer(Extension(db))
@@ -472,6 +494,91 @@ mod test {
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn info_returns_note_title_and_created_at_for_owner() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "My note".into()).await.unwrap();
+    s.db
+      .note_snapshot()
+      .create(note, "preview".into())
+      .await
+      .unwrap();
+    let snapshot_id = snapshot_ids(&s.db, note).await[0];
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      crate::storage::test::init_test_storage().await,
+    )
+    .await;
+
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{snapshot_id}/info"),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+    assert_eq!(body["title"], "My note");
+    assert!(body["created_at"].is_string());
+  }
+
+  #[tokio::test]
+  async fn info_forbidden_for_non_owner() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .note_snapshot()
+      .create(note, "preview".into())
+      .await
+      .unwrap();
+    let snapshot_id = snapshot_ids(&s.db, note).await[0];
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      crate::storage::test::init_test_storage().await,
+    )
+    .await;
+
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{snapshot_id}/info"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  #[tokio::test]
+  async fn info_returns_not_found_for_unknown_snapshot() {
+    let s = setup().await;
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      crate::storage::test::init_test_storage().await,
+    )
+    .await;
+
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{}/info", Uuid::new_v4()),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
   }
 
   #[tokio::test]

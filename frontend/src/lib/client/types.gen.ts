@@ -301,6 +301,12 @@ export type NoteShareReq = {
   shared_with: Array<NoteShareEntry>;
 };
 
+export type NoteSnapshotDetail = {
+  created_at: string;
+  note_id: string;
+  title: string;
+};
+
 export type NoteSnapshotIdReq = {
   snapshot_id: string;
 };
@@ -3684,6 +3690,33 @@ export type RestoreNoteSnapshotResponses = {
    */
   200: unknown;
 };
+
+export type InfoNoteSnapshotData = {
+  body?: never;
+  path: {
+    snapshot_id: string;
+  };
+  query?: never;
+  url: '/api/notes/snapshots/{snapshot_id}/info';
+};
+
+export type InfoNoteSnapshotErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoNoteSnapshotResponses = {
+  200: NoteSnapshotDetail;
+};
+
+export type InfoNoteSnapshotResponse =
+  InfoNoteSnapshotResponses[keyof InfoNoteSnapshotResponses];
 
 export type GetNoteSnapshotContentData = {
   body?: never;
