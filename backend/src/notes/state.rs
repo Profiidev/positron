@@ -15,6 +15,7 @@ use axum::{
   },
 };
 use centaurus::{db::init::Connection, error::Result, eyre::Context, storage::FileStorage};
+use chrono::{DateTime, TimeDelta, Utc};
 use dashmap::DashMap;
 use image::EncodableLayout;
 use tokio::{
@@ -51,6 +52,11 @@ pub struct NoteEditing {
   storage: Arc<FileStorage>,
 }
 
+struct SnapshotData {
+  last_snapshot: DateTime<Utc>,
+  last_snapshot_size: usize,
+}
+
 pub struct NoteState {
   doc: Arc<Mutex<Awareness>>,
   sender: Sender<WsMessage>,
@@ -61,6 +67,7 @@ pub struct NoteState {
   subscriber_count: AtomicUsize,
   save_counter: AtomicIsize,
   storage: Arc<FileStorage>,
+  snapshot_data: Mutex<SnapshotData>,
 }
 
 impl NoteEditing {
@@ -78,6 +85,11 @@ impl NoteEditing {
     }
 
     let content = db.notes().get_content(note_id).await?;
+    let latest_snapshot = db
+      .note_snapshot()
+      .latest_snapshot(note_id)
+      .await?
+      .unwrap_or_default();
 
     let doc = Doc::new();
     if !content.is_empty() {
@@ -137,6 +149,10 @@ impl NoteEditing {
       awareness_subscription,
       sender,
       storage: self.storage.clone(),
+      snapshot_data: Mutex::new(SnapshotData {
+        last_snapshot: latest_snapshot,
+        last_snapshot_size: content.len(),
+      }),
     });
 
     state.clone().start_save_task(db.clone(), note_id);
@@ -260,14 +276,25 @@ impl NoteState {
 
     let preview = render_preview(doc).await;
 
-    if false {
+    let mut snapshot_data = self.snapshot_data.lock().await;
+    let last_elapsed = Utc::now() - snapshot_data.last_snapshot;
+
+    // snapshots are created when the last snapshot is at least older than 10 minutes and (the snapshot is older than 1 hour or the snapshot has changed in size by more than 100B)
+    if last_elapsed >= TimeDelta::minutes(10)
+      && (last_elapsed >= TimeDelta::hours(1)
+        || (content.len() as isize - snapshot_data.last_snapshot_size as isize).abs() > 100)
+    {
       let snapshot_id = db.note_snapshot().create(note_id, preview.clone()).await?;
       self
         .storage
         .note_snapshot()
         .create(note_id, snapshot_id, &content)
         .await?;
+
+      snapshot_data.last_snapshot = Utc::now();
+      snapshot_data.last_snapshot_size = content.len();
     }
+    drop(snapshot_data);
 
     db.notes().set_content(note_id, content, preview).await?;
 

@@ -1,5 +1,5 @@
 use centaurus::error::Result;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use entity::note_snapshot;
 use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, QueryOrder, prelude::*};
@@ -69,5 +69,15 @@ impl<'db> NoteSnapshotTable<'db> {
       .exec(self.db)
       .await?;
     Ok(res.rows_affected > 0)
+  }
+
+  pub async fn latest_snapshot(&self, note_id: Uuid) -> Result<Option<DateTime<Utc>>> {
+    let snapshot = note_snapshot::Entity::find()
+      .filter(note_snapshot::Column::Note.eq(note_id))
+      .order_by_desc(note_snapshot::Column::CreatedAt)
+      .one(self.db)
+      .await?;
+
+    Ok(snapshot.map(|s| s.created_at.and_utc()))
   }
 }

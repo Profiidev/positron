@@ -49,7 +49,7 @@
   </Popover.Trigger>
   <Popover.Content class="p-0">
     <Command.Root>
-      <Command.Input placeholder="Search people..." />
+      <Command.Input placeholder="Search new owner..." />
       <Command.List class="flex overflow-hidden">
         <ScrollArea class="mt-1 grow">
           <Command.Empty>No people found</Command.Empty>
