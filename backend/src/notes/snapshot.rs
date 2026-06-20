@@ -17,8 +17,9 @@ use crate::{
     DBTrait,
     notes::snapshot::{NoteSnapshotDetail, NoteSnapshotInfo},
   },
-  notes::state::MB,
+  notes::state::{MB, NoteEditing},
   storage::StorageExt,
+  utils::{UpdateMessage, Updater},
 };
 
 pub fn router() -> ApiRouter {
@@ -77,6 +78,7 @@ async fn delete(
   auth: JwtAuth,
   db: Connection,
   storage: FileStorage,
+  updater: Updater,
   Json(req): Json<NoteSnapshotIdReq>,
 ) -> Result<()> {
   let Some(snapshot) = db.note_snapshot().find(req.snapshot_id).await? else {
@@ -100,6 +102,16 @@ async fn delete(
     bail!(NOT_FOUND, "snapshot not found");
   }
 
+  updater
+    .send_to(
+      auth.user_id,
+      UpdateMessage::NoteSnapshot {
+        uuid: snapshot.id,
+        note_id: snapshot.note,
+      },
+    )
+    .await;
+
   Ok(())
 }
 
@@ -107,6 +119,7 @@ async fn restore(
   auth: JwtAuth,
   storage: FileStorage,
   db: Connection,
+  state: NoteEditing,
   Json(req): Json<NoteSnapshotIdReq>,
 ) -> Result<()> {
   let Some(snapshot) = db.note_snapshot().find(req.snapshot_id).await? else {
@@ -127,6 +140,7 @@ async fn restore(
     .set_content(snapshot.note, data.to_vec(), snapshot.preview)
     .await?;
 
+  state.restore(snapshot.note, &data).await?;
   // TODO notify users
 
   Ok(())

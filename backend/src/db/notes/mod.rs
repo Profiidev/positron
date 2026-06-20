@@ -489,6 +489,17 @@ impl<'db> NoteTable<'db> {
 
     Ok(())
   }
+
+  pub async fn get_owner_id(&self, note_id: Uuid) -> Result<Option<Uuid>> {
+    let owner = Note::find_by_id(note_id)
+      .select_only()
+      .column(note::Column::Owner)
+      .into_tuple()
+      .one(self.db)
+      .await?;
+
+    Ok(owner)
+  }
 }
 
 async fn replace_shared_users<C: ConnectionTrait>(

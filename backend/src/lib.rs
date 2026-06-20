@@ -2,7 +2,10 @@ use aide::axum::ApiRouter;
 use axum::{Extension, Router};
 use centaurus::{
   backend::{
-    endpoints::{self, group, mail, setup, websocket},
+    endpoints::{
+      self, group, mail, setup,
+      websocket::{self, state::UpdateState},
+    },
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -97,17 +100,21 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   oauth_management::init(&db).await;
 
   let storage = storage::state(&config).await;
+  let (state, updater) = UpdateState::<UpdateMessage>::init().await;
 
   router = endpoints::user::state(router);
-  router = notes::state(router, storage.clone(), &config);
+  router = notes::state(router, storage.clone(), updater.clone(), &config);
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;
   router = services::state(router, &config).await;
   router = well_known::state(router, &config).await;
-  router = websocket::state::<UpdateMessage>(router).await;
 
-  router.layer(Extension(db)).layer(Extension(storage))
+  router
+    .layer(Extension(state))
+    .layer(Extension(updater))
+    .layer(Extension(db))
+    .layer(Extension(storage))
 }
 
 #[cfg(test)]

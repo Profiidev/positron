@@ -6,6 +6,7 @@ use std::{
   time::Duration,
 };
 
+use aide::OperationIo;
 use axum::{
   Extension,
   body::Bytes,
@@ -14,7 +15,12 @@ use axum::{
     ws::{Message as WsMessage, WebSocket},
   },
 };
-use centaurus::{db::init::Connection, error::Result, eyre::Context, storage::FileStorage};
+use centaurus::{
+  db::init::Connection,
+  error::Result,
+  eyre::{Context, ContextCompat},
+  storage::FileStorage,
+};
 use chrono::{DateTime, TimeDelta, Utc};
 use dashmap::DashMap;
 use image::EncodableLayout;
@@ -41,15 +47,21 @@ use yrs::{
   },
 };
 
-use crate::{db::DBTrait, notes::preview::render_preview, storage::StorageExt};
+use crate::{
+  db::DBTrait,
+  notes::preview::render_preview,
+  storage::StorageExt,
+  utils::{UpdateMessage, Updater},
+};
 
 pub const MB: usize = 1024 * 1024;
 
-#[derive(Clone, FromRequestParts)]
+#[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct NoteEditing {
   docs: Arc<DashMap<Uuid, Arc<NoteState>>>,
   storage: Arc<FileStorage>,
+  updater: Updater,
 }
 
 struct SnapshotData {
@@ -67,14 +79,17 @@ pub struct NoteState {
   subscriber_count: AtomicUsize,
   save_counter: AtomicIsize,
   storage: Arc<FileStorage>,
+  updater: Updater,
+  owner_id: Uuid,
   snapshot_data: Mutex<SnapshotData>,
 }
 
 impl NoteEditing {
-  pub fn init(storage: FileStorage) -> Self {
+  pub fn init(storage: FileStorage, updater: Updater) -> Self {
     Self {
       docs: Arc::new(DashMap::new()),
       storage: Arc::new(storage),
+      updater,
     }
   }
 
@@ -90,6 +105,11 @@ impl NoteEditing {
       .latest_snapshot(note_id)
       .await?
       .unwrap_or_default();
+    let owner_id = db
+      .notes()
+      .get_owner_id(note_id)
+      .await?
+      .context("No owner for note")?;
 
     let doc = Doc::new();
     if !content.is_empty() {
@@ -149,6 +169,8 @@ impl NoteEditing {
       awareness_subscription,
       sender,
       storage: self.storage.clone(),
+      updater: self.updater.clone(),
+      owner_id,
       snapshot_data: Mutex::new(SnapshotData {
         last_snapshot: latest_snapshot,
         last_snapshot_size: content.len(),
@@ -179,6 +201,16 @@ impl NoteEditing {
 
     state.save(db, note_id).await?;
     state.save_counter.store(-1, Ordering::Relaxed);
+
+    Ok(())
+  }
+
+  pub async fn restore(&self, note_id: Uuid, data: &[u8]) -> Result<()> {
+    let Some(state) = self.docs.get(&note_id) else {
+      return Ok(());
+    };
+
+    state.restore(data).await?;
 
     Ok(())
   }
@@ -293,6 +325,17 @@ impl NoteState {
 
       snapshot_data.last_snapshot = Utc::now();
       snapshot_data.last_snapshot_size = content.len();
+
+      self
+        .updater
+        .send_to(
+          self.owner_id,
+          UpdateMessage::NoteSnapshot {
+            uuid: snapshot_id,
+            note_id,
+          },
+        )
+        .await;
     }
     drop(snapshot_data);
 
@@ -315,6 +358,18 @@ impl NoteState {
         sleep(Duration::from_secs(10)).await;
       }
     });
+  }
+
+  async fn restore(&self, data: &[u8]) -> Result<()> {
+    let awareness = self.doc.lock().await;
+    awareness
+      .doc()
+      .transact_mut()
+      .await
+      .apply_update(Update::decode_v1(data).context("failed to decode note content")?)
+      .context("failed to apply update")?;
+
+    Ok(())
   }
 }
 

@@ -2,7 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::storage::FileStorage;
 
-use crate::{config::Config, notes::state::NoteEditing};
+use crate::{config::Config, notes::state::NoteEditing, utils::Updater};
 
 mod management;
 mod preview;
@@ -34,12 +34,17 @@ pub fn router() -> ApiRouter {
     .nest("/update", update::router())
 }
 
-pub fn state(router: ApiRouter, storage: FileStorage, config: &Config) -> ApiRouter {
+pub fn state(
+  router: ApiRouter,
+  storage: FileStorage,
+  updater: Updater,
+  config: &Config,
+) -> ApiRouter {
   let (public_note_state, public_note_updater) = update::PublicNoteUpdateState::init();
 
   router
     .layer(Extension(public_note_state))
     .layer(Extension(public_note_updater))
     .layer(Extension(NotesLimits::from_config(config)))
-    .layer(Extension(NoteEditing::init(storage)))
+    .layer(Extension(NoteEditing::init(storage, updater)))
 }

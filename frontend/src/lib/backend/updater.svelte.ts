@@ -11,7 +11,8 @@ export enum UpdateType {
   OAuthPolicy = 'OAuthPolicy',
   Passkey = 'Passkey',
   Apod = 'Apod',
-  Note = 'Note'
+  Note = 'Note',
+  NoteSnapshot = 'NoteSnapshot'
 }
 
 export type UpdateMessage =
@@ -31,6 +32,11 @@ export type UpdateMessage =
         | UpdateType.UserPermissions
         | UpdateType.Passkey
         | UpdateType.Apod;
+    }
+  | {
+      type: UpdateType.NoteSnapshot;
+      note_id: string;
+      uuid: string;
     };
 
 const websocket = createWebsocket<UpdateMessage>();
@@ -98,6 +104,11 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     case UpdateType.Note: {
       invalidate('/api/notes/management').catch(() => {});
       invalidate(`/api/notes/management/${msg.uuid}`).catch(() => {});
+      break;
+    }
+    case UpdateType.NoteSnapshot: {
+      invalidate(`/api/notes/snapshots/${msg.note_id}`).catch(() => {});
+      invalidate(`/api/notes/snapshots/${msg.uuid}/info`).catch(() => {});
       break;
     }
     default: {
