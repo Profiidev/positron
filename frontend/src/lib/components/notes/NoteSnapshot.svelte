@@ -8,16 +8,22 @@
   import type { NoteSnapshotInfo } from '$lib/client';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
-  import { buttonVariants } from '@profidev/pleiades/components/ui/button';
+  import {
+    Button,
+    buttonVariants
+  } from '@profidev/pleiades/components/ui/button';
+  import Trash from '@lucide/svelte/icons/trash';
 
   let {
     onOpen,
     onRestore,
+    onDelete,
     snapshots,
     saving = false
   }: {
     onOpen: (snapshotId: string) => void;
     onRestore: (snapshotId: string) => void;
+    onDelete: (snapshotId: string) => void;
     snapshots: NoteSnapshotInfo[];
     saving?: boolean;
   } = $props();
@@ -86,7 +92,10 @@
                             size: 'icon',
                             class: 'cursor-pointer'
                           })}
-                          onclick={() => restoreSnapshot(snapshot.id)}
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            restoreSnapshot(snapshot.id);
+                          }}
                         >
                           <ArchiveRestore />
                         </Tooltip.Trigger>
@@ -94,6 +103,17 @@
                           <p>Restore Snapshot</p>
                         </Tooltip.Content>
                       </Tooltip.Root>
+                      <Button
+                        size="icon"
+                        class="cursor-pointer"
+                        variant="destructive"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onDelete(snapshot.id);
+                        }}
+                      >
+                        <Trash />
+                      </Button>
                     </Command.Item>
                   {/snippet}
                 </Tooltip.Trigger>

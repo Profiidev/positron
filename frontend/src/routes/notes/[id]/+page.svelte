@@ -10,6 +10,7 @@
   import { goto } from '$app/navigation';
   import {
     deleteNote,
+    deleteNoteSnapshot,
     editNote,
     shareNote,
     shareNotePublic,
@@ -57,6 +58,20 @@
   let shareableUsers = $derived(
     users?.filter((user) => user.id !== note?.owner.id) ?? []
   );
+
+  $effect(() => {
+    if (data.error) {
+      if (data.error === 'not_found') {
+        toast.error('Snapshot not found');
+      } else if (data.error === 'other') {
+        toast.error('Failed to load snapshot');
+      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url);
+    }
+  });
 
   $effect(() => {
     data.noteRes.then((res) => {
@@ -305,7 +320,26 @@
     <Separator orientation="vertical" class="hidden h-5 lg:block" />
 
     {#if snapshots && note?.is_owner}
-      <NoteSnapshot {snapshots} onOpen={() => {}} onRestore={() => {}} />
+      <NoteSnapshot
+        {snapshots}
+        onOpen={(id) => {
+          goto(`/notes/${data.id}/${id}`);
+        }}
+        onRestore={() => {}}
+        onDelete={async (id) => {
+          let res = await deleteNoteSnapshot({
+            body: {
+              snapshot_id: id
+            }
+          });
+
+          if (res.error) {
+            toast.error('Failed to delete snapshot');
+          } else {
+            toast.success('Snapshot deleted');
+          }
+        }}
+      />
     {/if}
     <Button
       class="shrink-0 cursor-pointer px-2 lg:px-2.5"

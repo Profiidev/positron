@@ -76,7 +76,7 @@ impl<'db> NoteSnapshotTable<'db> {
       return Ok(None);
     };
 
-    let Some((title, note_id)) = note::Entity::find_by_id(snapshot.note)
+    let Some((note_id, title)) = note::Entity::find_by_id(snapshot.note)
       .select_only()
       .column(note::Column::Id)
       .column(note::Column::Title)
