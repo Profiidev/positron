@@ -58,7 +58,9 @@
               <p class="text-muted-foreground ml-4">
                 on {D.DateTime?.fromISO(apod.date.toString())
                   .setLocale('de')
-                  .toLocaleString(D.DateTime.DATE_MED)}
+                  .toLocaleString(D.DateTime.DATE_MED, {
+                    locale: navigator.language
+                  })}
               </p>
             </div>
           {:else}
