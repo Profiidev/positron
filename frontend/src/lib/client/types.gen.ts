@@ -277,6 +277,10 @@ export type NotePath = {
   uuid: string;
 };
 
+export type NotePath2 = {
+  note_uuid: string;
+};
+
 export type NotePublicShareReq = {
   note_id: string;
   public_access?: NoteShareAccess | null;
@@ -295,6 +299,23 @@ export type NoteShareEntry = {
 export type NoteShareReq = {
   note_id: string;
   shared_with: Array<NoteShareEntry>;
+};
+
+export type NoteSnapshotDetail = {
+  created_at: string;
+  note_id: string;
+  title: string;
+};
+
+export type NoteSnapshotIdReq = {
+  snapshot_id: string;
+};
+
+export type NoteSnapshotInfo = {
+  created_at: string;
+  id: string;
+  note_id: string;
+  preview: string;
 };
 
 export type NoteTransferReq = {
@@ -472,6 +493,10 @@ export type SimpleUserInfo = {
 
 export type SiteUrlResponse = {
   url: string;
+};
+
+export type SnapshotPath = {
+  snapshot_id: string;
 };
 
 export type SpecialAccess = {
@@ -3558,3 +3583,157 @@ export type NotesConfigResponses = {
 
 export type NotesConfigResponse =
   NotesConfigResponses[keyof NotesConfigResponses];
+
+export type ListNoteSnapshotsData = {
+  body?: never;
+  path: {
+    note_uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/snapshots/{note_uuid}';
+};
+
+export type ListNoteSnapshotsErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListNoteSnapshotsResponses = {
+  200: Array<NoteSnapshotInfo>;
+};
+
+export type ListNoteSnapshotsResponse =
+  ListNoteSnapshotsResponses[keyof ListNoteSnapshotsResponses];
+
+export type DeleteNoteSnapshotData = {
+  body: NoteSnapshotIdReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/snapshots';
+};
+
+export type DeleteNoteSnapshotErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type DeleteNoteSnapshotError =
+  DeleteNoteSnapshotErrors[keyof DeleteNoteSnapshotErrors];
+
+export type DeleteNoteSnapshotResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type RestoreNoteSnapshotData = {
+  body: NoteSnapshotIdReq;
+  path?: never;
+  query?: never;
+  url: '/api/notes/snapshots/restore';
+};
+
+export type RestoreNoteSnapshotErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RestoreNoteSnapshotError =
+  RestoreNoteSnapshotErrors[keyof RestoreNoteSnapshotErrors];
+
+export type RestoreNoteSnapshotResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
+export type InfoNoteSnapshotData = {
+  body?: never;
+  path: {
+    snapshot_id: string;
+  };
+  query?: never;
+  url: '/api/notes/snapshots/{snapshot_id}/info';
+};
+
+export type InfoNoteSnapshotErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type InfoNoteSnapshotResponses = {
+  200: NoteSnapshotDetail;
+};
+
+export type InfoNoteSnapshotResponse =
+  InfoNoteSnapshotResponses[keyof InfoNoteSnapshotResponses];
+
+export type GetNoteSnapshotContentData = {
+  body?: never;
+  path: {
+    snapshot_id: string;
+  };
+  query?: never;
+  url: '/api/notes/snapshots/{snapshot_id}/content';
+};
+
+export type GetNoteSnapshotContentErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};

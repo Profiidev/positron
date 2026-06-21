@@ -30,7 +30,7 @@
 <Popover.Root bind:open>
   <Popover.Trigger
     class={cn(
-      'flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full text-sm font-medium transition-colors md:border md:px-1 lg:pr-2.5 lg:pl-1',
+      'flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full px-1 text-sm font-medium transition-colors md:border lg:pr-2.5 lg:pl-1',
       'hover:bg-muted',
       open && 'bg-muted',
       saving && 'pointer-events-none opacity-60'
@@ -49,7 +49,7 @@
   </Popover.Trigger>
   <Popover.Content class="p-0">
     <Command.Root>
-      <Command.Input placeholder="Search people..." />
+      <Command.Input placeholder="Search new owner..." />
       <Command.List class="flex overflow-hidden">
         <ScrollArea class="mt-1 grow">
           <Command.Empty>No people found</Command.Empty>

@@ -132,11 +132,13 @@ mod test {
 
   use crate::db::{DBTrait, test::insert_user};
 
-  fn app(db: Connection, jwt: JwtState) -> Router {
+  async fn app(db: Connection, jwt: JwtState) -> Router {
+    let storage = crate::storage::test::init_test_storage().await;
+
     Router::new()
       .route("/{uuid}", get(super::notes_websocket))
       .route("/public/{uuid}", get(super::public_share_websocket))
-      .layer(Extension(NoteEditing::init()))
+      .layer(Extension(NoteEditing::init_test(storage).await))
       .layer(Extension(jwt))
       .layer(Extension(db))
   }
@@ -165,6 +167,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let resp = app(db, jwt)
+      .await
       .oneshot(ws_request(&format!("/{}", Uuid::new_v4()), None))
       .await
       .unwrap();
@@ -184,6 +187,7 @@ mod test {
     let note = db.notes().create(owner, "T".into()).await.unwrap();
 
     let resp = app(db, jwt)
+      .await
       .oneshot(ws_request(&format!("/public/{note}"), None))
       .await
       .unwrap();
@@ -195,6 +199,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let resp = app(db, jwt)
+      .await
       .oneshot(ws_request(&format!("/public/{}", Uuid::new_v4()), None))
       .await
       .unwrap();

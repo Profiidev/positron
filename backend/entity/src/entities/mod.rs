@@ -9,6 +9,7 @@ pub mod group_user;
 pub mod invalid_jwt;
 pub mod key;
 pub mod note;
+pub mod note_snapshot;
 pub mod note_user;
 pub mod o_auth_client;
 pub mod o_auth_client_additional_redirect_uri;

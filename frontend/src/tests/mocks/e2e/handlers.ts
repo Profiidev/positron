@@ -124,6 +124,26 @@ export const handlers = [
     )
   ),
   gen.infoNoteShareMswHandler(({ cookies }) => j(data.publicNoteOf(cookies))),
+  gen.listNoteSnapshotsMswHandler(({ cookies }) =>
+    j(data.noteSnapshots[scn(cookies)])
+  ),
+  // `snapshot-missing` reports a 404 so the view page's not-found redirect
+  // (back to the note with `?error=not_found`) can be exercised.
+  gen.infoNoteSnapshotMswHandler(({ params }) =>
+    params.snapshot_id === 'snapshot-missing'
+      ? (new HttpResponse(null, { status: 404 }) as never)
+      : j(data.noteSnapshotDetail)
+  ),
+  // The readonly editor applies an empty yjs update, so serve an empty body.
+  gen.getNoteSnapshotContentMswHandler(
+    () => new HttpResponse(new ArrayBuffer(0), { status: 200 }) as never
+  ),
+  gen.deleteNoteSnapshotMswHandler(
+    () => new HttpResponse(null, { status: 200 }) as never
+  ),
+  gen.restoreNoteSnapshotMswHandler(
+    () => new HttpResponse(null, { status: 200 }) as never
+  ),
   gen.shareNotePublicMswHandler(
     () => new HttpResponse(null, { status: 200 }) as never
   ),

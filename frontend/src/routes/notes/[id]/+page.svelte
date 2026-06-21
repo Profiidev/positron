@@ -10,12 +10,15 @@
   import { goto } from '$app/navigation';
   import {
     deleteNote,
+    deleteNoteSnapshot,
     editNote,
+    restoreNoteSnapshot,
     shareNote,
     shareNotePublic,
     transferNote,
     type NoteInfo,
     type NoteShareAccess,
+    type NoteSnapshotInfo,
     type SharedUserInfo,
     type SimpleUserInfo,
     type UserInfo
@@ -27,6 +30,7 @@
   import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
   import type { NoteActiveEditor } from '$lib/components/notes/types';
   import { Input } from '@profidev/pleiades/components/ui/input';
+  import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
 
   const { data } = $props();
 
@@ -34,6 +38,10 @@
   let isLoading = $state(false);
   let transferOpen = $state(false);
   let transferSaving = $state(false);
+  let restoreOpen = $state(false);
+  let pendingRestore: string | undefined = $state();
+  let deleteSnapshotOpen = $state(false);
+  let pendingDeleteSnapshot: string | undefined = $state();
   let pendingNewOwner = $state<SimpleUserInfo | undefined>(undefined);
   let titleSaving = $state(false);
   let note: NoteInfo | undefined = $state();
@@ -50,10 +58,25 @@
     $state(undefined);
   let userInfo: UserInfo | undefined = $state(undefined);
   let activeEditors = $state<NoteActiveEditor[]>([]);
+  let snapshots: NoteSnapshotInfo[] | undefined = $state();
 
   let shareableUsers = $derived(
     users?.filter((user) => user.id !== note?.owner.id) ?? []
   );
+
+  $effect(() => {
+    if (data.error) {
+      if (data.error === 'not_found') {
+        toast.error('Snapshot not found');
+      } else if (data.error === 'other') {
+        toast.error('Failed to load snapshot');
+      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url);
+    }
+  });
 
   $effect(() => {
     data.noteRes.then((res) => {
@@ -82,6 +105,12 @@
   $effect(() => {
     data.user.then((userInfoData) => {
       userInfo = userInfoData;
+    });
+  });
+
+  $effect(() => {
+    data.snapshotsPromise.then((snapshotsData) => {
+      snapshots = snapshotsData;
     });
   });
 
@@ -233,11 +262,56 @@
     pendingNewOwner = undefined;
     toast.success('Ownership transferred');
   };
+
+  const restoreConfirm = async () => {
+    if (!pendingRestore) return;
+    isLoading = true;
+    const res = await restoreNoteSnapshot({
+      body: {
+        snapshot_id: pendingRestore
+      }
+    });
+    isLoading = false;
+
+    if (res.error) {
+      return { error: 'Failed to restore snapshot' };
+    } else {
+      toast.success(`Snapshot restored successfully`);
+      setTimeout(() => {
+        goto(`/notes/${data.id}`);
+      });
+    }
+  };
+
+  const deleteSnapshot = async () => {
+    if (!pendingDeleteSnapshot) return;
+    isLoading = true;
+    let ret = await deleteNoteSnapshot({
+      body: {
+        snapshot_id: pendingDeleteSnapshot
+      }
+    });
+    isLoading = false;
+
+    if (ret.error) {
+      return { error: 'Failed to delete snapshot' };
+    } else {
+      toast.success(`Snapshot deleted successfully`);
+      setTimeout(() => {
+        goto(`/notes/${data.id}`);
+      });
+    }
+  };
 </script>
 
 <div class="flex h-full max-h-screen min-h-0 w-full flex-col space-y-6 p-4">
   <div class="mb-0 ml-7 flex min-w-0 items-center gap-2 md:m-0">
-    <Button size="icon" variant="ghost" href="/notes" class="shrink-0">
+    <Button
+      size="icon"
+      variant="ghost"
+      href="/notes"
+      class="hidden shrink-0 md:flex"
+    >
       <ArrowLeft class="size-5" />
     </Button>
 
@@ -290,8 +364,24 @@
     {/if}
     <Separator orientation="vertical" class="hidden h-5 lg:block" />
 
+    {#if snapshots && note?.is_owner}
+      <NoteSnapshot
+        {snapshots}
+        onOpen={(id) => {
+          goto(`/notes/${data.id}/${id}`);
+        }}
+        onRestore={(id) => {
+          pendingRestore = id;
+          restoreOpen = true;
+        }}
+        onDelete={(id) => {
+          pendingDeleteSnapshot = id;
+          deleteSnapshotOpen = true;
+        }}
+      />
+    {/if}
     <Button
-      class="shrink-0 cursor-pointer"
+      class="shrink-0 cursor-pointer px-2 lg:px-2.5"
       onclick={() => (deleteOpen = true)}
       variant="destructive"
       disabled={readonly}
@@ -330,5 +420,24 @@
   onsubmit={transferConfirm}
   bind:open={transferOpen}
   bind:isLoading={transferSaving}
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Delete Snapshot"
+  description={`Do you really want to delete the snapshot ${note?.title}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteSnapshot}
+  bind:open={deleteSnapshotOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Restore Snapshot"
+  description={`Do you really want to restore this snapshot of ${note?.title}?`}
+  confirm="Restore"
+  onsubmit={restoreConfirm}
+  bind:open={restoreOpen}
+  bind:isLoading
   schema={z.object({})}
 />

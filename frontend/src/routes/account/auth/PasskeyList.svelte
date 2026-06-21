@@ -242,13 +242,17 @@
             <p class="text-muted-foreground text-sm">
               Created on {D.DateTime?.fromISO(
                 passkey.created.toString()
-              ).toLocaleString(D.DateTime.DATE_MED)}
+              ).toLocaleString(D.DateTime.DATE_MED, {
+                locale: navigator.language
+              })}
             </p>
             <Separator orientation={'vertical'} />
             <p class="text-muted-foreground text-sm">
               Last used on {D.DateTime?.fromISO(
                 passkey.used.toString()
-              ).toLocaleString(D.DateTime.DATE_MED)}
+              ).toLocaleString(D.DateTime.DATE_MED, {
+                locale: navigator.language
+              })}
             </p>
           </div>
         </div>

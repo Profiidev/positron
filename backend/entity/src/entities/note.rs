@@ -18,6 +18,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+  #[sea_orm(has_many = "super::note_snapshot::Entity")]
+  NoteSnapshot,
   #[sea_orm(has_many = "super::note_user::Entity")]
   NoteUser,
   #[sea_orm(
@@ -28,6 +30,12 @@ pub enum Relation {
     on_delete = "Cascade"
   )]
   User,
+}
+
+impl Related<super::note_snapshot::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::NoteSnapshot.def()
+  }
 }
 
 impl Related<super::note_user::Entity> for Entity {

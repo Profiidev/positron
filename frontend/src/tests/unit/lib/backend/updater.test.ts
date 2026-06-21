@@ -17,7 +17,10 @@ vi.mock('@profidev/pleiades/backend', () => ({
 const { UpdateType, connectWebsocket, disconnectWebsocket } =
   await import('$lib/backend/updater.svelte');
 
-type Handler = (msg: { type: string; uuid?: string }, user: string) => void;
+type Handler = (
+  msg: { type: string; uuid?: string; note_id?: string },
+  user: string
+) => void;
 
 /** Registers the websocket and returns the message handler pleiades received. */
 const getHandler = (user = 'me'): Handler => {
@@ -41,6 +44,8 @@ describe('UpdateType enum', () => {
   it('exposes every update kind as a matching string', () => {
     expect(UpdateType.Settings).toBe('Settings');
     expect(UpdateType.Note).toBe('Note');
+    expect(UpdateType.NoteSnapshot).toBe('NoteSnapshot');
+    expect(UpdateType.NoteSnapshotsCleaned).toBe('NoteSnapshotsCleaned');
     expect(Object.values(UpdateType)).toContain('OAuthClient');
   });
 });
@@ -95,6 +100,24 @@ describe('handleMessage', () => {
       '/api/notes/management',
       '/api/notes/management/n1'
     ]);
+  });
+
+  it('invalidates the snapshot list and info on a NoteSnapshot update', () => {
+    const handler = getHandler();
+    handler({ note_id: 'n1', type: UpdateType.NoteSnapshot, uuid: 's1' }, 'me');
+    expect(invalidatedUrls()).toEqual([
+      '/api/notes/snapshots/n1',
+      '/api/notes/snapshots/s1/info'
+    ]);
+  });
+
+  it('invalidates all snapshot paths on NoteSnapshotsCleaned', () => {
+    const handler = getHandler();
+    handler({ type: UpdateType.NoteSnapshotsCleaned }, 'me');
+    const predicate = invalidate.mock.calls[0]?.[0] as (u: URL) => boolean;
+    expect(typeof predicate).toBe('function');
+    expect(predicate(new URL('http://x/api/notes/snapshots/n1'))).toBe(true);
+    expect(predicate(new URL('http://x/api/notes/management'))).toBe(false);
   });
 
   it('does nothing for an unknown message type', () => {

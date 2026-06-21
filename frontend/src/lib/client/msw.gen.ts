@@ -43,6 +43,8 @@ import type {
   DeleteGroupError,
   DeleteNoteData,
   DeleteNoteError,
+  DeleteNoteSnapshotData,
+  DeleteNoteSnapshotError,
   DeleteOauthClientData,
   DeleteOauthClientError,
   DeleteOAuthPolicyData,
@@ -79,6 +81,7 @@ import type {
   GetApodImageInfoResponse,
   GetMailSettingsData,
   GetMailSettingsResponse,
+  GetNoteSnapshotContentData,
   GetOidcSettingsData,
   GetOidcSettingsResponse,
   GroupInfoData,
@@ -88,6 +91,8 @@ import type {
   InfoNoteResponse,
   InfoNoteShareData,
   InfoNoteShareResponse,
+  InfoNoteSnapshotData,
+  InfoNoteSnapshotResponse,
   InfoOauthClientData,
   InfoOauthClientResponse,
   InfoOAuthPolicyData,
@@ -112,6 +117,8 @@ import type {
   ListGroupsSimpleData,
   ListGroupsSimpleResponse,
   ListNotesData,
+  ListNoteSnapshotsData,
+  ListNoteSnapshotsResponse,
   ListNotesResponse,
   ListOauthClientsData,
   ListOauthClientsResponse,
@@ -156,6 +163,8 @@ import type {
   ResetUserAvatarError,
   ResetUserPasswordData,
   ResetUserPasswordError,
+  RestoreNoteSnapshotData,
+  RestoreNoteSnapshotError,
   RetrieveAppTokenData,
   RetrieveAppTokenError,
   SaveAccountSettingsData,
@@ -784,3 +793,33 @@ export const notesConfigMswHandler = wrapMswHandler<
   never,
   NotesConfigData
 >('/api/notes/management/config', 'get', client.getConfig);
+
+export const listNoteSnapshotsMswHandler = wrapMswHandler<
+  ListNoteSnapshotsResponse,
+  never,
+  ListNoteSnapshotsData
+>('/api/notes/snapshots/{note_uuid}', 'get', client.getConfig);
+
+export const deleteNoteSnapshotMswHandler = wrapMswHandler<
+  never,
+  DeleteNoteSnapshotError,
+  DeleteNoteSnapshotData
+>('/api/notes/snapshots', 'delete', client.getConfig);
+
+export const restoreNoteSnapshotMswHandler = wrapMswHandler<
+  never,
+  RestoreNoteSnapshotError,
+  RestoreNoteSnapshotData
+>('/api/notes/snapshots/restore', 'put', client.getConfig);
+
+export const infoNoteSnapshotMswHandler = wrapMswHandler<
+  InfoNoteSnapshotResponse,
+  never,
+  InfoNoteSnapshotData
+>('/api/notes/snapshots/{snapshot_id}/info', 'get', client.getConfig);
+
+export const getNoteSnapshotContentMswHandler = wrapMswHandler<
+  never,
+  never,
+  GetNoteSnapshotContentData
+>('/api/notes/snapshots/{snapshot_id}/content', 'get', client.getConfig);

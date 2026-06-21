@@ -2,7 +2,10 @@ use aide::axum::ApiRouter;
 use axum::{Extension, Router};
 use centaurus::{
   backend::{
-    endpoints::{self, group, mail, setup, websocket},
+    endpoints::{
+      self, group, mail, setup,
+      websocket::{self, state::UpdateState},
+    },
     init::{listener_setup, run_app_connect_info},
     middleware::rate_limiter::RateLimiter,
     router::build_router,
@@ -96,17 +99,28 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
     .expect("Failed to create admin group");
   oauth_management::init(&db).await;
 
+  let storage = storage::state(&config).await;
+  let (state, updater) = UpdateState::<UpdateMessage>::init().await;
+
   router = endpoints::user::state(router);
-  router = notes::state(router, &config);
+  router = notes::state(
+    router,
+    storage.clone(),
+    updater.clone(),
+    db.clone(),
+    &config,
+  );
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
   router = oauth::state(router, &config).await;
-  router = storage::state(router, &config).await;
   router = services::state(router, &config).await;
   router = well_known::state(router, &config).await;
-  router = websocket::state::<UpdateMessage>(router).await;
 
-  router.layer(Extension(db))
+  router
+    .layer(Extension(state))
+    .layer(Extension(updater))
+    .layer(Extension(db))
+    .layer(Extension(storage))
 }
 
 #[cfg(test)]
@@ -138,13 +152,16 @@ mod test {
 
   #[tokio::test]
   async fn module_state_layers_apply_cleanly() {
+    use crate::db::test::test_db;
     // Cover the cheap, infallible state() layers and the well-known router.
     let config = test_config();
     let mut router = ApiRouter::new().nest("/.well-known", well_known::router());
-    router = notes::state(router, &config);
+    let storage = storage::state(&config).await;
+    let db = test_db().await;
+    let (_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    router = notes::state(router, storage.clone(), updater, db, &config);
     router = services::state(router, &config).await;
     router = oauth::state(router, &config).await;
-    router = storage::state(router, &config).await;
     router = well_known::state(router, &config).await;
     let _ = router;
   }
