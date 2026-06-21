@@ -1,2 +1,5 @@
 [profile.default.junit]
 path = "junit-backend.xml"
+
+[profile.app.junit]
+path = "junit-app-backend.xml"

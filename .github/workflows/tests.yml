@@ -132,6 +132,39 @@ jobs:
           path: ${{ github.workspace }}/app/test-results-app-frontend-unit.xml
           retention-days: 5
 
+  app_backend:
+    name: App Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: clippy,rustfmt
+
+      - uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
+      - name: Cache cargo and rust files
+        id: rust_cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+          shared-key: "app_backend_test_cache"
+
+      - uses: taiki-e/install-action@nextest
+      - name: "App Backend Test"
+        run: cd app/src-tauri && cargo nextest run --all-features --nff --profile app
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-app-backend
+          path: ${{ github.workspace }}/target/nextest/app/junit-app-backend.xml
+          retention-days: 5
+
   comment_results:
     name: Comment Results to PR
     runs-on: ubuntu-latest
@@ -141,6 +174,7 @@ jobs:
       - frontend_unit
       - frontend_e2e
       - app_frontend_unit
+      - app_backend
     steps:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         id: app-token
