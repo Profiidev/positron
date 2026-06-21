@@ -928,6 +928,36 @@ mod test {
   }
 
   #[tokio::test]
+  async fn delete_many_nonexistent_id_is_noop() {
+    let db = test_db().await;
+    assert_eq!(
+      db.note_snapshot()
+        .delete_many(&[Uuid::new_v4()])
+        .await
+        .unwrap(),
+      0
+    );
+  }
+
+  #[tokio::test]
+  async fn delete_many_counts_only_existing_ids() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let drop = db.note_snapshot().create(note, "a".into()).await.unwrap();
+
+    assert_eq!(
+      db.note_snapshot()
+        .delete_many(&[drop, Uuid::new_v4()])
+        .await
+        .unwrap(),
+      1
+    );
+    assert!(db.note_snapshot().find(drop).await.unwrap().is_none());
+  }
+
+  #[tokio::test]
   async fn ids_to_evict_three_in_same_bucket_keeps_newest_only() {
     let db = test_db().await;
     let owner = insert_user(&db, "owner", "owner@x.com").await;
