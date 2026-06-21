@@ -11,6 +11,7 @@ use centaurus::{
     tables::{ConnectionExt, group::SimpleUserInfo},
   },
   error::Result,
+  storage::FileStorage,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -21,7 +22,7 @@ use crate::{
     DBTrait,
     notes::{NoteInfo, NoteInfoPublic, NoteShareEntry},
   },
-  notes::{NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater},
+  notes::{NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note},
   utils::{UpdateMessage, Updater},
 };
 
@@ -158,6 +159,7 @@ struct NoteDeleteReq {
 async fn delete(
   auth: JwtAuth,
   db: Connection,
+  storage: FileStorage,
   updater: Updater,
   Json(req): Json<NoteDeleteReq>,
 ) -> Result<()> {
@@ -168,6 +170,7 @@ async fn delete(
   let mut users = db.notes().shared_user_ids(req.note_id).await?;
   users.push(auth.user_id);
 
+  delete_storage_for_note(&db, &storage, req.note_id).await?;
   db.notes().delete(req.note_id).await?;
 
   notify_note_update(&updater, users, req.note_id).await;
@@ -319,12 +322,13 @@ mod test {
   };
   use centaurus::{
     backend::auth::jwt_state::JwtState, backend::endpoints::websocket::state::Updater,
-    db::init::Connection,
+    db::init::Connection, storage::FileStorage,
   };
   use serde_json::{Value, json};
   use tower::ServiceExt;
   use uuid::Uuid;
 
+  use crate::storage::StorageExt;
   use crate::utils::UpdateMessage;
 
   fn app(
@@ -333,6 +337,7 @@ mod test {
     upd: Updater<UpdateMessage>,
     public_upd: PublicNoteUpdater,
     limits: NotesLimits,
+    storage: FileStorage,
   ) -> Router {
     let (public_state, _) = PublicNoteUpdateState::init();
     Router::new()
@@ -354,6 +359,7 @@ mod test {
       .layer(Extension(public_upd))
       .layer(Extension(limits))
       .layer(Extension(upd))
+      .layer(Extension(storage))
       .layer(Extension(jwt))
       .layer(Extension(db))
   }
@@ -379,6 +385,7 @@ mod test {
     public_upd: PublicNoteUpdater,
     user: Uuid,
     cookie: String,
+    storage: FileStorage,
   }
 
   async fn setup() -> Setup {
@@ -388,6 +395,7 @@ mod test {
     let (_, public_upd) = PublicNoteUpdateState::init();
     let user = insert_user(&db, "owner", "owner@x.com").await;
     let cookie = auth_cookie(&jwt, user);
+    let storage = crate::storage::test::init_test_storage().await;
     Setup {
       db,
       jwt,
@@ -395,6 +403,7 @@ mod test {
       public_upd,
       user,
       cookie,
+      storage,
     }
   }
 
@@ -407,6 +416,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
     let resp = app.oneshot(request("GET", "/", None, None)).await.unwrap();
     // no auth cookie -> request is rejected before reaching the handler
@@ -422,6 +432,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -463,6 +474,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
     let resp = app
       .clone()
@@ -512,6 +524,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
     let resp = app
       .oneshot(request(
@@ -540,6 +553,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     // owner can edit
@@ -579,6 +593,50 @@ mod test {
   }
 
   #[tokio::test]
+  async fn delete_as_owner_removes_note_and_snapshot_files() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let snapshot_id = s
+      .db
+      .note_snapshot()
+      .create(note, "preview".into())
+      .await
+      .unwrap();
+    s.storage
+      .note_snapshot()
+      .create(note, snapshot_id, b"snapshot")
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request(
+        "DELETE",
+        "/",
+        Some(&s.cookie),
+        Some(json!({ "note_id": note })),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(s.db.notes().info(note, s.user).await.unwrap().is_none());
+    assert!(
+      !s.storage
+        .note_snapshot()
+        .exists(note, snapshot_id)
+        .await
+        .unwrap()
+    );
+  }
+
+  #[tokio::test]
   async fn delete_as_owner_removes_note() {
     let s = setup().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
@@ -588,6 +646,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -614,6 +673,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -651,6 +711,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -680,6 +741,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -729,6 +791,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -762,6 +825,7 @@ mod test {
       s.upd,
       public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -799,6 +863,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     // a note that does not exist is not owned by the caller -> forbidden
@@ -837,6 +902,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     // no auth cookie required for the public info endpoint
@@ -862,6 +928,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     // private note -> 404 even for the owner
@@ -902,6 +969,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     // before going public the stranger is denied
@@ -951,6 +1019,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     for access in ["edit", "view"] {
@@ -988,6 +1057,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 1 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1025,6 +1095,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1058,6 +1129,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1086,6 +1158,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1119,6 +1192,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 1 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1154,6 +1228,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 2 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1182,6 +1257,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app
@@ -1210,6 +1286,7 @@ mod test {
       s.upd,
       s.public_upd,
       NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
     );
 
     let resp = app

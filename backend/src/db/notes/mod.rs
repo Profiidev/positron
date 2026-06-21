@@ -147,6 +147,18 @@ impl<'db> NoteTable<'db> {
     )
   }
 
+  pub async fn list_owned_ids(&self, owner: Uuid) -> Result<Vec<Uuid>> {
+    Ok(
+      note::Entity::find()
+        .filter(note::Column::Owner.eq(owner))
+        .all(self.db)
+        .await?
+        .into_iter()
+        .map(|note| note.id)
+        .collect(),
+    )
+  }
+
   pub async fn is_owner(&self, user_id: Uuid, note_id: Uuid) -> Result<bool> {
     let count = note::Entity::find()
       .filter(note::Column::Id.eq(note_id))
@@ -560,6 +572,19 @@ mod test {
       user_id: id,
       access: NoteShareAccess::View,
     }
+  }
+
+  #[tokio::test]
+  async fn list_owned_ids_returns_only_owned_notes() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let other = insert_user(&db, "other", "other@x.com").await;
+    let owned = db.notes().create(owner, "Owned".into()).await.unwrap();
+    db.notes().create(other, "Other".into()).await.unwrap();
+
+    let ids = db.notes().list_owned_ids(owner).await.unwrap();
+    assert_eq!(ids, vec![owned]);
+    assert!(db.notes().list_owned_ids(other).await.unwrap().len() == 1);
   }
 
   #[tokio::test]

@@ -8,6 +8,8 @@ use crate::{
   utils::Updater,
 };
 
+pub use snapshot::{delete_storage_for_note, delete_storage_for_user};
+
 mod management;
 mod preview;
 mod snapshot;

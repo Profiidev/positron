@@ -79,6 +79,39 @@ async fn run_cleanup_cycle(
   run_cleanup_cycle_at(db, storage, updater, chrono::Utc::now()).await
 }
 
+pub async fn delete_storage_for_note(
+  db: &Connection,
+  storage: &FileStorage,
+  note_id: Uuid,
+) -> Result<()> {
+  let snapshots = db.note_snapshot().list_for_note(note_id).await?;
+  for snapshot in snapshots {
+    if storage.note_snapshot().exists(note_id, snapshot.id).await?
+      && let Err(err) = storage.note_snapshot().delete(note_id, snapshot.id).await
+    {
+      tracing::warn!(
+        ?err,
+        %note_id,
+        snapshot_id = %snapshot.id,
+        "failed to delete note snapshot file"
+      );
+    }
+  }
+  Ok(())
+}
+
+pub async fn delete_storage_for_user(
+  db: &Connection,
+  storage: &FileStorage,
+  user_id: Uuid,
+) -> Result<()> {
+  let note_ids = db.notes().list_owned_ids(user_id).await?;
+  for note_id in note_ids {
+    delete_storage_for_note(db, storage, note_id).await?;
+  }
+  Ok(())
+}
+
 async fn run_cleanup_cycle_at(
   db: &Connection,
   storage: &FileStorage,
@@ -317,6 +350,53 @@ mod test {
       .await
       .unwrap();
     snapshot_id
+  }
+
+  #[tokio::test]
+  async fn delete_storage_for_note_removes_snapshot_files() {
+    let db = test_db().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note = db.notes().create(owner, "T".into()).await.unwrap();
+    let keep = create_snapshot_in_storage(&db, &storage, note, "a", b"a").await;
+    let drop = create_snapshot_in_storage(&db, &storage, note, "b", b"b").await;
+
+    super::delete_storage_for_note(&db, &storage, note)
+      .await
+      .unwrap();
+
+    assert!(!storage.note_snapshot().exists(note, keep).await.unwrap());
+    assert!(!storage.note_snapshot().exists(note, drop).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn delete_storage_for_user_removes_all_owned_note_snapshot_files() {
+    let db = test_db().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_a = db.notes().create(owner, "A".into()).await.unwrap();
+    let note_b = db.notes().create(owner, "B".into()).await.unwrap();
+    let snap_a = create_snapshot_in_storage(&db, &storage, note_a, "a", b"a").await;
+    let snap_b = create_snapshot_in_storage(&db, &storage, note_b, "b", b"b").await;
+
+    super::delete_storage_for_user(&db, &storage, owner)
+      .await
+      .unwrap();
+
+    assert!(
+      !storage
+        .note_snapshot()
+        .exists(note_a, snap_a)
+        .await
+        .unwrap()
+    );
+    assert!(
+      !storage
+        .note_snapshot()
+        .exists(note_b, snap_b)
+        .await
+        .unwrap()
+    );
   }
 
   fn request(method: &str, uri: &str, cookie: Option<&str>, body: Option<Value>) -> Request<Body> {
