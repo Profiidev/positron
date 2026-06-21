@@ -12,7 +12,8 @@ export enum UpdateType {
   Passkey = 'Passkey',
   Apod = 'Apod',
   Note = 'Note',
-  NoteSnapshot = 'NoteSnapshot'
+  NoteSnapshot = 'NoteSnapshot',
+  NoteSnapshotsCleaned = 'NoteSnapshotsCleaned'
 }
 
 export type UpdateMessage =
@@ -31,7 +32,8 @@ export type UpdateMessage =
         | UpdateType.Settings
         | UpdateType.UserPermissions
         | UpdateType.Passkey
-        | UpdateType.Apod;
+        | UpdateType.Apod
+        | UpdateType.NoteSnapshotsCleaned;
     }
   | {
       type: UpdateType.NoteSnapshot;
@@ -109,6 +111,12 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     case UpdateType.NoteSnapshot: {
       invalidate(`/api/notes/snapshots/${msg.note_id}`).catch(() => {});
       invalidate(`/api/notes/snapshots/${msg.uuid}/info`).catch(() => {});
+      break;
+    }
+    case UpdateType.NoteSnapshotsCleaned: {
+      invalidate((url) =>
+        url.pathname.startsWith('/api/notes/snapshots/')
+      ).catch(() => {});
       break;
     }
     default: {

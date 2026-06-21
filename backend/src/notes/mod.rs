@@ -1,8 +1,12 @@
 use aide::axum::ApiRouter;
 use axum::Extension;
-use centaurus::storage::FileStorage;
+use centaurus::{db::init::Connection, storage::FileStorage};
 
-use crate::{config::Config, notes::state::NoteEditing, utils::Updater};
+use crate::{
+  config::Config,
+  notes::{snapshot::SnapshotCleanup, state::NoteEditing},
+  utils::Updater,
+};
 
 mod management;
 mod preview;
@@ -38,6 +42,7 @@ pub fn state(
   router: ApiRouter,
   storage: FileStorage,
   updater: Updater,
+  db: Connection,
   config: &Config,
 ) -> ApiRouter {
   let (public_note_state, public_note_updater) = update::PublicNoteUpdateState::init();
@@ -46,5 +51,9 @@ pub fn state(
     .layer(Extension(public_note_state))
     .layer(Extension(public_note_updater))
     .layer(Extension(NotesLimits::from_config(config)))
-    .layer(Extension(NoteEditing::init(storage, updater)))
+    .layer(Extension(NoteEditing::init(
+      storage.clone(),
+      updater.clone(),
+    )))
+    .layer(Extension(SnapshotCleanup::init(db, storage, updater)))
 }

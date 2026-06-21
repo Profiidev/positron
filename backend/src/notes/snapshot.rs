@@ -1,3 +1,5 @@
+use std::{collections::HashSet, sync::Arc, time::Duration};
+
 use aide::axum::{
   ApiRouter,
   routing::{delete_with, get_with, put_with},
@@ -10,12 +12,13 @@ use centaurus::{
 use http::header;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use tokio::{spawn, task::JoinHandle, time::sleep};
 use uuid::Uuid;
 
 use crate::{
   db::{
     DBTrait,
-    notes::snapshot::{NoteSnapshotDetail, NoteSnapshotInfo},
+    notes::snapshot::{NoteSnapshotDetail, NoteSnapshotInfo, RetentionTier},
   },
   notes::state::{MB, NoteEditing},
   storage::StorageExt,
@@ -41,6 +44,77 @@ pub fn router() -> ApiRouter {
       "/{snapshot_id}/content",
       get_with(content, |op| op.id("getNoteSnapshotContent")),
     )
+}
+
+#[derive(Clone)]
+pub struct SnapshotCleanup {
+  _handle: Arc<JoinHandle<()>>,
+}
+
+impl SnapshotCleanup {
+  pub fn init(db: Connection, storage: FileStorage, updater: Updater) -> Self {
+    let db = db.clone();
+    let storage = storage.clone();
+    let updater = updater.clone();
+    let handle = spawn(async move {
+      loop {
+        if let Err(err) = run_cleanup_cycle(&db, &storage, &updater).await {
+          tracing::warn!(?err, "note snapshot cleanup failed");
+        }
+        sleep(Duration::from_mins(10)).await;
+      }
+    });
+
+    Self {
+      _handle: Arc::new(handle),
+    }
+  }
+}
+
+async fn run_cleanup_cycle(
+  db: &Connection,
+  storage: &FileStorage,
+  updater: &Updater,
+) -> Result<()> {
+  run_cleanup_cycle_at(db, storage, updater, chrono::Utc::now()).await
+}
+
+async fn run_cleanup_cycle_at(
+  db: &Connection,
+  storage: &FileStorage,
+  updater: &Updater,
+  now: chrono::DateTime<chrono::Utc>,
+) -> Result<()> {
+  let mut affected_owners = HashSet::new();
+
+  for tier in RetentionTier::all() {
+    let rows = db.note_snapshot().ids_to_evict_for_tier(*tier, now).await?;
+    if rows.is_empty() {
+      continue;
+    }
+
+    for row in &rows {
+      if storage.note_snapshot().exists(row.note, row.id).await? {
+        storage.note_snapshot().delete(row.note, row.id).await?;
+      }
+    }
+
+    let ids: Vec<Uuid> = rows.iter().map(|row| row.id).collect();
+    let deleted = db.note_snapshot().delete_many(&ids).await?;
+    if deleted > 0 {
+      for row in rows {
+        affected_owners.insert(row.owner);
+      }
+    }
+  }
+
+  for owner_id in affected_owners {
+    updater
+      .send_to(owner_id, UpdateMessage::NoteSnapshotsCleaned)
+      .await;
+  }
+
+  Ok(())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -670,5 +744,514 @@ mod test {
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+  }
+
+  // ---- cleanup ----
+
+  #[tokio::test]
+  async fn cleanup_deletes_excess_snapshots_and_storage() {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let updater = crate::db::test::updater().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let more_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "recent-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+      )
+      .await
+      .unwrap();
+    let less_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "old-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+      )
+      .await
+      .unwrap();
+    let recent = s
+      .db
+      .note_snapshot()
+      .create_at(note, "recent".into(), now - TimeDelta::minutes(30))
+      .await
+      .unwrap();
+
+    storage
+      .note_snapshot()
+      .create(note, more_recent, b"recent-in-bucket")
+      .await
+      .unwrap();
+    storage
+      .note_snapshot()
+      .create(note, less_recent, b"old-in-bucket")
+      .await
+      .unwrap();
+    storage
+      .note_snapshot()
+      .create(note, recent, b"recent")
+      .await
+      .unwrap();
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    let remaining = snapshot_ids(&s.db, note).await;
+    assert_eq!(remaining.len(), 2);
+    assert!(remaining.contains(&more_recent));
+    assert!(remaining.contains(&recent));
+    assert!(!remaining.contains(&less_recent));
+    assert!(
+      !storage
+        .note_snapshot()
+        .exists(note, less_recent)
+        .await
+        .unwrap()
+    );
+    assert!(
+      storage
+        .note_snapshot()
+        .exists(note, more_recent)
+        .await
+        .unwrap()
+    );
+  }
+
+  #[tokio::test]
+  async fn cleanup_mixed_ages_deletes_across_tiers() {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let updater = crate::db::test::updater().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let recent = s
+      .db
+      .note_snapshot()
+      .create_at(note, "recent".into(), now - TimeDelta::minutes(30))
+      .await
+      .unwrap();
+    let h2_dropped = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "h2-old".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+      )
+      .await
+      .unwrap();
+    let h2_kept = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "h2-new".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+      )
+      .await
+      .unwrap();
+    let d1_dropped = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "d1-old".into(),
+        now - TimeDelta::days(1) - TimeDelta::hours(3),
+      )
+      .await
+      .unwrap();
+    let d1_kept = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "d1-new".into(),
+        now - TimeDelta::days(1) - TimeDelta::hours(1),
+      )
+      .await
+      .unwrap();
+
+    for id in [recent, h2_dropped, h2_kept, d1_dropped, d1_kept] {
+      storage
+        .note_snapshot()
+        .create(note, id, b"snapshot")
+        .await
+        .unwrap();
+    }
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    let remaining = snapshot_ids(&s.db, note).await;
+    assert_eq!(remaining.len(), 3);
+    assert!(remaining.contains(&recent));
+    assert!(remaining.contains(&h2_kept));
+    assert!(remaining.contains(&d1_kept));
+    assert!(!remaining.contains(&h2_dropped));
+    assert!(!remaining.contains(&d1_dropped));
+    assert!(
+      !storage
+        .note_snapshot()
+        .exists(note, h2_dropped)
+        .await
+        .unwrap()
+    );
+    assert!(
+      !storage
+        .note_snapshot()
+        .exists(note, d1_dropped)
+        .await
+        .unwrap()
+    );
+  }
+
+  #[tokio::test]
+  async fn cleanup_is_noop_when_nothing_to_delete() {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let updater = crate::db::test::updater().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let id = s
+      .db
+      .note_snapshot()
+      .create_at(note, "recent".into(), now - TimeDelta::minutes(30))
+      .await
+      .unwrap();
+    storage
+      .note_snapshot()
+      .create(note, id, b"recent")
+      .await
+      .unwrap();
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    assert_eq!(snapshot_ids(&s.db, note).await, vec![id]);
+  }
+
+  #[tokio::test]
+  async fn cleanup_removes_db_row_when_storage_missing() {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let updater = crate::db::test::updater().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let more_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "recent-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+      )
+      .await
+      .unwrap();
+    let less_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "old-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+      )
+      .await
+      .unwrap();
+
+    storage
+      .note_snapshot()
+      .create(note, more_recent, b"recent-in-bucket")
+      .await
+      .unwrap();
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    let remaining = snapshot_ids(&s.db, note).await;
+    assert_eq!(remaining.len(), 1);
+    assert!(remaining.contains(&more_recent));
+    assert!(!remaining.contains(&less_recent));
+  }
+
+  #[tokio::test]
+  async fn cleanup_sends_note_snapshots_cleaned_to_owner() {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    use crate::utils::UpdateMessage;
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let (update_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    let (_session, mut rx) = update_state.create_session(s.user).await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let more_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "recent-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+      )
+      .await
+      .unwrap();
+    let less_recent = s
+      .db
+      .note_snapshot()
+      .create_at(
+        note,
+        "old-in-bucket".into(),
+        now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+      )
+      .await
+      .unwrap();
+
+    for id in [more_recent, less_recent] {
+      storage
+        .note_snapshot()
+        .create(note, id, b"snapshot")
+        .await
+        .unwrap();
+    }
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    assert!(matches!(
+      rx.recv().await,
+      Some(UpdateMessage::NoteSnapshotsCleaned)
+    ));
+    assert!(rx.try_recv().is_err());
+  }
+
+  #[tokio::test]
+  async fn cleanup_notifies_owner_once_for_multiple_notes() {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    use crate::utils::UpdateMessage;
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let (update_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    let (_session, mut rx) = update_state.create_session(s.user).await;
+    let note_a = s.db.notes().create(s.user, "A".into()).await.unwrap();
+    let note_b = s.db.notes().create(s.user, "B".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    for note in [note_a, note_b] {
+      let more_recent = s
+        .db
+        .note_snapshot()
+        .create_at(
+          note,
+          "recent-in-bucket".into(),
+          now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+        )
+        .await
+        .unwrap();
+      let less_recent = s
+        .db
+        .note_snapshot()
+        .create_at(
+          note,
+          "old-in-bucket".into(),
+          now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+        )
+        .await
+        .unwrap();
+
+      for id in [more_recent, less_recent] {
+        storage
+          .note_snapshot()
+          .create(note, id, b"snapshot")
+          .await
+          .unwrap();
+      }
+    }
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    assert!(matches!(
+      rx.recv().await,
+      Some(UpdateMessage::NoteSnapshotsCleaned)
+    ));
+    assert!(rx.try_recv().is_err());
+  }
+
+  #[tokio::test]
+  async fn cleanup_notifies_both_owners_independently() {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    use crate::utils::UpdateMessage;
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let (update_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    let owner_b = insert_user(&s.db, "owner-b", "b@x.com").await;
+
+    let (_session_a, mut rx_a) = update_state.create_session(s.user).await;
+    let (_session_b, mut rx_b) = update_state.create_session(owner_b).await;
+
+    let note_a = s.db.notes().create(s.user, "A".into()).await.unwrap();
+    let note_b = s.db.notes().create(owner_b, "B".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    for note in [note_a, note_b] {
+      let more_recent = s
+        .db
+        .note_snapshot()
+        .create_at(
+          note,
+          "recent-in-bucket".into(),
+          now - TimeDelta::hours(2) - TimeDelta::minutes(5),
+        )
+        .await
+        .unwrap();
+      let less_recent = s
+        .db
+        .note_snapshot()
+        .create_at(
+          note,
+          "old-in-bucket".into(),
+          now - TimeDelta::hours(2) - TimeDelta::minutes(20),
+        )
+        .await
+        .unwrap();
+
+      for id in [more_recent, less_recent] {
+        storage
+          .note_snapshot()
+          .create(note, id, b"snapshot")
+          .await
+          .unwrap();
+      }
+    }
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    assert!(matches!(
+      rx_a.recv().await,
+      Some(UpdateMessage::NoteSnapshotsCleaned)
+    ));
+    assert!(matches!(
+      rx_b.recv().await,
+      Some(UpdateMessage::NoteSnapshotsCleaned)
+    ));
+    assert!(rx_a.try_recv().is_err());
+    assert!(rx_b.try_recv().is_err());
+  }
+
+  #[tokio::test]
+  async fn cleanup_does_not_notify_on_noop() {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    use crate::utils::UpdateMessage;
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let (update_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    let (_session, mut rx) = update_state.create_session(s.user).await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+
+    let id = s
+      .db
+      .note_snapshot()
+      .create_at(note, "recent".into(), now - TimeDelta::minutes(30))
+      .await
+      .unwrap();
+    storage
+      .note_snapshot()
+      .create(note, id, b"recent")
+      .await
+      .unwrap();
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    assert!(rx.try_recv().is_err());
+  }
+
+  #[tokio::test]
+  async fn cleanup_three_in_bucket_removes_storage_for_all_evicted() {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    let s = setup().await;
+    let storage = crate::storage::test::init_test_storage().await;
+    let updater = crate::db::test::updater().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
+    let base = TimeDelta::hours(2) + TimeDelta::minutes(15);
+
+    let newest = s
+      .db
+      .note_snapshot()
+      .create_at(note, "newest".into(), now - base)
+      .await
+      .unwrap();
+    let middle = s
+      .db
+      .note_snapshot()
+      .create_at(note, "middle".into(), now - base - TimeDelta::minutes(5))
+      .await
+      .unwrap();
+    let oldest = s
+      .db
+      .note_snapshot()
+      .create_at(note, "oldest".into(), now - base - TimeDelta::minutes(10))
+      .await
+      .unwrap();
+
+    for id in [newest, middle, oldest] {
+      storage
+        .note_snapshot()
+        .create(note, id, b"snapshot")
+        .await
+        .unwrap();
+    }
+
+    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+      .await
+      .unwrap();
+
+    let remaining = snapshot_ids(&s.db, note).await;
+    assert_eq!(remaining, vec![newest]);
+    assert!(storage.note_snapshot().exists(note, newest).await.unwrap());
+    for evicted in [middle, oldest] {
+      assert!(!storage.note_snapshot().exists(note, evicted).await.unwrap());
+    }
   }
 }

@@ -45,6 +45,7 @@ describe('UpdateType enum', () => {
     expect(UpdateType.Settings).toBe('Settings');
     expect(UpdateType.Note).toBe('Note');
     expect(UpdateType.NoteSnapshot).toBe('NoteSnapshot');
+    expect(UpdateType.NoteSnapshotsCleaned).toBe('NoteSnapshotsCleaned');
     expect(Object.values(UpdateType)).toContain('OAuthClient');
   });
 });
@@ -108,6 +109,15 @@ describe('handleMessage', () => {
       '/api/notes/snapshots/n1',
       '/api/notes/snapshots/s1/info'
     ]);
+  });
+
+  it('invalidates all snapshot paths on NoteSnapshotsCleaned', () => {
+    const handler = getHandler();
+    handler({ type: UpdateType.NoteSnapshotsCleaned }, 'me');
+    const predicate = invalidate.mock.calls[0]?.[0] as (u: URL) => boolean;
+    expect(typeof predicate).toBe('function');
+    expect(predicate(new URL('http://x/api/notes/snapshots/n1'))).toBe(true);
+    expect(predicate(new URL('http://x/api/notes/management'))).toBe(false);
   });
 
   it('does nothing for an unknown message type', () => {
