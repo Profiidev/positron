@@ -31,6 +31,8 @@ export default defineConfig({
     ['html'],
     ['junit', { outputFile: 'test-results/frontend-e2e.xml' }]
   ],
+  // @ts-expect-error process not defined
+  retries: process.env.CI ? 2 : 0,
   testMatch: 'src/tests/e2e/**/*.{test,spec}.{js,ts}',
   use: { baseURL: 'http://localhost:4173', screenshot: 'on' },
   webServer: {
