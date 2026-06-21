@@ -55,7 +55,7 @@ impl OAuthClientCommands {
           .clone()
           .unwrap_or(Config::default().auth.auth_pepper);
 
-        let id = Uuid::new_v4();
+        let id = Uuid::now_v7();
         let secret = generate_secret();
 
         let salt = SaltString::generate(OsRng {}).to_string();

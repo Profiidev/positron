@@ -430,7 +430,7 @@ mod test {
     name: &str,
     confidential: bool,
   ) -> Uuid {
-    let id = Uuid::new_v4();
+    let id = Uuid::now_v7();
     db.oauth_client()
       .create_client(o_auth_client::Model {
         id,

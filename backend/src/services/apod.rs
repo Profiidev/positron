@@ -155,7 +155,7 @@ async fn get_image_info(
 
     db.apod()
       .create(apod::Model {
-        id: Uuid::new_v4(),
+        id: Uuid::now_v7(),
         title: image_data.title.clone(),
         date: req.date.date_naive(),
         selector: None,
@@ -252,7 +252,7 @@ mod test {
   async fn create_apod(db: &Connection, d: NaiveDate, selector: Option<Uuid>) {
     db.apod()
       .create(apod::Model {
-        id: Uuid::new_v4(),
+        id: Uuid::now_v7(),
         title: "Galaxy".into(),
         date: d,
         selector,
