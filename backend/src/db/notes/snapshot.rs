@@ -261,9 +261,6 @@ impl<'db> NoteSnapshotTable<'db> {
       .and_where(Expr::col((ranked, Alias::new("rn"))).gt(1))
       .to_owned();
 
-    // debug sql
-    println!("{}", backend.build(&outer).sql);
-
     Ok(
       SnapshotEvictRow::find_by_statement(backend.build(&outer))
         .all(self.db)

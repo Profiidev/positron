@@ -374,7 +374,7 @@ mod test {
         axum::routing::post(super::get_image_info),
       )
       .layer(Extension(storage))
-      .layer(Extension(ApodState::init("DEMO_KEY".into())))
+      .layer(Extension(ApodState::init()))
       .layer(Extension(jwt))
       .layer(Extension(db));
 

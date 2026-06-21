@@ -29,8 +29,6 @@ pub enum ApodCommands {
     s3_secret_key: Option<String>,
     #[clap(long, env)]
     s3_force_path_style: bool,
-    #[clap(long, env)]
-    apod_api_key: Option<String>,
   },
 }
 
@@ -45,7 +43,6 @@ impl ApodCommands {
         s3_access_key,
         s3_secret_key,
         s3_force_path_style,
-        apod_api_key,
       } => {
         let storage_config = StorageConfig {
           storage_path: storage_path
@@ -60,10 +57,7 @@ impl ApodCommands {
         };
         let s3 = FileStorage::init(&storage_config).await?;
 
-        let apod_api_key = apod_api_key
-          .clone()
-          .unwrap_or(Config::default().apod_api_key);
-        let state = ApodState::init(apod_api_key);
+        let state = ApodState::init();
 
         let apods = db.apod().list_all().await?;
 
@@ -145,7 +139,6 @@ mod test {
       s3_access_key: None,
       s3_secret_key: None,
       s3_force_path_style: false,
-      apod_api_key: Some("DEMO_KEY".into()),
     }
   }
 
