@@ -10,7 +10,11 @@ const config = {
   kit: {
     adapter: adapter({
       fallback: 'index.html'
-    })
+    }),
+    alias: {
+      $routes: 'src/routes',
+      $test_helpers: 'src/tests/_helpers'
+    }
   },
   preprocess: vitePreprocess()
 };

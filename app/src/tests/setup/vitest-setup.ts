@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom/vitest';
-import { afterAll } from 'vitest';
+import { cleanup } from '@testing-library/svelte';
+import { afterAll, afterEach } from 'vitest';
+
+// Vitest runs without `globals`, so @testing-library/svelte's automatic
+// Per-test cleanup never registers. Unmount rendered components between tests
+// So queries don't trip over leftovers from earlier renders.
+afterEach(() => cleanup());
 
 // Bits-ui's pin-input (TOTP) schedules detached setTimeouts (0/10/50ms) that
 // Call `input.dispatchEvent(new Event('input'))`. If the last test's timers
