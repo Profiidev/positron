@@ -27,7 +27,7 @@ impl<'db> SettingsTable<'db> {
       Ok(res)
     } else {
       let settings = user_settings::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(Uuid::now_v7()),
         user: Set(user),
         o_auth_instant_confirm: Set(false),
       };

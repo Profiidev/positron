@@ -133,7 +133,7 @@ async fn create(
   }
 
   let secret = generate_secret();
-  let client_id = Uuid::new_v4();
+  let client_id = Uuid::now_v7();
 
   let salt = SaltString::generate(OsRng {}).to_string();
   let client_secret = pw_state.pw_hash_raw(&salt, &secret)?;

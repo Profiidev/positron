@@ -191,7 +191,7 @@ impl<'db> OAuthScopeTable<'db> {
     scope: String,
     policy_mapped: Vec<Uuid>,
   ) -> Result<Uuid, DbErr> {
-    let uuid = Uuid::new_v4();
+    let uuid = Uuid::now_v7();
     let scope = o_auth_scope::ActiveModel {
       id: Set(uuid),
       name: Set(name),

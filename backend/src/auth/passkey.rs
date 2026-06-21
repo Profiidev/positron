@@ -138,7 +138,7 @@ async fn finish_registration(
   let json_key = serde_json::to_string(&key)?;
   db.passkey()
     .create_passkey_record(passkey::Model {
-      id: Uuid::new_v4(),
+      id: Uuid::now_v7(),
       data: json_key,
       cred_id: BASE64_STANDARD.encode(key.cred_id()),
       user: user.id,

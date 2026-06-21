@@ -116,7 +116,7 @@ impl<'db> OAuthPolicyTable<'db> {
     default: String,
   ) -> Result<Uuid, DbErr> {
     let policy = o_auth_policy::ActiveModel {
-      id: Set(Uuid::new_v4()),
+      id: Set(Uuid::now_v7()),
       name: Set(name),
       claim: Set(claim),
       default: Set(default),
@@ -153,7 +153,7 @@ impl<'db> OAuthPolicyTable<'db> {
     let mut content_models = Vec::new();
     for content in content {
       content_models.push(o_auth_policy_content::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(Uuid::now_v7()),
         policy: Set(uuid),
         group: Set(content.group_id),
         content: Set(content.content),
@@ -182,7 +182,7 @@ impl<'db> OAuthPolicyTable<'db> {
       .await?;
 
     let new_content = o_auth_policy_content::ActiveModel {
-      id: Set(Uuid::new_v4()),
+      id: Set(Uuid::now_v7()),
       policy: Set(policy_id),
       group: Set(group_id),
       content: Set(content),

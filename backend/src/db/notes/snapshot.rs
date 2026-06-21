@@ -120,7 +120,7 @@ impl<'db> NoteSnapshotTable<'db> {
 
   pub async fn create(&self, note_id: Uuid, preview: String) -> Result<Uuid> {
     let snapshot = note_snapshot::ActiveModel {
-      id: Set(Uuid::new_v4()),
+      id: Set(Uuid::now_v7()),
       note: Set(note_id),
       preview: Set(preview),
       created_at: Set(Utc::now().naive_utc()),

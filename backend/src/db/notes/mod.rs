@@ -335,7 +335,7 @@ impl<'db> NoteTable<'db> {
   }
 
   pub async fn create(&self, owner: Uuid, title: String) -> Result<Uuid> {
-    let id = Uuid::new_v4();
+    let id = Uuid::now_v7();
     let txn = self.db.begin().await?;
 
     note::ActiveModel {
