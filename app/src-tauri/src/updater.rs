@@ -90,3 +90,81 @@ impl Updater {
     self.sender.send(message).await.ok();
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::UpdateMessage;
+  use serde_json::json;
+
+  #[test]
+  fn unit_variants_serialize_with_internal_type_tag() {
+    // The frontend dispatches on the `type` field, so the tag names are a contract.
+    let cases = [
+      (UpdateMessage::AuthStatusUpdated, "AuthStatusUpdated"),
+      (UpdateMessage::SetupUpdated, "SetupUpdated"),
+      (UpdateMessage::UserInfoUpdated, "UserInfoUpdated"),
+      (UpdateMessage::TokenInvalid, "TokenInvalid"),
+      (UpdateMessage::Disconnected, "Disconnected"),
+      (UpdateMessage::Connected, "Connected"),
+      (UpdateMessage::CodeExchangeFailed, "CodeExchangeFailed"),
+      (
+        UpdateMessage::CodeExchangeMissingCode,
+        "CodeExchangeMissingCode",
+      ),
+      (
+        UpdateMessage::CodeExchangeMissingVerifier,
+        "CodeExchangeMissingVerifier",
+      ),
+      (UpdateMessage::AuthSuccess, "AuthSuccess"),
+      (
+        UpdateMessage::ConfirmAuthMissingCode,
+        "ConfirmAuthMissingCode",
+      ),
+    ];
+
+    for (message, tag) in cases {
+      assert_eq!(
+        serde_json::to_value(&message).unwrap(),
+        json!({ "type": tag })
+      );
+    }
+  }
+
+  #[test]
+  fn confirm_auth_serializes_code_and_redirect() {
+    let message = UpdateMessage::ConfirmAuth {
+      code: "the-code".into(),
+      redirect: Some("/home".into()),
+    };
+    assert_eq!(
+      serde_json::to_value(&message).unwrap(),
+      json!({ "type": "ConfirmAuth", "code": "the-code", "redirect": "/home" })
+    );
+  }
+
+  #[test]
+  fn confirm_auth_serializes_null_redirect_when_absent() {
+    let message = UpdateMessage::ConfirmAuth {
+      code: "the-code".into(),
+      redirect: None,
+    };
+    assert_eq!(
+      serde_json::to_value(&message).unwrap(),
+      json!({ "type": "ConfirmAuth", "code": "the-code", "redirect": null })
+    );
+  }
+
+  #[test]
+  fn message_is_cloneable() {
+    let message = UpdateMessage::ConfirmAuth {
+      code: "c".into(),
+      redirect: None,
+    };
+    // Updater::init fans messages out to every channel via clone.
+    let clone = message.clone();
+    assert_eq!(
+      serde_json::to_value(&message).unwrap(),
+      serde_json::to_value(&clone).unwrap()
+    );
+  }
+}

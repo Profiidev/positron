@@ -148,3 +148,48 @@ impl Store {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::UserInfo;
+  use uuid::Uuid;
+
+  #[test]
+  fn user_info_round_trips_through_the_persisted_json_string() {
+    // `set_user_info` persists `UserInfo` as a JSON string and `init` reads it
+    // back, so the serde representation is the on-disk store contract.
+    let uuid = Uuid::new_v4();
+    let original = UserInfo {
+      uuid,
+      name: "Alice".into(),
+      email: "alice@example.com".into(),
+    };
+
+    let serialized = serde_json::to_string(&original).unwrap();
+    let restored: UserInfo = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(restored.uuid, uuid);
+    assert_eq!(restored.name, "Alice");
+    assert_eq!(restored.email, "alice@example.com");
+  }
+
+  #[test]
+  fn user_info_serializes_uuid_as_hyphenated_string() {
+    let uuid = Uuid::nil();
+    let info = UserInfo {
+      uuid,
+      name: "n".into(),
+      email: "e".into(),
+    };
+    let value = serde_json::to_value(&info).unwrap();
+    assert_eq!(value["uuid"], "00000000-0000-0000-0000-000000000000");
+    assert_eq!(value["name"], "n");
+    assert_eq!(value["email"], "e");
+  }
+
+  #[test]
+  fn user_info_deserialization_fails_on_invalid_uuid() {
+    let json = r#"{"uuid":"not-a-uuid","name":"n","email":"e"}"#;
+    assert!(serde_json::from_str::<UserInfo>(json).is_err());
+  }
+}

@@ -5387,6 +5387,7 @@ dependencies = [
  "base64 0.22.1",
  "cookie",
  "dashmap",
+ "http 1.4.2",
  "rand 0.10.1",
  "serde",
  "serde_json",
