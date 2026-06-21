@@ -3,20 +3,11 @@ use axum::{Extension, extract::FromRequestParts};
 use centaurus::error::Result;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
-use serde::Deserialize;
 
 #[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct ApodState {
-  api_key: String,
   client: Client,
-}
-
-#[derive(Deserialize)]
-struct ImageRes {
-  hdurl: Option<String>,
-  media_type: String,
-  title: String,
 }
 
 pub struct Image {
@@ -25,9 +16,8 @@ pub struct Image {
 }
 
 impl ApodState {
-  pub fn init(apod_api_key: String) -> Self {
+  pub fn init() -> Self {
     Self {
-      api_key: apod_api_key,
       client: Client::new(),
     }
   }
@@ -36,32 +26,52 @@ impl ApodState {
 impl ApodState {
   pub async fn get_image(&self, date: DateTime<Utc>) -> Result<Option<Image>> {
     tracing::debug!("Loading new Apod from {}", date);
-    let formatted_date = date.date_naive().format("%Y-%m-%d").to_string();
+    let formatted_date = date.date_naive().format("%y%m%d").to_string();
 
-    let res: ImageRes = self
+    let res = self
       .client
       .get(format!(
-        "https://api.nasa.gov/planetary/apod?api_key={}&date={}",
-        self.api_key, formatted_date
+        "https://apod.nasa.gov/apod/ap{}.html",
+        formatted_date
       ))
       .send()
       .await?
-      .json()
+      .text()
       .await?;
 
-    if res.media_type != "image" {
-      return Ok(None);
-    }
+    let (img_src, title) = {
+      let html = scraper::Html::parse_document(&res);
 
-    let Some(image) = res.hdurl else {
-      return Ok(None);
+      let img_selector = scraper::Selector::parse("img").unwrap();
+      let title_selector =
+        scraper::Selector::parse("body > center:nth-of-type(2) b:first-of-type").unwrap();
+
+      let Some(img) = html.select(&img_selector).next() else {
+        return Ok(None);
+      };
+
+      let Some(img_src) = img.value().attr("src") else {
+        return Ok(None);
+      };
+
+      let Some(title) = html.select(&title_selector).next() else {
+        return Ok(None);
+      };
+
+      (img_src.to_string(), title.inner_html())
     };
 
-    let image_res = self.client.get(image).send().await?.bytes().await?;
+    let image_res = self
+      .client
+      .get(format!("https://apod.nasa.gov/apod/{}", img_src))
+      .send()
+      .await?
+      .bytes()
+      .await?;
 
     Ok(Some(Image {
       image: image_res.to_vec(),
-      title: res.title,
+      title,
     }))
   }
 }

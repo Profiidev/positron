@@ -52,9 +52,6 @@ pub struct Config {
   //oidc
   pub oidc_refresh_exp: i64,
 
-  //services
-  pub apod_api_key: String,
-
   //notes
   pub notes_max_per_user: u32,
 }
@@ -72,7 +69,6 @@ impl Default for Config {
       webauthn_additional_origins: "".to_string(),
       oidc_refresh_exp: 604800,
       storage: StorageConfig::default(),
-      apod_api_key: "DEMO_KEY".to_string(),
       notes_max_per_user: 20,
       metrics: MetricsConfig::default(),
       site: SiteConfig::default(),
@@ -142,7 +138,6 @@ mod test {
     let config = Config::default();
     assert!(config.db_url.is_empty());
     assert_eq!(config.webauthn_name, "Positron");
-    assert_eq!(config.apod_api_key, "DEMO_KEY");
     assert_eq!(config.oidc_refresh_exp, 604800);
     assert_eq!(config.assetlinks, "{}");
     assert_eq!(config.auth.auth_jwt_expiration, 60 * 60 * 24 * 31);
