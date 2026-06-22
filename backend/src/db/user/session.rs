@@ -164,11 +164,21 @@ mod test {
     let user = insert_user(&db, "u", "u@x.com").await;
 
     db.session()
-      .create(user, "expired".into(), false, Utc::now() - chrono::Duration::hours(1))
+      .create(
+        user,
+        "expired".into(),
+        false,
+        Utc::now() - chrono::Duration::hours(1),
+      )
       .await
       .unwrap();
     db.session()
-      .create(user, "active".into(), false, Utc::now() + chrono::Duration::hours(1))
+      .create(
+        user,
+        "active".into(),
+        false,
+        Utc::now() + chrono::Duration::hours(1),
+      )
       .await
       .unwrap();
 
