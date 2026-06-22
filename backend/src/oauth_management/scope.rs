@@ -241,7 +241,7 @@ mod test {
     let upd = updater().await;
     let user = insert_user(&db, "admin", "admin@x.com").await;
     grant_permissions(&db, user, perms).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     Setup {
       db,
       jwt,

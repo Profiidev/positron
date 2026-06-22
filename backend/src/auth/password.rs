@@ -19,7 +19,10 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
+  auth::{
+    jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
+    session_auth::create_session_cookie,
+  },
   db::DBTrait,
 };
 
@@ -67,10 +70,7 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (other.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    let cookie = jwt.create_token(user.id)?;
-    db.session()
-      .create(user.id, cookie.value().to_string(), false)
-      .await?;
+    let cookie = create_session_cookie(&db, &jwt, user.id, false).await?;
 
     (cookie, false)
   };
@@ -297,7 +297,7 @@ mod test {
     let pw = password_state().await;
     let (jwt, other) = jwt_states(&db).await;
     let user = insert_user(&db, &pw, "secret", None).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     let app = app(db, pw.clone(), jwt, other, updater().await);
 
     let resp = app

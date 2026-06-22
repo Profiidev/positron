@@ -70,6 +70,14 @@ impl<'db> SessionTable<'db> {
     Session::delete_by_id(id).exec(self.db).await?;
     Ok(row)
   }
+
+  pub async fn delete_by_token(&self, token: &str) -> Result<(), DbErr> {
+    Session::delete_many()
+      .filter(session::Column::Token.eq(token))
+      .exec(self.db)
+      .await?;
+    Ok(())
+  }
 }
 
 #[cfg(test)]

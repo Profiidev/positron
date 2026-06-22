@@ -40,7 +40,7 @@ use tower_governor::GovernorLayer;
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::db::DBTrait;
+use crate::auth::session_auth::create_session_cookie;
 
 pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
@@ -150,10 +150,7 @@ async fn exchange_code(
   }
 
   let user = code_entry.0;
-  let cookie = jwt.create_token(user)?;
-  db.session()
-    .create(user, cookie.value().to_string(), true)
-    .await?;
+  let cookie = create_session_cookie(&db, &jwt, user, true).await?;
   cookies = cookies.add(cookie);
 
   drop(code_entry);
@@ -284,10 +281,7 @@ async fn retrieve_token(
     bail!("Invalid verifier");
   }
 
-  let cookie = jwt.create_token(user_id)?;
-  db.session()
-    .create(user_id, cookie.value().to_string(), false)
-    .await?;
+  let cookie = create_session_cookie(&db, &jwt, user_id, false).await?;
   cookies = cookies.add(cookie);
 
   state.approved_codes.remove(&req.auth_code);
@@ -343,8 +337,8 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
-    let app = app(db, jwt);
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let app = app(db.clone(), jwt);
 
     let verifier = "verifier-string-1234567890";
     let challenge = challenge_for(verifier);
@@ -373,6 +367,47 @@ mod test {
       .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(body_json(resp).await["user"], user.to_string());
+    let sessions = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert!(sessions[0].is_app);
+  }
+
+  #[tokio::test]
+  async fn retrieve_token_sets_is_app_false() {
+    use std::time::Instant;
+
+    use crate::db::DBTrait;
+
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let state = AppState::init();
+    let verifier = "a".repeat(64);
+    let challenge = challenge_for(&verifier);
+    let auth_code = Uuid::new_v4();
+    state
+      .approved_codes
+      .insert(auth_code, (user, challenge, Instant::now()));
+
+    let app = Router::new()
+      .route("/retrieve", post(super::retrieve_token))
+      .layer(Extension(state))
+      .layer(Extension(jwt))
+      .layer(Extension(db.clone()));
+
+    let resp = app
+      .oneshot(post_json(
+        "/retrieve",
+        None,
+        json!({ "auth_code": auth_code, "verifier": verifier }),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let sessions = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert!(!sessions[0].is_app);
   }
 
   #[tokio::test]
@@ -391,8 +426,8 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
-    let app = app(db, jwt);
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let app = app(db.clone(), jwt);
 
     let resp = app
       .clone()

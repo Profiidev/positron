@@ -424,7 +424,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "owner", "owner@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     Setup {
       db,
       jwt,
@@ -477,7 +477,7 @@ mod test {
   async fn list_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(
       s.db.clone(),
@@ -502,7 +502,7 @@ mod test {
   async fn list_forbidden_for_shared_user() {
     let s = setup().await;
     let friend = insert_user(&s.db, "friend", "f@x.com").await;
-    let friend_cookie = auth_cookie(&s.jwt, friend);
+    let friend_cookie = auth_cookie(&s.db, &s.jwt, friend).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     s.db
       .notes()
@@ -568,7 +568,7 @@ mod test {
   async fn delete_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     s.db
       .note_snapshot()
@@ -643,7 +643,7 @@ mod test {
   async fn restore_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     s.db
       .note_snapshot()
@@ -706,7 +706,7 @@ mod test {
   async fn info_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     s.db
       .note_snapshot()
@@ -808,7 +808,7 @@ mod test {
   async fn content_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let storage = crate::storage::test::init_test_storage().await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let snapshot_id = create_snapshot_in_storage(&s.db, &storage, note, "preview", &[]).await;

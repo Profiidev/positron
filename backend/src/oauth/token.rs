@@ -1,13 +1,12 @@
 use axum::{Form, Json, Router, extract::Query, routing::post};
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use centaurus::{
-  backend::auth::{jwt_state::JwtInvalidState, oidc::URL_SAFE_CHARS},
+  backend::auth::oidc::URL_SAFE_CHARS,
   bail,
   db::{init::Connection, tables::ConnectionExt},
-  eyre::ContextCompat,
   serde::empty_string_as_none,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tracing::instrument;
@@ -333,12 +332,10 @@ struct RevokeReq {
   token: String,
 }
 
-#[instrument(skip(state, db, invalidate))]
+#[instrument(skip(state))]
 async fn revoke(
   Query(req_p): Query<RevokeReqOption>,
-  db: Connection,
   state: JwtStateOther,
-  invalidate: JwtInvalidState,
   Form(req_b): Form<RevokeReqOption>,
 ) -> centaurus::error::Result<()> {
   let req = if let Some(req) = req_p.try_into() {
@@ -349,12 +346,7 @@ async fn revoke(
     bail!("invalid_request");
   };
 
-  let claims = state.validate_token::<OAuthClaims>(&req.token)?;
-  let exp = DateTime::from_timestamp(claims.exp, 0).context("Invalid timestamp")?;
-
-  db.invalid_jwt()
-    .invalidate_jwt(req.token, exp, invalidate.count.clone())
-    .await?;
+  let _claims = state.validate_token::<OAuthClaims>(&req.token)?;
 
   Ok(())
 }
@@ -377,7 +369,6 @@ mod test {
   };
   use axum::{Form, extract::Query};
   use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
-  use centaurus::backend::auth::jwt_state::JwtInvalidState;
   use sha2::{Digest, Sha256};
   use std::{collections::HashMap, time::Instant};
   use uuid::Uuid;
@@ -945,9 +936,7 @@ mod test {
 
     revoke(
       Query(RevokeReqOption { token: None }),
-      c.db,
       c.jwt,
-      JwtInvalidState::default(),
       Form(RevokeReqOption { token: Some(tok) }),
     )
     .await
@@ -959,9 +948,7 @@ mod test {
     let c = ctx().await;
     let res = revoke(
       Query(RevokeReqOption { token: None }),
-      c.db,
       c.jwt,
-      JwtInvalidState::default(),
       Form(RevokeReqOption { token: None }),
     )
     .await;

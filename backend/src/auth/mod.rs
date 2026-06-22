@@ -2,7 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::{
   backend::{
-    auth::{init_pw_state, jwt_state::JwtState, logout},
+    auth::{init_pw_state, jwt_state::JwtState},
     middleware::rate_limiter::RateLimiter,
   },
   db::init::Connection,
@@ -17,6 +17,7 @@ use crate::{
 mod app;
 mod config;
 pub mod jwt;
+mod logout;
 mod passkey;
 mod password;
 mod refresh;

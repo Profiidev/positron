@@ -24,7 +24,10 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtAuthOther, JwtSpecial, JwtTotpRequired},
+  auth::{
+    jwt::{JwtAuthOther, JwtSpecial, JwtTotpRequired},
+    session_auth::create_session_cookie,
+  },
   db::DBTrait,
   utils::{UpdateMessage, Updater},
 };
@@ -157,7 +160,7 @@ async fn confirm(
   {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
-    let cookie = jwt.create_token(auth.user_id)?;
+    let cookie = create_session_cookie(&db, &jwt, auth.user_id, false).await?;
     cookies = cookies.add(cookie);
 
     Ok((cookies, TokenRes(AuthRes { user: auth.user_id })))
@@ -306,6 +309,7 @@ mod test {
       .await
       .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(db.session().list_for_user(user).await.unwrap().len(), 1);
   }
 
   #[tokio::test]

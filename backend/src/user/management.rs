@@ -139,7 +139,7 @@ mod test {
     let upd = updater().await;
     let caller = insert_user(&db, "admin-caller", "caller@x.com").await;
     grant_permissions(&db, caller, &["user:edit"]).await;
-    let cookie = auth_cookie(&jwt, caller);
+    let cookie = auth_cookie(&db, &jwt, caller).await;
     Ctx {
       db,
       jwt,
@@ -163,7 +163,7 @@ mod test {
   async fn delete_user_requires_user_edit_permission() {
     let c = ctx().await;
     let stranger = insert_user(&c.db, "stranger", "stranger@x.com").await;
-    let cookie = auth_cookie(&c.jwt, stranger);
+    let cookie = auth_cookie(&c.db, &c.jwt, stranger).await;
     let target = insert_user(&c.db, "target", "target@x.com").await;
     make_admin_group(&c.db).await;
 

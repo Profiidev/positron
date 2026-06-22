@@ -6,7 +6,6 @@ pub mod apod;
 pub mod group;
 pub mod group_permission;
 pub mod group_user;
-pub mod invalid_jwt;
 pub mod key;
 pub mod note;
 pub mod note_snapshot;

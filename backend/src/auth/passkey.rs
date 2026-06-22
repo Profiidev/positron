@@ -31,6 +31,7 @@ use webauthn_rs_proto::ResidentKeyRequirement;
 use crate::{
   auth::{
     jwt::{JwtAuthOther, JwtStateOther},
+    session_auth::create_session_cookie,
     state::WebauthnState,
   },
   db::DBTrait,
@@ -225,10 +226,7 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  let cookie = jwt.create_token(user.id)?;
-  db.session()
-    .create(user.id, cookie.value().to_string(), false)
-    .await?;
+  let cookie = create_session_cookie(&db, &jwt, user.id, false).await?;
   cookies = cookies.add(cookie);
 
   Ok((cookies, TokenRes(AuthRes { user: user.id })))
@@ -449,7 +447,7 @@ mod test {
     let c = ctx().await;
     insert_passkey(&c.db, c.user, "key-a", "credA").await;
     insert_passkey(&c.db, c.user, "key-b", "credB").await;
-    let cookie = auth_cookie(&c.jwt, c.user);
+    let cookie = auth_cookie(&c.db, &c.jwt, c.user).await;
 
     let resp = app(&c)
       .oneshot(req("GET", "/list", &cookie, None))

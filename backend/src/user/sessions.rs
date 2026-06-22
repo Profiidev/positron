@@ -90,15 +90,14 @@ mod test {
     http::{Request, header},
     routing::{get, post},
   };
-  use centaurus::backend::auth::jwt_state::JwtInvalidState;
+  use centaurus::backend::auth::jwt_state::JwtState;
   use serde_json::json;
   use tower::ServiceExt;
 
-  fn app(db: Connection, jwt: centaurus::backend::auth::jwt_state::JwtState) -> Router {
+  fn app(db: Connection, jwt: JwtState) -> Router {
     Router::new()
       .route("/sessions", get(super::list))
       .route("/sessions/revoke", post(super::revoke))
-      .layer(Extension(JwtInvalidState::default()))
       .layer(Extension(jwt))
       .layer(Extension(db))
   }
@@ -108,7 +107,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(
@@ -131,7 +130,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     let sessions = db.session().list_for_user(user).await.unwrap();
     let id = sessions[0].id;
 

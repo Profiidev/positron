@@ -16,7 +16,7 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::db::DBTrait;
+use crate::{auth::session_auth::create_session_raw_token, db::DBTrait};
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -74,11 +74,9 @@ async fn refresh_token(
     .value()
     .to_string();
 
-  let cookie = jwt.create_token(auth.user_id)?;
-  db.session()
-    .refresh(&old_token, cookie.value().to_string())
-    .await?;
-  cookies = cookies.add(cookie);
+  let token = create_session_raw_token(&jwt, auth.user_id).await?;
+  db.session().refresh(&old_token, token.clone()).await?;
+  cookies = cookies.add(jwt.create_cookie(JWT_COOKIE_NAME, token));
 
   Ok((cookies, TokenRes(())))
 }
@@ -131,7 +129,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(
@@ -154,7 +152,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(

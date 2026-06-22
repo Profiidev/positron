@@ -4,7 +4,6 @@ pub use super::apod::Entity as Apod;
 pub use super::group::Entity as Group;
 pub use super::group_permission::Entity as GroupPermission;
 pub use super::group_user::Entity as GroupUser;
-pub use super::invalid_jwt::Entity as InvalidJwt;
 pub use super::key::Entity as Key;
 pub use super::note::Entity as Note;
 pub use super::note_snapshot::Entity as NoteSnapshot;

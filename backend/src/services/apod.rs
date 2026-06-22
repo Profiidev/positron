@@ -268,7 +268,7 @@ mod test {
     let upd = updater().await;
     let user = insert_user(&db, "u", "u@x.com").await;
     grant_permissions(&db, user, &["apod:list"]).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     create_apod(&db, date(1), None).await; // unselected -> excluded
     create_apod(&db, date(2), Some(user)).await; // selected -> included
@@ -296,7 +296,7 @@ mod test {
     let upd = updater().await;
     let user = insert_user(&db, "u", "u@x.com").await;
     // no apod:list permission granted
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt, upd)
       .oneshot(
@@ -318,7 +318,7 @@ mod test {
     let upd = updater().await;
     let user = insert_user(&db, "u", "u@x.com").await;
     grant_permissions(&db, user, &["apod:select"]).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     create_apod(&db, date(5), None).await;
 
     let resp = app(db.clone(), jwt, upd)
@@ -350,7 +350,7 @@ mod test {
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
     grant_permissions(&db, user, &["apod:list"]).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     create_apod(&db, date(7), Some(user)).await;
 
     // local storage + a dummy api key; the cached branch touches neither
