@@ -238,9 +238,21 @@ pub mod test {
     jwt: &centaurus::backend::auth::jwt_state::JwtState,
     user: Uuid,
   ) -> String {
-    let cookie = crate::auth::session_auth::create_session_cookie(conn, jwt, user, false)
-      .await
-      .expect("create token");
+    use crate::auth::session_auth::SessionMeta;
+
+    let cookie = crate::auth::session_auth::create_session_cookie(
+      conn,
+      jwt,
+      user,
+      false,
+      SessionMeta {
+        name: String::new(),
+        application: String::new(),
+        operating_system: String::new(),
+      },
+    )
+    .await
+    .expect("create token");
     format!("{}={}", cookie.name(), cookie.value())
   }
 

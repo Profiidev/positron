@@ -12,12 +12,16 @@ impl<'db> SessionTable<'db> {
     Self { db }
   }
 
+  #[allow(clippy::too_many_arguments)]
   pub async fn create(
     &self,
     user_id: Uuid,
     token: String,
     is_app: bool,
     expires_at: DateTime<Utc>,
+    name: String,
+    application: String,
+    operating_system: String,
   ) -> Result<(), DbErr> {
     let now = Utc::now().naive_utc();
     session::Entity::insert(session::ActiveModel {
@@ -29,6 +33,9 @@ impl<'db> SessionTable<'db> {
       created_at: Set(now),
       last_used_at: Set(now),
       refreshed_at: Set(None),
+      name: Set(name),
+      application: Set(application),
+      operating_system: Set(operating_system),
     })
     .exec(self.db)
     .await?;
@@ -112,7 +119,15 @@ mod test {
     let token = "test-token".to_string();
 
     db.session()
-      .create(user, token.clone(), false, Utc::now())
+      .create(
+        user,
+        token.clone(),
+        false,
+        Utc::now(),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
+      )
       .await
       .unwrap();
 
@@ -129,7 +144,15 @@ mod test {
     let new = "new-token".to_string();
 
     db.session()
-      .create(user, old.clone(), false, Utc::now())
+      .create(
+        user,
+        old.clone(),
+        false,
+        Utc::now(),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
+      )
       .await
       .unwrap();
     db.session().refresh(&old, new.clone()).await.unwrap();
@@ -147,7 +170,15 @@ mod test {
     let token = "tok".to_string();
 
     db.session()
-      .create(user1, token, false, Utc::now())
+      .create(
+        user1,
+        token,
+        false,
+        Utc::now(),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
+      )
       .await
       .unwrap();
     let row = db.session().list_for_user(user1).await.unwrap();
@@ -169,6 +200,9 @@ mod test {
         "expired".into(),
         false,
         Utc::now() - chrono::Duration::hours(1),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
       )
       .await
       .unwrap();
@@ -178,6 +212,9 @@ mod test {
         "active".into(),
         false,
         Utc::now() + chrono::Duration::hours(1),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
       )
       .await
       .unwrap();

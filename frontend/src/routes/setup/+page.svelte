@@ -9,7 +9,7 @@
   import { goto, invalidate } from '$app/navigation';
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { completeSetup } from '$lib/client';
-  import { getEncrypt } from '$lib/backend/auth.svelte';
+  import { getEncrypt, getSessionMeta } from '$lib/backend/auth.svelte';
 
   let { data } = $props();
 
@@ -39,7 +39,8 @@
       body: {
         admin_email: formData.email,
         admin_password: encrypt.encrypt(formData.password) || '',
-        admin_username: formData.username
+        admin_username: formData.username,
+        ...getSessionMeta()
       }
     });
 

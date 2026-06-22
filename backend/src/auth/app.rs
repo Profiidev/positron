@@ -40,7 +40,7 @@ use tower_governor::GovernorLayer;
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::auth::session_auth::create_session_cookie;
+use crate::auth::session_auth::{SessionMeta, create_session_cookie};
 
 pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
@@ -127,6 +127,8 @@ async fn request_code(
 struct ExchangeCodeReq {
   code: Uuid,
   verifier: String,
+  #[serde(flatten)]
+  session: SessionMeta,
 }
 
 async fn exchange_code(
@@ -150,7 +152,7 @@ async fn exchange_code(
   }
 
   let user = code_entry.0;
-  let cookie = create_session_cookie(&db, &jwt, user, true).await?;
+  let cookie = create_session_cookie(&db, &jwt, user, true, req.session).await?;
   cookies = cookies.add(cookie);
 
   drop(code_entry);
@@ -247,6 +249,8 @@ async fn approve_code(
 struct RetrieveTokenReq {
   auth_code: Uuid,
   verifier: String,
+  #[serde(flatten)]
+  session: SessionMeta,
 }
 
 #[derive(Serialize, JsonSchema, Debug)]
@@ -281,7 +285,7 @@ async fn retrieve_token(
     bail!("Invalid verifier");
   }
 
-  let cookie = create_session_cookie(&db, &jwt, user_id, false).await?;
+  let cookie = create_session_cookie(&db, &jwt, user_id, false, req.session).await?;
   cookies = cookies.add(cookie);
 
   state.approved_codes.remove(&req.auth_code);
@@ -364,7 +368,7 @@ mod test {
       .oneshot(post_json(
         "/exchange",
         None,
-        json!({ "code": code, "verifier": verifier }),
+        json!({ "code": code, "verifier": verifier, "name": "", "application": "", "operating_system": "" }),
       ))
       .await
       .unwrap();
@@ -402,7 +406,7 @@ mod test {
       .oneshot(post_json(
         "/retrieve",
         None,
-        json!({ "auth_code": auth_code, "verifier": verifier }),
+        json!({ "auth_code": auth_code, "verifier": verifier, "name": "", "application": "", "operating_system": "" }),
       ))
       .await
       .unwrap();

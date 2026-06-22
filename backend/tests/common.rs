@@ -242,7 +242,7 @@ impl TestServer {
     self
       .post(
         "/auth/password/authenticate",
-        serde_json::json!({ "email": email, "password": encrypted }),
+        serde_json::json!({ "email": email, "password": encrypted, "name": "", "application": "", "operating_system": "" }),
       )
       .await
   }

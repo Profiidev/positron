@@ -31,7 +31,7 @@ use webauthn_rs_proto::ResidentKeyRequirement;
 use crate::{
   auth::{
     jwt::{JwtAuthOther, JwtStateOther},
-    session_auth::create_session_cookie,
+    session_auth::{SessionMeta, create_session_cookie},
     state::WebauthnState,
   },
   db::DBTrait,
@@ -181,6 +181,13 @@ struct FinishAuthPath {
   auth_id: Uuid,
 }
 
+#[derive(Deserialize, JsonSchema)]
+struct AuthReq {
+  res: serde_json::Value,
+  #[serde(flatten)]
+  session: SessionMeta,
+}
+
 #[derive(Serialize, JsonSchema, Debug)]
 struct AuthRes {
   user: Uuid,
@@ -193,9 +200,9 @@ async fn finish_authentication(
   state: PasskeyState,
   jwt: JwtState,
   mut cookies: CookieJar,
-  Json(auth): Json<serde_json::Value>,
+  Json(auth_req): Json<AuthReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
-  let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth) else {
+  let Ok(auth) = serde_json::from_value::<PublicKeyCredential>(auth_req.res) else {
     bail!(BAD_REQUEST, "Invalid authentication data");
   };
   let (_, (auth_state, _)) = state
@@ -226,7 +233,7 @@ async fn finish_authentication(
     .update_passkey_record(passkey_db.id, json_key)
     .await;
 
-  let cookie = create_session_cookie(&db, &jwt, user.id, false).await?;
+  let cookie = create_session_cookie(&db, &jwt, user.id, false, auth_req.session).await?;
   cookies = cookies.add(cookie);
 
   Ok((cookies, TokenRes(AuthRes { user: user.id })))

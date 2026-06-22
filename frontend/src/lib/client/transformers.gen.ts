@@ -21,6 +21,7 @@ export const listPasskeysResponseTransformer = async (
 
 const sessionInfoSchemaResponseTransformer = (data: any) => {
   data.created_at = new Date(data.created_at);
+  data.expires_at = new Date(data.expires_at);
   data.last_used_at = new Date(data.last_used_at);
   if (data.refreshed_at) {
     data.refreshed_at = new Date(data.refreshed_at);

@@ -26,7 +26,7 @@ use uuid::Uuid;
 use crate::{
   auth::{
     jwt::{JwtAuthOther, JwtSpecial, JwtTotpRequired},
-    session_auth::create_session_cookie,
+    session_auth::{SessionMeta, create_session_cookie},
   },
   db::DBTrait,
   utils::{UpdateMessage, Updater},
@@ -52,6 +52,13 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
 #[derive(Deserialize, Debug, JsonSchema)]
 struct TotpReq {
   code: String,
+}
+
+#[derive(Deserialize, Debug, JsonSchema)]
+struct TotpConfirmReq {
+  code: String,
+  #[serde(flatten)]
+  session: SessionMeta,
 }
 
 #[derive(Serialize, Debug, JsonSchema)]
@@ -139,7 +146,7 @@ async fn confirm(
   db: Connection,
   jwt: JwtState,
   mut cookies: CookieJar,
-  Json(req): Json<TotpReq>,
+  Json(req): Json<TotpConfirmReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.user_ext().get_user_by_id(auth.user_id).await?;
 
@@ -160,7 +167,14 @@ async fn confirm(
   {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
-    let cookie = create_session_cookie(&db, &jwt, auth.user_id, false).await?;
+    let cookie = create_session_cookie(
+      &db,
+      &jwt,
+      auth.user_id,
+      false,
+      req.session,
+    )
+    .await?;
     cookies = cookies.add(cookie);
 
     Ok((cookies, TokenRes(AuthRes { user: auth.user_id })))
@@ -304,7 +318,7 @@ mod test {
         "POST",
         "/confirm",
         &totp_cookie,
-        Some(json!({ "code": current_code(&stored.unwrap()) })),
+        Some(json!({ "code": current_code(&stored.unwrap()), "name": "", "application": "", "operating_system": "" })),
       ))
       .await
       .unwrap();

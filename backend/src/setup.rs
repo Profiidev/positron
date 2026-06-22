@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::auth::session_auth::create_session_cookie;
+use crate::auth::session_auth::{SessionMeta, create_session_cookie};
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -33,6 +33,8 @@ struct SetupPayload {
   admin_username: String,
   admin_password: String,
   admin_email: String,
+  #[serde(flatten)]
+  session: SessionMeta,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -72,7 +74,7 @@ async fn complete_setup(
   let admin = db
     .user()
     .create_user(
-      payload.admin_username,
+      payload.admin_username.clone(),
       payload.admin_email,
       hash,
       salt,
@@ -87,7 +89,7 @@ async fn complete_setup(
   db.setup().mark_completed().await?;
   info!("Setup completed, created admin user with ID {}", admin);
 
-  let cookie = create_session_cookie(&db, &jwt, admin, false).await?;
+  let cookie = create_session_cookie(&db, &jwt, admin, false, payload.session).await?;
   cookies = cookies.add(cookie);
   info!("Created post setup login token for admin user");
 

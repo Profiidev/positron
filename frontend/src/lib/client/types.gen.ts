@@ -27,6 +27,12 @@ export type AuthConfirmQuery = {
   code: string;
 };
 
+export type AuthReq = {
+  application: string;
+  name: string;
+  operating_system: string;
+};
+
 export type AuthRes = {
   location: string;
 };
@@ -149,7 +155,10 @@ export type EmailChangeConfirm = {
 };
 
 export type ExchangeCodeReq = {
+  application: string;
   code: string;
+  name: string;
+  operating_system: string;
   verifier: string;
 };
 
@@ -214,7 +223,10 @@ export type ListGroupResponse = {
 };
 
 export type LoginReq = {
+  application: string;
   email: string;
+  name: string;
+  operating_system: string;
   password: string;
 };
 
@@ -445,7 +457,10 @@ export type ResetUserPassword = {
 };
 
 export type RetrieveTokenReq = {
+  application: string;
   auth_code: string;
+  name: string;
+  operating_system: string;
   verifier: string;
 };
 
@@ -456,6 +471,7 @@ export type RevokeSessionReq = {
 export type SessionInfo = {
   created_at: Date;
   current: boolean;
+  expires_at: Date;
   id: string;
   is_app: boolean;
   last_used_at: Date;
@@ -475,6 +491,9 @@ export type SetupPayload = {
   admin_email: string;
   admin_password: string;
   admin_username: string;
+  application: string;
+  name: string;
+  operating_system: string;
 };
 
 export type SharedUserInfo = {
@@ -514,6 +533,13 @@ export type SnapshotPath = {
 
 export type SpecialAccess = {
   password: string;
+};
+
+export type TotpConfirmReq = {
+  application: string;
+  code: string;
+  name: string;
+  operating_system: string;
 };
 
 export type TotpReq = {
@@ -740,7 +766,7 @@ export type FinishRegistrationError =
   FinishRegistrationErrors[keyof FinishRegistrationErrors];
 
 export type FinishAuthenticationData = {
-  body: unknown;
+  body: AuthReq;
   path: {
     auth_id: string;
   };
@@ -1093,7 +1119,7 @@ export type ChangePasswordError =
   ChangePasswordErrors[keyof ChangePasswordErrors];
 
 export type TotpConfirmData = {
-  body: TotpReq;
+  body: TotpConfirmReq;
   path?: never;
   query?: never;
   url: '/api/auth/totp/confirm';

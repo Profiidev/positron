@@ -13,6 +13,9 @@ impl MigrationTrait for Migration {
           .table(Session::Table)
           .if_not_exists()
           .col(pk_uuid(Session::Id))
+          .col(string(Session::Name))
+          .col(string(Session::Application))
+          .col(string(Session::OperatingSystem))
           .col(string(Session::Token).unique_key())
           .col(uuid(Session::UserId))
           .col(boolean(Session::IsApp))
@@ -43,6 +46,9 @@ impl MigrationTrait for Migration {
 enum Session {
   Table,
   Id,
+  Name,
+  Application,
+  OperatingSystem,
   Token,
   UserId,
   IsApp,
