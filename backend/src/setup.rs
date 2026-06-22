@@ -5,10 +5,8 @@ use axum_extra::extract::CookieJar;
 use centaurus::{
   backend::{
     auth::jwt_state::JwtState,
-    endpoints::setup::{
-      get_oidc_settings_route, init_oidc_route, is_setup_route,
-    },
     auth::pw_state::PasswordState,
+    endpoints::setup::{get_oidc_settings_route, init_oidc_route, is_setup_route},
   },
   bail,
   db::{init::Connection, tables::ConnectionExt},

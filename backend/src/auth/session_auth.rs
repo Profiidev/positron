@@ -108,12 +108,7 @@ mod test {
 
     let auth = SessionAuth;
     let mut parts = http::request::Parts::default();
-    assert!(
-      auth
-        .check(&db, &mut parts, token, &claims)
-        .await
-        .is_err()
-    );
+    assert!(auth.check(&db, &mut parts, token, &claims).await.is_err());
   }
 
   #[tokio::test]
