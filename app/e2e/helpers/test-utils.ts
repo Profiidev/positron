@@ -31,9 +31,8 @@ export const resetAppState = async (): Promise<void> => {
   });
 };
 
-export const generateTestId = (prefix: string): string => 
-  `${prefix}-${Date.now()}-${Math.random().toString(36).substring(7)}`
-;
+export const generateTestId = (prefix: string): string =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
 export const waitForElement = async (selector: string, timeout = 5000) => {
   const element = $(selector);
@@ -41,30 +40,30 @@ export const waitForElement = async (selector: string, timeout = 5000) => {
   return element;
 };
 
-export const waitForElementVisible = async (selector: string, timeout = 5000) => {
+export const waitForElementVisible = async (
+  selector: string,
+  timeout = 5000
+) => {
   const element = $(selector);
   await element.waitForDisplayed({ timeout });
   return element;
 };
 
-export const getElementByTestId = (testId: string) => 
-  $(`[data-testid="${testId}"]`)
-;
+export const getElementByTestId = (testId: string) =>
+  $(`[data-testid="${testId}"]`);
 
-export const waitForTestId = async (testId: string, timeout = 5000) => 
-  waitForElement(`[data-testid="${testId}"]`, timeout)
-;
+export const waitForTestId = async (testId: string, timeout = 5000) =>
+  waitForElement(`[data-testid="${testId}"]`, timeout);
 
-export const takeScreenshotAsBase64 = async (): Promise<string> => 
-  browser.takeScreenshot()
-;
+export const takeScreenshotAsBase64 = async (): Promise<string> =>
+  browser.takeScreenshot();
 
 export const isValidBase64Png = (base64String: string): boolean => {
   try {
     const buffer = Buffer.from(base64String, 'base64');
     // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
     const pngMagic = Buffer.from([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
     ]);
     return buffer.subarray(0, 8).equals(pngMagic);
   } catch {
