@@ -13,6 +13,7 @@ mod m20260611_120000_create_note_table;
 mod m20260616_120000_note_user_access;
 mod m20260618_120000_note_public_share;
 mod m20260620_055816_note_snapshots;
+mod m20260622_create_session_table;
 
 pub struct Migrator;
 
@@ -40,6 +41,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20260618_120000_note_public_share::Migration),
       Box::new(centaurus::db::migrations::m6_user_oidc_subject::Migration),
       Box::new(m20260620_055816_note_snapshots::Migration),
+      Box::new(m20260622_create_session_table::Migration),
     ]
   }
 }

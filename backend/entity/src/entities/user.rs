@@ -32,6 +32,8 @@ pub enum Relation {
   OAuthClientUser,
   #[sea_orm(has_many = "super::passkey::Entity")]
   Passkey,
+  #[sea_orm(has_many = "super::session::Entity")]
+  Session,
   #[sea_orm(has_one = "super::user_avatar::Entity")]
   UserAvatar,
   #[sea_orm(has_one = "super::user_settings::Entity")]
@@ -65,6 +67,12 @@ impl Related<super::o_auth_client_user::Entity> for Entity {
 impl Related<super::passkey::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Passkey.def()
+  }
+}
+
+impl Related<super::session::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Session.def()
   }
 }
 

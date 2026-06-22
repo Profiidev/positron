@@ -4,7 +4,7 @@ use oauth::{
   oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
 };
 use services::apod::ApodTable;
-use user::{passkey::PasskeyTable, settings::SettingsTable};
+use user::{passkey::PasskeyTable, session::SessionTable, settings::SettingsTable};
 
 use crate::db::{notes::snapshot::NoteSnapshotTable, user::user_ext::UserExtTable};
 
@@ -16,6 +16,7 @@ pub mod user;
 pub trait DBTrait {
   fn user_ext(&self) -> UserExtTable<'_>;
   fn passkey(&self) -> PasskeyTable<'_>;
+  fn session(&self) -> SessionTable<'_>;
   fn oauth_client(&self) -> OauthClientTable<'_>;
   fn oauth_policy(&self) -> OAuthPolicyTable<'_>;
   fn oauth_scope(&self) -> OAuthScopeTable<'_>;
@@ -32,6 +33,10 @@ impl DBTrait for Connection {
 
   fn passkey(&self) -> PasskeyTable<'_> {
     PasskeyTable::new(&self.0)
+  }
+
+  fn session(&self) -> SessionTable<'_> {
+    SessionTable::new(&self.0)
   }
 
   fn oauth_client(&self) -> OauthClientTable<'_> {

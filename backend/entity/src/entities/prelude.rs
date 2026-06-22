@@ -19,6 +19,7 @@ pub use super::o_auth_policy_content::Entity as OAuthPolicyContent;
 pub use super::o_auth_scope::Entity as OAuthScope;
 pub use super::o_auth_scope_o_auth_policy::Entity as OAuthScopeOAuthPolicy;
 pub use super::passkey::Entity as Passkey;
+pub use super::session::Entity as Session;
 pub use super::settings::Entity as Settings;
 pub use super::setup::Entity as Setup;
 pub use super::user::Entity as User;
