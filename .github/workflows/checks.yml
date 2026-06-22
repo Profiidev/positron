@@ -32,6 +32,9 @@ jobs:
           cache-on-failure: true
           shared-key: "linter_cache"
       - uses: bahmutov/npm-install@v1
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: app/e2e
 
       - name: Generate svelte data
         run: |
