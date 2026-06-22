@@ -298,7 +298,7 @@ mod test {
 
     // confirm using a JwtTotpRequired cookie and a valid code issues a session
     let totp_cookie = other_cookie::<JwtTotpRequired>(&other, user);
-    let app = mk_app(db, other, jwt, totp_state(), updater().await);
+    let app = mk_app(db.clone(), other, jwt, totp_state(), updater().await);
     let resp = app
       .oneshot(req(
         "POST",

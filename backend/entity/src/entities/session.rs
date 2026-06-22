@@ -11,6 +11,7 @@ pub struct Model {
   pub token: String,
   pub user_id: Uuid,
   pub is_app: bool,
+  pub expires_at: DateTime,
   pub created_at: DateTime,
   pub last_used_at: DateTime,
   pub refreshed_at: Option<DateTime>,

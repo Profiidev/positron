@@ -292,7 +292,10 @@ async fn retrieve_token(
 #[cfg(test)]
 mod test {
   use super::AppState;
-  use crate::db::test::{auth_cookie, auth_state, body_json, insert_user, test_db};
+  use crate::db::{
+    DBTrait,
+    test::{auth_cookie, auth_state, body_json, insert_user, test_db},
+  };
   use axum::{
     Extension, Router,
     body::Body,
@@ -368,7 +371,7 @@ mod test {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(body_json(resp).await["user"], user.to_string());
     let sessions = db.session().list_for_user(user).await.unwrap();
-    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions.len(), 2);
     assert!(sessions[0].is_app);
   }
 

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use entity::{prelude::*, session};
 use sea_orm::{ActiveValue::Set, QueryOrder, prelude::*};
 use uuid::Uuid;
@@ -12,13 +12,20 @@ impl<'db> SessionTable<'db> {
     Self { db }
   }
 
-  pub async fn create(&self, user_id: Uuid, token: String, is_app: bool) -> Result<(), DbErr> {
+  pub async fn create(
+    &self,
+    user_id: Uuid,
+    token: String,
+    is_app: bool,
+    expires_at: DateTime<Utc>,
+  ) -> Result<(), DbErr> {
     let now = Utc::now().naive_utc();
     session::Entity::insert(session::ActiveModel {
       id: Set(Uuid::now_v7()),
       token: Set(token),
       user_id: Set(user_id),
       is_app: Set(is_app),
+      expires_at: Set(expires_at.naive_utc()),
       created_at: Set(now),
       last_used_at: Set(now),
       refreshed_at: Set(None),
@@ -82,6 +89,8 @@ impl<'db> SessionTable<'db> {
 
 #[cfg(test)]
 mod test {
+  use chrono::Utc;
+
   use crate::db::{
     DBTrait,
     test::{insert_user, test_db},
@@ -94,7 +103,7 @@ mod test {
     let token = "test-token".to_string();
 
     db.session()
-      .create(user, token.clone(), false)
+      .create(user, token.clone(), false, Utc::now())
       .await
       .unwrap();
 
@@ -110,7 +119,10 @@ mod test {
     let old = "old-token".to_string();
     let new = "new-token".to_string();
 
-    db.session().create(user, old.clone(), false).await.unwrap();
+    db.session()
+      .create(user, old.clone(), false, Utc::now())
+      .await
+      .unwrap();
     db.session().refresh(&old, new.clone()).await.unwrap();
 
     assert!(db.session().get_by_token(&old).await.is_err());
@@ -125,7 +137,10 @@ mod test {
     let user2 = insert_user(&db, "u2", "u2@x.com").await;
     let token = "tok".to_string();
 
-    db.session().create(user1, token, false).await.unwrap();
+    db.session()
+      .create(user1, token, false, Utc::now())
+      .await
+      .unwrap();
     let row = db.session().list_for_user(user1).await.unwrap();
     let id = row[0].id;
 

@@ -16,6 +16,7 @@ impl MigrationTrait for Migration {
           .col(string(Session::Token).unique_key())
           .col(uuid(Session::UserId))
           .col(boolean(Session::IsApp))
+          .col(date_time(Session::ExpiresAt))
           .col(date_time(Session::CreatedAt))
           .col(date_time(Session::LastUsedAt))
           .col(date_time_null(Session::RefreshedAt))
@@ -45,6 +46,7 @@ enum Session {
   Token,
   UserId,
   IsApp,
+  ExpiresAt,
   CreatedAt,
   LastUsedAt,
   RefreshedAt,

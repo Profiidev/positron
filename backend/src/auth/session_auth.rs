@@ -7,7 +7,9 @@ use centaurus::{
   bail,
   db::init::Connection,
   error::Result,
+  eyre::ContextCompat,
 };
+use chrono::{Duration, Utc};
 use http::request::Parts;
 use migration::async_trait;
 use uuid::Uuid;
@@ -57,7 +59,14 @@ pub async fn create_session_cookie<'c>(
   is_app: bool,
 ) -> Result<Cookie<'c>> {
   let token = create_session_raw_token(jwt, user_id).await?;
-  db.session().create(user_id, token.clone(), is_app).await?;
+
+  let exp = Utc::now()
+    .checked_add_signed(Duration::seconds(jwt.exp))
+    .context("Failed to add exp")?;
+
+  db.session()
+    .create(user_id, token.clone(), is_app, exp)
+    .await?;
   Ok(jwt.create_cookie(JWT_COOKIE_NAME, token))
 }
 
@@ -68,6 +77,8 @@ pub async fn revoke_session(db: &Connection, token: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+  use http::Request;
+
   use super::*;
   use crate::db::test::{auth_state, insert_user, test_db};
 
@@ -107,7 +118,7 @@ mod test {
     revoke_session(&db, token).await.unwrap();
 
     let auth = SessionAuth;
-    let mut parts = http::request::Parts::default();
+    let mut parts = Request::new(()).into_parts().0;
     assert!(auth.check(&db, &mut parts, token, &claims).await.is_err());
   }
 
