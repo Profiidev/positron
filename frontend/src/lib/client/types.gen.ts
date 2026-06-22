@@ -449,6 +449,19 @@ export type RetrieveTokenReq = {
   verifier: string;
 };
 
+export type RevokeSessionReq = {
+  id: string;
+};
+
+export type SessionInfo = {
+  created_at: Date;
+  current: boolean;
+  id: string;
+  is_app: boolean;
+  last_used_at: Date;
+  refreshed_at?: Date | null;
+};
+
 export type SetGoodReq = {
   date: Date;
   good: boolean;
@@ -1916,6 +1929,63 @@ export type UpdateAvatarResponses = {
    */
   200: unknown;
 };
+
+export type ListSessionsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/sessions';
+};
+
+export type ListSessionsErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListSessionsResponses = {
+  200: Array<SessionInfo>;
+};
+
+export type ListSessionsResponse =
+  ListSessionsResponses[keyof ListSessionsResponses];
+
+export type RevokeSessionData = {
+  body: RevokeSessionReq;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/sessions';
+};
+
+export type RevokeSessionErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RevokeSessionError = RevokeSessionErrors[keyof RevokeSessionErrors];
 
 export type InfoData = {
   body?: never;
