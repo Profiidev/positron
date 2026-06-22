@@ -85,6 +85,15 @@ impl<'db> SessionTable<'db> {
       .await?;
     Ok(())
   }
+
+  pub async fn delete_expired(&self) -> Result<u64, DbErr> {
+    let now = Utc::now().naive_utc();
+    let res = Session::delete_many()
+      .filter(session::Column::ExpiresAt.lt(now))
+      .exec(self.db)
+      .await?;
+    Ok(res.rows_affected)
+  }
 }
 
 #[cfg(test)]
@@ -147,5 +156,25 @@ mod test {
     assert!(db.session().delete_by_id(id, user2).await.is_err());
     db.session().delete_by_id(id, user1).await.unwrap();
     assert!(db.session().list_for_user(user1).await.unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn delete_expired_removes_only_past_sessions() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    db.session()
+      .create(user, "expired".into(), false, Utc::now() - chrono::Duration::hours(1))
+      .await
+      .unwrap();
+    db.session()
+      .create(user, "active".into(), false, Utc::now() + chrono::Duration::hours(1))
+      .await
+      .unwrap();
+
+    assert_eq!(db.session().delete_expired().await.unwrap(), 1);
+    let remaining = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(remaining[0].token, "active");
   }
 }

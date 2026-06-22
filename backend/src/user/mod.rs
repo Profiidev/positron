@@ -1,5 +1,9 @@
 use aide::axum::ApiRouter;
-use centaurus::backend::{endpoints::user::account, middleware::rate_limiter::RateLimiter};
+use axum::Extension;
+use centaurus::{
+  backend::{endpoints::user::account, middleware::rate_limiter::RateLimiter},
+  db::init::Connection,
+};
 
 use crate::utils::UpdateMessage;
 
@@ -15,4 +19,8 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       account::router::<UpdateMessage>(rate_limiter).nest("/sessions", sessions::router()),
     )
     .nest("/info", info::router())
+}
+
+pub fn state(router: ApiRouter, db: Connection) -> ApiRouter {
+  router.layer(Extension(sessions::SessionCleanup::init(db)))
 }

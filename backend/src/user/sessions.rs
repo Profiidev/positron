@@ -1,3 +1,5 @@
+use std::{sync::Arc, time::Duration};
+
 use aide::axum::{ApiRouter, routing::get_with, routing::post_with};
 use axum::Json;
 use axum_extra::extract::CookieJar;
@@ -15,9 +17,32 @@ use centaurus::{
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tokio::{spawn, task::JoinHandle, time::sleep};
 use uuid::Uuid;
 
 use crate::db::DBTrait;
+
+#[derive(Clone)]
+pub struct SessionCleanup {
+  _handle: Arc<JoinHandle<()>>,
+}
+
+impl SessionCleanup {
+  pub fn init(db: Connection) -> Self {
+    let handle = spawn(async move {
+      loop {
+        if let Err(err) = db.session().delete_expired().await {
+          tracing::warn!(?err, "session cleanup failed");
+        }
+        sleep(Duration::from_secs(3600)).await;
+      }
+    });
+
+    Self {
+      _handle: Arc::new(handle),
+    }
+  }
+}
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -32,6 +57,7 @@ struct SessionInfo {
   created_at: DateTime<Utc>,
   last_used_at: DateTime<Utc>,
   refreshed_at: Option<DateTime<Utc>>,
+  expires_at: DateTime<Utc>,
   current: bool,
 }
 
@@ -48,6 +74,7 @@ async fn list(auth: JwtAuth, db: Connection, cookies: CookieJar) -> Result<Json<
       created_at: s.created_at.and_utc(),
       last_used_at: s.last_used_at.and_utc(),
       refreshed_at: s.refreshed_at.map(|t| t.and_utc()),
+      expires_at: s.expires_at.and_utc(),
       current: current_token.as_ref() == Some(&s.token),
     })
     .collect();
