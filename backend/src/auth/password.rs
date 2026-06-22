@@ -67,7 +67,12 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (other.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    (jwt.create_token(user.id)?, false)
+    let cookie = jwt.create_token(user.id)?;
+    db.session()
+      .create(user.id, cookie.value().to_string(), false)
+      .await?;
+
+    (cookie, false)
   };
 
   cookies = cookies.add(cookie);

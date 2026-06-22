@@ -226,6 +226,9 @@ async fn finish_authentication(
     .await;
 
   let cookie = jwt.create_token(user.id)?;
+  db.session()
+    .create(user.id, cookie.value().to_string(), false)
+    .await?;
   cookies = cookies.add(cookie);
 
   Ok((cookies, TokenRes(AuthRes { user: user.id })))

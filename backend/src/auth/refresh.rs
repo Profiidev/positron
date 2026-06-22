@@ -9,11 +9,14 @@ use centaurus::{
     },
     request::response::TokenRes,
   },
-  error::Result,
+  db::init::Connection,
+  error::{ErrorReportStatusExt, Result},
 };
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::Serialize;
+
+use crate::db::DBTrait;
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -63,9 +66,20 @@ async fn refresh_token(
   auth: JwtAuth,
   mut cookies: CookieJar,
   jwt: JwtState,
+  db: Connection,
 ) -> Result<(CookieJar, TokenRes)> {
+  let old_token = cookies
+    .get(JWT_COOKIE_NAME)
+    .status_context(http::StatusCode::UNAUTHORIZED, "Missing auth cookie")?
+    .value()
+    .to_string();
+
   let cookie = jwt.create_token(auth.user_id)?;
+  db.session()
+    .refresh(&old_token, cookie.value().to_string())
+    .await?;
   cookies = cookies.add(cookie);
+
   Ok((cookies, TokenRes(())))
 }
 

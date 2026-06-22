@@ -26,6 +26,7 @@ use centaurus::{
     request::response::TokenRes,
   },
   bail,
+  db::init::Connection,
   error::Result,
 };
 use dashmap::DashMap;
@@ -38,6 +39,8 @@ use tokio::{spawn, sync::mpsc, time::sleep};
 use tower_governor::GovernorLayer;
 use tracing::warn;
 use uuid::Uuid;
+
+use crate::db::DBTrait;
 
 pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
@@ -129,6 +132,7 @@ struct ExchangeCodeReq {
 async fn exchange_code(
   state: AppState,
   jwt: JwtState,
+  db: Connection,
   mut cookies: CookieJar,
   Json(req): Json<ExchangeCodeReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
@@ -147,6 +151,9 @@ async fn exchange_code(
 
   let user = code_entry.0;
   let cookie = jwt.create_token(user)?;
+  db.session()
+    .create(user, cookie.value().to_string(), true)
+    .await?;
   cookies = cookies.add(cookie);
 
   drop(code_entry);
@@ -253,6 +260,7 @@ struct AuthRes {
 async fn retrieve_token(
   state: AppState,
   jwt: JwtState,
+  db: Connection,
   mut cookies: CookieJar,
   Json(req): Json<RetrieveTokenReq>,
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
@@ -277,6 +285,9 @@ async fn retrieve_token(
   }
 
   let cookie = jwt.create_token(user_id)?;
+  db.session()
+    .create(user_id, cookie.value().to_string(), false)
+    .await?;
   cookies = cookies.add(cookie);
 
   state.approved_codes.remove(&req.auth_code);
