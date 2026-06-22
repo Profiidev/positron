@@ -1,0 +1,25 @@
+{
+  "name": "webdriverio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "wdio run wdio.conf.js",
+    "test:android": "TAURI_TEST_PLATFORM=android npm run test",
+    "build:x86": "cd .. && npm run tauri android build -- --apk --target x86_64 --debug --features test",
+    "build:arm": "cd .. && npm run tauri android build -- --apk --target aarch64 --debug --features test",
+    "appium": "appium"
+  },
+  "dependencies": {
+    "@wdio/cli": "^9.29.0"
+  },
+  "devDependencies": {
+    "@testing-library/webdriverio": "^3.2.1",
+    "@types/node": "^26.0.0",
+    "@wdio/globals": "^9.29.0",
+    "@wdio/junit-reporter": "^9.29.0",
+    "@wdio/local-runner": "^9.29.0",
+    "@wdio/mocha-framework": "^9.29.0",
+    "@wdio/spec-reporter": "^9.29.0"
+  }
+}

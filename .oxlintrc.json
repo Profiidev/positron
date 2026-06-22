@@ -16,6 +16,12 @@
         "eslint/class-methods-use-this": "off",
         "unicorn/consistent-function-scoping": "off"
       }
+    },
+    {
+      "files": ["app/e2e/**"],
+      "rules": {
+        "eslint/no-console": "off"
+      }
     }
   ]
 }

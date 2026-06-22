@@ -1,0 +1,84 @@
+import { $, browser } from '@wdio/globals';
+
+export const WEBDRIVER_PORT = 4445;
+export const BASE_URL = 'tauri://localhost';
+
+export const isMobile = (): boolean => {
+  const platform = process.env.TAURI_TEST_PLATFORM;
+  return platform === 'android' || platform === 'ios';
+};
+
+export const navigateToTestPage = async (page: string): Promise<void> => {
+  // Use click-based navigation instead of browser.url() for hash routes
+  // Browser.url() with tauri:// scheme doesn't work on Windows WebView2
+  const navLink = browser.$(`[data-testid="nav-${page}"]`);
+  await navLink.click();
+  // Wait for route to load
+  await browser.pause(100);
+};
+
+export const resetAppState = async (): Promise<void> => {
+  // Navigate to main page using click
+  await navigateToTestPage('main');
+
+  // Clear cookies
+  await browser.deleteAllCookies();
+
+  // Clear local and session storage
+  await browser.execute(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+};
+
+export const generateTestId = (prefix: string): string => 
+  `${prefix}-${Date.now()}-${Math.random().toString(36).substring(7)}`
+;
+
+export const waitForElement = async (selector: string, timeout = 5000) => {
+  const element = $(selector);
+  await element.waitForExist({ timeout });
+  return element;
+};
+
+export const waitForElementVisible = async (selector: string, timeout = 5000) => {
+  const element = $(selector);
+  await element.waitForDisplayed({ timeout });
+  return element;
+};
+
+export const getElementByTestId = (testId: string) => 
+  $(`[data-testid="${testId}"]`)
+;
+
+export const waitForTestId = async (testId: string, timeout = 5000) => 
+  waitForElement(`[data-testid="${testId}"]`, timeout)
+;
+
+export const takeScreenshotAsBase64 = async (): Promise<string> => 
+  browser.takeScreenshot()
+;
+
+export const isValidBase64Png = (base64String: string): boolean => {
+  try {
+    const buffer = Buffer.from(base64String, 'base64');
+    // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+    const pngMagic = Buffer.from([
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+    ]);
+    return buffer.subarray(0, 8).equals(pngMagic);
+  } catch {
+    return false;
+  }
+};
+
+export const isValidBase64Pdf = (base64String: string): boolean => {
+  try {
+    const buffer = Buffer.from(base64String, 'base64');
+    // PDF magic bytes: %PDF
+    const pdfMagic = Buffer.from('%PDF');
+    return buffer.subarray(0, 4).equals(pdfMagic);
+  } catch {
+    return false;
+  }
+};

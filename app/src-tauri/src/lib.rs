@@ -26,7 +26,12 @@ mod tauri_plugin_barcode_scanner {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+  let builder = tauri::Builder::default();
+
+  #[cfg(feature = "test")]
+  let builder = builder.plugin(tauri_plugin_webdriver::init());
+
+  builder
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_barcode_scanner::init())
     .plugin(tauri_plugin_store::Builder::new().build())
