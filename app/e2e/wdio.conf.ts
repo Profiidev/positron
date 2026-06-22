@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startApp, stopApp } from './helpers/app-launcher.js';
+import { mergeFiles } from 'junit-report-merger';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,7 +46,16 @@ export const config: WebdriverIO.Config = {
 
   framework: 'mocha',
 
-  reporters: ['spec'],
+  reporters: [
+    'spec',
+    [
+      'junit',
+      {
+        outputDir: path.resolve(__dirname, 'reports'),
+        outputFileFormat: (options) => `results-${options.cid}.xml`
+      }
+    ]
+  ],
 
   mochaOpts: {
     ui: 'bdd',
@@ -58,9 +68,14 @@ export const config: WebdriverIO.Config = {
     await startApp(WEBDRIVER_PORT);
   },
 
-  onComplete: () => {
+  onComplete: async () => {
     console.log('Stopping Tauri application...');
     stopApp(WEBDRIVER_PORT);
+
+    const sourceDir = path.resolve(__dirname, 'reports', '*.xml');
+    const destFile = path.resolve(__dirname, 'reports', 'app-e2e-tests.xml');
+
+    await mergeFiles(destFile, [sourceDir]);
   },
 
   beforeSession: async () => {

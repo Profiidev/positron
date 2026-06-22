@@ -166,6 +166,7 @@ jobs:
           retention-days: 5
 
   app_e2e:
+    name: App E2E Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -207,10 +208,11 @@ jobs:
             app/src-tauri/gen/android/buildSrc/build
 
       - name: Build app
-        run: |
-          cd app/e2e
-          npm run build:x86
-          cd ../..
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        with:
+          projectPath: 'app'
+          args: --apk --debug --target x86_64 --features test
+          mobile: 'android'
 
       - name: Enable KVM
         run: |
@@ -248,6 +250,14 @@ jobs:
             adb install app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
             cd app/e2e
             npm run test:android
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-app-e2e
+          path: ${{ github.workspace }}/app/e2e/reports/app-e2e-tests.xml
+          retention-days: 5
 
   comment_results:
     name: Comment Results to PR
