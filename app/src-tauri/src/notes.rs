@@ -4,12 +4,12 @@ use anyhow::{Result, bail};
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt, stream::SplitSink};
 use serde::Serialize;
+use serde_json::{Value, json};
 use tauri::{
   AppHandle, Manager, State, Url,
   async_runtime::{JoinHandle, spawn},
   ipc::Channel,
 };
-use serde_json::{Value, json};
 use tauri_plugin_http::reqwest::{Method, header::AUTHORIZATION};
 use tokio::{
   net::TcpStream,
@@ -37,7 +37,11 @@ pub async fn list_notes(client: State<'_, Client>) -> tauri::Result<Value> {
 
 #[tauri::command]
 pub async fn note_info(client: State<'_, Client>, uuid: Uuid) -> tauri::Result<Value> {
-  Ok(client.notes_get(&format!("/api/notes/management/{uuid}")).await?)
+  Ok(
+    client
+      .notes_get(&format!("/api/notes/management/{uuid}"))
+      .await?,
+  )
 }
 
 #[tauri::command]
