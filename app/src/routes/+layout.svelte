@@ -34,6 +34,16 @@
     }
   });
 
+  $effect(() => {
+    if (
+      authStatus &&
+      setupStatus?.url &&
+      (page.route.id === '/auth' || page.route.id === '/setup')
+    ) {
+      goto('/');
+    }
+  });
+
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
 

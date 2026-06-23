@@ -210,6 +210,12 @@ jobs:
             app/src-tauri/gen/android/buildSrc/.gradle
             app/src-tauri/gen/android/buildSrc/build
 
+      - name: Generate svelte data
+        run: |
+          echo "BACKEND_URL=http://localhost:8000" > frontend/.env
+          cd frontend && npm run sync && cd ..
+          cd app && npm run sync && cd ..
+
       - name: Build app
         uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
         with:
