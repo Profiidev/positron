@@ -20,7 +20,10 @@
     {
       "files": ["app/e2e/**"],
       "rules": {
-        "eslint/no-console": "off"
+        "eslint/no-console": "off",
+        "eslint/no-underscore-dangle": "off",
+        "eslint/capitalized-comments": "off",
+        "typescript/no-unsafe-type-assertion": "off"
       }
     }
   ]

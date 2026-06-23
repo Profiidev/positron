@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startApp, stopApp } from './helpers/app-launcher.js';
+import { startMockServer, stopMockServer } from './helpers/mock-server.js';
 import { mergeFiles } from 'junit-report-merger';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +65,9 @@ export const config: WebdriverIO.Config = {
 
   // Hooks
   onPrepare: async () => {
+    console.log('Starting mock backend...');
+    await startMockServer();
+
     console.log('Starting Tauri application...');
     await startApp(WEBDRIVER_PORT);
   },
@@ -71,6 +75,9 @@ export const config: WebdriverIO.Config = {
   onComplete: async () => {
     console.log('Stopping Tauri application...');
     stopApp(WEBDRIVER_PORT);
+
+    console.log('Stopping mock backend...');
+    await stopMockServer();
 
     const sourceDir = path.resolve(__dirname, 'reports', '*.xml');
     const destFile = path.resolve(__dirname, 'reports', 'app-e2e-tests.xml');
