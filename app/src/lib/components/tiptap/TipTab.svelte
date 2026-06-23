@@ -6,7 +6,7 @@
   import { EditorContent, type Editor } from 'svelte-tiptap';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { cn } from '@profidev/pleiades/utils';
-  import type { NoteActiveEditor } from '../types';
+  import type { NoteActiveEditor } from '../notes/types';
   import { TauriWebsocketProvider } from '$lib/commands/notes.svelte';
 
   type AwarenessUser = {
@@ -112,7 +112,6 @@
     const doc = new Doc();
 
     provider = new TauriWebsocketProvider(id, doc);
-    console.log(provider);
     provider.awareness.on('change', onAwarenessChange);
 
     lastEditable = editable;

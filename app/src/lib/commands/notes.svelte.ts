@@ -6,36 +6,172 @@ import { ObservableV2 } from 'lib0/observable';
 import * as awarenessProtocol from 'y-protocols/awareness';
 import * as syncProtocol from 'y-protocols/sync';
 import type * as Y from 'yjs';
+import type {
+  CreateNoteResult,
+  NoteInfo,
+  NoteShareAccess,
+  NoteSnapshotDetail,
+  NoteSnapshotInfo,
+  NotesConfig,
+  ShareEntry,
+  SimpleUserInfo,
+  TransferNoteResult
+} from './notes-types';
 
-export type NoteShareAccess = 'view' | 'edit';
-
-export interface SimpleUserInfo {
-  id: string;
-  name: string;
-}
-
-export interface SharedUserInfo {
-  id: string;
-  name: string;
-  access: NoteShareAccess;
-}
-
-export interface NoteInfo {
-  can_edit: boolean;
-  id: string;
-  is_owner: boolean;
-  owner: SimpleUserInfo;
-  preview: string;
-  public_access?: NoteShareAccess | null;
-  shared_with: SharedUserInfo[];
-  title: string;
-}
+export type * from './notes-types';
 
 export const listNotes = async (): Promise<NoteInfo[]> => {
   try {
     return await invoke<NoteInfo[]>('list_notes');
   } catch {
     return [];
+  }
+};
+
+export const noteInfo = async (uuid: string): Promise<NoteInfo | undefined> => {
+  try {
+    return await invoke<NoteInfo>('note_info', { uuid });
+  } catch {
+    return undefined;
+  }
+};
+
+export const notesConfig = async (): Promise<NotesConfig | undefined> => {
+  try {
+    return await invoke<NotesConfig>('notes_config');
+  } catch {
+    return undefined;
+  }
+};
+
+export const listUsersNote = async (): Promise<SimpleUserInfo[]> => {
+  try {
+    return await invoke<SimpleUserInfo[]>('list_users_note');
+  } catch {
+    return [];
+  }
+};
+
+export const listNoteSnapshots = async (
+  noteUuid: string
+): Promise<NoteSnapshotInfo[]> => {
+  try {
+    return await invoke<NoteSnapshotInfo[]>('list_note_snapshots', {
+      noteUuid
+    });
+  } catch {
+    return [];
+  }
+};
+
+export const noteSnapshotInfo = async (
+  snapshotId: string
+): Promise<NoteSnapshotDetail | undefined> => {
+  try {
+    return await invoke<NoteSnapshotDetail>('note_snapshot_info', {
+      snapshotId
+    });
+  } catch {
+    return undefined;
+  }
+};
+
+export const noteSnapshotContent = async (
+  snapshotId: string
+): Promise<Uint8Array | undefined> => {
+  try {
+    const res = await invoke<number[]>('note_snapshot_content', { snapshotId });
+    return new Uint8Array(res);
+  } catch {
+    return undefined;
+  }
+};
+
+export const editNote = async (
+  noteId: string,
+  title: string
+): Promise<boolean> => {
+  try {
+    await invoke('edit_note', { noteId, title });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const shareNote = async (
+  noteId: string,
+  sharedWith: ShareEntry[]
+): Promise<boolean> => {
+  try {
+    await invoke('share_note', { noteId, sharedWith });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const shareNotePublic = async (
+  noteId: string,
+  publicAccess: NoteShareAccess | null
+): Promise<boolean> => {
+  try {
+    await invoke('share_note_public', { noteId, publicAccess });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const restoreNoteSnapshot = async (
+  snapshotId: string
+): Promise<boolean> => {
+  try {
+    await invoke('restore_note_snapshot', { snapshotId });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const deleteNote = async (noteId: string): Promise<boolean> => {
+  try {
+    await invoke('delete_note', { noteId });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const deleteNoteSnapshot = async (
+  snapshotId: string
+): Promise<boolean> => {
+  try {
+    await invoke('delete_note_snapshot', { snapshotId });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const createNote = async (title: string): Promise<CreateNoteResult> => {
+  try {
+    const note = await invoke<{ id: string }>('create_note', { title });
+    return { id: note.id, ok: true };
+  } catch (error) {
+    return { error: error === 'limit' ? 'limit' : 'other', ok: false };
+  }
+};
+
+export const transferNote = async (
+  noteId: string,
+  newOwnerId: string
+): Promise<TransferNoteResult> => {
+  try {
+    await invoke('transfer_note', { newOwnerId, noteId });
+    return { ok: true };
+  } catch (error) {
+    return { error: error === 'limit' ? 'limit' : 'other', ok: false };
   }
 };
 

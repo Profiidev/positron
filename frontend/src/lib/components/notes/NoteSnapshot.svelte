@@ -5,7 +5,7 @@
   import { cn } from '@profidev/pleiades/utils';
   import History from '@lucide/svelte/icons/history';
   import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
-  import type { NoteSnapshotInfo } from '$lib/client';
+  import type { NoteSnapshotInfo } from './types';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
   import {

@@ -34,12 +34,17 @@ impl super::Client {
     Ok(())
   }
 
-  async fn load_image(&self, uuid: Uuid) -> Result<()> {
+  pub async fn any_user_avatar(&self, uuid: Uuid) -> Result<Vec<u8>> {
     let req = self
       .builder(Method::GET, &format!("/api/user/info/avatar/{}", uuid))
       .await?;
     let resp = self.send_auth(req).await?;
     let image: Vec<u8> = resp.bytes().await?.to_vec();
+    Ok(image)
+  }
+
+  async fn load_image(&self, uuid: Uuid) -> Result<()> {
+    let image = self.any_user_avatar(uuid).await?;
 
     let store = self.handle.state::<Store>();
     store.set_avatar_store(Some(image)).await?;

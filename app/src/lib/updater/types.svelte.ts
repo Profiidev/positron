@@ -2,6 +2,7 @@ export enum UpdateMessageType {
   AuthStatusUpdated = 'AuthStatusUpdated',
   SetupUpdated = 'SetupUpdated',
   UserInfoUpdated = 'UserInfoUpdated',
+  NotesUpdated = 'NotesUpdated',
   TokenInvalid = 'TokenInvalid',
   Disconnected = 'Disconnected',
   Connected = 'Connected',
@@ -27,7 +28,8 @@ export type UpdateMessage =
         | UpdateMessageType.ConfirmAuthMissingCode
         | UpdateMessageType.AuthStatusUpdated
         | UpdateMessageType.SetupUpdated
-        | UpdateMessageType.UserInfoUpdated;
+        | UpdateMessageType.UserInfoUpdated
+        | UpdateMessageType.NotesUpdated;
     }
   | {
       type: UpdateMessageType.ConfirmAuth;

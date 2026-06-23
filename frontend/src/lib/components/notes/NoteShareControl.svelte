@@ -11,9 +11,9 @@
   import Link from '@lucide/svelte/icons/link';
   import type {
     NoteShareAccess,
-    SharedUserInfo,
-    SimpleUserInfo
-  } from '$lib/client';
+    NoteSharedUserInfo,
+    NoteUserInfo
+  } from './types';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { page } from '$app/state';
@@ -31,8 +31,8 @@
     saving = false
   }: {
     noteId: string;
-    shareableUsers: SimpleUserInfo[];
-    selected: SharedUserInfo[];
+    shareableUsers: NoteUserInfo[];
+    selected: NoteSharedUserInfo[];
     publicAccess?: NoteShareAccess | null;
     onShareChange: (shares: ShareEntry[]) => void;
     onPublicAccessChange: (access: NoteShareAccess | null) => void;

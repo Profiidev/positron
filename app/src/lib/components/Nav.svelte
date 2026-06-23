@@ -9,7 +9,7 @@
   import LogOut from '@lucide/svelte/icons/log-out';
 </script>
 
-<nav class="bg-background flex items-center gap-1 border-b p-2">
+<nav class="bg-background mb-1 flex items-center gap-1 border-b p-2 pb-1">
   <Button variant="ghost" class="cursor-pointer" onclick={() => goto('/')}>
     <NotebookPen />
     Notes

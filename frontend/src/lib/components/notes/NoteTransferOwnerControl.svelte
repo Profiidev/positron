@@ -3,9 +3,9 @@
   import * as Command from '@profidev/pleiades/components/ui/command';
   import { cn } from '@profidev/pleiades/utils';
   import LockOpen from '@lucide/svelte/icons/lock-open';
-  import type { SimpleUserInfo } from '$lib/client';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
+  import type { NoteUserInfo } from './types';
 
   let {
     owner,
@@ -13,8 +13,8 @@
     onTransfer,
     saving = false
   }: {
-    owner: SimpleUserInfo;
-    candidateUsers: SimpleUserInfo[];
+    owner: NoteUserInfo;
+    candidateUsers: NoteUserInfo[];
     onTransfer: (userId: string) => void;
     saving?: boolean;
   } = $props();

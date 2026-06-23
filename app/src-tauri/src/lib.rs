@@ -1,11 +1,16 @@
 use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
-  notes::{NoteState, connect_note, disconnect_note, list_notes, send_note},
+  notes::{
+    NoteState, connect_note, create_note, delete_note, delete_note_snapshot, disconnect_note,
+    edit_note, list_note_snapshots, list_notes, list_users_note, note_info, note_snapshot_content,
+    note_snapshot_info, notes_config, restore_note_snapshot, send_note, share_note,
+    share_note_public, transfer_note,
+  },
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
-  user::{user_avatar, user_info},
+  user::{any_user_avatar, user_avatar, user_info},
 };
 
 mod api;
@@ -50,11 +55,26 @@ pub fn run() {
       reset_setup,
       user_info,
       user_avatar,
+      any_user_avatar,
       confirm_code,
       connect_note,
       send_note,
       disconnect_note,
       list_notes,
+      note_info,
+      notes_config,
+      list_users_note,
+      list_note_snapshots,
+      note_snapshot_info,
+      note_snapshot_content,
+      edit_note,
+      share_note,
+      share_note_public,
+      restore_note_snapshot,
+      delete_note,
+      delete_note_snapshot,
+      create_note,
+      transfer_note,
     ])
     .setup(|app| {
       Updater::init(app.handle());
