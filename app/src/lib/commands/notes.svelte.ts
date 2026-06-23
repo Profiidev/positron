@@ -33,12 +33,18 @@ class NoteConnection {
     // oxlint-disable-next-line prefer-add-event-listener
     receive.onmessage = listener;
 
-    const uuid = await invoke<string>('connect_note', {
-      channel: receive,
-      note_id
-    });
+    try {
+      const uuid = await invoke<string>('connect_note', {
+        channel: receive,
+        note: note_id
+      });
 
-    return new NoteConnection(note_id, uuid);
+      return new NoteConnection(note_id, uuid);
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.error(error);
+      throw error;
+    }
   }
 
   public async send(data: Uint8Array): Promise<void> {

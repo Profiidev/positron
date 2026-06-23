@@ -4,6 +4,7 @@
   import { isConnected } from '$lib/updater/updater.svelte';
   import { Badge } from '@profidev/pleiades/components/ui/badge';
   import { goto } from '$app/navigation';
+  import TipTab from '$lib/components/TipTab.svelte';
 
   const scanLoginCode = async () => {
     goto('/scan');
@@ -18,4 +19,5 @@
       <Badge variant="destructive" class="ml-auto">Disconnected</Badge>
     {/if}
   </div>
+  <TipTab id="8ae43409-4785-40e8-a668-1b570f520091" />
 </div>

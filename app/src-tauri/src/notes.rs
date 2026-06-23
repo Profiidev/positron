@@ -33,10 +33,10 @@ pub enum WebsocketMessage {
 pub async fn connect_note(
   state: State<'_, NoteState>,
   channel: Channel<WebsocketMessage>,
-  note_id: Uuid,
+  note: Uuid,
 ) -> tauri::Result<Uuid> {
   let uuid = Uuid::new_v4();
-  state.connect(uuid, channel, note_id).await?;
+  state.connect(uuid, channel, note).await?;
   Ok(uuid)
 }
 
@@ -63,16 +63,17 @@ pub struct NoteState {
 }
 
 impl NoteState {
-  pub fn init(handle: &AppHandle) -> Self {
+  pub fn init(handle: &AppHandle) {
     let store = handle.state::<Store>();
     let url = store.instance_url.clone();
     let token = store.token.clone();
 
-    Self {
+    let state = Self {
       connections: Arc::new(DashMap::new()),
       url,
       token,
-    }
+    };
+    handle.manage(state);
   }
 
   async fn connect(
@@ -89,9 +90,16 @@ impl NoteState {
     };
 
     url.set_path(&format!("/api/notes/websocket/{}", note_id));
+    if url.scheme() == "http" {
+      url.set_scheme("ws").unwrap();
+    } else if url.scheme() == "https" {
+      url.set_scheme("wss").unwrap();
+    }
 
     let mut request = url.into_client_request()?;
-    request.headers_mut().append(AUTHORIZATION, token.parse()?);
+    request
+      .headers_mut()
+      .append(AUTHORIZATION, format!("Bearer {}", token).parse()?);
 
     let (stream, _) = connect_async(request).await?;
     let (write, mut read) = stream.split();
