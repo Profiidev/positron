@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import General from '$routes/account/general/+page.svelte';
 import Settings from '$routes/account/settings/+page.svelte';
 import Auth from '$routes/account/auth/+page.svelte';
+import Sessions from '$routes/account/sessions/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 const user = {
@@ -31,5 +32,32 @@ describe('account pages', () => {
   it('auth renders its heading', () => {
     r(Auth, { mailActive: pr(false), passkeys: pr([]), user: pr(user) });
     expect(screen.getByText('Authentication')).toBeInTheDocument();
+  });
+
+  it('sessions renders its heading and current device badge', async () => {
+    r(Sessions, {
+      sessions: pr([
+        {
+          application: 'Chrome 126',
+          created_at: new Date('2024-01-01T00:00:00Z'),
+          current: true,
+          expires_at: new Date('2024-07-01T00:00:00Z'),
+          id: 'session-1',
+          is_app: false,
+          last_used_at: new Date('2024-06-01T00:00:00Z'),
+          name: 'MacBook Pro',
+          operating_system: 'macOS 15.1',
+          refreshed_at: new Date('2024-06-01T00:00:00Z')
+        }
+      ])
+    });
+    expect(screen.getByText('Sessions')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/0 other sessions active\./)
+    ).toBeInTheDocument();
+    expect(await screen.findByText('This device')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Revoke all other sessions' })
+    ).toBeDisabled();
   });
 });

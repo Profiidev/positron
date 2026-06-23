@@ -72,10 +72,38 @@ test.describe('account authentication', () => {
   });
 });
 
+test.describe('account sessions', () => {
+  test('renders active sessions', async ({ page }) => {
+    await gotoReady(page, '/account/sessions');
+
+    await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
+    await expect(page.getByText('1 other session active.')).toBeVisible();
+    await expect(page.getByText('MacBook Pro')).toBeVisible();
+    await expect(page.getByText('iPhone 15 Pro')).toBeVisible();
+    await expect(page.getByText('This device')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('revokes another session', async ({ page }) => {
+    await gotoReady(page, '/account/sessions');
+
+    await page.getByRole('button', { name: 'Revoke session' }).first().click();
+    await page.getByRole('button', { name: 'Revoke' }).click();
+
+    await expect(page.getByText('Session revoked')).toBeVisible();
+    await expect(page.getByText('iPhone 15 Pro')).toHaveCount(0);
+    await expect(page.getByText('0 other sessions active.')).toBeVisible();
+  });
+});
+
 test('navigates between account tabs', async ({ page }) => {
   await gotoReady(page, '/account/general');
   await page.locator('a[href="/account/settings"]').first().click();
 
   await expect(page).toHaveURL(/\/account\/settings/);
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+
+  await page.locator('a[href="/account/sessions"]').first().click();
+  await expect(page).toHaveURL(/\/account\/sessions/);
+  await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
 });

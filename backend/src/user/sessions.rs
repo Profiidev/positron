@@ -53,6 +53,9 @@ pub fn router() -> ApiRouter {
 #[derive(Serialize, JsonSchema)]
 struct SessionInfo {
   id: Uuid,
+  name: String,
+  application: String,
+  operating_system: String,
   is_app: bool,
   created_at: DateTime<Utc>,
   last_used_at: DateTime<Utc>,
@@ -70,6 +73,9 @@ async fn list(auth: JwtAuth, db: Connection, cookies: CookieJar) -> Result<Json<
     .into_iter()
     .map(|s| SessionInfo {
       id: s.id,
+      name: s.name,
+      application: s.application,
+      operating_system: s.operating_system,
       is_app: s.is_app,
       created_at: s.created_at.and_utc(),
       last_used_at: s.last_used_at.and_utc(),
@@ -150,6 +156,9 @@ mod test {
     assert_eq!(body.as_array().unwrap().len(), 1);
     assert_eq!(body[0]["current"], true);
     assert_eq!(body[0]["is_app"], false);
+    assert_eq!(body[0]["name"], "");
+    assert_eq!(body[0]["application"], "");
+    assert_eq!(body[0]["operating_system"], "");
   }
 
   #[tokio::test]

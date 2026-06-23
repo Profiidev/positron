@@ -60,10 +60,14 @@ export const getSessionMeta = (): SessionMeta => {
   if ((match = /Firefox\/(?<version>\d+(?:\.\d+)*)/.exec(ua) ?? undefined)) {
     browser_name = 'Firefox';
     browser_version = match.groups?.version;
-  } else if ((match = /EDG\/(?<version>\d+(?:\.\d+)*)/i.exec(ua) ?? undefined)) {
+  } else if (
+    (match = /EDG\/(?<version>\d+(?:\.\d+)*)/i.exec(ua) ?? undefined)
+  ) {
     browser_name = 'Edge';
     browser_version = match.groups?.version;
-  } else if ((match = /Chrome\/(?<version>\d+(?:\.\d+)*)/.exec(ua) ?? undefined)) {
+  } else if (
+    (match = /Chrome\/(?<version>\d+(?:\.\d+)*)/.exec(ua) ?? undefined)
+  ) {
     browser_name = 'Chrome';
     browser_version = match.groups?.version;
   } else if (

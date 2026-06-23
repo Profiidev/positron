@@ -14,6 +14,10 @@
       href: '/account/settings'
     },
     {
+      title: 'Sessions',
+      href: '/account/sessions'
+    },
+    {
       title: 'Authentication',
       href: '/account/auth'
     }

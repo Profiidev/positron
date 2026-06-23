@@ -469,12 +469,15 @@ export type RevokeSessionReq = {
 };
 
 export type SessionInfo = {
+  application: string;
   created_at: Date;
   current: boolean;
   expires_at: Date;
   id: string;
   is_app: boolean;
   last_used_at: Date;
+  name: string;
+  operating_system: string;
   refreshed_at?: Date | null;
 };
 
