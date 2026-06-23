@@ -263,6 +263,36 @@ export const passkeys = {
   empty: [] as unknown[]
 };
 
+export const sessions = {
+  default: [
+    {
+      application: 'Chrome 126',
+      created_at: '2024-01-01T00:00:00Z',
+      current: true,
+      expires_at: '2024-07-01T00:00:00Z',
+      id: 'session-current',
+      is_app: false,
+      last_used_at: '2024-06-01T00:00:00Z',
+      name: 'MacBook Pro',
+      operating_system: 'macOS 15.1',
+      refreshed_at: '2024-06-01T00:00:00Z'
+    },
+    {
+      application: 'Positron iOS 2.4.0',
+      created_at: '2024-02-01T00:00:00Z',
+      current: false,
+      expires_at: '2024-08-01T00:00:00Z',
+      id: 'session-app',
+      is_app: true,
+      last_used_at: '2024-06-01T00:00:00Z',
+      name: 'iPhone 15 Pro',
+      operating_system: 'iOS 18.1',
+      refreshed_at: '2024-06-01T00:00:00Z'
+    }
+  ],
+  empty: [] as unknown[]
+};
+
 // Detail payloads.
 export const groupDetails = {
   admin_group: 'group-admins',

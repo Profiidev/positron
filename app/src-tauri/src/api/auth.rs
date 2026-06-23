@@ -32,12 +32,24 @@ impl super::Client {
   }
 
   pub async fn exchange_code(&self, code: String, verifier: String) -> Result<()> {
+    let os = if cfg!(target_os = "android") {
+      "Android".to_string()
+    } else if cfg!(target_os = "ios") {
+      "iOS".to_string()
+    } else {
+      "Unknown".to_string()
+    };
+    let version = &self.handle.package_info().version;
+
     let req = self
       .builder(Method::POST, "/api/auth/app/exchange")
       .await?
       .json(&json!({
         "code": code,
-        "verifier": verifier
+        "verifier": verifier,
+        "application": format!("Positron App {}", version),
+        "operating_system": os,
+        "name": format!("App {}", os),
       }));
 
     let res = self.send(req).await?;

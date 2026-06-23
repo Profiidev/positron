@@ -394,7 +394,7 @@ mod test {
     let upd = updater().await;
     let (_, public_upd) = PublicNoteUpdateState::init();
     let user = insert_user(&db, "owner", "owner@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     let storage = crate::storage::test::init_test_storage().await;
     Setup {
       db,
@@ -503,7 +503,7 @@ mod test {
   async fn info_view_only_share_has_can_edit_false() {
     let s = setup().await;
     let viewer = insert_user(&s.db, "viewer", "v@x.com").await;
-    let viewer_cookie = auth_cookie(&s.jwt, viewer);
+    let viewer_cookie = auth_cookie(&s.db, &s.jwt, viewer).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     s.db
       .notes()
@@ -545,7 +545,7 @@ mod test {
   async fn edit_title_as_owner_and_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "Old".into()).await.unwrap();
     let app = app(
       s.db.clone(),
@@ -702,7 +702,7 @@ mod test {
   async fn share_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let victim = insert_user(&s.db, "victim", "v@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(
@@ -783,7 +783,7 @@ mod test {
   async fn share_public_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(
       s.db.clone(),
@@ -961,7 +961,7 @@ mod test {
   async fn info_grants_access_to_stranger_for_public_note() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(
       s.db.clone(),
@@ -1120,7 +1120,7 @@ mod test {
   async fn transfer_forbidden_for_non_owner() {
     let s = setup().await;
     let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
-    let stranger_cookie = auth_cookie(&s.jwt, stranger);
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
     let recipient = insert_user(&s.db, "recipient", "r@x.com").await;
     let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
     let app = app(

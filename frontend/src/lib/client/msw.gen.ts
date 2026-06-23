@@ -132,6 +132,8 @@ import type {
   ListPoliciesOAuthScopeResponse,
   ListScopesOAuthClientData,
   ListScopesOAuthClientResponse,
+  ListSessionsData,
+  ListSessionsResponse,
   ListUsersData,
   ListUsersNoteData,
   ListUsersNoteResponse,
@@ -167,6 +169,8 @@ import type {
   RestoreNoteSnapshotError,
   RetrieveAppTokenData,
   RetrieveAppTokenError,
+  RevokeSessionData,
+  RevokeSessionError,
   SaveAccountSettingsData,
   SaveAccountSettingsError,
   SaveMailSettingsData,
@@ -475,6 +479,18 @@ export const updateAvatarMswHandler = wrapMswHandler<
   UpdateAvatarError,
   UpdateAvatarData
 >('/api/user/account/avatar', 'post', client.getConfig);
+
+export const listSessionsMswHandler = wrapMswHandler<
+  ListSessionsResponse,
+  never,
+  ListSessionsData
+>('/api/user/account/sessions', 'get', client.getConfig);
+
+export const revokeSessionMswHandler = wrapMswHandler<
+  never,
+  RevokeSessionError,
+  RevokeSessionData
+>('/api/user/account/sessions', 'post', client.getConfig);
 
 export const infoMswHandler = wrapMswHandler<InfoResponse, never, InfoData>(
   '/api/user/info',

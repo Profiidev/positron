@@ -97,6 +97,10 @@ const pages: { path: string; ready: (page: Page) => Locator }[] = [
     ready: (p) => p.getByText('Skip confirmation for OAuth logins')
   },
   {
+    path: '/account/sessions',
+    ready: (p) => p.getByRole('heading', { name: 'Sessions' })
+  },
+  {
     path: '/account/auth',
     ready: (p) => p.getByRole('heading', { name: 'Authentication' })
   }

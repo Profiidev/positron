@@ -186,6 +186,9 @@ import type {
   ListScopesOAuthClientData,
   ListScopesOAuthClientErrors,
   ListScopesOAuthClientResponses,
+  ListSessionsData,
+  ListSessionsErrors,
+  ListSessionsResponses,
   ListUsersData,
   ListUsersErrors,
   ListUsersNoteData,
@@ -235,6 +238,8 @@ import type {
   RestoreNoteSnapshotResponses,
   RetrieveAppTokenData,
   RetrieveAppTokenErrors,
+  RevokeSessionData,
+  RevokeSessionErrors,
   SaveAccountSettingsData,
   SaveAccountSettingsErrors,
   SaveAccountSettingsResponses,
@@ -921,6 +926,27 @@ export const updateAvatar = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/user/account/avatar',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+
+export const listSessions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListSessionsData, ThrowOnError>
+): RequestResult<ListSessionsResponses, ListSessionsErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListSessionsResponses,
+    ListSessionsErrors,
+    ThrowOnError
+  >({ url: '/api/user/account/sessions', ...options });
+
+export const revokeSession = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeSessionData, ThrowOnError>
+): RequestResult<unknown, RevokeSessionErrors, ThrowOnError> =>
+  (options.client ?? client).post<unknown, RevokeSessionErrors, ThrowOnError>({
+    url: '/api/user/account/sessions',
     ...options,
     headers: {
       'Content-Type': 'application/json',

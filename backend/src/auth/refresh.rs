@@ -9,11 +9,14 @@ use centaurus::{
     },
     request::response::TokenRes,
   },
-  error::Result,
+  db::init::Connection,
+  error::{ErrorReportStatusExt, Result},
 };
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::Serialize;
+
+use crate::{auth::session_auth::create_session_raw_token, db::DBTrait};
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -63,9 +66,18 @@ async fn refresh_token(
   auth: JwtAuth,
   mut cookies: CookieJar,
   jwt: JwtState,
+  db: Connection,
 ) -> Result<(CookieJar, TokenRes)> {
-  let cookie = jwt.create_token(auth.user_id)?;
-  cookies = cookies.add(cookie);
+  let old_token = cookies
+    .get(JWT_COOKIE_NAME)
+    .status_context(http::StatusCode::UNAUTHORIZED, "Missing auth cookie")?
+    .value()
+    .to_string();
+
+  let token = create_session_raw_token(&jwt, auth.user_id).await?;
+  db.session().refresh(&old_token, token.clone()).await?;
+  cookies = cookies.add(jwt.create_cookie(JWT_COOKIE_NAME, token));
+
   Ok((cookies, TokenRes(())))
 }
 
@@ -117,7 +129,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(
@@ -140,7 +152,7 @@ mod test {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(
@@ -161,5 +173,35 @@ mod test {
         .iter()
         .any(|v| v.to_str().unwrap().starts_with(JWT_COOKIE_NAME))
     );
+  }
+
+  #[tokio::test]
+  async fn refresh_token_rotates_existing_session() {
+    use crate::db::DBTrait;
+
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let old_token = cookie.split('=').nth(1).unwrap().to_string();
+
+    let resp = app(db.clone(), jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/refresh_token")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(resp.status().is_success());
+
+    // the old token no longer maps to a session
+    assert!(db.session().get_by_token(&old_token).await.is_err());
+    // the session was rotated in place, not duplicated
+    let sessions = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert!(sessions[0].refreshed_at.is_some());
   }
 }

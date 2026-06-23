@@ -4,7 +4,7 @@ use oauth::{
   oauth_client::OauthClientTable, oauth_policy::OAuthPolicyTable, oauth_scope::OAuthScopeTable,
 };
 use services::apod::ApodTable;
-use user::{passkey::PasskeyTable, settings::SettingsTable};
+use user::{passkey::PasskeyTable, session::SessionTable, settings::SettingsTable};
 
 use crate::db::{notes::snapshot::NoteSnapshotTable, user::user_ext::UserExtTable};
 
@@ -16,6 +16,7 @@ pub mod user;
 pub trait DBTrait {
   fn user_ext(&self) -> UserExtTable<'_>;
   fn passkey(&self) -> PasskeyTable<'_>;
+  fn session(&self) -> SessionTable<'_>;
   fn oauth_client(&self) -> OauthClientTable<'_>;
   fn oauth_policy(&self) -> OAuthPolicyTable<'_>;
   fn oauth_scope(&self) -> OAuthScopeTable<'_>;
@@ -32,6 +33,10 @@ impl DBTrait for Connection {
 
   fn passkey(&self) -> PasskeyTable<'_> {
     PasskeyTable::new(&self.0)
+  }
+
+  fn session(&self) -> SessionTable<'_> {
+    SessionTable::new(&self.0)
   }
 
   fn oauth_client(&self) -> OauthClientTable<'_> {
@@ -201,7 +206,12 @@ pub mod test {
   pub async fn auth_state(conn: &Connection) -> centaurus::backend::auth::jwt_state::JwtState {
     insert_jwt_key(conn).await;
     let config = crate::config::Config::default();
-    centaurus::backend::auth::jwt_state::JwtState::init(&config.auth, conn).await
+    centaurus::backend::auth::jwt_state::JwtState::init_with_auth(
+      &config.auth,
+      conn,
+      crate::auth::session_auth::SessionAuth,
+    )
+    .await
   }
 
   /// Builds an `Updater` extension whose channel has no websocket subscribers,
@@ -223,8 +233,26 @@ pub mod test {
   }
 
   /// Produces a `Cookie:` header value carrying a valid auth token for `user`.
-  pub fn auth_cookie(jwt: &centaurus::backend::auth::jwt_state::JwtState, user: Uuid) -> String {
-    let cookie = jwt.create_token(user).expect("create token");
+  pub async fn auth_cookie(
+    conn: &Connection,
+    jwt: &centaurus::backend::auth::jwt_state::JwtState,
+    user: Uuid,
+  ) -> String {
+    use crate::auth::session_auth::SessionMeta;
+
+    let cookie = crate::auth::session_auth::create_session_cookie(
+      conn,
+      jwt,
+      user,
+      false,
+      SessionMeta {
+        name: String::new(),
+        application: String::new(),
+        operating_system: String::new(),
+      },
+    )
+    .await
+    .expect("create token");
     format!("{}={}", cookie.name(), cookie.value())
   }
 
@@ -239,7 +267,12 @@ pub mod test {
   ) {
     insert_jwt_key(conn).await;
     let config = crate::config::Config::default();
-    let jwt = centaurus::backend::auth::jwt_state::JwtState::init(&config.auth, conn).await;
+    let jwt = centaurus::backend::auth::jwt_state::JwtState::init_with_auth(
+      &config.auth,
+      conn,
+      crate::auth::session_auth::SessionAuth,
+    )
+    .await;
     let other = crate::auth::jwt::JwtStateOther::init(&config.auth, conn).await;
     (jwt, other)
   }
