@@ -12,24 +12,26 @@
   let { session, revoke }: Props = $props();
 </script>
 
-{#if session.current}
-  <Button
-    variant="outline"
-    size="icon"
-    class="cursor-default opacity-50"
-    disabled
-    aria-label="Current session"
-  >
-    <Lock class="size-4" />
-  </Button>
-{:else}
-  <Button
-    variant="outline"
-    size="icon"
-    class="border-destructive text-destructive hover:text-destructive cursor-pointer"
-    aria-label="Revoke session"
-    onclick={() => revoke(session)}
-  >
-    <LogOut class="size-4" />
-  </Button>
-{/if}
+<div class="flex w-full justify-end">
+  {#if session.current}
+    <Button
+      variant="outline"
+      size="icon"
+      class="cursor-default opacity-50"
+      disabled
+      aria-label="Current session"
+    >
+      <Lock class="size-4" />
+    </Button>
+  {:else}
+    <Button
+      variant="outline"
+      size="icon"
+      class="border-destructive text-destructive hover:text-destructive cursor-pointer"
+      aria-label="Revoke session"
+      onclick={() => revoke(session)}
+    >
+      <LogOut class="size-4" />
+    </Button>
+  {/if}
+</div>
