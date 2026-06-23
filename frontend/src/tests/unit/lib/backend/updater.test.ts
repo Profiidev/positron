@@ -46,6 +46,7 @@ describe('UpdateType enum', () => {
     expect(UpdateType.Note).toBe('Note');
     expect(UpdateType.NoteSnapshot).toBe('NoteSnapshot');
     expect(UpdateType.NoteSnapshotsCleaned).toBe('NoteSnapshotsCleaned');
+    expect(UpdateType.Sessions).toBe('Sessions');
     expect(Object.values(UpdateType)).toContain('OAuthClient');
   });
 });
@@ -118,6 +119,12 @@ describe('handleMessage', () => {
     expect(typeof predicate).toBe('function');
     expect(predicate(new URL('http://x/api/notes/snapshots/n1'))).toBe(true);
     expect(predicate(new URL('http://x/api/notes/management'))).toBe(false);
+  });
+
+  it('invalidates the account session list on a Sessions update', () => {
+    const handler = getHandler();
+    handler({ type: UpdateType.Sessions }, 'me');
+    expect(invalidatedUrls()).toEqual(['/api/user/account/sessions']);
   });
 
   it('does nothing for an unknown message type', () => {

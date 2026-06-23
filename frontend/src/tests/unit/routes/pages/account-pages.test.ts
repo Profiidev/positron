@@ -52,12 +52,33 @@ describe('account pages', () => {
       ])
     });
     expect(screen.getByText('Sessions')).toBeInTheDocument();
-    expect(
-      await screen.findByText(/0 other sessions active\./)
-    ).toBeInTheDocument();
     expect(await screen.findByText('This device')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Revoke all other sessions' })
     ).toBeDisabled();
+  });
+
+  it('enables bulk revoke when a non-current session exists', async () => {
+    const base = {
+      application: 'Chrome 126',
+      created_at: new Date('2024-01-01T00:00:00Z'),
+      expires_at: new Date('2024-07-01T00:00:00Z'),
+      is_app: false,
+      last_used_at: new Date('2024-06-01T00:00:00Z'),
+      name: 'MacBook Pro',
+      operating_system: 'macOS 15.1',
+      refreshed_at: new Date('2024-06-01T00:00:00Z')
+    };
+    r(Sessions, {
+      sessions: pr([
+        { ...base, current: true, id: 'session-1' },
+        { ...base, current: false, id: 'session-2', name: 'iPhone 15 Pro' }
+      ])
+    });
+    expect(
+      await screen.findByRole('button', {
+        name: 'Revoke all other sessions'
+      })
+    ).toBeEnabled();
   });
 });

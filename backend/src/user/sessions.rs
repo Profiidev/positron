@@ -122,7 +122,7 @@ async fn revoke(
 mod test {
   use super::*;
   use crate::db::DBTrait;
-  use crate::db::test::{auth_cookie, auth_state, body_json, insert_user, test_db};
+  use crate::db::test::{auth_cookie, auth_state, body_json, insert_user, test_db, updater};
   use axum::{
     Extension, Router,
     body::Body,
@@ -167,16 +167,213 @@ mod test {
     assert_eq!(body[0]["operating_system"], "");
   }
 
+  async fn extra_session(db: &Connection, jwt: &JwtState, user: Uuid) -> Uuid {
+    use crate::auth::session_auth::{SessionMeta, create_session_cookie};
+    create_session_cookie(
+      db,
+      jwt,
+      user,
+      false,
+      SessionMeta {
+        name: String::new(),
+        application: String::new(),
+        operating_system: String::new(),
+      },
+    )
+    .await
+    .unwrap();
+    // newest session is first (ordered by last_used desc)
+    db.session().list_for_user(user).await.unwrap()[0].id
+  }
+
+  fn clears_jwt_cookie(resp: &axum::http::Response<Body>) -> bool {
+    use centaurus::backend::auth::jwt_state::JWT_COOKIE_NAME;
+    resp.headers().get_all(header::SET_COOKIE).iter().any(|v| {
+      let s = v.to_str().unwrap_or("");
+      let mut parts = s.split(';');
+      let Some((name, val)) = parts.next().and_then(|p| p.split_once('=')) else {
+        return false;
+      };
+      if name.trim() != JWT_COOKIE_NAME {
+        return false;
+      }
+      // a cleared cookie carries an empty value or an expiry in the past
+      val.trim().is_empty()
+        || parts.any(|attr| {
+          let attr = attr.trim().to_ascii_lowercase();
+          attr == "max-age=0" || attr.starts_with("expires=thu, 01 jan 1970")
+        })
+    })
+  }
+
+  #[tokio::test]
+  async fn list_only_returns_own_sessions() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let other = insert_user(&db, "o", "o@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    // unrelated session belonging to another user
+    extra_session(&db, &jwt, other).await;
+
+    let resp = app(db, jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/sessions")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    let body = body_json(resp).await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+  }
+
+  #[tokio::test]
+  async fn list_marks_only_current_session() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    extra_session(&db, &jwt, user).await;
+
+    let resp = app(db, jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/sessions")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    let body = body_json(resp).await;
+    let arr = body.as_array().unwrap();
+    assert_eq!(arr.len(), 2);
+    let current: Vec<_> = arr.iter().filter(|s| s["current"] == true).collect();
+    assert_eq!(current.len(), 1);
+  }
+
+  #[tokio::test]
+  async fn revoke_unknown_id_errors() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let upd = updater().await;
+
+    let resp = app(db, jwt)
+      .layer(Extension(upd))
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/sessions/revoke")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(json!({"id": Uuid::new_v4()}).to_string()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+  }
+
+  #[tokio::test]
+  async fn revoke_other_users_session_errors() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let other = insert_user(&db, "o", "o@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let upd = updater().await;
+    let other_id = extra_session(&db, &jwt, other).await;
+
+    let resp = app(db.clone(), jwt)
+      .layer(Extension(upd))
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/sessions/revoke")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(json!({"id": other_id}).to_string()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(!resp.status().is_success());
+    // the other user's session is untouched
+    assert_eq!(db.session().list_for_user(other).await.unwrap().len(), 1);
+  }
+
+  #[tokio::test]
+  async fn revoke_current_session_clears_cookie() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let upd = updater().await;
+    let id = db.session().list_for_user(user).await.unwrap()[0].id;
+
+    let resp = app(db, jwt)
+      .layer(Extension(upd))
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/sessions/revoke")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(json!({"id": id}).to_string()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(resp.status().is_success());
+    assert!(clears_jwt_cookie(&resp));
+  }
+
+  #[tokio::test]
+  async fn revoke_non_current_session_keeps_cookie() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let upd = updater().await;
+    // a second session for the same user that is NOT the request's cookie
+    let other_id = extra_session(&db, &jwt, user).await;
+
+    let resp = app(db.clone(), jwt)
+      .layer(Extension(upd))
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/sessions/revoke")
+          .header(header::COOKIE, &cookie)
+          .header(header::CONTENT_TYPE, "application/json")
+          .body(Body::from(json!({"id": other_id}).to_string()))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(resp.status().is_success());
+    assert!(!clears_jwt_cookie(&resp));
+    // only the targeted session was removed; the current one remains
+    assert_eq!(db.session().list_for_user(user).await.unwrap().len(), 1);
+  }
+
   #[tokio::test]
   async fn revoke_removes_session() {
     let db = test_db().await;
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "u", "u@x.com").await;
     let cookie = auth_cookie(&db, &jwt, user).await;
+    let upd = updater().await;
     let sessions = db.session().list_for_user(user).await.unwrap();
     let id = sessions[0].id;
 
     let resp = app(db.clone(), jwt)
+      .layer(Extension(upd))
       .oneshot(
         Request::builder()
           .method("POST")

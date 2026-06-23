@@ -190,6 +190,162 @@ mod test {
   }
 
   #[tokio::test]
+  async fn get_by_token_not_found_errors() {
+    use sea_orm::DbErr;
+    let db = test_db().await;
+    assert!(matches!(
+      db.session().get_by_token("missing").await,
+      Err(DbErr::RecordNotFound(_))
+    ));
+  }
+
+  #[tokio::test]
+  async fn create_stores_metadata_fields() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    db.session()
+      .create(
+        user,
+        "tok".into(),
+        true,
+        Utc::now(),
+        "My Laptop".into(),
+        "Firefox".into(),
+        "Linux".into(),
+      )
+      .await
+      .unwrap();
+
+    let row = db.session().get_by_token("tok").await.unwrap();
+    assert_eq!(row.name, "My Laptop");
+    assert_eq!(row.application, "Firefox");
+    assert_eq!(row.operating_system, "Linux");
+    assert!(row.is_app);
+    assert!(row.refreshed_at.is_none());
+  }
+
+  #[tokio::test]
+  async fn touch_last_used_updates_and_not_found_errors() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    db.session()
+      .create(
+        user,
+        "tok".into(),
+        false,
+        Utc::now(),
+        "".into(),
+        "".into(),
+        "".into(),
+      )
+      .await
+      .unwrap();
+    let before = db.session().get_by_token("tok").await.unwrap().last_used_at;
+
+    db.session().touch_last_used("tok").await.unwrap();
+    let after = db.session().get_by_token("tok").await.unwrap().last_used_at;
+    assert!(after >= before);
+
+    assert!(db.session().touch_last_used("missing").await.is_err());
+  }
+
+  #[tokio::test]
+  async fn refresh_unknown_token_errors() {
+    let db = test_db().await;
+    assert!(db.session().refresh("missing", "new".into()).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn delete_by_token_removes_and_noops_on_missing() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    db.session()
+      .create(
+        user,
+        "tok".into(),
+        false,
+        Utc::now(),
+        "".into(),
+        "".into(),
+        "".into(),
+      )
+      .await
+      .unwrap();
+
+    db.session().delete_by_token("tok").await.unwrap();
+    assert!(db.session().get_by_token("tok").await.is_err());
+    // deleting a missing token is a no-op, not an error
+    db.session().delete_by_token("tok").await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn delete_by_id_unknown_id_errors() {
+    use sea_orm::DbErr;
+    use uuid::Uuid;
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    assert!(matches!(
+      db.session().delete_by_id(Uuid::new_v4(), user).await,
+      Err(DbErr::RecordNotFound(_))
+    ));
+  }
+
+  #[tokio::test]
+  async fn list_for_user_orders_by_last_used_desc_and_isolates_users() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let other = insert_user(&db, "o", "o@x.com").await;
+
+    db.session()
+      .create(
+        user,
+        "first".into(),
+        false,
+        Utc::now(),
+        "".into(),
+        "".into(),
+        "".into(),
+      )
+      .await
+      .unwrap();
+    db.session()
+      .create(
+        user,
+        "second".into(),
+        false,
+        Utc::now(),
+        "".into(),
+        "".into(),
+        "".into(),
+      )
+      .await
+      .unwrap();
+    db.session()
+      .create(
+        other,
+        "other".into(),
+        false,
+        Utc::now(),
+        "".into(),
+        "".into(),
+        "".into(),
+      )
+      .await
+      .unwrap();
+
+    // touch "first" so it becomes the most-recently used
+    db.session().touch_last_used("first").await.unwrap();
+
+    let rows = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0].token, "first");
+    assert_eq!(rows[1].token, "second");
+    // other user's sessions are not included
+    assert!(rows.iter().all(|r| r.user_id == user));
+  }
+
+  #[tokio::test]
   async fn delete_expired_removes_only_past_sessions() {
     let db = test_db().await;
     let user = insert_user(&db, "u", "u@x.com").await;

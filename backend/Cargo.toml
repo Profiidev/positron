@@ -23,12 +23,12 @@ argon2 = { version = "0.5.3", default-features = false, features = ["std"] }
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.22.1"
-centaurus = { version = "0.15.1", features = [
+centaurus = { version = "0.16.0", features = [
   "fix-migrations",
   "uuid",
   "webauthn",
   "storage"
-], git = "https://github.com/profiidev/centaurus", rev = "72d8c2f332da3295054ec0751c3663d01f159730" }
+] }
 chrono = { version = "0.4.44", default-features = false, features = [
   "serde",
   "std"

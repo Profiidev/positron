@@ -81,8 +81,8 @@ pub async fn create_session_cookie<'c>(
       is_app,
       exp,
       session.name,
-      session.operating_system,
       session.application,
+      session.operating_system,
     )
     .await?;
   Ok(jwt.create_cookie(JWT_COOKIE_NAME, token))
@@ -186,6 +186,102 @@ mod test {
     let auth = SessionAuth;
     let mut parts = Request::new(()).into_parts().0;
     assert!(auth.check(&db, &mut parts, token, &claims).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn check_accepts_valid_session() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    let cookie = create_session_cookie(
+      &db,
+      &jwt,
+      user,
+      false,
+      SessionMeta {
+        name: String::new(),
+        application: String::new(),
+        operating_system: String::new(),
+      },
+    )
+    .await
+    .unwrap();
+    let token = cookie.value();
+    let claims = jwt.validate_token(token).unwrap();
+
+    let auth = SessionAuth;
+    let mut parts = Request::new(()).into_parts().0;
+    auth
+      .check(&db, &mut parts, token, &claims)
+      .await
+      .expect("valid session must pass");
+  }
+
+  #[tokio::test]
+  async fn check_rejects_user_mismatch() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let other = insert_user(&db, "o", "o@x.com").await;
+
+    let cookie = create_session_cookie(
+      &db,
+      &jwt,
+      user,
+      false,
+      SessionMeta {
+        name: String::new(),
+        application: String::new(),
+        operating_system: String::new(),
+      },
+    )
+    .await
+    .unwrap();
+    let token = cookie.value();
+    // claims that name a different subject than the session owner
+    let mut claims = jwt.validate_token(token).unwrap();
+    claims.sub = other;
+
+    let auth = SessionAuth;
+    let mut parts = Request::new(()).into_parts().0;
+    assert!(auth.check(&db, &mut parts, token, &claims).await.is_err());
+  }
+
+  #[tokio::test]
+  async fn create_session_cookie_stores_metadata_in_order() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    let cookie = create_session_cookie(
+      &db,
+      &jwt,
+      user,
+      false,
+      SessionMeta {
+        name: "My Laptop".into(),
+        application: "Firefox".into(),
+        operating_system: "Linux".into(),
+      },
+    )
+    .await
+    .unwrap();
+    let row = db.session().get_by_token(cookie.value()).await.unwrap();
+    assert_eq!(row.name, "My Laptop");
+    assert_eq!(row.application, "Firefox");
+    assert_eq!(row.operating_system, "Linux");
+  }
+
+  #[tokio::test]
+  async fn create_session_raw_token_is_unique_per_call() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    let a = create_session_raw_token(&jwt, user).await.unwrap();
+    let b = create_session_raw_token(&jwt, user).await.unwrap();
+    assert_ne!(a, b);
   }
 
   #[tokio::test]

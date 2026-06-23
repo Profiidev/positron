@@ -47,10 +47,55 @@ async fn setup_twice_conflicts() {
         "admin_username": "admin2",
         "admin_email": "admin2@example.com",
         "admin_password": encrypted,
+        "application": "",
+        "operating_system": "",
+        "name": ""
       }),
     )
     .await;
   assert_eq!(resp.status(), StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn setup_rejects_empty_username() {
+  let server = TestServer::start().await;
+  let encrypted = server.encrypt_password("hunter2pass").await;
+
+  let resp = server
+    .post(
+      "/setup",
+      serde_json::json!({
+        "admin_username": "   ",
+        "admin_email": "admin@example.com",
+        "admin_password": encrypted,
+        "application": "",
+        "operating_system": "",
+        "name": ""
+      }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn setup_rejects_empty_email() {
+  let server = TestServer::start().await;
+  let encrypted = server.encrypt_password("hunter2pass").await;
+
+  let resp = server
+    .post(
+      "/setup",
+      serde_json::json!({
+        "admin_username": "admin",
+        "admin_email": "   ",
+        "admin_password": encrypted,
+        "application": "",
+        "operating_system": "",
+        "name": ""
+      }),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]

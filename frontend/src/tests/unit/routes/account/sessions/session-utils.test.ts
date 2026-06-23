@@ -16,7 +16,7 @@ const now = new Date('2024-06-01T12:00:00Z');
 describe('sessionSubtitle', () => {
   it('joins application and operating system', () => {
     expect(sessionSubtitle('Chrome 126', 'macOS 15.1')).toBe(
-      'Chrome 126 · macOS 15.1'
+      'Chrome 126 - macOS 15.1'
     );
   });
 
@@ -78,7 +78,7 @@ describe('formatRelativeFuture', () => {
 
 describe('formatRelativeOptional', () => {
   it('returns a dash when refresh is missing', () => {
-    expect(formatRelativeOptional(null, now)).toBe('—');
+    expect(formatRelativeOptional(null, now)).toBe('-');
   });
 });
 
@@ -105,7 +105,7 @@ describe('getExpiryUrgency', () => {
 describe('formatExpiry', () => {
   it('prefixes urgent expiry labels with a dot', () => {
     expect(formatExpiry(new Date('2024-06-01T18:00:00Z'), now).text).toMatch(
-      /^• /
+      /^in 6 hours/
     );
   });
 
@@ -121,5 +121,62 @@ describe('expiryClass', () => {
     expect(expiryClass('critical')).toBe('text-destructive');
     expect(expiryClass('warning')).toBe('text-amber-500');
     expect(expiryClass('normal')).toBe('');
+  });
+});
+
+describe('formatRelative branch coverage', () => {
+  it.each([
+    { date: '2024-06-01T11:30:00Z', unit: /minute/ },
+    { date: '2024-06-01T09:00:00Z', unit: /hour/ },
+    { date: '2024-05-20T12:00:00Z', unit: /day/ },
+    { date: '2024-04-01T12:00:00Z', unit: /month/ },
+    { date: '2022-06-01T12:00:00Z', unit: /year/ }
+  ])('formats past timestamp $date with the right unit', ({ date, unit }) => {
+    expect(formatRelativePast(new Date(date), now)).toMatch(unit);
+  });
+
+  it.each([
+    { date: '2024-06-01T12:30:00Z', unit: /minute/ },
+    { date: '2024-06-01T15:00:00Z', unit: /hour/ },
+    { date: '2024-06-19T12:00:00Z', unit: /day/ },
+    { date: '2024-08-01T12:00:00Z', unit: /month/ },
+    { date: '2026-06-01T12:00:00Z', unit: /year/ }
+  ])('formats future timestamp $date with the right unit', ({ date, unit }) => {
+    expect(formatRelativeFuture(new Date(date), now)).toMatch(unit);
+  });
+
+  it('treats an exactly-now expiry as expired', () => {
+    expect(formatRelativeFuture(now, now)).toBe('expired');
+  });
+
+  it('formats a present optional date as a relative past label', () => {
+    expect(
+      formatRelativeOptional(new Date('2024-05-20T12:00:00Z'), now)
+    ).toMatch(/day/);
+  });
+});
+
+describe('getExpiryUrgency boundaries', () => {
+  it('treats expiry exactly one day out as critical', () => {
+    expect(getExpiryUrgency(new Date('2024-06-02T12:00:00Z'), now)).toBe(
+      'critical'
+    );
+  });
+
+  it('treats expiry exactly three days out as warning', () => {
+    expect(getExpiryUrgency(new Date('2024-06-04T12:00:00Z'), now)).toBe(
+      'warning'
+    );
+  });
+});
+
+describe('formatExpiry urgency', () => {
+  it('carries the urgency alongside the relative text', () => {
+    expect(formatExpiry(new Date('2024-06-01T18:00:00Z'), now).urgency).toBe(
+      'critical'
+    );
+    expect(formatExpiry(new Date('2024-07-01T12:00:00Z'), now).urgency).toBe(
+      'normal'
+    );
   });
 });

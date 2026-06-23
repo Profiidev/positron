@@ -223,6 +223,9 @@ impl TestServer {
           "admin_username": username,
           "admin_email": email,
           "admin_password": encrypted,
+          "application": "",
+          "operating_system": "",
+          "name": ""
         }),
       )
       .await;

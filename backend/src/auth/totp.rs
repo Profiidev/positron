@@ -167,14 +167,7 @@ async fn confirm(
   {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
-    let cookie = create_session_cookie(
-      &db,
-      &jwt,
-      auth.user_id,
-      false,
-      req.session,
-    )
-    .await?;
+    let cookie = create_session_cookie(&db, &jwt, auth.user_id, false, req.session).await?;
     cookies = cookies.add(cookie);
 
     Ok((cookies, TokenRes(AuthRes { user: auth.user_id })))

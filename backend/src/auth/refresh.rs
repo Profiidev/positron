@@ -174,4 +174,34 @@ mod test {
         .any(|v| v.to_str().unwrap().starts_with(JWT_COOKIE_NAME))
     );
   }
+
+  #[tokio::test]
+  async fn refresh_token_rotates_existing_session() {
+    use crate::db::DBTrait;
+
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    let old_token = cookie.split('=').nth(1).unwrap().to_string();
+
+    let resp = app(db.clone(), jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/refresh_token")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert!(resp.status().is_success());
+
+    // the old token no longer maps to a session
+    assert!(db.session().get_by_token(&old_token).await.is_err());
+    // the session was rotated in place, not duplicated
+    let sessions = db.session().list_for_user(user).await.unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert!(sessions[0].refreshed_at.is_some());
+  }
 }
