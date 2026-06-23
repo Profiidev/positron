@@ -7,6 +7,38 @@ import * as awarenessProtocol from 'y-protocols/awareness';
 import * as syncProtocol from 'y-protocols/sync';
 import type * as Y from 'yjs';
 
+export type NoteShareAccess = 'view' | 'edit';
+
+export interface SimpleUserInfo {
+  id: string;
+  name: string;
+}
+
+export interface SharedUserInfo {
+  id: string;
+  name: string;
+  access: NoteShareAccess;
+}
+
+export interface NoteInfo {
+  can_edit: boolean;
+  id: string;
+  is_owner: boolean;
+  owner: SimpleUserInfo;
+  preview: string;
+  public_access?: NoteShareAccess | null;
+  shared_with: SharedUserInfo[];
+  title: string;
+}
+
+export const listNotes = async (): Promise<NoteInfo[]> => {
+  try {
+    return await invoke<NoteInfo[]>('list_notes');
+  } catch {
+    return [];
+  }
+};
+
 type WebsocketMessage =
   | {
       type: 'Data';

@@ -20,13 +20,18 @@ use tokio_tungstenite::{
 };
 use uuid::Uuid;
 
-use crate::store::Store;
+use crate::{api::Client, store::Store};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
 pub enum WebsocketMessage {
   Data(Vec<u8>),
   Close,
+}
+
+#[tauri::command]
+pub async fn list_notes(client: State<'_, Client>) -> tauri::Result<serde_json::Value> {
+  Ok(client.list_notes().await?)
 }
 
 #[tauri::command]

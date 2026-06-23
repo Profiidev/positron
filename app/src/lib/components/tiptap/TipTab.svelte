@@ -1,12 +1,12 @@
 <script lang="ts">
-  import './tiptap/tiptap.css';
+  import './tiptap.css';
   import { onDestroy, onMount } from 'svelte';
-  import { getRandomColor } from './tiptap/color';
-  import EditorToolbar from './tiptap/toolbar/EditorToolbar.svelte';
+  import { getRandomColor } from './color';
+  import EditorToolbar from './toolbar/EditorToolbar.svelte';
   import { EditorContent, type Editor } from 'svelte-tiptap';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { cn } from '@profidev/pleiades/utils';
-  import type { NoteActiveEditor } from './types';
+  import type { NoteActiveEditor } from '../types';
   import { TauriWebsocketProvider } from '$lib/commands/notes.svelte';
 
   type AwarenessUser = {
@@ -25,15 +25,13 @@
     username,
     userId,
     editable = true,
-    activeEditors = $bindable(),
-    wsPath = '/api/notes/websocket'
+    activeEditors = $bindable()
   }: {
     id: string;
     username?: string;
     userId?: string;
     editable?: boolean;
     activeEditors?: NoteActiveEditor[];
-    wsPath?: string;
   } = $props();
 
   let editorState = $state<{ editor: Editor | null }>({ editor: null });
@@ -114,7 +112,7 @@
     const doc = new Doc();
 
     provider = new TauriWebsocketProvider(id, doc);
-    console.log(provider)
+    console.log(provider);
     provider.awareness.on('change', onAwarenessChange);
 
     lastEditable = editable;
@@ -122,7 +120,7 @@
     setLocalAwarenessState();
     syncActiveEditors();
 
-    const extensions = (await import('./tiptap/config')).extensions;
+    const extensions = (await import('./config')).extensions;
     const Collaboration = (await import('@tiptap/extension-collaboration'))
       .default;
     const CollaborationCaret = (

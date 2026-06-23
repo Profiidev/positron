@@ -1,12 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
+import type { NoteInfo } from '$lib/commands/notes.svelte';
 
 const logout = vi.fn();
 vi.mock('$lib/commands/auth.svelte', () => ({ logout }));
 
 const isConnected = vi.fn(() => true);
 vi.mock('$lib/updater/updater.svelte', () => ({ isConnected }));
+
+const listNotes = vi.fn<() => Promise<NoteInfo[]>>(async () =>
+  Promise.resolve([])
+);
+vi.mock('$lib/commands/notes.svelte', () => ({ listNotes }));
+
+const note = (title: string, id: string): NoteInfo => ({
+  can_edit: true,
+  id,
+  is_owner: true,
+  owner: { id: 'owner', name: 'Owner' },
+  preview: '',
+  shared_with: [],
+  title
+});
 
 const Page = (await import('$routes/+page.svelte')).default;
 
@@ -19,8 +35,14 @@ describe('home page', () => {
 
   it('navigates to /scan when the Scan button is clicked', async () => {
     render(Page);
-    screen.getByRole('button', { name: 'Scan Login Code' }).click();
+    screen.getByRole('button', { name: 'Scan' }).click();
     await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/scan'));
+  });
+
+  it('navigates home when the Notes button is clicked', async () => {
+    render(Page);
+    screen.getByRole('button', { name: 'Notes' }).click();
+    await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/'));
   });
 
   it('hides the Disconnected badge while connected', () => {
@@ -33,5 +55,19 @@ describe('home page', () => {
     isConnected.mockReturnValue(false);
     render(Page);
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
+  });
+
+  it('renders the loaded notes as links', async () => {
+    listNotes.mockResolvedValueOnce([note('First', 'a'), note('Second', 'b')]);
+    render(Page);
+    const link = await screen.findByRole('link', { name: /First/ });
+    expect(link).toHaveAttribute('href', '/notes/a');
+    expect(screen.getByRole('link', { name: /Second/ })).toBeInTheDocument();
+  });
+
+  it('shows an empty state when there are no notes', async () => {
+    listNotes.mockResolvedValueOnce([]);
+    render(Page);
+    expect(await screen.findByText('No notes yet')).toBeInTheDocument();
   });
 });

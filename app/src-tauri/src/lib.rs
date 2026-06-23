@@ -1,7 +1,7 @@
 use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
-  notes::{NoteState, connect_note, disconnect_note, send_note},
+  notes::{NoteState, connect_note, disconnect_note, list_notes, send_note},
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
@@ -54,6 +54,7 @@ pub fn run() {
       connect_note,
       send_note,
       disconnect_note,
+      list_notes,
     ])
     .setup(|app| {
       Updater::init(app.handle());
