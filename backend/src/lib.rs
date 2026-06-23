@@ -3,7 +3,7 @@ use axum::{Extension, Router};
 use centaurus::{
   backend::{
     endpoints::{
-      self, group, mail, setup,
+      self, group, mail,
       websocket::{self, state::UpdateState},
     },
     init::{listener_setup, run_app_connect_info},
@@ -30,6 +30,7 @@ mod oauth;
 mod oauth_management;
 mod services;
 mod settings;
+mod setup;
 mod storage;
 mod user;
 mod utils;
@@ -77,7 +78,7 @@ impl App {
 fn api_router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
     .nest("/ws", websocket::router::<UpdateMessage>())
-    .nest("/setup", setup::router())
+    .nest("/setup", crate::setup::router())
     .nest("/auth", auth::router(rate_limiter))
     .nest("/user", user::router(rate_limiter))
     .nest("/settings", settings::router())
@@ -103,6 +104,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   let (state, updater) = UpdateState::<UpdateMessage>::init().await;
 
   router = endpoints::user::state(router);
+  router = user::state(router, db.clone());
   router = notes::state(
     router,
     storage.clone(),
@@ -159,7 +161,8 @@ mod test {
     let storage = storage::state(&config).await;
     let db = test_db().await;
     let (_state, updater) = UpdateState::<UpdateMessage>::init().await;
-    router = notes::state(router, storage.clone(), updater, db, &config);
+    router = notes::state(router, storage.clone(), updater, db.clone(), &config);
+    router = user::state(router, db);
     router = services::state(router).await;
     router = oauth::state(router, &config).await;
     router = well_known::state(router, &config).await;

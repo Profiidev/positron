@@ -63,7 +63,7 @@ async fn totp_setup_login_and_remove_flow() {
   let resp = server
     .post(
       "/auth/totp/confirm",
-      serde_json::json!({ "code": current_code(&secret) }),
+      serde_json::json!({ "code": current_code(&secret), "application": "", "operating_system": "", "name": "" }),
     )
     .await;
   assert_eq!(resp.status(), StatusCode::OK);

@@ -223,6 +223,9 @@ impl TestServer {
           "admin_username": username,
           "admin_email": email,
           "admin_password": encrypted,
+          "application": "",
+          "operating_system": "",
+          "name": ""
         }),
       )
       .await;
@@ -242,7 +245,7 @@ impl TestServer {
     self
       .post(
         "/auth/password/authenticate",
-        serde_json::json!({ "email": email, "password": encrypted }),
+        serde_json::json!({ "email": email, "password": encrypted, "name": "", "application": "", "operating_system": "" }),
       )
       .await
   }

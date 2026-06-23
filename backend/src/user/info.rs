@@ -75,7 +75,7 @@ mod test {
     let jwt = auth_state(&db).await;
     let user = insert_user(&db, "Alice", "alice@x.com").await;
     grant_permissions(&db, user, &["apod:list"]).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
       .oneshot(get_request(Some(&cookie)))

@@ -117,6 +117,37 @@ test.describe('login page', () => {
 
     await expect(page).toHaveURL(/\/users$/);
   });
+
+  test('attaches session metadata to the password login request', async ({
+    page,
+    network
+  }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let body: any = undefined;
+    network.use(
+      gen.passwordAuthenticateMswHandler(async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          { user: 'user-uuid' },
+          { headers: { 'Set-Cookie': 'centaurus_jwt=e2e-token; Path=/' } }
+        );
+      })
+    );
+
+    await gotoReady(page, '/login');
+    await page.getByPlaceholder('mail@example.com').fill('user@example.com');
+    await page.getByPlaceholder('Your password').fill('secret');
+    await page.getByRole('button', { exact: true, name: 'Login' }).click();
+
+    // `getSessionMeta()` is spread into the auth body so the backend can record
+    // The device behind each session.
+    await expect.poll(() => body).toBeTruthy();
+    expect(body).toMatchObject({
+      application: expect.any(String),
+      name: expect.any(String),
+      operating_system: expect.any(String)
+    });
+  });
 });
 
 test.describe('totp login', () => {

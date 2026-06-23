@@ -17,6 +17,7 @@
     generateCodeChallenge,
     generateCodeVerifier,
     getEncrypt,
+    getSessionMeta,
     openAppLoginDeepLink
   } from '$lib/backend/auth.svelte';
   import {
@@ -110,7 +111,8 @@
     let ret = await passwordAuthenticate({
       body: {
         email: formData.email,
-        password: encrypt.encrypt(formData.password) || ''
+        password: encrypt.encrypt(formData.password) || '',
+        ...getSessionMeta()
       },
       parseAs: 'json'
     });
@@ -137,7 +139,8 @@
   const confirmTotp = async (formData: FormValue<typeof totpSchema>) => {
     let ret = await totpConfirm({
       body: {
-        code: formData.code
+        code: formData.code,
+        ...getSessionMeta()
       },
       parseAs: 'json'
     });
@@ -183,7 +186,11 @@
     }
 
     let { response: regResponse, data: authData } = await finishAuthentication({
-      body: passkeyResponse,
+      body: {
+        // @ts-expect-error idk api client generation stuff
+        res: passkeyResponse,
+        ...getSessionMeta()
+      },
       path: {
         auth_id: reqData.id
       }
@@ -224,7 +231,7 @@
           });
         } else {
           const { data, response } = await retrieveAppToken({
-            body: { auth_code: code, verifier }
+            body: { auth_code: code, verifier, ...getSessionMeta() }
           });
 
           if (response?.status !== 200 || !data) {

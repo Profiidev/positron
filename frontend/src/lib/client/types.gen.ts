@@ -27,6 +27,12 @@ export type AuthConfirmQuery = {
   code: string;
 };
 
+export type AuthReq = {
+  application: string;
+  name: string;
+  operating_system: string;
+};
+
 export type AuthRes = {
   location: string;
 };
@@ -149,7 +155,10 @@ export type EmailChangeConfirm = {
 };
 
 export type ExchangeCodeReq = {
+  application: string;
   code: string;
+  name: string;
+  operating_system: string;
   verifier: string;
 };
 
@@ -214,7 +223,10 @@ export type ListGroupResponse = {
 };
 
 export type LoginReq = {
+  application: string;
   email: string;
+  name: string;
+  operating_system: string;
   password: string;
 };
 
@@ -445,8 +457,28 @@ export type ResetUserPassword = {
 };
 
 export type RetrieveTokenReq = {
+  application: string;
   auth_code: string;
+  name: string;
+  operating_system: string;
   verifier: string;
+};
+
+export type RevokeSessionReq = {
+  id: string;
+};
+
+export type SessionInfo = {
+  application: string;
+  created_at: Date;
+  current: boolean;
+  expires_at: Date;
+  id: string;
+  is_app: boolean;
+  last_used_at: Date;
+  name: string;
+  operating_system: string;
+  refreshed_at?: Date | null;
 };
 
 export type SetGoodReq = {
@@ -462,6 +494,9 @@ export type SetupPayload = {
   admin_email: string;
   admin_password: string;
   admin_username: string;
+  application: string;
+  name: string;
+  operating_system: string;
 };
 
 export type SharedUserInfo = {
@@ -501,6 +536,13 @@ export type SnapshotPath = {
 
 export type SpecialAccess = {
   password: string;
+};
+
+export type TotpConfirmReq = {
+  application: string;
+  code: string;
+  name: string;
+  operating_system: string;
 };
 
 export type TotpReq = {
@@ -727,7 +769,7 @@ export type FinishRegistrationError =
   FinishRegistrationErrors[keyof FinishRegistrationErrors];
 
 export type FinishAuthenticationData = {
-  body: unknown;
+  body: AuthReq;
   path: {
     auth_id: string;
   };
@@ -1080,7 +1122,7 @@ export type ChangePasswordError =
   ChangePasswordErrors[keyof ChangePasswordErrors];
 
 export type TotpConfirmData = {
-  body: TotpReq;
+  body: TotpConfirmReq;
   path?: never;
   query?: never;
   url: '/api/auth/totp/confirm';
@@ -1916,6 +1958,63 @@ export type UpdateAvatarResponses = {
    */
   200: unknown;
 };
+
+export type ListSessionsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/sessions';
+};
+
+export type ListSessionsErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ListSessionsResponses = {
+  200: Array<SessionInfo>;
+};
+
+export type ListSessionsResponse =
+  ListSessionsResponses[keyof ListSessionsResponses];
+
+export type RevokeSessionData = {
+  body: RevokeSessionReq;
+  path?: never;
+  query?: never;
+  url: '/api/user/account/sessions';
+};
+
+export type RevokeSessionErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type RevokeSessionError = RevokeSessionErrors[keyof RevokeSessionErrors];
 
 export type InfoData = {
   body?: never;

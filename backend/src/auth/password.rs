@@ -19,7 +19,10 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
-  auth::jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
+  auth::{
+    jwt::{JwtAuthOther, JwtSpecial, JwtStateOther, JwtTotpRequired},
+    session_auth::{SessionMeta, create_session_cookie},
+  },
   db::DBTrait,
 };
 
@@ -42,6 +45,8 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
 struct LoginReq {
   email: String,
   password: String,
+  #[serde(flatten)]
+  session: SessionMeta,
 }
 
 #[derive(Serialize, JsonSchema, Debug)]
@@ -67,7 +72,9 @@ async fn authenticate(
   let (cookie, totp) = if user.totp.is_some() {
     (other.create_token::<JwtTotpRequired>(user.id)?, true)
   } else {
-    (jwt.create_token(user.id)?, false)
+    let cookie = create_session_cookie(&db, &jwt, user.id, false, req.session).await?;
+
+    (cookie, false)
   };
 
   cookies = cookies.add(cookie);
@@ -238,7 +245,7 @@ mod test {
       .oneshot(post_req(
         "/authenticate",
         None,
-        json!({ "email": "user@x.com", "password": encrypt(&pw, "secret") }),
+        json!({ "email": "user@x.com", "password": encrypt(&pw, "secret"), "name": "", "application": "", "operating_system": "" }),
       ))
       .await
       .unwrap();
@@ -258,7 +265,7 @@ mod test {
       .oneshot(post_req(
         "/authenticate",
         None,
-        json!({ "email": "user@x.com", "password": encrypt(&pw, "secret") }),
+        json!({ "email": "user@x.com", "password": encrypt(&pw, "secret"), "name": "", "application": "", "operating_system": "" }),
       ))
       .await
       .unwrap();
@@ -279,7 +286,7 @@ mod test {
       .oneshot(post_req(
         "/authenticate",
         None,
-        json!({ "email": "user@x.com", "password": encrypt(&pw, "wrong") }),
+        json!({ "email": "user@x.com", "password": encrypt(&pw, "wrong"), "name": "", "application": "", "operating_system": "" }),
       ))
       .await
       .unwrap();
@@ -292,7 +299,7 @@ mod test {
     let pw = password_state().await;
     let (jwt, other) = jwt_states(&db).await;
     let user = insert_user(&db, &pw, "secret", None).await;
-    let cookie = auth_cookie(&jwt, user);
+    let cookie = auth_cookie(&db, &jwt, user).await;
     let app = app(db, pw.clone(), jwt, other, updater().await);
 
     let resp = app

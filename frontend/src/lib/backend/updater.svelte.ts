@@ -13,7 +13,8 @@ export enum UpdateType {
   Apod = 'Apod',
   Note = 'Note',
   NoteSnapshot = 'NoteSnapshot',
-  NoteSnapshotsCleaned = 'NoteSnapshotsCleaned'
+  NoteSnapshotsCleaned = 'NoteSnapshotsCleaned',
+  Sessions = 'Sessions'
 }
 
 export type UpdateMessage =
@@ -33,7 +34,8 @@ export type UpdateMessage =
         | UpdateType.UserPermissions
         | UpdateType.Passkey
         | UpdateType.Apod
-        | UpdateType.NoteSnapshotsCleaned;
+        | UpdateType.NoteSnapshotsCleaned
+        | UpdateType.Sessions;
     }
   | {
       type: UpdateType.NoteSnapshot;
@@ -117,6 +119,10 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
       invalidate((url) =>
         url.pathname.startsWith('/api/notes/snapshots/')
       ).catch(() => {});
+      break;
+    }
+    case UpdateType.Sessions: {
+      invalidate('/api/user/account/sessions').catch(() => {});
       break;
     }
     default: {

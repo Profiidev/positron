@@ -637,7 +637,7 @@ mod test {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
       let user = insert_user(&db, "u", "u@x.com").await;
-      let cookie = auth_cookie(&jwt, user);
+      let cookie = auth_cookie(&db, &jwt, user).await;
       let client_id = setup_client(&db, user, true).await;
 
       let state = AuthorizeState::init(&Config::default());
@@ -670,7 +670,7 @@ mod test {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
       let user = insert_user(&db, "u", "u@x.com").await;
-      let cookie = auth_cookie(&jwt, user);
+      let cookie = auth_cookie(&db, &jwt, user).await;
 
       let state = AuthorizeState::init(&Config::default());
       let code = Uuid::new_v4();
@@ -698,7 +698,7 @@ mod test {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
       let user = insert_user(&db, "u", "u@x.com").await;
-      let cookie = auth_cookie(&jwt, user);
+      let cookie = auth_cookie(&db, &jwt, user).await;
       // client exists but the user is not granted access
       let client_id = setup_client(&db, user, false).await;
 
@@ -727,7 +727,7 @@ mod test {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
       let user = insert_user(&db, "u", "u@x.com").await;
-      let cookie = auth_cookie(&jwt, user);
+      let cookie = auth_cookie(&db, &jwt, user).await;
 
       let state = AuthorizeState::init(&Config::default());
       let resp = app(db, jwt, state)

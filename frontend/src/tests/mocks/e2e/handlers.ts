@@ -79,6 +79,10 @@ export const handlers = [
     j(data.oauthPolicies[scn(cookies)])
   ),
   gen.listPasskeysMswHandler(({ cookies }) => j(data.passkeys[scn(cookies)])),
+  gen.listSessionsMswHandler(({ cookies }) => j(data.sessions[scn(cookies)])),
+  gen.revokeSessionMswHandler(
+    () => new HttpResponse(null, { status: 200 }) as never
+  ),
   gen.listApodMswHandler(({ cookies }) => j(data.apodList[scn(cookies)])),
   gen.getApodImageInfoMswHandler(() => j(data.apodImageInfo)),
 

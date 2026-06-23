@@ -2,11 +2,7 @@ use aide::axum::ApiRouter;
 use axum::Extension;
 use centaurus::{
   backend::{
-    auth::{
-      init_pw_state,
-      jwt_state::{JwtInvalidState, JwtState},
-      logout,
-    },
+    auth::{init_pw_state, jwt_state::JwtState},
     middleware::rate_limiter::RateLimiter,
   },
   db::init::Connection,
@@ -14,16 +10,18 @@ use centaurus::{
 use state::{PasskeyState, TotpState};
 
 use crate::{
-  auth::{app::AppState, jwt::JwtStateOther, state::WebauthnState},
+  auth::{app::AppState, jwt::JwtStateOther, session_auth::SessionAuth, state::WebauthnState},
   config::Config,
 };
 
 mod app;
 mod config;
 pub mod jwt;
+mod logout;
 mod passkey;
 mod password;
 mod refresh;
+pub mod session_auth;
 pub mod state;
 mod totp;
 
@@ -41,8 +39,9 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
 pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
   router
     .layer(Extension(init_pw_state(&config.auth, db).await))
-    .layer(Extension(JwtState::init(&config.auth, db).await))
-    .layer(Extension(JwtInvalidState::default()))
+    .layer(Extension(
+      JwtState::init_with_auth(&config.auth, db, SessionAuth).await,
+    ))
     .layer(Extension(JwtStateOther::init(&config.auth, db).await))
     .layer(Extension(PasskeyState::init()))
     .layer(Extension(TotpState::init(config)))
