@@ -20,7 +20,10 @@ use serde::{Deserialize, Serialize};
 use tokio::{spawn, task::JoinHandle, time::sleep};
 use uuid::Uuid;
 
-use crate::db::DBTrait;
+use crate::{
+  db::DBTrait,
+  utils::{UpdateMessage, Updater},
+};
 
 #[derive(Clone)]
 pub struct SessionCleanup {
@@ -97,6 +100,7 @@ async fn revoke(
   auth: JwtAuth,
   db: Connection,
   jwt: JwtState,
+  updater: Updater,
   mut cookies: CookieJar,
   Json(req): Json<RevokeSessionReq>,
 ) -> Result<(CookieJar, TokenRes)> {
@@ -108,6 +112,8 @@ async fn revoke(
   {
     cookies = cookies.remove(jwt.create_cookie(JWT_COOKIE_NAME, String::new()));
   }
+
+  updater.send_to(auth.user_id, UpdateMessage::Sessions).await;
 
   Ok((cookies, TokenRes(())))
 }
