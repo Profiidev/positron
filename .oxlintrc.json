@@ -23,7 +23,8 @@
         "eslint/no-console": "off",
         "eslint/no-underscore-dangle": "off",
         "eslint/capitalized-comments": "off",
-        "typescript/no-unsafe-type-assertion": "off"
+        "typescript/no-unsafe-type-assertion": "off",
+        "unicorn/number-literal-case": "off"
       }
     }
   ]
