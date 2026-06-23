@@ -1,6 +1,7 @@
 use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
+  notes::{NoteState, connect_note, disconnect_note, send_note},
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater},
@@ -10,6 +11,7 @@ use crate::{
 mod api;
 mod auth;
 mod deep_link;
+mod notes;
 mod setup;
 mod store;
 mod updater;
@@ -49,11 +51,15 @@ pub fn run() {
       user_info,
       user_avatar,
       confirm_code,
+      connect_note,
+      send_note,
+      disconnect_note,
     ])
     .setup(|app| {
       Updater::init(app.handle());
       Store::init(app.handle())?;
       Client::init(app.handle())?;
+      NoteState::init(app.handle());
       deep_link::setup_deep_link(app.handle())?;
       Ok(())
     })
