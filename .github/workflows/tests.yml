@@ -111,6 +111,158 @@ jobs:
           path: ${{ github.workspace }}/frontend/playwright-report/
           retention-days: 5
 
+  app_frontend_unit:
+    name: App Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: bahmutov/npm-install@v1
+      - name: Generate svelte data
+        run: |
+          cd app && npm run sync && cd ..
+
+      - name: Run tests
+        run: cd app && npm run test:unit -- --reporter junit --reporter default --outputFile test-results-app-frontend-unit.xml
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-app-frontend-unit
+          path: ${{ github.workspace }}/app/test-results-app-frontend-unit.xml
+          retention-days: 5
+
+  app_backend:
+    name: App Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: clippy,rustfmt
+
+      - uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
+      - name: Cache cargo and rust files
+        id: rust_cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+          shared-key: "app_backend_test_cache"
+
+      - uses: taiki-e/install-action@nextest
+      - name: "App Backend Test"
+        run: cd app/src-tauri && cargo nextest run --all-features --nff --profile app
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-app-backend
+          path: ${{ github.workspace }}/target/nextest/app/junit-app-backend.xml
+          retention-days: 5
+
+  app_e2e:
+    name: App E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: install dependencies (ubuntu only)
+        uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
+      - name: install frontend dependencies
+        uses: bahmutov/npm-install@v1
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: app/e2e
+
+      - name: Cache cargo and rust files
+        id: rust_cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+          shared-key: 'app_e2e_test_cache'
+
+      - name: Cache android build files
+        id: android_cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          key: app_e2e_android_cache
+          restore-keys: app_e2e_android_cache
+          path: |
+            app/src-tauri/gen/android/.gradle
+            app/src-tauri/gen/android/app/build
+            app/src-tauri/gen/android/build
+            app/src-tauri/gen/android/buildSrc/.gradle
+            app/src-tauri/gen/android/buildSrc/build
+
+      - name: Build app
+        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        with:
+          projectPath: 'app'
+          args: --apk --debug --target x86_64 --features test
+          mobile: 'android'
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v5
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-cache
+
+      - name: create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: run tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb install app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+            cd app/e2e && npm run test:android
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-app-e2e
+          path: ${{ github.workspace }}/app/e2e/reports/app-e2e-tests.xml
+          retention-days: 5
+
   comment_results:
     name: Comment Results to PR
     runs-on: ubuntu-latest
@@ -119,6 +271,9 @@ jobs:
       - backend_test
       - frontend_unit
       - frontend_e2e
+      - app_frontend_unit
+      - app_backend
+      - app_e2e
     steps:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         id: app-token

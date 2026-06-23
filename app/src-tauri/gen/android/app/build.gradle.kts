@@ -43,12 +43,13 @@ android {
                 val keystoreProperties = Properties()
                 if (keystorePropertiesFile.exists()) {
                     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+                    keyAlias = keystoreProperties["keyAlias"] as String
+                    keyPassword = keystoreProperties["password"] as String
+                    storeFile = file(keystoreProperties["storeFile"] as String)
+                    storePassword = keystoreProperties["password"] as String
+                } else {
+                    logger.warn("keystore.properties not found, using default signing config")
                 }
-
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["password"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["password"] as String
             }
         }
         getByName("release") {

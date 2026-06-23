@@ -31,3 +31,30 @@ pub async fn setup_status(state: State<'_, Store>) -> Result<SetupStatus> {
     url: state.instance_url().await,
   })
 }
+
+#[cfg(test)]
+mod test {
+  use super::SetupStatus;
+  use serde_json::json;
+  use tauri::Url;
+
+  #[test]
+  fn setup_status_serializes_configured_url() {
+    let status = SetupStatus {
+      url: Some(Url::parse("https://example.com/").unwrap()),
+    };
+    assert_eq!(
+      serde_json::to_value(&status).unwrap(),
+      json!({ "url": "https://example.com/" })
+    );
+  }
+
+  #[test]
+  fn setup_status_serializes_null_url_when_not_set_up() {
+    let status = SetupStatus { url: None };
+    assert_eq!(
+      serde_json::to_value(&status).unwrap(),
+      json!({ "url": null })
+    );
+  }
+}

@@ -1,5 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
 
@@ -15,6 +15,11 @@ export default defineConfig(() => ({
     __version__: JSON.stringify(process.env.npm_package_version)
   },
   plugins: [enhancedImages(), tailwindcss(), sveltekit()],
+  resolve: process.env.VITEST
+    ? {
+        conditions: ['browser']
+      }
+    : undefined,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     hmr: host
@@ -31,5 +36,14 @@ export default defineConfig(() => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ['**/src-tauri/**']
     }
+  },
+  test: {
+    clearMocks: true,
+    environment: 'jsdom',
+    include: ['src/tests/unit/**/*.{test,spec}.{js,ts}'],
+    setupFiles: [
+      './src/tests/setup/vitest-setup.ts',
+      './src/tests/setup/vitest-setup-sveltekit.ts'
+    ]
   }
 }));
