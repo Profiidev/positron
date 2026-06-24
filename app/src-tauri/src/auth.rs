@@ -121,6 +121,7 @@ pub async fn logout(store: State<'_, Store>, updater: State<'_, Updater>) -> Res
   store.set_avatar_store(None).await?;
   updater.send(UpdateMessage::AuthStatusUpdated).await;
   updater.send(UpdateMessage::UserInfoUpdated).await;
+  updater.disconnect.notify_one();
   Ok(())
 }
 

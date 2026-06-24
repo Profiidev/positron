@@ -77,8 +77,8 @@ pub fn run() {
       transfer_note,
     ])
     .setup(|app| {
-      Updater::init(app.handle());
       Store::init(app.handle())?;
+      Updater::init(app.handle());
       Client::init(app.handle())?;
       NoteState::init(app.handle());
       deep_link::setup_deep_link(app.handle())?;

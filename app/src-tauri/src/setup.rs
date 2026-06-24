@@ -17,6 +17,7 @@ pub async fn setup(state: State<'_, Store>, url: Url, updater: State<'_, Updater
 pub async fn reset_setup(state: State<'_, Store>, updater: State<'_, Updater>) -> Result<()> {
   state.set_instance_url(None).await?;
   updater.send(UpdateMessage::SetupUpdated).await;
+  updater.disconnect.notify_one();
   Ok(())
 }
 

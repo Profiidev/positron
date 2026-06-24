@@ -11,7 +11,9 @@ export enum UpdateMessageType {
   CodeExchangeMissingVerifier = 'CodeExchangeMissingVerifier',
   AuthSuccess = 'AuthSuccess',
   ConfirmAuth = 'ConfirmAuth',
-  ConfirmAuthMissingCode = 'ConfirmAuthMissingCode'
+  ConfirmAuthMissingCode = 'ConfirmAuthMissingCode',
+  None = 'None',
+  UsersUpdated = 'UsersUpdated'
 }
 
 // oxlint-disable-next-line consistent-type-definitions
@@ -29,7 +31,8 @@ export type UpdateMessage =
         | UpdateMessageType.AuthStatusUpdated
         | UpdateMessageType.SetupUpdated
         | UpdateMessageType.UserInfoUpdated
-        | UpdateMessageType.NotesUpdated;
+        | UpdateMessageType.NotesUpdated
+        | UpdateMessageType.UsersUpdated;
     }
   | {
       type: UpdateMessageType.ConfirmAuth;

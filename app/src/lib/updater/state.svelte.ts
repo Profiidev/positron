@@ -108,12 +108,12 @@ export const notesState = create_updater(
 );
 
 export const notesConfigState = create_updater(
-  UpdateMessageType.NotesUpdated,
+  UpdateMessageType.None,
   notesConfig
 );
 
 export const noteUsersState = create_updater(
-  UpdateMessageType.NotesUpdated,
+  UpdateMessageType.UsersUpdated,
   listUsersNote
 );
 
