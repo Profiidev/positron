@@ -272,104 +272,99 @@
   };
 </script>
 
-<div class="flex h-full flex-col">
-  <Nav />
-  <div class="flex min-h-0 w-full flex-1 flex-col space-y-6 p-4 pt-1">
-    <div class="mb-0 flex min-w-0 items-center gap-2">
-      <Button size="icon" variant="ghost" href="/" class="shrink-0">
-        <ArrowLeft class="size-5" />
-      </Button>
+<div class="flex min-h-0 w-full flex-1 flex-col space-y-6 p-4 pt-1">
+  <div class="mb-0 flex min-w-0 items-center gap-2">
+    <Button size="icon" variant="ghost" href="/" class="shrink-0">
+      <ArrowLeft class="size-5" />
+    </Button>
 
-      <Input
-        class="bg-background! mr-auto w-full min-w-0 flex-1 border-none text-xl! md:max-w-70"
-        bind:value={title}
-        placeholder="Note title"
-        readonly={readonly || titleSaving}
-        onblur={saveTitle}
-        onkeydown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
+    <Input
+      class="bg-background! mr-auto w-full min-w-0 flex-1 border-none text-xl! md:max-w-70"
+      bind:value={title}
+      placeholder="Note title"
+      readonly={readonly || titleSaving}
+      onblur={saveTitle}
+      onkeydown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+      }}
+    />
+
+    <NoteActiveEditorsIndicator editors={activeEditors} />
+
+    <NoteShareControl
+      noteId={note?.id ?? id}
+      {shareableUsers}
+      selected={sharedWithUsers}
+      {publicAccess}
+      onShareChange={handleShareChange}
+      onPublicAccessChange={handlePublicAccessChange}
+      {readonly}
+      saving={shareSaving || publicAccessSaving}
+    />
+    {#if note && !readonly}
+      <NoteTransferOwnerControl
+        owner={note.owner}
+        candidateUsers={shareableUsers}
+        onTransfer={handleTransferRequest}
+        saving={transferSaving}
+      />
+    {:else if note}
+      <div
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:px-1 lg:pr-2.5 lg:pl-1"
+        title={`Owner: ${note.owner.name}`}
+      >
+        <UserAvatar
+          userId={note.owner.id}
+          username={note.owner.name}
+          class="size-6.5 shrink-0"
+        />
+        <span class="hidden max-w-32 truncate lg:inline">
+          {note.owner.name}
+        </span>
+        <Lock class="text-muted-foreground hidden size-3.5 shrink-0 lg:block" />
+      </div>
+    {/if}
+    <Separator orientation="vertical" class="hidden h-5 lg:block" />
+
+    {#if snapshots && note?.is_owner}
+      <NoteSnapshot
+        {snapshots}
+        onOpen={(snapshotId) => {
+          goto(`/notes/${id}/${snapshotId}`);
+        }}
+        onRestore={(snapshotId) => {
+          pendingRestore = snapshotId;
+          restoreOpen = true;
+        }}
+        onDelete={(snapshotId) => {
+          pendingDeleteSnapshot = snapshotId;
+          deleteSnapshotOpen = true;
         }}
       />
-
-      <NoteActiveEditorsIndicator editors={activeEditors} />
-
-      <NoteShareControl
-        noteId={note?.id ?? id}
-        {shareableUsers}
-        selected={sharedWithUsers}
-        {publicAccess}
-        onShareChange={handleShareChange}
-        onPublicAccessChange={handlePublicAccessChange}
-        {readonly}
-        saving={shareSaving || publicAccessSaving}
+    {/if}
+    <Button
+      class="shrink-0 cursor-pointer px-2 lg:px-2.5"
+      onclick={() => (deleteOpen = true)}
+      variant="destructive"
+      disabled={readonly}
+      aria-label="Delete"
+    >
+      <Trash />
+      <span class="hidden lg:inline">Delete</span>
+    </Button>
+  </div>
+  <div class="flex min-h-0 grow flex-col space-y-4">
+    {#if note}
+      <TipTab
+        {id}
+        username={userInfo?.name}
+        userId={userInfo?.uuid}
+        editable={note.can_edit}
+        bind:activeEditors
       />
-      {#if note && !readonly}
-        <NoteTransferOwnerControl
-          owner={note.owner}
-          candidateUsers={shareableUsers}
-          onTransfer={handleTransferRequest}
-          saving={transferSaving}
-        />
-      {:else if note}
-        <div
-          class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:px-1 lg:pr-2.5 lg:pl-1"
-          title={`Owner: ${note.owner.name}`}
-        >
-          <UserAvatar
-            userId={note.owner.id}
-            username={note.owner.name}
-            class="size-6.5 shrink-0"
-          />
-          <span class="hidden max-w-32 truncate lg:inline">
-            {note.owner.name}
-          </span>
-          <Lock
-            class="text-muted-foreground hidden size-3.5 shrink-0 lg:block"
-          />
-        </div>
-      {/if}
-      <Separator orientation="vertical" class="hidden h-5 lg:block" />
-
-      {#if snapshots && note?.is_owner}
-        <NoteSnapshot
-          {snapshots}
-          onOpen={(snapshotId) => {
-            goto(`/notes/${id}/${snapshotId}`);
-          }}
-          onRestore={(snapshotId) => {
-            pendingRestore = snapshotId;
-            restoreOpen = true;
-          }}
-          onDelete={(snapshotId) => {
-            pendingDeleteSnapshot = snapshotId;
-            deleteSnapshotOpen = true;
-          }}
-        />
-      {/if}
-      <Button
-        class="shrink-0 cursor-pointer px-2 lg:px-2.5"
-        onclick={() => (deleteOpen = true)}
-        variant="destructive"
-        disabled={readonly}
-        aria-label="Delete"
-      >
-        <Trash />
-        <span class="hidden lg:inline">Delete</span>
-      </Button>
-    </div>
-    <div class="flex min-h-0 grow flex-col space-y-4">
-      {#if note}
-        <TipTab
-          {id}
-          username={userInfo?.name}
-          userId={userInfo?.uuid}
-          editable={note.can_edit}
-          bind:activeEditors
-        />
-      {/if}
-    </div>
+    {/if}
   </div>
 </div>
 <FormDialog

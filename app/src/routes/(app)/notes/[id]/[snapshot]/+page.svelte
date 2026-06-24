@@ -88,60 +88,48 @@
   };
 </script>
 
-<div class="flex h-full flex-col">
-  <Nav />
-  <div class="flex min-h-0 w-full flex-1 flex-col space-y-6 p-4 pt-1">
-    <div class="mb-0 flex min-w-0 items-center gap-2">
-      <Button
-        size="icon"
-        variant="ghost"
-        href={`/notes/${id}`}
-        class="shrink-0"
-      >
-        <ArrowLeft class="size-5" />
-      </Button>
+<div class="flex min-h-0 w-full flex-1 flex-col space-y-6 p-4 pt-1">
+  <div class="mb-0 flex min-w-0 items-center gap-2">
+    <Button size="icon" variant="ghost" href={`/notes/${id}`} class="shrink-0">
+      <ArrowLeft class="size-5" />
+    </Button>
 
-      <p
-        class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis"
-      >
-        {snapshot?.title}:
-      </p>
-      <p
-        class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis"
-      >
-        {snapshot
-          ? D.DateTime?.fromISO(snapshot.created_at).toLocaleString(
-              D.DateTime.DATETIME_MED_WITH_WEEKDAY,
-              {
-                locale: navigator.language
-              }
-            )
-          : null}
-      </p>
+    <p class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis">
+      {snapshot?.title}:
+    </p>
+    <p class="min-w-0 shrink overflow-hidden text-xl text-nowrap text-ellipsis">
+      {snapshot
+        ? D.DateTime?.fromISO(snapshot.created_at).toLocaleString(
+            D.DateTime.DATETIME_MED_WITH_WEEKDAY,
+            {
+              locale: navigator.language
+            }
+          )
+        : null}
+    </p>
 
-      <Button
-        class="ml-auto shrink-0 cursor-pointer px-2 lg:px-2.5"
-        onclick={() => (restoreOpen = true)}
-        disabled={isLoading}
-        aria-label="Restore"
-      >
-        <ArchiveRestore />
-        <span class="hidden lg:inline">Restore</span>
-      </Button>
-      <Button
-        class="shrink-0 cursor-pointer px-2 lg:px-2.5"
-        onclick={() => (deleteSnapshotOpen = true)}
-        variant="destructive"
-        disabled={isLoading}
-        aria-label="Delete"
-      >
-        <Trash />
-        <span class="hidden lg:inline">Delete</span>
-      </Button>
-    </div>
-    <div class="flex min-h-0 grow flex-col space-y-4">
-      <TipTabReadonly data={snapData ?? new Uint8Array()} />
-    </div>
+    <Button
+      class="ml-auto shrink-0 cursor-pointer px-2 lg:px-2.5"
+      onclick={() => (restoreOpen = true)}
+      disabled={isLoading}
+      aria-label="Restore"
+    >
+      <ArchiveRestore />
+      <span class="hidden lg:inline">Restore</span>
+    </Button>
+    <Button
+      class="shrink-0 cursor-pointer px-2 lg:px-2.5"
+      onclick={() => (deleteSnapshotOpen = true)}
+      variant="destructive"
+      disabled={isLoading}
+      aria-label="Delete"
+    >
+      <Trash />
+      <span class="hidden lg:inline">Delete</span>
+    </Button>
+  </div>
+  <div class="flex min-h-0 grow flex-col space-y-4">
+    <TipTabReadonly data={snapData ?? new Uint8Array()} />
   </div>
 </div>
 <FormDialog

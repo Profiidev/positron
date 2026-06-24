@@ -55,7 +55,7 @@ describe('NoteSnapshot', () => {
     await openManager();
 
     expect(
-      screen.getByPlaceholderText('Search new owner...')
+      screen.getByPlaceholderText('Search snapshots...')
     ).toBeInTheDocument();
     expect(screen.getAllByRole('option')).toHaveLength(2);
     expect(screen.getByText('at 2024-01-02T00:00:00Z')).toBeInTheDocument();
@@ -109,14 +109,14 @@ describe('NoteSnapshot', () => {
     render(NoteSnapshot, base);
     await openManager();
     expect(
-      screen.getByPlaceholderText('Search new owner...')
+      screen.getByPlaceholderText('Search snapshots...')
     ).toBeInTheDocument();
 
     await fireEvent.click(screen.getAllByRole('option')[0]);
 
     await waitFor(() =>
       expect(
-        screen.queryByPlaceholderText('Search new owner...')
+        screen.queryByPlaceholderText('Search snapshots...')
       ).not.toBeInTheDocument()
     );
   });

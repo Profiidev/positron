@@ -46,7 +46,4 @@
   };
 </script>
 
-<div class="flex h-full flex-col">
-  <Nav />
-  <MultiStepForm {stages} onsubmit={submit} cancelHref="/" />
-</div>
+<MultiStepForm {stages} onsubmit={submit} cancelHref="/" />
