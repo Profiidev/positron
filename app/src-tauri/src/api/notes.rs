@@ -47,7 +47,7 @@ impl super::Client {
       req = req.json(&body);
     }
 
-    let res = req.send().await?;
+    let res = self.client.execute(req.build()?).await?;
     let status = res.status();
     if status == StatusCode::UNAUTHORIZED {
       super::Client::token_check(self.handle.clone());

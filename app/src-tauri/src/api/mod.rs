@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{Result, bail};
 use tauri::{AppHandle, Manager, Url};
 use tauri_plugin_http::reqwest::{self, Method, RequestBuilder, Response, StatusCode};
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::Mutex;
 
 use crate::store::Store;
 
@@ -16,7 +16,6 @@ pub struct Client {
   token: Arc<Mutex<Option<String>>>,
   client: reqwest::Client,
   handle: AppHandle,
-  connection_task: Arc<Notify>,
 }
 
 impl Client {
@@ -26,21 +25,16 @@ impl Client {
       .connect_timeout(Duration::from_secs(10))
       .build()?;
     let store = handle.state::<Store>();
-    let connection_task = Arc::new(Notify::new());
 
     let client = Client {
       url: store.instance_url.clone(),
       token: store.token.clone(),
       client,
       handle: handle.clone(),
-      connection_task: connection_task.clone(),
     };
-
-    Self::start_connection_task(handle.clone(), connection_task);
 
     handle.manage(client);
 
-    Self::connection_check(handle.clone());
     Self::token_check(handle.clone());
     Self::update_user_info(handle.clone());
 
@@ -66,13 +60,7 @@ impl Client {
 
   async fn send(&self, req: RequestBuilder) -> Result<Response> {
     let req = req.build()?;
-    let res = match self.client.execute(req).await {
-      Ok(res) => res,
-      Err(e) => {
-        Self::connection_check(self.handle.clone());
-        return Err(e.into());
-      }
-    };
+    let res = self.client.execute(req).await?;
 
     if !res.status().is_success() {
       if res.status() == StatusCode::UNAUTHORIZED {

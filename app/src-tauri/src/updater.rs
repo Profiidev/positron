@@ -1,4 +1,11 @@
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use std::{
+  convert::Infallible,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+  time::Duration,
+};
 
 use anyhow::{Result, bail};
 use dashmap::DashMap;
@@ -26,6 +33,8 @@ pub struct Updater {
   url: Arc<Mutex<Option<Url>>>,
   token: Arc<Mutex<Option<String>>>,
   pub disconnect: Arc<Notify>,
+  is_online: Arc<AtomicBool>,
+  reconnect: Arc<Notify>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -76,6 +85,17 @@ pub async fn disconnect_updater(state: State<'_, Updater>, uuid: Uuid) -> tauri:
   Ok(())
 }
 
+#[tauri::command]
+pub async fn set_online(state: State<'_, Updater>, online: bool) -> tauri::Result<()> {
+  state.is_online.store(online, Ordering::Relaxed);
+  if !online {
+    state.disconnect.notify_waiters();
+  } else {
+    state.reconnect.notify_waiters();
+  }
+  Ok(())
+}
+
 impl Updater {
   pub fn init(handle: &AppHandle) {
     // the channel is used to have a buffer of messages on initial app startup to account for the time it takes for the updater to connect
@@ -115,6 +135,8 @@ impl Updater {
       url,
       token,
       disconnect: Arc::new(Notify::new()),
+      reconnect: Arc::new(Notify::new()),
+      is_online: Arc::new(AtomicBool::new(true)),
     };
 
     updater.clone().websocket_task();
@@ -134,7 +156,13 @@ impl Updater {
           "Websocket disconnected with the following error, retrying in 10 seconds: {:?}",
           err
         );
-        sleep(Duration::from_secs(10)).await;
+
+        self.send(UpdateMessage::Disconnected).await;
+        sleep(Duration::from_secs(1)).await;
+
+        if !self.is_online.load(Ordering::Relaxed) {
+          self.reconnect.notified().await;
+        }
       }
     });
   }
@@ -160,6 +188,8 @@ impl Updater {
       .append(AUTHORIZATION, format!("Bearer {}", token).parse()?);
 
     let (mut stream, _) = connect_async(request).await?;
+
+    self.sender.send(UpdateMessage::Connected).await.ok();
 
     loop {
       let msg = tokio::select! {

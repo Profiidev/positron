@@ -9,7 +9,7 @@ use crate::{
   },
   setup::{reset_setup, setup, setup_status},
   store::Store,
-  updater::{Updater, connect_updater, disconnect_updater},
+  updater::{Updater, connect_updater, disconnect_updater, set_online},
   user::{any_user_avatar, user_avatar, user_info},
 };
 
@@ -49,6 +49,7 @@ pub fn run() {
       setup_status,
       connect_updater,
       disconnect_updater,
+      set_online,
       auth_status,
       start_auth,
       logout,

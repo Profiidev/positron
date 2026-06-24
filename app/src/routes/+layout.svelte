@@ -7,7 +7,8 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { authStatusState, setupStatusState } from '$lib/updater/state.svelte';
-  import { startListener } from '$lib/updater/updater.svelte';
+  import { setOnline, startListener } from '$lib/updater/updater.svelte';
+  import { online } from 'svelte/reactivity/window';
 
   const setupStatus = $derived(setupStatusState.value);
   const authStatus = $derived(authStatusState.value);
@@ -42,6 +43,10 @@
     ) {
       goto('/');
     }
+  });
+
+  $effect(() => {
+    setOnline(online.current ?? true);
   });
 
   // @ts-ignore this is injected at build time via Vite's define option
