@@ -2,10 +2,12 @@ use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
   notes::{
-    NoteState, connect_note, create_note, delete_note, delete_note_snapshot, disconnect_note,
-    edit_note, list_note_snapshots, list_notes, list_users_note, note_info, note_snapshot_content,
-    note_snapshot_info, notes_config, restore_note_snapshot, send_note, share_note,
-    share_note_public, transfer_note,
+    commands::{
+      create_note, delete_note, delete_note_snapshot, edit_note, list_note_snapshots, list_notes,
+      list_users_note, note_info, note_snapshot_content, note_snapshot_info, notes_config,
+      restore_note_snapshot, share_note, share_note_public, transfer_note,
+    },
+    connection::{NoteState, connect_note, disconnect_note, send_note},
   },
   setup::{reset_setup, setup, setup_status},
   store::Store,
