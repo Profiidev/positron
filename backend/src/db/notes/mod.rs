@@ -1117,4 +1117,98 @@ mod test {
     let info = db.notes().info_public(id).await.unwrap().unwrap();
     assert!(info.can_edit);
   }
+
+  // ---- last_updated / content ----
+
+  #[tokio::test]
+  async fn content_returns_some_for_existing_and_none_for_unknown() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // a freshly created note exists but has empty content -> Some(empty)
+    assert_eq!(db.notes().content(id).await.unwrap(), Some(vec![]));
+
+    db.notes()
+      .set_content(id, vec![1, 2, 3], "preview".into())
+      .await
+      .unwrap();
+    assert_eq!(db.notes().content(id).await.unwrap(), Some(vec![1, 2, 3]));
+
+    // unlike get_content (which errors), content() returns None for a missing note
+    assert_eq!(db.notes().content(Uuid::new_v4()).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn create_sets_last_updated_and_info_exposes_it() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+
+    let before = chrono::Utc::now().naive_utc();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    let after = chrono::Utc::now().naive_utc();
+
+    let info = db.notes().info(id, owner).await.unwrap().unwrap();
+    // create stamps last_updated to roughly "now"
+    assert!(info.last_updated >= before && info.last_updated <= after);
+
+    // the same value surfaces through list_for_user
+    let listed = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(listed[0].last_updated, info.last_updated);
+  }
+
+  #[tokio::test]
+  async fn set_content_bumps_last_updated() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    let created = db
+      .notes()
+      .info(id, owner)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+
+    // ensure the wall clock advances past the create timestamp
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+    db.notes()
+      .set_content(id, vec![1], "p".into())
+      .await
+      .unwrap();
+    let updated = db
+      .notes()
+      .info(id, owner)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+    assert!(updated > created, "set_content must advance last_updated");
+  }
+
+  #[tokio::test]
+  async fn list_for_user_orders_by_last_updated_desc() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+
+    let first = db.notes().create(owner, "First".into()).await.unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    let second = db.notes().create(owner, "Second".into()).await.unwrap();
+
+    // newest-created note comes first
+    let notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(notes[0].id, second);
+    assert_eq!(notes[1].id, first);
+
+    // touching the older note moves it to the front
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    db.notes()
+      .set_content(first, vec![1], "p".into())
+      .await
+      .unwrap();
+    let notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(notes[0].id, first);
+    assert_eq!(notes[1].id, second);
+  }
 }

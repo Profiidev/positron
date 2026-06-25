@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import CopyButtonStub from '$test_helpers/copy-button-stub.svelte';
 import ShareControl from '$lib/components/notes/NoteShareControl.svelte';
 import type { SharedUserInfo, SimpleUserInfo } from '$lib/client';
+
+// Bits-ui's CopyButton click handling doesn't drive under jsdom fireEvent, so
+// Swap it for a stub that simply renders the share `text` it receives.
+vi.mock('@profidev/pleiades/components/ui-extra/copy-button', () => ({
+  CopyButton: CopyButtonStub
+}));
 
 const shareableUsers: SimpleUserInfo[] = [
   { id: 'u1', name: 'Alice' },
@@ -174,6 +181,23 @@ describe('NoteShareControl (editable)', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'Share' }));
     expect(screen.queryByText('Copy share link')).toBeNull();
+  });
+
+  it('builds the share link from the provided origin', async () => {
+    render(ShareControl, {
+      ...base,
+      origin: 'https://app.example.com',
+      publicAccess: 'view',
+      selected: []
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Public' }));
+    expect(
+      screen.getByRole('button', { name: /Copy share link/i })
+    ).toHaveAttribute(
+      'data-copy-text',
+      'https://app.example.com/notes/share/note-1'
+    );
   });
 
   it('counts the public globe alongside shared users', () => {

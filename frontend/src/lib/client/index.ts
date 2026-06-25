@@ -2,6 +2,7 @@
 
 export {
   accountSettingsMswHandler,
+  applyNoteEditMswHandler,
   authConfigMswHandler,
   authorizeConfirmMswHandler,
   avatarByIdMswHandler,
@@ -109,6 +110,7 @@ export {
 } from './msw.gen';
 export {
   accountSettings,
+  applyNoteEdit,
   authConfig,
   authorizeConfirm,
   avatarById,
@@ -222,6 +224,9 @@ export {
   type AccountSettingsResponses,
   type AccountUpdate,
   type ApodInfo,
+  type ApplyNoteEditData,
+  type ApplyNoteEditErrors,
+  type ApplyNoteEditResponses,
   type ApproveCodeReq,
   type AuthConfig,
   type AuthConfigData,

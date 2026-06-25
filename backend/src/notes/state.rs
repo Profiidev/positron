@@ -821,4 +821,148 @@ mod note_editing_test {
       "read-only SyncStep1 should produce a SyncStep2 reply"
     );
   }
+
+  // ---- note locking ----
+
+  #[tokio::test]
+  async fn lock_note_is_exclusive_per_id() {
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    let id = Uuid::new_v4();
+
+    let guard = editing.lock_note(id).await;
+    // a second lock on the same id must not be grantable while the first is held
+    let blocked =
+      tokio::time::timeout(std::time::Duration::from_millis(50), editing.lock_note(id)).await;
+    assert!(blocked.is_err(), "same-id lock must block while held");
+
+    // once released the lock can be taken again
+    drop(guard);
+    let _guard2 =
+      tokio::time::timeout(std::time::Duration::from_millis(200), editing.lock_note(id))
+        .await
+        .expect("lock should be grantable after release");
+  }
+
+  #[tokio::test]
+  async fn lock_note_does_not_block_other_ids() {
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+
+    let _a = editing.lock_note(Uuid::new_v4()).await;
+    // locking a different note id is independent and resolves immediately
+    let _b = tokio::time::timeout(
+      std::time::Duration::from_millis(200),
+      editing.lock_note(Uuid::new_v4()),
+    )
+    .await
+    .expect("different-id lock must not block");
+  }
+
+  // ---- apply_update ----
+
+  #[tokio::test]
+  async fn apply_update_is_noop_for_unopened_note() {
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    // note was never opened -> early return, data is never decoded (even if garbage)
+    editing
+      .apply_update(Uuid::new_v4(), b"not valid yrs data")
+      .await
+      .unwrap();
+  }
+
+  #[tokio::test]
+  async fn apply_update_merges_into_open_doc() {
+    use yrs::{Doc, GetString, ReadTxn, StateVector, Text, Transact};
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // build an update from an independent doc and apply it through the entry point
+    let other = Doc::new();
+    other
+      .get_or_insert_text("default")
+      .insert(&mut other.transact_mut(), 0, "merged");
+    let update = other
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default());
+
+    editing.apply_update(note_id, &update).await.unwrap();
+
+    let awareness = state.doc.lock().await;
+    let txt = awareness.doc().get_or_insert_text("default");
+    assert_eq!(txt.get_string(&awareness.doc().transact()), "merged");
+  }
+
+  #[tokio::test]
+  async fn apply_update_rejects_invalid_data_on_open_doc() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    let storage = crate::storage::test::init_test_storage().await;
+    let editing = NoteEditing::init_test(storage).await;
+    let _state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    // an opened doc actually decodes the payload -> garbage bytes error
+    assert!(editing.apply_update(note_id, b"garbage").await.is_err());
+  }
+
+  // ---- save fan-out ----
+
+  #[tokio::test]
+  async fn save_notifies_owner_and_shared_users() {
+    use crate::utils::UpdateMessage;
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let shared = insert_user(&db, "shared", "shared@x.com").await;
+    let note_id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(
+        note_id,
+        owner,
+        vec![crate::db::notes::NoteShareEntry {
+          user_id: shared,
+          access: entity::sea_orm_active_enums::NoteShareAccess::Edit,
+        }],
+      )
+      .await
+      .unwrap();
+
+    let storage = crate::storage::test::init_test_storage().await;
+    let (update_state, updater) = UpdateState::<UpdateMessage>::init().await;
+    let editing = NoteEditing::init(storage, updater);
+    let state = editing.get_or_open_note(note_id, &db).await.unwrap();
+
+    let (_owner_sid, mut owner_rx) = update_state.create_session(owner).await;
+    let (_shared_sid, mut shared_rx) = update_state.create_session(shared).await;
+
+    state.save(&db, note_id).await.unwrap();
+
+    // save may also emit a NoteSnapshot message; assert NoteContent is delivered
+    // to both the owner and the shared user among the received messages.
+    for rx in [&mut owner_rx, &mut shared_rx] {
+      let mut got_content = false;
+      while let Ok(Some(msg)) =
+        tokio::time::timeout(std::time::Duration::from_millis(200), rx.recv()).await
+      {
+        if matches!(msg, UpdateMessage::NoteContent { uuid } if uuid == note_id) {
+          got_content = true;
+          break;
+        }
+      }
+      assert!(
+        got_content,
+        "subscriber should receive a NoteContent update"
+      );
+    }
+  }
 }

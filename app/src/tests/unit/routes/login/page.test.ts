@@ -24,7 +24,7 @@ vi.mock('$lib/updater/state.svelte.js', () => ({
 const isConnected = vi.fn(() => true);
 vi.mock('$lib/updater/updater.svelte.js', () => ({ isConnected }));
 
-const Page = (await import('$routes/login/+page.svelte')).default;
+const Page = (await import('$routes/(app)/login/+page.svelte')).default;
 
 const data = (code?: string, redirect?: string) => ({ code, redirect });
 

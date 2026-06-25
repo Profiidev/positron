@@ -1,6 +1,10 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { userAvatar, userInfo } from '$lib/commands/user.svelte';
-import { mockCommand, mockCommandError } from '$test_helpers/tauri';
+import { anyUserAvatar, userAvatar, userInfo } from '$lib/commands/user.svelte';
+import {
+  mockCommand,
+  mockCommandError,
+  mockCommands
+} from '$test_helpers/tauri';
 
 beforeAll(() => {
   // Jsdom has no object-URL implementation; userAvatar builds one from the
@@ -37,5 +41,31 @@ describe('userAvatar', () => {
   it('returns undefined when the command fails', async () => {
     mockCommandError('user_avatar');
     expect(await userAvatar()).toBeUndefined();
+  });
+});
+
+describe('anyUserAvatar', () => {
+  it('forwards the uuid and wraps the returned bytes in an object URL', async () => {
+    const spy = vi
+      .spyOn(globalThis.URL, 'createObjectURL')
+      .mockReturnValue('blob:any-avatar');
+    let payload: unknown = undefined;
+    mockCommands((cmd, p) => {
+      if (cmd === 'any_user_avatar') {
+        payload = p;
+        return [7, 8, 9];
+      }
+      throw new Error('unexpected');
+    });
+    expect(await anyUserAvatar('u2')).toBe('blob:any-avatar');
+    expect(payload).toEqual({ uuid: 'u2' });
+    const blob = spy.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('image/webp');
+    spy.mockRestore();
+  });
+
+  it('returns undefined when the command fails', async () => {
+    mockCommandError('any_user_avatar');
+    expect(await anyUserAvatar('u2')).toBeUndefined();
   });
 });

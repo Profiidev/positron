@@ -144,6 +144,104 @@ async fn notes_require_auth() {
   assert!(!server.get("/notes/management").await.status().is_success());
 }
 
+// ---- note content / live edit sync ----
+
+/// Encodes a yrs document holding `text` as a full-state v1 update.
+fn yrs_state(text: &str) -> Vec<u8> {
+  use yrs::{Doc, ReadTxn, StateVector, Text, Transact};
+  let doc = Doc::new();
+  doc
+    .get_or_insert_text("default")
+    .insert(&mut doc.transact_mut(), 0, text);
+  doc
+    .transact()
+    .encode_state_as_update_v1(&StateVector::default())
+}
+
+#[tokio::test]
+async fn note_info_and_list_expose_last_updated() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let note = create_note(&server, "Stamped").await;
+
+  let info: Value = server
+    .get(&format!("/notes/management/{note}"))
+    .await
+    .json()
+    .await
+    .unwrap();
+  assert!(info["last_updated"].is_string());
+
+  let list: Value = server.get("/notes/management").await.json().await.unwrap();
+  assert!(list[0]["last_updated"].is_string());
+}
+
+#[tokio::test]
+async fn note_content_is_empty_for_fresh_note() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let note = create_note(&server, "Fresh").await;
+
+  let resp = server
+    .get(&format!("/notes/management/{note}/content"))
+    .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  assert!(resp.bytes().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn note_content_unknown_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+  let resp = server
+    .get(&format!("/notes/management/{}/content", Uuid::new_v4()))
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn note_content_requires_auth() {
+  let server = TestServer::start().await;
+  let resp = server
+    .get(&format!("/notes/management/{}/content", Uuid::new_v4()))
+    .await;
+  assert!(!resp.status().is_success());
+}
+
+#[tokio::test]
+async fn apply_note_edit_foreign_note_is_not_found() {
+  let (server, _) = TestServer::start_with_admin().await;
+  // a note id the admin has no access to -> not found, edit never applied
+  let resp = server
+    .put_bytes(
+      &format!("/notes/management/{}", Uuid::new_v4()),
+      yrs_state("hi"),
+    )
+    .await;
+  assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn apply_note_edit_requires_auth() {
+  let server = TestServer::start().await;
+  let resp = server
+    .put_bytes(
+      &format!("/notes/management/{}", Uuid::new_v4()),
+      yrs_state("hi"),
+    )
+    .await;
+  assert!(!resp.status().is_success());
+}
+
+#[tokio::test]
+async fn apply_note_edit_on_unsaved_note_errors() {
+  let (server, _) = TestServer::start_with_admin().await;
+  // a freshly created note has empty content; the merge cannot decode it, so the
+  // edit endpoint reports a server error rather than silently succeeding.
+  let note = create_note(&server, "Unsaved").await;
+  let resp = server
+    .put_bytes(&format!("/notes/management/{note}"), yrs_state("hi"))
+    .await;
+  assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
 #[tokio::test]
 async fn share_note_with_edit_access() {
   let (server, _) = TestServer::start_with_admin().await;

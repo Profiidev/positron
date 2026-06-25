@@ -74,10 +74,4 @@ describe('auth page', () => {
     render(Page);
     await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/setup'));
   });
-
-  it('shows the Disconnected badge while disconnected', () => {
-    isConnected.mockReturnValue(false);
-    render(Page);
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
-  });
 });

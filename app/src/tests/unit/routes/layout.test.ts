@@ -5,7 +5,8 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 
 const startListener = vi.fn(async () => () => {});
-vi.mock('$lib/updater/updater.svelte', () => ({ startListener }));
+const setOnline = vi.fn(async () => true);
+vi.mock('$lib/updater/updater.svelte', () => ({ setOnline, startListener }));
 
 const setupStatusState = { value: undefined as unknown };
 const authStatusState = { value: undefined as unknown };

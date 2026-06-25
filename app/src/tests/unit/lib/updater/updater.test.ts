@@ -13,6 +13,15 @@ const toast = vi.hoisted(() => ({
 }));
 vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
+// Connection toasts are now gated on the auth status, and every message forwards
+// Its type to `triggerUpdates`. Mock the state module so both are controllable.
+const authStatusState = vi.hoisted(() => ({ value: true as unknown }));
+const triggerUpdates = vi.hoisted(() => vi.fn());
+vi.mock('$lib/updater/state.svelte', () => ({
+  authStatusState,
+  triggerUpdates
+}));
+
 // Capture each Channel so the test can play backend messages through the
 // `onmessage` handler the updater installs.
 const channels = vi.hoisted(() => [] as { onmessage?: (m: unknown) => void }[]);
@@ -31,7 +40,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke
 }));
 
-const { startListener, isConnected } =
+const { startListener, isConnected, setOnline } =
   await import('$lib/updater/updater.svelte');
 
 const send = (message: UpdateMessage) => channels.at(-1)!.onmessage!(message);
@@ -39,9 +48,22 @@ const send = (message: UpdateMessage) => channels.at(-1)!.onmessage!(message);
 beforeEach(() => {
   channels.length = 0;
   page.route.id = '/';
+  authStatusState.value = true;
 });
 
 afterEach(() => vi.clearAllMocks());
+
+describe('setOnline', () => {
+  it('forwards the flag and returns true on success', async () => {
+    expect(await setOnline(true)).toBe(true);
+    expect(invoke).toHaveBeenCalledWith('set_online', { online: true });
+  });
+
+  it('returns false when the command fails', async () => {
+    invoke.mockRejectedValueOnce(new Error('offline'));
+    expect(await setOnline(false)).toBe(false);
+  });
+});
 
 describe('startListener', () => {
   it('connects the channel and returns a disconnect cleanup', async () => {
@@ -89,6 +111,29 @@ describe('handleMessage', () => {
     send({ type: UpdateMessageType.Disconnected });
     expect(toast.warning).not.toHaveBeenCalled();
     send({ type: UpdateMessageType.Connected });
+  });
+
+  it('does not toast connection changes while unauthenticated', () => {
+    authStatusState.value = false;
+    send({ type: UpdateMessageType.Disconnected });
+    send({ type: UpdateMessageType.Connected });
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('refreshes all data when the connection is restored', () => {
+    send({ type: UpdateMessageType.Disconnected });
+    triggerUpdates.mockClear();
+    send({ type: UpdateMessageType.Connected });
+    // Connected fires an untyped refresh plus the trailing typed one.
+    expect(triggerUpdates).toHaveBeenCalledWith();
+  });
+
+  it('forwards the message type to triggerUpdates', () => {
+    send({ type: UpdateMessageType.AuthStatusUpdated });
+    expect(triggerUpdates).toHaveBeenCalledWith(
+      UpdateMessageType.AuthStatusUpdated
+    );
   });
 
   it.each([

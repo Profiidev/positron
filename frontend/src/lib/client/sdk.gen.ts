@@ -12,6 +12,9 @@ import type {
   AccountSettingsData,
   AccountSettingsErrors,
   AccountSettingsResponses,
+  ApplyNoteEditData,
+  ApplyNoteEditErrors,
+  ApplyNoteEditResponses,
   AuthConfigData,
   AuthConfigErrors,
   AuthConfigResponses,
@@ -1630,6 +1633,23 @@ export const infoNote = <ThrowOnError extends boolean = false>(
     InfoNoteErrors,
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}', ...options });
+
+export const applyNoteEdit = <ThrowOnError extends boolean = false>(
+  options: Options<ApplyNoteEditData, ThrowOnError>
+): RequestResult<ApplyNoteEditResponses, ApplyNoteEditErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    ApplyNoteEditResponses,
+    ApplyNoteEditErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/api/notes/management/{uuid}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...options.headers
+    }
+  });
 
 export const infoNoteShare = <ThrowOnError extends boolean = false>(
   options: Options<InfoNoteShareData, ThrowOnError>

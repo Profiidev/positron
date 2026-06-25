@@ -5,6 +5,7 @@ import { client, wrapMswHandler } from '$mocks/msw-runtime';
 import type {
   AccountSettingsData,
   AccountSettingsResponse,
+  ApplyNoteEditData,
   AuthConfigData,
   AuthConfigResponse,
   AuthorizeConfirmData,
@@ -775,6 +776,12 @@ export const infoNoteMswHandler = wrapMswHandler<
   never,
   InfoNoteData
 >('/api/notes/management/{uuid}', 'get', client.getConfig);
+
+export const applyNoteEditMswHandler = wrapMswHandler<
+  never,
+  never,
+  ApplyNoteEditData
+>('/api/notes/management/{uuid}', 'put', client.getConfig);
 
 export const infoNoteShareMswHandler = wrapMswHandler<
   InfoNoteShareResponse,

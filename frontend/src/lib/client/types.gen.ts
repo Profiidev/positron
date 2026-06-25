@@ -3489,6 +3489,33 @@ export type InfoNoteResponses = {
 
 export type InfoNoteResponse = InfoNoteResponses[keyof InfoNoteResponses];
 
+export type ApplyNoteEditData = {
+  body: unknown;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/management/{uuid}';
+};
+
+export type ApplyNoteEditErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type ApplyNoteEditResponses = {
+  /**
+   * no content
+   */
+  200: unknown;
+};
+
 export type InfoNoteShareData = {
   body?: never;
   path: {
