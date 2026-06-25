@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
+use chrono::Utc;
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType,
+  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType, Order,
   QueryOrder, QuerySelect, TransactionTrait, prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,7 @@ struct NoteWithOwner {
   public_access: Option<NoteShareAccess>,
   #[sea_orm(nested)]
   owner: Option<PartialUser>,
+  last_updated: DateTime,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -55,6 +57,7 @@ pub struct NoteInfo {
   pub public_access: Option<NoteShareAccess>,
   pub is_owner: bool,
   pub can_edit: bool,
+  pub last_updated: DateTime,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -214,6 +217,7 @@ impl<'db> NoteTable<'db> {
           .add(note::Column::Id.is_in(shared_note_ids)),
       )
       .join(JoinType::LeftJoin, note::Relation::User.def())
+      .order_by(note::Column::LastUpdated, Order::Desc)
       .into_partial_model()
       .all(self.db)
       .await?;
@@ -250,6 +254,7 @@ impl<'db> NoteTable<'db> {
           public_access: note.public_access,
           is_owner,
           can_edit,
+          last_updated: note.last_updated,
         })
       })
       .collect::<Result<Vec<_>>>()
@@ -300,6 +305,7 @@ impl<'db> NoteTable<'db> {
       public_access: note.public_access,
       is_owner,
       can_edit,
+      last_updated: note.last_updated,
     }))
   }
 
@@ -345,6 +351,7 @@ impl<'db> NoteTable<'db> {
       preview: Set("".into()),
       owner: Set(owner),
       public_access: Set(None),
+      last_updated: Set(Utc::now().naive_utc()),
     }
     .insert(&txn)
     .await?;
@@ -453,6 +460,10 @@ impl<'db> NoteTable<'db> {
     note::Entity::update_many()
       .col_expr(note::Column::Content, Expr::value(content))
       .col_expr(note::Column::Preview, Expr::value(preview))
+      .col_expr(
+        note::Column::LastUpdated,
+        Expr::value(Utc::now().naive_utc()),
+      )
       .filter(note::Column::Id.eq(note_id))
       .exec(self.db)
       .await?;
@@ -511,6 +522,17 @@ impl<'db> NoteTable<'db> {
       .await?;
 
     Ok(owner)
+  }
+
+  pub async fn content(&self, note_id: Uuid) -> Result<Option<Vec<u8>>> {
+    let content = Note::find_by_id(note_id)
+      .select_only()
+      .column(note::Column::Content)
+      .into_tuple()
+      .one(self.db)
+      .await?;
+
+    Ok(content)
   }
 }
 
@@ -1094,5 +1116,99 @@ mod test {
       .unwrap();
     let info = db.notes().info_public(id).await.unwrap().unwrap();
     assert!(info.can_edit);
+  }
+
+  // ---- last_updated / content ----
+
+  #[tokio::test]
+  async fn content_returns_some_for_existing_and_none_for_unknown() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    // a freshly created note exists but has empty content -> Some(empty)
+    assert_eq!(db.notes().content(id).await.unwrap(), Some(vec![]));
+
+    db.notes()
+      .set_content(id, vec![1, 2, 3], "preview".into())
+      .await
+      .unwrap();
+    assert_eq!(db.notes().content(id).await.unwrap(), Some(vec![1, 2, 3]));
+
+    // unlike get_content (which errors), content() returns None for a missing note
+    assert_eq!(db.notes().content(Uuid::new_v4()).await.unwrap(), None);
+  }
+
+  #[tokio::test]
+  async fn create_sets_last_updated_and_info_exposes_it() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+
+    let before = chrono::Utc::now().naive_utc();
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    let after = chrono::Utc::now().naive_utc();
+
+    let info = db.notes().info(id, owner).await.unwrap().unwrap();
+    // create stamps last_updated to roughly "now"
+    assert!(info.last_updated >= before && info.last_updated <= after);
+
+    // the same value surfaces through list_for_user
+    let listed = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(listed[0].last_updated, info.last_updated);
+  }
+
+  #[tokio::test]
+  async fn set_content_bumps_last_updated() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    let created = db
+      .notes()
+      .info(id, owner)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+
+    // ensure the wall clock advances past the create timestamp
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+    db.notes()
+      .set_content(id, vec![1], "p".into())
+      .await
+      .unwrap();
+    let updated = db
+      .notes()
+      .info(id, owner)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+    assert!(updated > created, "set_content must advance last_updated");
+  }
+
+  #[tokio::test]
+  async fn list_for_user_orders_by_last_updated_desc() {
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+
+    let first = db.notes().create(owner, "First".into()).await.unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    let second = db.notes().create(owner, "Second".into()).await.unwrap();
+
+    // newest-created note comes first
+    let notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(notes[0].id, second);
+    assert_eq!(notes[1].id, first);
+
+    // touching the older note moves it to the front
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    db.notes()
+      .set_content(first, vec![1], "p".into())
+      .await
+      .unwrap();
+    let notes = db.notes().list_for_user(owner).await.unwrap();
+    assert_eq!(notes[0].id, first);
+    assert_eq!(notes[1].id, second);
   }
 }

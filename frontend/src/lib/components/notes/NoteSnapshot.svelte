@@ -5,7 +5,7 @@
   import { cn } from '@profidev/pleiades/utils';
   import History from '@lucide/svelte/icons/history';
   import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
-  import type { NoteSnapshotInfo } from '$lib/client';
+  import type { NoteSnapshotInfo } from './types';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
   import {
@@ -63,10 +63,10 @@
   </Popover.Trigger>
   <Popover.Content class="p-0">
     <Command.Root>
-      <Command.Input placeholder="Search new owner..." />
+      <Command.Input placeholder="Search snapshots..." />
       <Command.List class="flex overflow-hidden">
         <ScrollArea class="mt-2 grow">
-          <Command.Empty>No people found</Command.Empty>
+          <Command.Empty>No snapshots found</Command.Empty>
           {#each snapshots as snapshot (snapshot.id)}
             {let created_at = $derived(
               D.DateTime?.fromISO(snapshot.created_at).toLocaleString(

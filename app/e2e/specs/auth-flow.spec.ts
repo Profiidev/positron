@@ -39,7 +39,7 @@ describe('Authentication deep link', () => {
 
     expect(await getRoute()).toBe('/');
     await expect(byButton('Logout')).toBeDisplayed();
-    await expect(byButton('Scan Login Code')).toBeDisplayed();
+    await expect(byButton('Scan Login')).toBeDisplayed();
   });
 
   it('exchanges the deep-link code together with the stored verifier', async () => {

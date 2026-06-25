@@ -2,6 +2,7 @@
 
 export {
   accountSettingsMswHandler,
+  applyNoteEditMswHandler,
   authConfigMswHandler,
   authorizeConfirmMswHandler,
   avatarByIdMswHandler,
@@ -70,6 +71,7 @@ export {
   listUsersSimpleMswHandler,
   logoutMswHandler,
   mailActiveMswHandler,
+  noteContentMswHandler,
   notesConfigMswHandler,
   passwordAuthenticateMswHandler,
   passwordSpecialAccessMswHandler,
@@ -108,6 +110,7 @@ export {
 } from './msw.gen';
 export {
   accountSettings,
+  applyNoteEdit,
   authConfig,
   authorizeConfirm,
   avatarById,
@@ -176,6 +179,7 @@ export {
   listUsersSimple,
   logout,
   mailActive,
+  noteContent,
   notesConfig,
   type Options,
   passwordAuthenticate,
@@ -220,6 +224,9 @@ export {
   type AccountSettingsResponses,
   type AccountUpdate,
   type ApodInfo,
+  type ApplyNoteEditData,
+  type ApplyNoteEditErrors,
+  type ApplyNoteEditResponses,
   type ApproveCodeReq,
   type AuthConfig,
   type AuthConfigData,
@@ -533,6 +540,10 @@ export {
   type MailActiveResponses,
   type MailSettings,
   type MailSettingsResponse,
+  type NoteContentData,
+  type NoteContentErrors,
+  type NoteContentResponse,
+  type NoteContentResponses,
   type NoteCreateReq,
   type NoteCreateRes,
   type NoteDeleteReq,

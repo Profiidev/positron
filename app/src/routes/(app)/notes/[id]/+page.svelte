@@ -1,0 +1,432 @@
+<script lang="ts">
+  import { Separator } from '@profidev/pleiades/components/ui/separator';
+  import { Button } from '@profidev/pleiades/components/ui/button';
+  import { Input } from '@profidev/pleiades/components/ui/input';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import Trash from '@lucide/svelte/icons/trash';
+  import Lock from '@lucide/svelte/icons/lock';
+  import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
+  import { z } from 'zod';
+  import { toast } from '@profidev/pleiades/components/util/general';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import {
+    deleteNote,
+    deleteNoteSnapshot,
+    editNote,
+    listNoteSnapshots,
+    noteInfo,
+    noteInfoStore,
+    restoreNoteSnapshot,
+    shareNote,
+    shareNotePublic,
+    transferNote,
+    type NoteInfo,
+    type NoteShareAccess,
+    type NoteSnapshotInfo,
+    type SharedUserInfo,
+    type SimpleUserInfo
+  } from '$lib/commands/notes.svelte';
+  import {
+    noteUsersState,
+    onNotesUpdate,
+    setupStatusState,
+    userInfoState
+  } from '$lib/updater/state.svelte';
+  import TipTab from '$lib/components/tiptap/TipTab.svelte';
+  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
+  import NoteTransferOwnerControl from '$lib/components/notes/NoteTransferOwnerControl.svelte';
+  import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
+  import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
+  import type { NoteActiveEditor } from '$lib/components/notes/types';
+
+  const id = $derived(page.params.id ?? '');
+  const userInfo = $derived(userInfoState.value);
+
+  let deleteOpen = $state(false);
+  let isLoading = $state(false);
+  let transferOpen = $state(false);
+  let transferSaving = $state(false);
+  let restoreOpen = $state(false);
+  let pendingRestore: string | undefined = $state();
+  let deleteSnapshotOpen = $state(false);
+  let pendingDeleteSnapshot: string | undefined = $state();
+  let pendingNewOwner = $state<SimpleUserInfo | undefined>(undefined);
+  let titleSaving = $state(false);
+  let note: NoteInfo | undefined = $state();
+  const users = $derived(noteUsersState.value ?? undefined);
+  let readonly = $derived(!note?.is_owner);
+  let shareSaving = $state(false);
+  let publicAccessSaving = $state(false);
+  let title = $state('');
+  let sharedWithUsers = $state<SharedUserInfo[]>([]);
+  let publicAccess = $state<NoteShareAccess | null>(null);
+  let sharedUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
+    $state(undefined);
+  let publicUpdateTimeout: ReturnType<typeof setTimeout> | undefined =
+    $state(undefined);
+  let activeEditors = $state<NoteActiveEditor[]>([]);
+  let snapshots: NoteSnapshotInfo[] | undefined = $state();
+  const url = $derived(setupStatusState.value?.url);
+
+  let shareableUsers = $derived(
+    users?.filter((user) => user.id !== note?.owner.id) ?? []
+  );
+
+  let firstLoad = false;
+
+  // svelte-ignore state_referenced_locally
+  noteInfoStore(id).then((res) => {
+    if (res && !note) {
+      note = res;
+      title = res.title;
+      sharedWithUsers = res.shared_with;
+      publicAccess = res.public_access ?? null;
+    }
+
+    if (!firstLoad) {
+      firstLoad = true;
+    } else if (!res && !note) {
+      goto('/?error=not_found');
+    }
+  });
+
+  const loadNote = async () => {
+    const res = await noteInfo(id);
+    if (res) {
+      note = res;
+      title = res.title;
+      sharedWithUsers = res.shared_with;
+      publicAccess = res.public_access ?? null;
+    }
+
+    if (!firstLoad) {
+      firstLoad = true;
+    } else if (!res && !note) {
+      goto('/?error=not_found');
+    }
+  };
+
+  const loadSnapshots = async () => {
+    snapshots = await listNoteSnapshots(id);
+  };
+
+  // Initial load + reload on navigation, plus subscribe to note-data updates
+  // so the page refreshes the same way the user-info state does.
+  $effect(() => {
+    id;
+    loadNote();
+    loadSnapshots();
+    return onNotesUpdate(() => {
+      loadNote();
+      loadSnapshots();
+    });
+  });
+
+  $effect(() => {
+    if (page.url.searchParams.get('error')) {
+      toast.error('Note not found');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url);
+    }
+  });
+
+  const saveTitle = async () => {
+    if (!note || readonly) return;
+
+    const trimmed = title.trim();
+    if (!trimmed || trimmed === note.title) {
+      title = note.title;
+      return;
+    }
+
+    titleSaving = true;
+    const ok = await editNote(note.id, trimmed);
+    titleSaving = false;
+
+    if (!ok) {
+      title = note.title;
+      toast.error('Failed to update title');
+    } else {
+      note = { ...note, title: trimmed };
+      title = trimmed;
+      toast.success('Title updated');
+    }
+  };
+
+  const toSharedUserInfo = (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ): SharedUserInfo[] =>
+    shares.map((share) => {
+      const user = shareableUsers.find(
+        (candidate) => candidate.id === share.userId
+      );
+
+      return {
+        id: share.userId,
+        name: user?.name ?? '',
+        access: share.access
+      };
+    });
+
+  const onSharedChange = async (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ) => {
+    if (!note || readonly) return;
+
+    shareSaving = true;
+    const ok = await shareNote(
+      note.id,
+      shares.map((share) => ({ user_id: share.userId, access: share.access }))
+    );
+    shareSaving = false;
+
+    if (!ok) {
+      sharedWithUsers = note.shared_with;
+      toast.error('Failed to update shared users');
+    } else {
+      const updated = toSharedUserInfo(shares);
+      sharedWithUsers = updated;
+      note = { ...note, shared_with: updated };
+      toast.success('Shared users updated');
+    }
+  };
+
+  const handleShareChange = (
+    shares: { userId: string; access: NoteShareAccess }[]
+  ) => {
+    sharedWithUsers = toSharedUserInfo(shares);
+    if (sharedUpdateTimeout) clearTimeout(sharedUpdateTimeout);
+    sharedUpdateTimeout = setTimeout(() => {
+      onSharedChange(shares);
+    }, 750);
+  };
+
+  const onPublicAccessChange = async (access: NoteShareAccess | null) => {
+    if (!note || readonly) return;
+
+    publicAccessSaving = true;
+    const ok = await shareNotePublic(note.id, access);
+    publicAccessSaving = false;
+
+    if (!ok) {
+      publicAccess = note.public_access ?? null;
+      toast.error('Failed to update public access');
+    } else {
+      publicAccess = access;
+      note = { ...note, public_access: access };
+      toast.success(access ? 'Public access updated' : 'Public access removed');
+    }
+  };
+
+  const handlePublicAccessChange = (access: NoteShareAccess | null) => {
+    publicAccess = access;
+    if (publicUpdateTimeout) clearTimeout(publicUpdateTimeout);
+    publicUpdateTimeout = setTimeout(() => {
+      onPublicAccessChange(access);
+    }, 750);
+  };
+
+  const deleteItemConfirm = async () => {
+    if (!note) return;
+    isLoading = true;
+    const ok = await deleteNote(note.id);
+    isLoading = false;
+
+    if (!ok) {
+      return { error: 'Failed to delete note' };
+    } else {
+      toast.success(`Note ${note.title} deleted successfully`);
+      setTimeout(() => {
+        goto('/');
+      });
+    }
+  };
+
+  const handleTransferRequest = (userId: string) => {
+    pendingNewOwner = shareableUsers.find((user) => user.id === userId);
+    transferOpen = true;
+  };
+
+  const transferConfirm = async () => {
+    if (!note || !pendingNewOwner) return;
+
+    transferSaving = true;
+    const res = await transferNote(note.id, pendingNewOwner.id);
+    transferSaving = false;
+
+    if (!res.ok) {
+      if (res.error === 'limit') {
+        return {
+          error: `${pendingNewOwner.name} has reached the maximum number of notes.`
+        };
+      }
+      return { error: 'Failed to transfer ownership.' };
+    }
+    pendingNewOwner = undefined;
+    toast.success('Ownership transferred');
+  };
+
+  const restoreConfirm = async () => {
+    if (!pendingRestore) return;
+    isLoading = true;
+    const ok = await restoreNoteSnapshot(pendingRestore);
+    isLoading = false;
+
+    if (!ok) {
+      return { error: 'Failed to restore snapshot' };
+    } else {
+      toast.success(`Snapshot restored successfully`);
+    }
+  };
+
+  const deleteSnapshot = async () => {
+    if (!pendingDeleteSnapshot) return;
+    isLoading = true;
+    const ok = await deleteNoteSnapshot(pendingDeleteSnapshot);
+    isLoading = false;
+
+    if (!ok) {
+      return { error: 'Failed to delete snapshot' };
+    } else {
+      toast.success(`Snapshot deleted successfully`);
+    }
+  };
+</script>
+
+<div class="flex min-h-0 w-full flex-1 flex-col space-y-6 p-4 pt-1">
+  <div class="mb-0 flex min-w-0 items-center gap-2">
+    <Button size="icon" variant="ghost" href="/" class="shrink-0">
+      <ArrowLeft class="size-5" />
+    </Button>
+
+    <Input
+      class="bg-background! mr-auto w-full min-w-0 flex-1 border-none text-xl! md:max-w-70"
+      bind:value={title}
+      placeholder="Note title"
+      readonly={readonly || titleSaving}
+      onblur={saveTitle}
+      onkeydown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+      }}
+    />
+
+    <NoteActiveEditorsIndicator editors={activeEditors} />
+
+    <NoteShareControl
+      noteId={note?.id ?? id}
+      {shareableUsers}
+      selected={sharedWithUsers}
+      {publicAccess}
+      onShareChange={handleShareChange}
+      onPublicAccessChange={handlePublicAccessChange}
+      {readonly}
+      saving={shareSaving || publicAccessSaving}
+      origin={url?.endsWith('/') ? url.slice(0, -1) : url}
+    />
+    {#if note && !readonly}
+      <NoteTransferOwnerControl
+        owner={note.owner}
+        candidateUsers={shareableUsers}
+        onTransfer={handleTransferRequest}
+        saving={transferSaving}
+      />
+    {:else if note}
+      <div
+        class="flex h-9 shrink-0 cursor-default items-center gap-2 rounded-full text-sm font-medium md:border md:px-1 lg:pr-2.5 lg:pl-1"
+        title={`Owner: ${note.owner.name}`}
+      >
+        <UserAvatar
+          userId={note.owner.id}
+          username={note.owner.name}
+          class="size-6.5 shrink-0"
+        />
+        <span class="hidden max-w-32 truncate lg:inline">
+          {note.owner.name}
+        </span>
+        <Lock class="text-muted-foreground hidden size-3.5 shrink-0 lg:block" />
+      </div>
+    {/if}
+    <Separator orientation="vertical" class="hidden h-5 lg:block" />
+
+    {#if snapshots && note?.is_owner}
+      <NoteSnapshot
+        {snapshots}
+        onOpen={(snapshotId) => {
+          goto(`/notes/${id}/${snapshotId}`);
+        }}
+        onRestore={(snapshotId) => {
+          pendingRestore = snapshotId;
+          restoreOpen = true;
+        }}
+        onDelete={(snapshotId) => {
+          pendingDeleteSnapshot = snapshotId;
+          deleteSnapshotOpen = true;
+        }}
+      />
+    {/if}
+    <Button
+      class="shrink-0 cursor-pointer px-2 lg:px-2.5"
+      onclick={() => (deleteOpen = true)}
+      variant="destructive"
+      disabled={readonly}
+      aria-label="Delete"
+    >
+      <Trash />
+      <span class="hidden lg:inline">Delete</span>
+    </Button>
+  </div>
+  <div class="flex min-h-0 grow flex-col space-y-4">
+    {#if note}
+      <TipTab
+        {id}
+        username={userInfo?.name}
+        userId={userInfo?.uuid}
+        editable={note.can_edit}
+        bind:activeEditors
+      />
+    {/if}
+  </div>
+</div>
+<FormDialog
+  title="Delete Note"
+  description={`Do you really want to delete the note ${note?.title}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteItemConfirm}
+  bind:open={deleteOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Transfer Ownership"
+  description={`Transfer ownership of "${note?.title}" to ${pendingNewOwner?.name}? You will remain an editor but lose owner controls.`}
+  confirm="Transfer"
+  onsubmit={transferConfirm}
+  bind:open={transferOpen}
+  bind:isLoading={transferSaving}
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Delete Snapshot"
+  description={`Do you really want to delete this snapshot of ${note?.title}?`}
+  confirm="Delete"
+  confirmVariant="destructive"
+  onsubmit={deleteSnapshot}
+  bind:open={deleteSnapshotOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>
+<FormDialog
+  title="Restore Snapshot"
+  description={`Do you really want to restore this snapshot of ${note?.title}?`}
+  confirm="Restore"
+  onsubmit={restoreConfirm}
+  bind:open={restoreOpen}
+  bind:isLoading
+  schema={z.object({})}
+/>

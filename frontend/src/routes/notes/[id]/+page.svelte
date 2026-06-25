@@ -277,9 +277,6 @@
       return { error: 'Failed to restore snapshot' };
     } else {
       toast.success(`Snapshot restored successfully`);
-      setTimeout(() => {
-        goto(`/notes/${data.id}`);
-      });
     }
   };
 
@@ -297,9 +294,6 @@
       return { error: 'Failed to delete snapshot' };
     } else {
       toast.success(`Snapshot deleted successfully`);
-      setTimeout(() => {
-        goto(`/notes/${data.id}`);
-      });
     }
   };
 </script>

@@ -12,6 +12,9 @@ import type {
   AccountSettingsData,
   AccountSettingsErrors,
   AccountSettingsResponses,
+  ApplyNoteEditData,
+  ApplyNoteEditErrors,
+  ApplyNoteEditResponses,
   AuthConfigData,
   AuthConfigErrors,
   AuthConfigResponses,
@@ -206,6 +209,9 @@ import type {
   MailActiveData,
   MailActiveErrors,
   MailActiveResponses,
+  NoteContentData,
+  NoteContentErrors,
+  NoteContentResponses,
   NotesConfigData,
   NotesConfigErrors,
   NotesConfigResponses,
@@ -1628,6 +1634,23 @@ export const infoNote = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}', ...options });
 
+export const applyNoteEdit = <ThrowOnError extends boolean = false>(
+  options: Options<ApplyNoteEditData, ThrowOnError>
+): RequestResult<ApplyNoteEditResponses, ApplyNoteEditErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    ApplyNoteEditResponses,
+    ApplyNoteEditErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/api/notes/management/{uuid}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...options.headers
+    }
+  });
+
 export const infoNoteShare = <ThrowOnError extends boolean = false>(
   options: Options<InfoNoteShareData, ThrowOnError>
 ): RequestResult<InfoNoteShareResponses, InfoNoteShareErrors, ThrowOnError> =>
@@ -1636,6 +1659,15 @@ export const infoNoteShare = <ThrowOnError extends boolean = false>(
     InfoNoteShareErrors,
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}/public', ...options });
+
+export const noteContent = <ThrowOnError extends boolean = false>(
+  options: Options<NoteContentData, ThrowOnError>
+): RequestResult<NoteContentResponses, NoteContentErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    NoteContentResponses,
+    NoteContentErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/{uuid}/content', ...options });
 
 export const listUsersNote = <ThrowOnError extends boolean = false>(
   options?: Options<ListUsersNoteData, ThrowOnError>

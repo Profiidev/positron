@@ -281,7 +281,7 @@ test.describe('note snapshots', () => {
     await gotoReady(page, '/notes/note-1');
 
     await page.getByRole('button', { name: 'Snapshot manager' }).click();
-    await expect(page.getByPlaceholder('Search new owner...')).toBeVisible();
+    await expect(page.getByPlaceholder('Search snapshots...')).toBeVisible();
     await page.getByRole('option').first().click();
 
     await expect(page).toHaveURL(/\/notes\/note-1\/snapshot-1$/);
@@ -302,6 +302,8 @@ test.describe('note snapshots', () => {
     await expect(
       page.getByText('Snapshot restored successfully')
     ).toBeVisible();
+    // Restoring from the manager refreshes content in place, no navigation.
+    await expect(page).toHaveURL(/\/notes\/note-1$/);
   });
 
   test('deletes a snapshot from the manager', async ({ page }) => {
@@ -317,6 +319,8 @@ test.describe('note snapshots', () => {
     await page.getByRole('button', { name: 'Delete' }).last().click();
 
     await expect(page.getByText('Snapshot deleted successfully')).toBeVisible();
+    // Deleting from the manager stays on the note page.
+    await expect(page).toHaveURL(/\/notes\/note-1$/);
   });
 
   test('renders the snapshot view page with restore and delete', async ({

@@ -3,6 +3,11 @@ import { UpdateMessageType } from './types.svelte';
 import { setupStatus } from '$lib/commands/setup.svelte';
 import { authStatus } from '$lib/commands/auth.svelte';
 import { userAvatar, userInfo } from '$lib/commands/user.svelte';
+import {
+  listNotes,
+  listUsersNote,
+  notesConfig
+} from '$lib/commands/notes.svelte';
 
 const updater_cbs = new Map<UpdateMessageType, Map<string, () => void>>();
 
@@ -41,7 +46,10 @@ const create_updater = <T>(
   let subscribers = 0;
   let uuid = '';
 
-  const runUpdate = async () => update().then((v) => (value = v));
+  const runUpdate = async () =>
+    update().then((v) => {
+      value = v ?? value;
+    });
 
   return {
     update: async () => {
@@ -96,3 +104,26 @@ export const userAvatarState = create_updater(
   UpdateMessageType.UserInfoUpdated,
   userAvatar
 );
+
+export const notesState = create_updater(
+  UpdateMessageType.NotesUpdated,
+  listNotes
+);
+
+export const notesConfigState = create_updater(
+  UpdateMessageType.None,
+  notesConfig
+);
+
+export const noteUsersState = create_updater(
+  UpdateMessageType.UsersUpdated,
+  listUsersNote
+);
+
+export const onUpdate = (type: UpdateMessageType, cb: () => void) => {
+  const uuid = register_cb(type, cb);
+  return () => unregister_cb(uuid, type);
+};
+
+export const onNotesUpdate = (cb: () => void) =>
+  onUpdate(UpdateMessageType.NotesUpdated, cb);

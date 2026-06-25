@@ -1,15 +1,56 @@
-use std::sync::Arc;
+use std::{
+  convert::Infallible,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+  time::Duration,
+};
 
+use anyhow::{Result, bail};
 use dashmap::DashMap;
-use serde::Serialize;
-use tauri::{AppHandle, Manager, State, async_runtime::spawn, ipc::Channel};
-use tokio::sync::{Notify, mpsc};
+use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Manager, State, Url, async_runtime::spawn, ipc::Channel};
+use tauri_plugin_http::reqwest::header::AUTHORIZATION;
+use tokio::{
+  sync::{Mutex, Notify, mpsc},
+  time::sleep,
+};
+use tokio_tungstenite::{
+  connect_async,
+  tungstenite::{Message, client::IntoClientRequest},
+};
 use uuid::Uuid;
 
+use crate::store::Store;
+
+pub type ConnectionChangeCallback = Box<dyn Fn(bool) + Send + Sync>;
+pub type UpdateCallback = Box<dyn Fn(WsUpdateMessage) + Send + Sync>;
+
+#[derive(Clone)]
 pub struct Updater {
   sender: mpsc::Sender<UpdateMessage>,
   channels: Arc<DashMap<Uuid, Channel<UpdateMessage>>>,
   connected: Arc<Notify>,
+  url: Arc<Mutex<Option<Url>>>,
+  token: Arc<Mutex<Option<String>>>,
+  pub disconnect: Arc<Notify>,
+  is_online: Arc<AtomicBool>,
+  is_connected: Arc<AtomicBool>,
+  on_connection_change: Arc<Mutex<Vec<ConnectionChangeCallback>>>,
+  on_update: Arc<Mutex<Vec<UpdateCallback>>>,
+  reconnect: Arc<Notify>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
+pub enum WsUpdateMessage {
+  User { uuid: Uuid },
+  Note { uuid: Uuid },
+  NoteSnapshot { uuid: Uuid, note_id: Uuid },
+  NoteSnapshotsCleaned,
+  NoteContent { uuid: Uuid },
 }
 
 #[derive(Serialize, Clone)]
@@ -18,6 +59,7 @@ pub enum UpdateMessage {
   AuthStatusUpdated,
   SetupUpdated,
   UserInfoUpdated,
+  NotesUpdated,
   TokenInvalid,
   Disconnected,
   Connected,
@@ -30,6 +72,7 @@ pub enum UpdateMessage {
     code: String,
     redirect: Option<String>,
   },
+  UsersUpdated,
 }
 
 #[tauri::command]
@@ -46,6 +89,19 @@ pub async fn connect_updater(
 #[tauri::command]
 pub async fn disconnect_updater(state: State<'_, Updater>, uuid: Uuid) -> tauri::Result<()> {
   state.channels.remove(&uuid);
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn set_online(state: State<'_, Updater>, online: bool) -> tauri::Result<()> {
+  state.is_online.store(online, Ordering::Relaxed);
+  if !online {
+    state.disconnect.notify_waiters();
+    state.is_connected.store(false, Ordering::Relaxed);
+    state.notify_connection_change(false).await;
+  } else {
+    state.reconnect.notify_waiters();
+  }
   Ok(())
 }
 
@@ -77,17 +133,140 @@ impl Updater {
       }
     });
 
+    let store = handle.state::<Store>();
+    let url = store.instance_url.clone();
+    let token = store.token.clone();
+
     let updater = Updater {
       sender,
       channels,
       connected,
+      url,
+      token,
+      disconnect: Arc::new(Notify::new()),
+      reconnect: Arc::new(Notify::new()),
+      is_online: Arc::new(AtomicBool::new(true)),
+      is_connected: Arc::new(AtomicBool::new(false)),
+      on_connection_change: Arc::new(Mutex::new(Vec::new())),
+      on_update: Arc::new(Mutex::new(Vec::new())),
     };
+
+    updater.clone().websocket_task();
 
     handle.manage(updater);
   }
 
   pub async fn send(&self, message: UpdateMessage) {
     self.sender.send(message).await.ok();
+  }
+
+  pub async fn add_connection_change_callback<F: Fn(bool) + Send + Sync + 'static>(
+    &self,
+    callback: F,
+  ) {
+    self
+      .on_connection_change
+      .lock()
+      .await
+      .push(Box::new(callback));
+  }
+
+  pub async fn add_update_callback<F: Fn(WsUpdateMessage) + Send + Sync + 'static>(
+    &self,
+    callback: F,
+  ) {
+    self.on_update.lock().await.push(Box::new(callback));
+  }
+
+  async fn notify_connection_change(&self, connected: bool) {
+    let callbacks = self.on_connection_change.lock().await;
+    for callback in callbacks.iter() {
+      callback(connected);
+    }
+  }
+
+  async fn notify_update(&self, message: WsUpdateMessage) {
+    let callbacks = self.on_update.lock().await;
+    for callback in callbacks.iter() {
+      callback(message);
+    }
+  }
+
+  fn websocket_task(self) {
+    spawn(async move {
+      loop {
+        let Err(err) = self.connect_websocket().await;
+        println!(
+          "Websocket disconnected with the following error, retrying in 10 seconds: {:?}",
+          err
+        );
+
+        self.is_connected.store(false, Ordering::Relaxed);
+        self.send(UpdateMessage::Disconnected).await;
+        sleep(Duration::from_secs(1)).await;
+
+        if !self.is_online.load(Ordering::Relaxed) {
+          self.reconnect.notified().await;
+        }
+      }
+    });
+  }
+
+  async fn connect_websocket(&self) -> Result<Infallible> {
+    let Some(mut url) = self.url.lock().await.clone() else {
+      bail!("No url found");
+    };
+    let Some(token) = self.token.lock().await.clone() else {
+      bail!("No token found");
+    };
+
+    url.set_path("/api/ws/updater");
+    if url.scheme() == "http" {
+      url.set_scheme("ws").unwrap();
+    } else if url.scheme() == "https" {
+      url.set_scheme("wss").unwrap();
+    }
+
+    let mut request = url.into_client_request()?;
+    request
+      .headers_mut()
+      .append(AUTHORIZATION, format!("Bearer {}", token).parse()?);
+
+    let (mut stream, _) = connect_async(request).await?;
+
+    self.sender.send(UpdateMessage::Connected).await.ok();
+    self.is_connected.store(true, Ordering::Relaxed);
+    self.notify_connection_change(true).await;
+
+    loop {
+      let msg = tokio::select! {
+        Some(msg) = stream.next() => msg?,
+        _ = self.disconnect.notified() => break,
+        _ = sleep(Duration::from_secs(10)) => {
+          stream.send(Message::Text("heartbeat".into())).await.ok();
+          continue;
+        },
+      };
+
+      let Message::Text(data) = msg else { continue };
+      let Some(data): Option<WsUpdateMessage> = serde_json::from_str(&data).ok() else {
+        continue;
+      };
+
+      self.notify_update(data).await;
+
+      let msg = match data {
+        WsUpdateMessage::Note { .. }
+        | WsUpdateMessage::NoteSnapshot { .. }
+        | WsUpdateMessage::NoteSnapshotsCleaned
+        | WsUpdateMessage::NoteContent { .. } => UpdateMessage::NotesUpdated,
+        WsUpdateMessage::User { .. } => UpdateMessage::UsersUpdated,
+      };
+
+      self.sender.send(msg).await.ok();
+    }
+
+    bail!("WebSocket disconnected");
   }
 }
 
@@ -103,6 +282,7 @@ mod test {
       (UpdateMessage::AuthStatusUpdated, "AuthStatusUpdated"),
       (UpdateMessage::SetupUpdated, "SetupUpdated"),
       (UpdateMessage::UserInfoUpdated, "UserInfoUpdated"),
+      (UpdateMessage::NotesUpdated, "NotesUpdated"),
       (UpdateMessage::TokenInvalid, "TokenInvalid"),
       (UpdateMessage::Disconnected, "Disconnected"),
       (UpdateMessage::Connected, "Connected"),

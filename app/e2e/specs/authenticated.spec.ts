@@ -6,7 +6,9 @@ import {
   getRoute,
   resetAppData,
   resetMockState,
-  seedSetup
+  seedSetup,
+  waitForBodyText,
+  waitForRoute
 } from '../helpers/test-utils.js';
 
 describe('Main page (authenticated)', () => {
@@ -24,10 +26,25 @@ describe('Main page (authenticated)', () => {
     await authenticateViaDeepLink();
   });
 
-  it('lands on the main page with its actions', async () => {
+  it('lands on the notes page with the nav', async () => {
+    await browser.pause(500);
     expect(await getRoute()).toBe('/');
+    // The nav exposes the global actions; the page itself shows the notes list.
     await expect(byButton('Logout')).toBeDisplayed();
-    await expect(byButton('Scan Login Code')).toBeDisplayed();
+    await expect(byButton('Scan Login')).toBeDisplayed();
+    await waitForBodyText('Notes');
+    await waitForBodyText('No notes yet');
+  });
+
+  it('shows a disconnected badge while the updater websocket is down', async () => {
+    // The mock backend serves no `/api/ws/updater`, so the app's updater socket
+    // fails to connect and the nav must surface the offline state.
+    await waitForBodyText('Disconnected', 15_000);
+  });
+
+  it('logs out from the nav back to auth', async () => {
+    await byButton('Logout').click();
+    await waitForRoute('/auth');
   });
 
   it('keeps the user authenticated across a reload', async () => {
@@ -52,6 +69,8 @@ describe('Main page (authenticated)', () => {
  *
  * Documented here as skipped so the coverage gap stays explicit.
  */
+/*
 describe.skip('Scan page (requires a real camera)', () => {
   it('scans a QR login code and routes to the login page');
 });
+*/

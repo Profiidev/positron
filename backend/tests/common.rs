@@ -197,6 +197,11 @@ impl TestServer {
       .await
   }
 
+  /// PUT a raw byte body (used by the note-edit endpoint, which reads `Bytes`).
+  pub async fn put_bytes(&self, path: &str, body: Vec<u8>) -> Response {
+    self.send(self.client.put(self.url(path)).body(body)).await
+  }
+
   /// Fetch the password-transfer RSA public key and encrypt `plaintext` the
   /// same way the frontend does (RSA-PKCS1v15 + base64).
   pub async fn encrypt_password(&self, plaintext: &str) -> String {

@@ -23,7 +23,7 @@
 <div class="flex min-w-48 items-center gap-3 py-1">
   <Icon class="text-muted-foreground mx-1 size-5 shrink-0" />
   <div class="min-w-0 space-y-0.5">
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-2">
       <span class="font-medium">{displayName}</span>
       {#if session.current}
         <Badge

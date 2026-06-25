@@ -2,7 +2,7 @@ use aide::axum::{
   ApiRouter,
   routing::{delete_with, get_with, post_with, put_with},
 };
-use axum::{Extension, Json, extract::Path};
+use axum::{Extension, Json, body::Bytes, extract::Path};
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
@@ -11,18 +11,23 @@ use centaurus::{
     tables::{ConnectionExt, group::SimpleUserInfo},
   },
   error::Result,
+  eyre::Context,
   storage::FileStorage,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use yrs::{AsyncTransact, Doc, ReadTxn, StateVector, Update, updates::decoder::Decode};
 
 use crate::{
   db::{
     DBTrait,
     notes::{NoteInfo, NoteInfoPublic, NoteShareEntry},
   },
-  notes::{NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note},
+  notes::{
+    NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note, preview,
+    state::NoteEditing,
+  },
   utils::{UpdateMessage, Updater},
 };
 
@@ -34,8 +39,16 @@ pub fn router() -> ApiRouter {
     .api_route("/", delete_with(delete, |op| op.id("deleteNote")))
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
     .api_route(
+      "/{uuid}",
+      put_with(apply_note_edit, |op| op.id("applyNoteEdit")),
+    )
+    .api_route(
       "/{uuid}/public",
       get_with(info_public, |op| op.id("infoNoteShare")),
+    )
+    .api_route(
+      "/{uuid}/content",
+      get_with(note_content, |op| op.id("noteContent")),
     )
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
@@ -114,6 +127,54 @@ async fn info(
   Ok(Json(note))
 }
 
+async fn apply_note_edit(
+  auth: JwtAuth,
+  db: Connection,
+  updater: Updater,
+  state: NoteEditing,
+  Path(NotePath { uuid }): Path<NotePath>,
+  data: Bytes,
+) -> Result<()> {
+  if !db.notes().has_access(auth.user_id, uuid).await? {
+    bail!(NOT_FOUND, "note not found");
+  }
+
+  let lock = state.lock_note(uuid).await;
+  let content = db.notes().get_content(uuid).await?;
+  let doc = Doc::new();
+  let mut txn = doc.transact_mut().await;
+  txn
+    .apply_update(Update::decode_v1(&content).context("failed to decode note content")?)
+    .context("failed to apply update")?;
+
+  txn
+    .apply_update(Update::decode_v1(&data).context("failed to decode note content")?)
+    .context("failed to apply update")?;
+
+  let content = txn.encode_state_as_update_v1(&StateVector::default());
+  drop(txn);
+
+  let preview = preview::render_preview(&doc).await;
+
+  state.apply_update(uuid, &content).await?;
+  db.notes().set_content(uuid, content, preview).await?;
+  drop(lock);
+
+  let Some(owner) = db.notes().get_owner_id(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
+  let mut users = db.notes().shared_user_ids(uuid).await?;
+  users.push(owner);
+
+  for user in users {
+    updater
+      .send_to(user, UpdateMessage::NoteContent { uuid })
+      .await;
+  }
+
+  Ok(())
+}
+
 async fn info_public(
   db: Connection,
   Path(NotePath { uuid }): Path<NotePath>,
@@ -123,6 +184,22 @@ async fn info_public(
   };
 
   Ok(Json(note))
+}
+
+async fn note_content(
+  auth: JwtAuth,
+  db: Connection,
+  Path(NotePath { uuid }): Path<NotePath>,
+) -> Result<Bytes> {
+  if !db.notes().has_access(auth.user_id, uuid).await? {
+    bail!(NOT_FOUND, "note not found");
+  }
+
+  let Some(content) = db.notes().content(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
+
+  Ok(Bytes::from(content))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -340,6 +417,7 @@ mod test {
     storage: FileStorage,
   ) -> Router {
     let (public_state, _) = PublicNoteUpdateState::init();
+    let editing = super::NoteEditing::init(storage.clone(), upd.clone());
     Router::new()
       .route(
         "/",
@@ -348,8 +426,9 @@ mod test {
           .put(super::edit)
           .delete(super::delete),
       )
-      .route("/{uuid}", get(super::info))
+      .route("/{uuid}", get(super::info).put(super::apply_note_edit))
       .route("/{uuid}/public", get(super::info_public))
+      .route("/{uuid}/content", get(super::note_content))
       .route("/users", get(super::list_users))
       .route("/share", axum::routing::put(super::share))
       .route("/share/public", axum::routing::put(super::share_public))
@@ -358,6 +437,7 @@ mod test {
       .layer(Extension(public_state))
       .layer(Extension(public_upd))
       .layer(Extension(limits))
+      .layer(Extension(editing))
       .layer(Extension(upd))
       .layer(Extension(storage))
       .layer(Extension(jwt))
@@ -376,6 +456,39 @@ mod test {
         .unwrap(),
       None => builder.body(Body::empty()).unwrap(),
     }
+  }
+
+  /// Builds a request carrying a raw byte body (for the `apply_note_edit`
+  /// endpoint, which reads `Bytes` rather than JSON).
+  fn request_bytes(method: &str, uri: &str, cookie: Option<&str>, body: Vec<u8>) -> Request<Body> {
+    let mut builder = Request::builder().method(method).uri(uri);
+    if let Some(cookie) = cookie {
+      builder = builder.header(header::COOKIE, cookie);
+    }
+    builder
+      .header(header::CONTENT_TYPE, "application/octet-stream")
+      .body(Body::from(body))
+      .unwrap()
+  }
+
+  async fn response_bytes(resp: axum::response::Response) -> Vec<u8> {
+    axum::body::to_bytes(resp.into_body(), usize::MAX)
+      .await
+      .unwrap()
+      .to_vec()
+  }
+
+  /// Encodes a yrs document holding `text` as a full-state v1 update, the same
+  /// shape the client sends and the server stores as note content.
+  fn yrs_state(text: &str) -> Vec<u8> {
+    use yrs::{Doc, ReadTxn, StateVector, Text, Transact};
+    let doc = Doc::new();
+    doc
+      .get_or_insert_text("default")
+      .insert(&mut doc.transact_mut(), 0, text);
+    doc
+      .transact()
+      .encode_state_as_update_v1(&StateVector::default())
   }
 
   struct Setup {
@@ -1296,5 +1409,306 @@ mod test {
     assert_eq!(resp.status(), StatusCode::OK);
     let body: Value = body_json(resp).await;
     assert_eq!(body.as_array().unwrap().len(), 2);
+  }
+
+  // ---- note_content ----
+
+  #[tokio::test]
+  async fn note_content_returns_raw_bytes_for_owner() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .notes()
+      .set_content(note, vec![1, 2, 3, 4], "p".into())
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}/content"),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(response_bytes(resp).await, vec![1, 2, 3, 4]);
+  }
+
+  #[tokio::test]
+  async fn note_content_is_empty_for_fresh_note() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    // a freshly created note exists with empty content -> 200 with an empty body
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}/content"),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(response_bytes(resp).await.is_empty());
+  }
+
+  #[tokio::test]
+  async fn note_content_not_found_for_unknown_note() {
+    let s = setup().await;
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{}/content", Uuid::new_v4()),
+        Some(&s.cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn note_content_hidden_from_stranger() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .notes()
+      .set_content(note, vec![9], "p".into())
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    // no access -> 404 (existence is not leaked)
+    let resp = app
+      .oneshot(request(
+        "GET",
+        &format!("/{note}/content"),
+        Some(&stranger_cookie),
+        None,
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn note_content_requires_authentication() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request("GET", &format!("/{note}/content"), None, None))
+      .await
+      .unwrap();
+    assert!(resp.status().is_client_error());
+  }
+
+  // ---- apply_note_edit ----
+
+  #[tokio::test]
+  async fn apply_note_edit_merges_persists_and_notifies() {
+    use centaurus::backend::endpoints::websocket::state::UpdateState;
+
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    // seed a valid base document so the merge has something to decode
+    let base = yrs_state("hello");
+    s.db
+      .notes()
+      .set_content(note, base.clone(), "old".into())
+      .await
+      .unwrap();
+    let before = s
+      .db
+      .notes()
+      .info(note, s.user)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+
+    // a custom updater whose subscriber we can observe
+    let (update_state, upd) = UpdateState::<UpdateMessage>::init().await;
+    let (_sid, mut rx) = update_state.create_session(s.user).await;
+
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    let resp = app
+      .oneshot(request_bytes(
+        "PUT",
+        &format!("/{note}"),
+        Some(&s.cookie),
+        yrs_state("world"),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // content is rewritten (merge of base + update) and last_updated advanced
+    let stored = s.db.notes().get_content(note).await.unwrap();
+    assert!(!stored.is_empty());
+    assert_ne!(stored, base);
+    let after = s
+      .db
+      .notes()
+      .info(note, s.user)
+      .await
+      .unwrap()
+      .unwrap()
+      .last_updated;
+    assert!(after > before);
+
+    // the owner is notified that the note content changed
+    let msg = tokio::time::timeout(std::time::Duration::from_secs(1), rx.recv())
+      .await
+      .expect("owner should receive an update")
+      .expect("channel open");
+    assert!(
+      matches!(msg, UpdateMessage::NoteContent { uuid } if uuid == note),
+      "expected NoteContent, got {msg:?}"
+    );
+  }
+
+  #[tokio::test]
+  async fn apply_note_edit_not_found_for_no_access() {
+    let s = setup().await;
+    let stranger = insert_user(&s.db, "stranger", "s@x.com").await;
+    let stranger_cookie = auth_cookie(&s.db, &s.jwt, stranger).await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .notes()
+      .set_content(note, yrs_state("hello"), "p".into())
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request_bytes(
+        "PUT",
+        &format!("/{note}"),
+        Some(&stranger_cookie),
+        yrs_state("world"),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn apply_note_edit_rejects_invalid_update() {
+    let s = setup().await;
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    s.db
+      .notes()
+      .set_content(note, yrs_state("hello"), "p".into())
+      .await
+      .unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    // a body that is not a valid yrs update fails to decode -> bad request
+    let resp = app
+      .oneshot(request_bytes(
+        "PUT",
+        &format!("/{note}"),
+        Some(&s.cookie),
+        b"not a yrs update".to_vec(),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+  }
+
+  #[tokio::test]
+  async fn apply_note_edit_on_empty_content_note_errors() {
+    let s = setup().await;
+    // a note that has never been opened/saved still has empty content; decoding
+    // that empty buffer as a yrs update fails before the new edit is applied.
+    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let app = app(
+      s.db.clone(),
+      s.jwt,
+      s.upd,
+      s.public_upd,
+      NotesLimits { max_per_user: 20 },
+      s.storage.clone(),
+    );
+
+    let resp = app
+      .oneshot(request_bytes(
+        "PUT",
+        &format!("/{note}"),
+        Some(&s.cookie),
+        yrs_state("world"),
+      ))
+      .await
+      .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
   }
 }

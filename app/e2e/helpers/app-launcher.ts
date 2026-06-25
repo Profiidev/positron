@@ -147,6 +147,20 @@ export const restartAndroidApp = async (port = 4445): Promise<void> => {
 };
 
 /**
+ * Ensures the Android app (and its embedded WebDriver server) is up before a
+ * worker creates its session. The app is started once in `onPrepare`, but in CI
+ * it can crash during a cold restart and never come back; without this every
+ * following spec fails to create a session on the now-dead port, cascading one
+ * flaky crash into a whole-suite failure. `am start` is idempotent (it just
+ * foregrounds a live app), so calling this per session is safe and lets each
+ * spec file — and each retry — self-heal instead of inheriting a dead process.
+ */
+export const ensureAndroidAppRunning = async (port = 4445): Promise<void> => {
+  startAndroidApp();
+  await waitForServer(port);
+};
+
+/**
  * Fires an OS deep link at the app via `adb`, the way the real auth flow
  * delivers `positron://auth?...` / `positron://login?...` URLs back to the app
  * after the external browser step. The URL is single-quoted so the device

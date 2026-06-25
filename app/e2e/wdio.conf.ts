@@ -1,7 +1,11 @@
 // oxlint-disable sort-keys no-console no-underscore-dangle
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startApp, stopApp } from './helpers/app-launcher.js';
+import {
+  ensureAndroidAppRunning,
+  startApp,
+  stopApp
+} from './helpers/app-launcher.js';
 import { startMockServer, stopMockServer } from './helpers/mock-server.js';
 import { mergeFiles } from 'junit-report-merger';
 
@@ -38,6 +42,12 @@ export const config: WebdriverIO.Config = {
   logLevel: 'warn',
 
   bail: 0,
+
+  // A spec can fail wholesale in CI when the emulator crashes the app on a cold
+  // restart; retrying the file (with the beforeSession relaunch below) recovers
+  // from a one-off crash instead of failing the run.
+  specFileRetries: 1,
+  specFileRetriesDeferred: false,
 
   waitforTimeout: 10_000,
 
@@ -86,6 +96,13 @@ export const config: WebdriverIO.Config = {
   },
 
   beforeSession: async () => {
+    // Each spec file (and each retry) gets its own session. If a previous spec
+    // left the app dead — as a CI emulator crash can — relaunch it so this
+    // worker can bind a session instead of failing on a refused port.
+    if (process.env.TAURI_TEST_PLATFORM === 'android') {
+      await ensureAndroidAppRunning(WEBDRIVER_PORT);
+    }
+
     // Wait a bit for any lingering state to clear
     await new Promise((resolve) => setTimeout(resolve, 500));
   }

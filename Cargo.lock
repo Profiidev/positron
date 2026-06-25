@@ -5494,8 +5494,10 @@ version = "0.2.12"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "chrono",
  "cookie",
  "dashmap",
+ "futures-util",
  "http 1.4.2",
  "rand 0.10.1",
  "serde",
@@ -5510,7 +5512,9 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-webdriver",
  "tokio",
+ "tokio-tungstenite",
  "uuid",
+ "yrs",
 ]
 
 [[package]]
@@ -8257,8 +8261,12 @@ checksum = "8f72a05e828585856dacd553fba484c242c46e391fb0e58917c942ee9202915c"
 dependencies = [
  "futures-util",
  "log",
+ "rustls 0.23.40",
+ "rustls-pki-types",
  "tokio",
+ "tokio-rustls 0.26.4",
  "tungstenite",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -8619,8 +8627,11 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.9.4",
+ "rustls 0.23.40",
+ "rustls-pki-types",
  "sha1 0.10.6",
  "thiserror 2.0.18",
+ "url",
 ]
 
 [[package]]

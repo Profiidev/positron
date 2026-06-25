@@ -46,6 +46,7 @@ describe('UpdateType enum', () => {
     expect(UpdateType.Note).toBe('Note');
     expect(UpdateType.NoteSnapshot).toBe('NoteSnapshot');
     expect(UpdateType.NoteSnapshotsCleaned).toBe('NoteSnapshotsCleaned');
+    expect(UpdateType.NoteContent).toBe('NoteContent');
     expect(UpdateType.Sessions).toBe('Sessions');
     expect(Object.values(UpdateType)).toContain('OAuthClient');
   });
@@ -110,6 +111,13 @@ describe('handleMessage', () => {
       '/api/notes/snapshots/n1',
       '/api/notes/snapshots/s1/info'
     ]);
+  });
+
+  it('invalidates only the note list on a NoteContent update', () => {
+    const handler = getHandler();
+    handler({ type: UpdateType.NoteContent, uuid: 'n1' }, 'me');
+    // Content updates refresh the list preview only, not the per-note path
+    expect(invalidatedUrls()).toEqual(['/api/notes/management']);
   });
 
   it('invalidates all snapshot paths on NoteSnapshotsCleaned', () => {

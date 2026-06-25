@@ -11,9 +11,9 @@
   import Link from '@lucide/svelte/icons/link';
   import type {
     NoteShareAccess,
-    SharedUserInfo,
-    SimpleUserInfo
-  } from '$lib/client';
+    NoteSharedUserInfo,
+    NoteUserInfo
+  } from './types';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { page } from '$app/state';
@@ -28,16 +28,18 @@
     onShareChange,
     onPublicAccessChange,
     readonly = false,
-    saving = false
+    saving = false,
+    origin = page.url.origin
   }: {
     noteId: string;
-    shareableUsers: SimpleUserInfo[];
-    selected: SharedUserInfo[];
+    shareableUsers: NoteUserInfo[];
+    selected: NoteSharedUserInfo[];
     publicAccess?: NoteShareAccess | null;
     onShareChange: (shares: ShareEntry[]) => void;
     onPublicAccessChange: (access: NoteShareAccess | null) => void;
     readonly?: boolean;
     saving?: boolean;
+    origin?: string;
   } = $props();
 
   let open = $state(false);
@@ -47,7 +49,7 @@
   );
 
   const extraCount = $derived(Math.max(0, selected.length - 4));
-  const shareUrl = $derived(`${page.url.origin}/notes/share/${noteId}`);
+  const shareUrl = $derived(`${origin}/notes/share/${noteId}`);
   const isPublic = $derived(publicAccess !== null);
 
   const shareForUser = (userId: string) =>

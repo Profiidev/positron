@@ -1,12 +1,9 @@
-use std::{sync::Arc, time::Duration};
-
 use anyhow::{Result, bail};
 use cookie::Cookie;
 use serde::Deserialize;
 use serde_json::json;
 use tauri::{AppHandle, Manager, async_runtime::spawn};
 use tauri_plugin_http::reqwest::{Method, Response, header::SET_COOKIE};
-use tokio::{sync::Notify, time::sleep};
 
 use crate::{
   store::Store,
@@ -94,15 +91,6 @@ impl super::Client {
     Ok(())
   }
 
-  pub async fn test_connection(&self) -> Result<bool> {
-    let req = self.builder(Method::GET, "/api/health").await?;
-    let Ok(res) = self.send(req).await else {
-      return Ok(false);
-    };
-
-    Ok(res.headers().get("X-Api-Version").is_some())
-  }
-
   pub(super) fn token_check(handle: AppHandle) {
     spawn(async move {
       let client = handle.state::<Self>();
@@ -119,48 +107,6 @@ impl super::Client {
         let updater = handle.state::<Updater>();
         updater.send(UpdateMessage::TokenInvalid).await;
         updater.send(UpdateMessage::UserInfoUpdated).await;
-      }
-    });
-  }
-
-  pub(super) fn connection_check(handle: AppHandle) {
-    spawn(async move {
-      let client = handle.state::<Self>();
-      let Ok(connected) = client.test_connection().await else {
-        return;
-      };
-
-      if !connected {
-        client.connection_task.notify_waiters();
-        handle
-          .state::<Updater>()
-          .send(UpdateMessage::Disconnected)
-          .await;
-      }
-    });
-  }
-
-  pub(super) fn start_connection_task(handle: AppHandle, notify: Arc<Notify>) {
-    spawn(async move {
-      loop {
-        notify.notified().await;
-
-        loop {
-          sleep(Duration::from_secs(5)).await;
-
-          let client = handle.state::<Self>();
-          let Ok(connected) = client.test_connection().await else {
-            continue;
-          };
-
-          if connected {
-            handle
-              .state::<Updater>()
-              .send(UpdateMessage::Connected)
-              .await;
-            break;
-          }
-        }
       }
     });
   }

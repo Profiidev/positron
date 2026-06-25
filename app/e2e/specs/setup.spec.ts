@@ -1,11 +1,9 @@
 import { $, browser, expect } from '@wdio/globals';
-import { MOCK_URL } from '../helpers/mock-server.js';
 import {
   byButton,
   getRoute,
   resetAppData,
-  waitForBodyText,
-  waitForRoute
+  waitForBodyText
 } from '../helpers/test-utils.js';
 
 const INSTANCE_INPUT = 'input[placeholder="https://positron.example.com"]';
@@ -47,6 +45,7 @@ describe('Setup flow', () => {
   // through the `adb reverse` tunnel (native `reqwest` can — see auth-flow.spec),
   // so this can't complete here. The setup -> /auth transition is covered via
   // the seeded path in auth.spec / routing.spec instead.
+  /*
   it.skip('completes setup against a reachable server and moves to auth', async () => {
     const input = $(INSTANCE_INPUT);
     await input.setValue(MOCK_URL);
@@ -55,4 +54,5 @@ describe('Setup flow', () => {
     await waitForRoute('/auth');
     expect(await getRoute()).toBe('/auth');
   });
+  */
 });
