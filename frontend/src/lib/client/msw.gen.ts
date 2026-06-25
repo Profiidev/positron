@@ -145,6 +145,8 @@ import type {
   LogoutData,
   MailActiveData,
   MailActiveResponse2,
+  NoteContentData,
+  NoteContentResponse,
   NotesConfigData,
   NotesConfigResponse,
   PasswordAuthenticateData,
@@ -779,6 +781,12 @@ export const infoNoteShareMswHandler = wrapMswHandler<
   never,
   InfoNoteShareData
 >('/api/notes/management/{uuid}/public', 'get', client.getConfig);
+
+export const noteContentMswHandler = wrapMswHandler<
+  NoteContentResponse,
+  never,
+  NoteContentData
+>('/api/notes/management/{uuid}/content', 'get', client.getConfig);
 
 export const listUsersNoteMswHandler = wrapMswHandler<
   ListUsersNoteResponse,

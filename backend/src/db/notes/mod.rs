@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use centaurus::{db::tables::group::SimpleUserInfo, error::Result};
+use chrono::Utc;
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
@@ -30,6 +31,7 @@ struct NoteWithOwner {
   public_access: Option<NoteShareAccess>,
   #[sea_orm(nested)]
   owner: Option<PartialUser>,
+  last_updated: DateTime,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -55,6 +57,7 @@ pub struct NoteInfo {
   pub public_access: Option<NoteShareAccess>,
   pub is_owner: bool,
   pub can_edit: bool,
+  pub last_updated: DateTime,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -250,6 +253,7 @@ impl<'db> NoteTable<'db> {
           public_access: note.public_access,
           is_owner,
           can_edit,
+          last_updated: note.last_updated,
         })
       })
       .collect::<Result<Vec<_>>>()
@@ -300,6 +304,7 @@ impl<'db> NoteTable<'db> {
       public_access: note.public_access,
       is_owner,
       can_edit,
+      last_updated: note.last_updated,
     }))
   }
 
@@ -345,6 +350,7 @@ impl<'db> NoteTable<'db> {
       preview: Set("".into()),
       owner: Set(owner),
       public_access: Set(None),
+      last_updated: Set(Utc::now().naive_utc()),
     }
     .insert(&txn)
     .await?;
@@ -453,6 +459,10 @@ impl<'db> NoteTable<'db> {
     note::Entity::update_many()
       .col_expr(note::Column::Content, Expr::value(content))
       .col_expr(note::Column::Preview, Expr::value(preview))
+      .col_expr(
+        note::Column::LastUpdated,
+        Expr::value(Utc::now().naive_utc()),
+      )
       .filter(note::Column::Id.eq(note_id))
       .exec(self.db)
       .await?;
@@ -511,6 +521,17 @@ impl<'db> NoteTable<'db> {
       .await?;
 
     Ok(owner)
+  }
+
+  pub async fn content(&self, note_id: Uuid) -> Result<Option<Vec<u8>>> {
+    let content = Note::find_by_id(note_id)
+      .select_only()
+      .column(note::Column::Content)
+      .into_tuple()
+      .one(self.db)
+      .await?;
+
+    Ok(content)
   }
 }
 

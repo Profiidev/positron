@@ -14,7 +14,8 @@ export enum UpdateType {
   Note = 'Note',
   NoteSnapshot = 'NoteSnapshot',
   NoteSnapshotsCleaned = 'NoteSnapshotsCleaned',
-  Sessions = 'Sessions'
+  Sessions = 'Sessions',
+  NoteContent = 'NoteContent'
 }
 
 export type UpdateMessage =
@@ -25,7 +26,8 @@ export type UpdateMessage =
         | UpdateType.OAuthClient
         | UpdateType.OAuthScope
         | UpdateType.OAuthPolicy
-        | UpdateType.Note;
+        | UpdateType.Note
+        | UpdateType.NoteContent;
       uuid: string;
     }
   | {
@@ -113,6 +115,10 @@ const handleMessage = (msg: UpdateMessage, user: string) => {
     case UpdateType.NoteSnapshot: {
       invalidate(`/api/notes/snapshots/${msg.note_id}`).catch(() => {});
       invalidate(`/api/notes/snapshots/${msg.uuid}/info`).catch(() => {});
+      break;
+    }
+    case UpdateType.NoteContent: {
+      invalidate('/api/notes/management').catch(() => {});
       break;
     }
     case UpdateType.NoteSnapshotsCleaned: {

@@ -206,6 +206,9 @@ import type {
   MailActiveData,
   MailActiveErrors,
   MailActiveResponses,
+  NoteContentData,
+  NoteContentErrors,
+  NoteContentResponses,
   NotesConfigData,
   NotesConfigErrors,
   NotesConfigResponses,
@@ -1636,6 +1639,15 @@ export const infoNoteShare = <ThrowOnError extends boolean = false>(
     InfoNoteShareErrors,
     ThrowOnError
   >({ url: '/api/notes/management/{uuid}/public', ...options });
+
+export const noteContent = <ThrowOnError extends boolean = false>(
+  options: Options<NoteContentData, ThrowOnError>
+): RequestResult<NoteContentResponses, NoteContentErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    NoteContentResponses,
+    NoteContentErrors,
+    ThrowOnError
+  >({ url: '/api/notes/management/{uuid}/content', ...options });
 
 export const listUsersNote = <ThrowOnError extends boolean = false>(
   options?: Options<ListUsersNoteData, ThrowOnError>

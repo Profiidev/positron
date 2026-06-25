@@ -2,7 +2,7 @@ use aide::axum::{
   ApiRouter,
   routing::{delete_with, get_with, post_with, put_with},
 };
-use axum::{Extension, Json, extract::Path};
+use axum::{Extension, Json, body::Bytes, extract::Path};
 use centaurus::{
   backend::auth::jwt_auth::JwtAuth,
   bail,
@@ -36,6 +36,10 @@ pub fn router() -> ApiRouter {
     .api_route(
       "/{uuid}/public",
       get_with(info_public, |op| op.id("infoNoteShare")),
+    )
+    .api_route(
+      "/{uuid}/content",
+      get_with(note_content, |op| op.id("noteContent")),
     )
     .api_route("/users", get_with(list_users, |op| op.id("listUsersNote")))
     .api_route("/share", put_with(share, |op| op.id("shareNote")))
@@ -123,6 +127,14 @@ async fn info_public(
   };
 
   Ok(Json(note))
+}
+
+async fn note_content(db: Connection, Path(NotePath { uuid }): Path<NotePath>) -> Result<Bytes> {
+  let Some(content) = db.notes().content(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
+
+  Ok(Bytes::from(content))
 }
 
 #[derive(Deserialize, JsonSchema)]

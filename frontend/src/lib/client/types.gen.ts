@@ -271,6 +271,7 @@ export type NoteInfo = {
   can_edit: boolean;
   id: string;
   is_owner: boolean;
+  last_updated: string;
   owner: SimpleUserInfo;
   preview: string;
   public_access?: NoteShareAccess | null;
@@ -3514,6 +3515,36 @@ export type InfoNoteShareResponses = {
 
 export type InfoNoteShareResponse =
   InfoNoteShareResponses[keyof InfoNoteShareResponses];
+
+export type NoteContentData = {
+  body?: never;
+  path: {
+    uuid: string;
+  };
+  query?: never;
+  url: '/api/notes/management/{uuid}/content';
+};
+
+export type NoteContentErrors = {
+  /**
+   * An error occurred
+   */
+  '4XX': unknown;
+  /**
+   * An error occurred
+   */
+  '5XX': unknown;
+};
+
+export type NoteContentResponses = {
+  /**
+   * byte stream
+   */
+  200: Blob | File;
+};
+
+export type NoteContentResponse =
+  NoteContentResponses[keyof NoteContentResponses];
 
 export type ListUsersNoteData = {
   body?: never;

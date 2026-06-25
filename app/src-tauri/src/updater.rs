@@ -26,6 +26,7 @@ use uuid::Uuid;
 use crate::store::Store;
 
 pub type ConnectionChangeCallback = Box<dyn Fn(bool) + Send + Sync>;
+pub type UpdateCallback = Box<dyn Fn(WsUpdateMessage) + Send + Sync>;
 
 #[derive(Clone)]
 pub struct Updater {
@@ -38,6 +39,7 @@ pub struct Updater {
   is_online: Arc<AtomicBool>,
   is_connected: Arc<AtomicBool>,
   on_connection_change: Arc<Mutex<Vec<ConnectionChangeCallback>>>,
+  on_update: Arc<Mutex<Vec<UpdateCallback>>>,
   reconnect: Arc<Notify>,
 }
 
@@ -48,6 +50,7 @@ pub enum WsUpdateMessage {
   Note { uuid: Uuid },
   NoteSnapshot { uuid: Uuid, note_id: Uuid },
   NoteSnapshotsCleaned,
+  NoteContent { uuid: Uuid },
 }
 
 #[derive(Serialize, Clone)]
@@ -145,6 +148,7 @@ impl Updater {
       is_online: Arc::new(AtomicBool::new(true)),
       is_connected: Arc::new(AtomicBool::new(false)),
       on_connection_change: Arc::new(Mutex::new(Vec::new())),
+      on_update: Arc::new(Mutex::new(Vec::new())),
     };
 
     updater.clone().websocket_task();
@@ -167,10 +171,24 @@ impl Updater {
       .push(Box::new(callback));
   }
 
+  pub async fn add_update_callback<F: Fn(WsUpdateMessage) + Send + Sync + 'static>(
+    &self,
+    callback: F,
+  ) {
+    self.on_update.lock().await.push(Box::new(callback));
+  }
+
   async fn notify_connection_change(&self, connected: bool) {
     let callbacks = self.on_connection_change.lock().await;
     for callback in callbacks.iter() {
       callback(connected);
+    }
+  }
+
+  async fn notify_update(&self, message: WsUpdateMessage) {
+    let callbacks = self.on_update.lock().await;
+    for callback in callbacks.iter() {
+      callback(message);
     }
   }
 
@@ -235,10 +253,13 @@ impl Updater {
         continue;
       };
 
+      self.notify_update(data).await;
+
       let msg = match data {
         WsUpdateMessage::Note { .. }
         | WsUpdateMessage::NoteSnapshot { .. }
-        | WsUpdateMessage::NoteSnapshotsCleaned => UpdateMessage::NotesUpdated,
+        | WsUpdateMessage::NoteSnapshotsCleaned
+        | WsUpdateMessage::NoteContent { .. } => UpdateMessage::NotesUpdated,
         WsUpdateMessage::User { .. } => UpdateMessage::UsersUpdated,
       };
 

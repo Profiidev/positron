@@ -3,11 +3,18 @@
   import { onDestroy, onMount } from 'svelte';
   import { getRandomColor } from './color';
   import EditorToolbar from './toolbar/EditorToolbar.svelte';
-  import { EditorContent, type Editor } from 'svelte-tiptap';
+  import { EditorContent, Editor } from 'svelte-tiptap';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { cn } from '@profidev/pleiades/utils';
   import type { NoteActiveEditor } from '../notes/types';
-  import { TauriWebsocketProvider } from '$lib/commands/notes.svelte';
+  import {
+    noteContent,
+    TauriWebsocketProvider
+  } from '$lib/commands/notes.svelte';
+  import { extensions } from './config';
+  import Collaboration from '@tiptap/extension-collaboration';
+  import CollaborationCaret from '@tiptap/extension-collaboration-caret';
+  import { Doc, applyUpdate } from 'yjs';
 
   type AwarenessUser = {
     name?: string;
@@ -39,6 +46,13 @@
   let providerReady = $state(false);
   let lastEditable = $state<boolean | undefined>(undefined);
   const userColor = getRandomColor();
+  const doc = new Doc();
+
+  // svelte-ignore state_referenced_locally
+  noteContent(id).then((content) => {
+    if (!content) return;
+    doc.transact(() => applyUpdate(doc, content));
+  });
 
   const setLocalAwarenessState = () => {
     if (!provider) return;
@@ -108,9 +122,6 @@
   });
 
   onMount(async () => {
-    const Doc = (await import('yjs')).Doc;
-    const doc = new Doc();
-
     provider = new TauriWebsocketProvider(id, doc);
     provider.awareness.on('change', onAwarenessChange);
 
@@ -118,14 +129,6 @@
     providerReady = true;
     setLocalAwarenessState();
     syncActiveEditors();
-
-    const extensions = (await import('./config')).extensions;
-    const Collaboration = (await import('@tiptap/extension-collaboration'))
-      .default;
-    const CollaborationCaret = (
-      await import('@tiptap/extension-collaboration-caret')
-    ).default;
-    const Editor = (await import('svelte-tiptap')).Editor;
 
     editorState.editor = new Editor({
       extensions: [

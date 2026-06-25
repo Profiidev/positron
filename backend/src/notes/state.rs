@@ -349,6 +349,15 @@ impl NoteState {
 
     db.notes().set_content(note_id, content, preview).await?;
 
+    let mut users = db.notes().shared_user_ids(note_id).await?;
+    users.push(self.owner_id);
+    for user in users {
+      self
+        .updater
+        .send_to(user, UpdateMessage::NoteContent { uuid: note_id })
+        .await;
+    }
+
     Ok(())
   }
 

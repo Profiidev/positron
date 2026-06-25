@@ -47,6 +47,9 @@ pub enum UpdateMessage {
   },
   NoteSnapshotsCleaned,
   Sessions,
+  NoteContent {
+    uuid: Uuid,
+  },
 }
 
 pub fn generate_secret() -> String {

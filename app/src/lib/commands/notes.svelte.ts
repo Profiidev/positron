@@ -105,6 +105,17 @@ export const noteSnapshotContent = async (
   }
 };
 
+export const noteContent = async (
+  noteId: string
+): Promise<Uint8Array | undefined> => {
+  try {
+    const res = await invoke<number[]>('note_content', { id: noteId });
+    return new Uint8Array(res);
+  } catch {
+    return undefined;
+  }
+};
+
 export const editNote = async (
   noteId: string,
   title: string

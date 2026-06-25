@@ -14,6 +14,7 @@ pub struct Model {
   pub preview: String,
   pub owner: Uuid,
   pub public_access: Option<NoteShareAccess>,
+  pub last_updated: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
