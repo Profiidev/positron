@@ -26,6 +26,7 @@ use crate::{
   },
   notes::{
     NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note, preview,
+    state::NoteEditing,
   },
   utils::{UpdateMessage, Updater},
 };
@@ -130,6 +131,7 @@ async fn apply_note_edit(
   auth: JwtAuth,
   db: Connection,
   updater: Updater,
+  state: NoteEditing,
   Path(NotePath { uuid }): Path<NotePath>,
   data: Bytes,
 ) -> Result<()> {
@@ -137,6 +139,7 @@ async fn apply_note_edit(
     bail!(NOT_FOUND, "note not found");
   }
 
+  let lock = state.lock_note(uuid).await;
   let content = db.notes().get_content(uuid).await?;
   let doc = Doc::new();
   let mut txn = doc.transact_mut().await;
@@ -152,7 +155,10 @@ async fn apply_note_edit(
   drop(txn);
 
   let preview = preview::render_preview(&doc).await;
+
+  state.apply_update(uuid, &content).await?;
   db.notes().set_content(uuid, content, preview).await?;
+  drop(lock);
 
   let Some(owner) = db.notes().get_owner_id(uuid).await? else {
     bail!(NOT_FOUND, "note not found");
@@ -165,8 +171,6 @@ async fn apply_note_edit(
       .send_to(user, UpdateMessage::NoteContent { uuid })
       .await;
   }
-
-  // TODO also update live notes
 
   Ok(())
 }

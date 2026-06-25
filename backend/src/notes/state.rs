@@ -27,7 +27,7 @@ use image::EncodableLayout;
 use tokio::{
   spawn,
   sync::{
-    Mutex,
+    Mutex, OwnedMutexGuard,
     broadcast::{Receiver, Sender, channel},
     mpsc,
   },
@@ -61,6 +61,7 @@ pub const MB: usize = 1024 * 1024;
 #[from_request(via(Extension))]
 pub struct NoteEditing {
   docs: Arc<DashMap<Uuid, Arc<NoteState>>>,
+  note_lock: Arc<DashMap<Uuid, Arc<Mutex<()>>>>,
   storage: Arc<FileStorage>,
   updater: Updater,
 }
@@ -89,6 +90,7 @@ impl NoteEditing {
   pub fn init(storage: FileStorage, updater: Updater) -> Self {
     Self {
       docs: Arc::new(DashMap::new()),
+      note_lock: Arc::new(DashMap::new()),
       storage: Arc::new(storage),
       updater,
     }
@@ -102,7 +104,9 @@ impl NoteEditing {
   }
 
   pub async fn get_or_open_note(&self, note_id: Uuid, db: &Connection) -> Result<Arc<NoteState>> {
+    let lock = self.lock_note(note_id).await;
     if let Some(state) = self.docs.get(&note_id) {
+      drop(lock);
       state.subscriber_count.fetch_add(1, Ordering::Relaxed);
       return Ok(state.clone());
     }
@@ -187,13 +191,14 @@ impl NoteEditing {
 
     state.clone().start_save_task(db.clone(), note_id);
 
-    // TODO fix insert race condition
     self.docs.insert(note_id, state.clone());
+    drop(lock);
 
     Ok(state)
   }
 
   pub async fn close_note(&self, note_id: Uuid, db: &Connection) -> Result<()> {
+    let lock = self.lock_note(note_id).await;
     let Some(state) = self.docs.get(&note_id) else {
       return Ok(());
     };
@@ -209,6 +214,7 @@ impl NoteEditing {
     };
 
     state.save(db, note_id).await?;
+    drop(lock);
     state.save_counter.store(-1, Ordering::Relaxed);
 
     Ok(())
@@ -220,6 +226,30 @@ impl NoteEditing {
     };
 
     state.restore(data).await?;
+
+    Ok(())
+  }
+
+  pub async fn lock_note(&self, note_id: Uuid) -> OwnedMutexGuard<()> {
+    let mutex = self
+      .note_lock
+      .entry(note_id)
+      .or_insert_with(|| Arc::new(Mutex::new(())))
+      .clone();
+
+    mutex.lock_owned().await
+  }
+
+  pub async fn apply_update(&self, note_id: Uuid, data: &[u8]) -> Result<()> {
+    let Some(state) = self.docs.get(&note_id) else {
+      return Ok(());
+    };
+
+    let awareness = state.doc.lock().await;
+    let mut txn = awareness.doc().transact_mut().await;
+    txn
+      .apply_update(Update::decode_v1(data).context("invalid update")?)
+      .context("failed to apply update")?;
 
     Ok(())
   }

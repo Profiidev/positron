@@ -281,7 +281,7 @@ test.describe('note snapshots', () => {
     await gotoReady(page, '/notes/note-1');
 
     await page.getByRole('button', { name: 'Snapshot manager' }).click();
-    await expect(page.getByPlaceholder('Search new owner...')).toBeVisible();
+    await expect(page.getByPlaceholder('Search snapshots...')).toBeVisible();
     await page.getByRole('option').first().click();
 
     await expect(page).toHaveURL(/\/notes\/note-1\/snapshot-1$/);
