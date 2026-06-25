@@ -29,9 +29,9 @@
   import {
     noteUsersState,
     onNotesUpdate,
+    setupStatusState,
     userInfoState
   } from '$lib/updater/state.svelte';
-  import Nav from '$lib/components/Nav.svelte';
   import TipTab from '$lib/components/tiptap/TipTab.svelte';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
@@ -302,6 +302,7 @@
       onPublicAccessChange={handlePublicAccessChange}
       {readonly}
       saving={shareSaving || publicAccessSaving}
+      origin={setupStatusState.value?.url}
     />
     {#if note && !readonly}
       <NoteTransferOwnerControl

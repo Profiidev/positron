@@ -46,7 +46,10 @@ const create_updater = <T>(
   let subscribers = 0;
   let uuid = '';
 
-  const runUpdate = async () => update().then((v) => (value = v));
+  const runUpdate = async () =>
+    update().then((v) => {
+      value = v ?? value;
+    });
 
   return {
     update: async () => {

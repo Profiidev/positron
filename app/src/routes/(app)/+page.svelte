@@ -8,7 +8,6 @@
   import Trash from '@lucide/svelte/icons/trash';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import Nav from '$lib/components/Nav.svelte';
   import { deleteNote, type NoteInfo } from '$lib/commands/notes.svelte';
   import { notesConfigState, notesState } from '$lib/updater/state.svelte';
 

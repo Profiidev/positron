@@ -28,7 +28,8 @@
     onShareChange,
     onPublicAccessChange,
     readonly = false,
-    saving = false
+    saving = false,
+    origin = page.url.origin
   }: {
     noteId: string;
     shareableUsers: NoteUserInfo[];
@@ -38,6 +39,7 @@
     onPublicAccessChange: (access: NoteShareAccess | null) => void;
     readonly?: boolean;
     saving?: boolean;
+    origin?: string;
   } = $props();
 
   let open = $state(false);
@@ -47,7 +49,7 @@
   );
 
   const extraCount = $derived(Math.max(0, selected.length - 4));
-  const shareUrl = $derived(`${page.url.origin}/notes/share/${noteId}`);
+  const shareUrl = $derived(`${origin}/notes/share/${noteId}`);
   const isPublic = $derived(publicAccess !== null);
 
   const shareForUser = (userId: string) =>

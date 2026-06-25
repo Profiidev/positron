@@ -55,6 +55,7 @@ const handleMessage = (message: UpdateMessage) => {
         toast.success('Connection restored');
       }
       connected = true;
+      triggerUpdates();
       break;
     }
     case UpdateMessageType.CodeExchangeFailed: {
@@ -95,5 +96,5 @@ const handleMessage = (message: UpdateMessage) => {
     }
   }
 
-  triggerUpdates();
+  triggerUpdates(message.type);
 };
