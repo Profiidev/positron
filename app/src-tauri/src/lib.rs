@@ -8,6 +8,7 @@ use crate::{
       restore_note_snapshot, share_note, share_note_public, transfer_note,
     },
     connection::{NoteState, connect_note, disconnect_note, send_note},
+    storage::{NotesStore, get_note_store, list_notes_store},
   },
   setup::{reset_setup, setup, setup_status},
   store::Store,
@@ -78,12 +79,15 @@ pub fn run() {
       delete_note_snapshot,
       create_note,
       transfer_note,
+      list_notes_store,
+      get_note_store,
     ])
     .setup(|app| {
       Store::init(app.handle())?;
       Updater::init(app.handle());
       Client::init(app.handle())?;
       NoteState::init(app.handle());
+      NotesStore::init(app.handle())?;
       deep_link::setup_deep_link(app.handle())?;
       Ok(())
     })

@@ -20,7 +20,7 @@ use tokio_tungstenite::{
 };
 use uuid::Uuid;
 
-use crate::store::Store;
+use crate::{store::Store, updater::Updater};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
@@ -74,6 +74,28 @@ impl NoteState {
       token,
     };
     handle.manage(state);
+
+    let handle = handle.clone();
+    spawn(async move {
+      Self::register_callback(handle).await;
+    });
+  }
+
+  async fn register_callback(handle: AppHandle) {
+    let updater = handle.state::<Updater>();
+    let handle = handle.clone();
+
+    updater
+      .add_connection_change_callback(move |connected| {
+        let handle = handle.clone();
+        spawn(async move {
+          if !connected {
+            let state = handle.state::<NoteState>();
+            state.disconnect_all().await;
+          }
+        });
+      })
+      .await;
   }
 
   async fn connect(
@@ -156,9 +178,18 @@ impl NoteState {
   }
 
   async fn disconnect(&self, uuid: Uuid) {
-    if let Some((_, mut conn)) = self.connections.remove(&uuid) {
-      conn.write.send(Message::Close(None)).await.ok();
+    if let Some((_, conn)) = self.connections.remove(&uuid) {
       conn.notify.notify_one();
+    }
+  }
+
+  pub async fn disconnect_all(&self) {
+    let mut keys = Vec::new();
+    for val in self.connections.iter() {
+      keys.push(*val.key());
+    }
+    for key in keys {
+      self.disconnect(key).await;
     }
   }
 }

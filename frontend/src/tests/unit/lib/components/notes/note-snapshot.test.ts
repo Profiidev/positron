@@ -125,7 +125,7 @@ describe('NoteSnapshot', () => {
     render(NoteSnapshot, { ...base, snapshots: [] });
     await openManager();
 
-    expect(screen.getByText('No people found')).toBeInTheDocument();
+    expect(screen.getByText('No snapshots found')).toBeInTheDocument();
     expect(screen.queryByRole('option')).toBeNull();
   });
 

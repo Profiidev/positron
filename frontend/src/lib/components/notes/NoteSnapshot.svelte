@@ -66,7 +66,7 @@
       <Command.Input placeholder="Search snapshots..." />
       <Command.List class="flex overflow-hidden">
         <ScrollArea class="mt-2 grow">
-          <Command.Empty>No people found</Command.Empty>
+          <Command.Empty>No snapshots found</Command.Empty>
           {#each snapshots as snapshot (snapshot.id)}
             {let created_at = $derived(
               D.DateTime?.fromISO(snapshot.created_at).toLocaleString(

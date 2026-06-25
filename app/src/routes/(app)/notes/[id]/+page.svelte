@@ -16,6 +16,7 @@
     editNote,
     listNoteSnapshots,
     noteInfo,
+    noteInfoStore,
     restoreNoteSnapshot,
     shareNote,
     shareNotePublic,
@@ -67,21 +68,44 @@
     $state(undefined);
   let activeEditors = $state<NoteActiveEditor[]>([]);
   let snapshots: NoteSnapshotInfo[] | undefined = $state();
+  const url = $derived(setupStatusState.value?.url);
 
   let shareableUsers = $derived(
     users?.filter((user) => user.id !== note?.owner.id) ?? []
   );
 
+  let firstLoad = false;
+
+  // svelte-ignore state_referenced_locally
+  noteInfoStore(id).then((res) => {
+    if (res && !note) {
+      note = res;
+      title = res.title;
+      sharedWithUsers = res.shared_with;
+      publicAccess = res.public_access ?? null;
+    }
+
+    if (!firstLoad) {
+      firstLoad = true;
+    } else if (!res && !note) {
+      goto('/?error=not_found');
+    }
+  });
+
   const loadNote = async () => {
     const res = await noteInfo(id);
-    if (!res) {
-      goto('/?error=not_found');
-      return;
+    if (res) {
+      note = res;
+      title = res.title;
+      sharedWithUsers = res.shared_with;
+      publicAccess = res.public_access ?? null;
     }
-    note = res;
-    title = res.title;
-    sharedWithUsers = res.shared_with;
-    publicAccess = res.public_access ?? null;
+
+    if (!firstLoad) {
+      firstLoad = true;
+    } else if (!res && !note) {
+      goto('/?error=not_found');
+    }
   };
 
   const loadSnapshots = async () => {
@@ -302,7 +326,7 @@
       onPublicAccessChange={handlePublicAccessChange}
       {readonly}
       saving={shareSaving || publicAccessSaving}
-      origin={setupStatusState.value?.url}
+      origin={url?.endsWith('/') ? url.slice(0, -1) : url}
     />
     {#if note && !readonly}
       <NoteTransferOwnerControl

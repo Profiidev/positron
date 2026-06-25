@@ -8,11 +8,21 @@
   import Trash from '@lucide/svelte/icons/trash';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { deleteNote, type NoteInfo } from '$lib/commands/notes.svelte';
+  import {
+    deleteNote,
+    listNotesStore,
+    type NoteInfo
+  } from '$lib/commands/notes.svelte';
   import { notesConfigState, notesState } from '$lib/updater/state.svelte';
 
-  const notes = $derived(notesState.value ?? undefined);
+  const notesRemote = $derived(notesState.value ?? undefined);
   const maxPerUser = $derived(notesConfigState.value?.max_per_user);
+  let localNotes = $state<NoteInfo[] | undefined>(undefined);
+  const notes = $derived(notesRemote ?? localNotes ?? undefined);
+
+  listNotesStore().then((notes) => {
+    localNotes = notes;
+  });
 
   let selected: NoteInfo | undefined = $state();
   let deleteOpen = $state(false);

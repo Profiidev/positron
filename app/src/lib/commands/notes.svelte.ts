@@ -20,11 +20,29 @@ import type {
 
 export type * from './notes-types';
 
-export const listNotes = async (): Promise<NoteInfo[]> => {
+export const listNotesStore = async (): Promise<NoteInfo[] | undefined> => {
+  try {
+    return await invoke<NoteInfo[]>('list_notes_store');
+  } catch {
+    return undefined;
+  }
+};
+
+export const listNotes = async (): Promise<NoteInfo[] | undefined> => {
   try {
     return await invoke<NoteInfo[]>('list_notes');
   } catch {
-    return [];
+    return undefined;
+  }
+};
+
+export const noteInfoStore = async (
+  id: string
+): Promise<NoteInfo | undefined> => {
+  try {
+    return await invoke<NoteInfo | undefined>('get_note_store', { id });
+  } catch {
+    return undefined;
   }
 };
 

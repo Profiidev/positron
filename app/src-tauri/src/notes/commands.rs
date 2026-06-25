@@ -4,11 +4,21 @@ use tauri::State;
 use tauri_plugin_http::reqwest::Method;
 use uuid::Uuid;
 
-use crate::api::Client;
+use crate::{
+  api::Client,
+  notes::storage::{NoteInfo, NotesStore},
+};
 
 #[tauri::command]
-pub async fn list_notes(client: State<'_, Client>) -> tauri::Result<Value> {
-  Ok(client.notes_get("/api/notes/management").await?)
+pub async fn list_notes(
+  client: State<'_, Client>,
+  store: State<'_, NotesStore>,
+) -> tauri::Result<Vec<NoteInfo>> {
+  let raw_notes = client.notes_get("/api/notes/management").await?;
+  let notes: Vec<NoteInfo> = serde_json::from_value(raw_notes)?;
+  store.set_notes(notes.clone()).await?;
+
+  Ok(notes)
 }
 
 #[tauri::command]

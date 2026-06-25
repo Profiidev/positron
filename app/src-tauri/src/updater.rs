@@ -25,6 +25,8 @@ use uuid::Uuid;
 
 use crate::store::Store;
 
+pub type ConnectionChangeCallback = Box<dyn Fn(bool) + Send + Sync>;
+
 #[derive(Clone)]
 pub struct Updater {
   sender: mpsc::Sender<UpdateMessage>,
@@ -34,6 +36,8 @@ pub struct Updater {
   token: Arc<Mutex<Option<String>>>,
   pub disconnect: Arc<Notify>,
   is_online: Arc<AtomicBool>,
+  is_connected: Arc<AtomicBool>,
+  on_connection_change: Arc<Mutex<Vec<ConnectionChangeCallback>>>,
   reconnect: Arc<Notify>,
 }
 
@@ -90,6 +94,8 @@ pub async fn set_online(state: State<'_, Updater>, online: bool) -> tauri::Resul
   state.is_online.store(online, Ordering::Relaxed);
   if !online {
     state.disconnect.notify_waiters();
+    state.is_connected.store(false, Ordering::Relaxed);
+    state.notify_connection_change(false).await;
   } else {
     state.reconnect.notify_waiters();
   }
@@ -137,6 +143,8 @@ impl Updater {
       disconnect: Arc::new(Notify::new()),
       reconnect: Arc::new(Notify::new()),
       is_online: Arc::new(AtomicBool::new(true)),
+      is_connected: Arc::new(AtomicBool::new(false)),
+      on_connection_change: Arc::new(Mutex::new(Vec::new())),
     };
 
     updater.clone().websocket_task();
@@ -148,6 +156,24 @@ impl Updater {
     self.sender.send(message).await.ok();
   }
 
+  pub async fn add_connection_change_callback<F: Fn(bool) + Send + Sync + 'static>(
+    &self,
+    callback: F,
+  ) {
+    self
+      .on_connection_change
+      .lock()
+      .await
+      .push(Box::new(callback));
+  }
+
+  async fn notify_connection_change(&self, connected: bool) {
+    let callbacks = self.on_connection_change.lock().await;
+    for callback in callbacks.iter() {
+      callback(connected);
+    }
+  }
+
   fn websocket_task(self) {
     spawn(async move {
       loop {
@@ -157,6 +183,7 @@ impl Updater {
           err
         );
 
+        self.is_connected.store(false, Ordering::Relaxed);
         self.send(UpdateMessage::Disconnected).await;
         sleep(Duration::from_secs(1)).await;
 
@@ -190,6 +217,8 @@ impl Updater {
     let (mut stream, _) = connect_async(request).await?;
 
     self.sender.send(UpdateMessage::Connected).await.ok();
+    self.is_connected.store(true, Ordering::Relaxed);
+    self.notify_connection_change(true).await;
 
     loop {
       let msg = tokio::select! {
