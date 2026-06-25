@@ -14,7 +14,7 @@ use tauri::{AppHandle, Manager, State, Wry, async_runtime::spawn};
 use tauri_plugin_store::StoreExt;
 use tokio::{fs, sync::Mutex};
 use uuid::Uuid;
-use yrs::{AsyncTransact, Doc, Update, updates::decoder::Decode};
+use yrs::{AsyncTransact, Doc, ReadTxn, StateVector, Update, updates::decoder::Decode};
 
 use crate::{
   api::Client,
@@ -287,19 +287,23 @@ impl NotesStore {
 
   pub async fn save_note_content(&self, id: Uuid, content: Vec<u8>) -> Result<()> {
     let doc = Doc::new();
+    let mut txn = doc.transact_mut().await;
     if !content.is_empty() {
-      doc
-        .transact_mut()
-        .await
-        .apply_update(Update::decode_v1(&content)?)?
+      txn.apply_update(Update::decode_v1(&content)?)?;
     }
 
-    let preview = preview::render_preview(&doc).await;
-
     let file_path = self.dir.join(id.to_string());
-    fs::write(file_path, content).await?;
+    if let Ok(current) = fs::read(&file_path).await {
+      txn.apply_update(Update::decode_v1(&current)?)?;
+    }
 
+    let data = txn.encode_state_as_update_v1(&StateVector::default());
+    fs::write(file_path, data).await?;
+    drop(txn);
+
+    let preview = preview::render_preview(&doc).await;
     let mut notes = self.notes.lock().await;
+
     if let Some(note) = notes.iter_mut().find(|n| n.id == id) {
       note.local_changes = true;
       note.preview = preview;

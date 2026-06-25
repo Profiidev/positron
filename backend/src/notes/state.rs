@@ -187,6 +187,7 @@ impl NoteEditing {
 
     state.clone().start_save_task(db.clone(), note_id);
 
+    // TODO fix insert race condition
     self.docs.insert(note_id, state.clone());
 
     Ok(state)
