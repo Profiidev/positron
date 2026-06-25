@@ -1,4 +1,11 @@
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{
+  collections::HashSet,
+  path::PathBuf,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+};
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
@@ -58,6 +65,8 @@ pub struct NotesStore {
   notes: Arc<Mutex<Vec<NoteInfo>>>,
   dir: PathBuf,
   handle: AppHandle,
+  initialized: Arc<AtomicBool>,
+  syncing: Arc<Mutex<()>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -104,19 +113,24 @@ impl NotesStore {
       .unwrap_or_default();
 
     let dir = handle.path().app_data_dir()?;
+    let syncing = Arc::new(Mutex::new(()));
 
     let state = NotesStore {
       store,
       notes: Arc::new(Mutex::new(notes)),
       dir,
       handle: handle.clone(),
+      initialized: Arc::new(AtomicBool::new(false)),
+      syncing: syncing.clone(),
     };
     handle.manage(state);
 
     let handle = handle.clone();
     spawn(async move {
       Self::register_callback(&handle).await;
+      let lock = syncing.lock().await;
       Self::initial_sync(&handle).await.ok();
+      drop(lock);
     });
 
     Ok(())
@@ -125,6 +139,7 @@ impl NotesStore {
   async fn register_callback(handle: &AppHandle) {
     let updater = handle.state::<Updater>();
     let handle = handle.clone();
+    let app = handle.clone();
 
     updater
       .add_update_callback(move |update| {
@@ -132,6 +147,30 @@ impl NotesStore {
         spawn(async move {
           let state = handle.state::<NotesStore>();
           state.handle_update(update).await;
+        });
+      })
+      .await;
+
+    updater
+      .add_connection_change_callback(move |connected| {
+        if !connected {
+          return;
+        }
+
+        let handle = app.clone();
+        spawn(async move {
+          let state = handle.state::<NotesStore>();
+          let lock = state.syncing.lock().await;
+
+          // check again after acquiring the lock
+          let initialized = state.initialized.load(Ordering::Relaxed);
+          if initialized {
+            let notes = state.get_notes().await;
+            state.write_local_edits(&notes).await;
+          } else {
+            Self::initial_sync(&handle).await.ok();
+          }
+          drop(lock);
         });
       })
       .await;
@@ -171,10 +210,13 @@ impl NotesStore {
     }
 
     state.set_notes(notes).await?;
+    state.write_local_edits(&old_notes).await;
 
     for note_id in note_content_to_sync {
       state.sync_note_content(note_id, &client).await.ok();
     }
+
+    state.initialized.store(true, Ordering::Relaxed);
 
     // cleanup deleted notes
     let mut read = fs::read_dir(&state.dir).await?;
@@ -190,6 +232,27 @@ impl NotesStore {
     }
 
     Ok(())
+  }
+
+  async fn write_local_edits(&self, notes: &[NoteInfo]) {
+    let client = self.handle.state::<Client>();
+
+    for note in notes {
+      if !note.local_changes {
+        continue;
+      }
+
+      let file_path = self.dir.join(note.id.to_string());
+      let content = fs::read(&file_path).await.unwrap_or_default();
+
+      if content.is_empty() {
+        continue;
+      }
+
+      if let Err(e) = client.note_update(note.id, content).await {
+        eprintln!("Failed to sync note content: {}", e);
+      }
+    }
   }
 
   async fn sync_note_content(&self, note_id: Uuid, client: &Client) -> Result<()> {

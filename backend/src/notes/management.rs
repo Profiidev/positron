@@ -11,18 +11,22 @@ use centaurus::{
     tables::{ConnectionExt, group::SimpleUserInfo},
   },
   error::Result,
+  eyre::Context,
   storage::FileStorage,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use yrs::{AsyncTransact, Doc, ReadTxn, StateVector, Update, updates::decoder::Decode};
 
 use crate::{
   db::{
     DBTrait,
     notes::{NoteInfo, NoteInfoPublic, NoteShareEntry},
   },
-  notes::{NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note},
+  notes::{
+    NotesLimits, PublicNoteUpdateMessage, PublicNoteUpdater, delete_storage_for_note, preview,
+  },
   utils::{UpdateMessage, Updater},
 };
 
@@ -33,6 +37,10 @@ pub fn router() -> ApiRouter {
     .api_route("/", put_with(edit, |op| op.id("editNote")))
     .api_route("/", delete_with(delete, |op| op.id("deleteNote")))
     .api_route("/{uuid}", get_with(info, |op| op.id("infoNote")))
+    .api_route(
+      "/{uuid}",
+      put_with(apply_note_edit, |op| op.id("applyNoteEdit")),
+    )
     .api_route(
       "/{uuid}/public",
       get_with(info_public, |op| op.id("infoNoteShare")),
@@ -118,6 +126,51 @@ async fn info(
   Ok(Json(note))
 }
 
+async fn apply_note_edit(
+  auth: JwtAuth,
+  db: Connection,
+  updater: Updater,
+  Path(NotePath { uuid }): Path<NotePath>,
+  data: Bytes,
+) -> Result<()> {
+  if !db.notes().has_access(auth.user_id, uuid).await? {
+    bail!(NOT_FOUND, "note not found");
+  }
+
+  let content = db.notes().get_content(uuid).await?;
+  let doc = Doc::new();
+  let mut txn = doc.transact_mut().await;
+  txn
+    .apply_update(Update::decode_v1(&content).context("failed to decode note content")?)
+    .context("failed to apply update")?;
+
+  txn
+    .apply_update(Update::decode_v1(&data).context("failed to decode note content")?)
+    .context("failed to apply update")?;
+
+  let content = txn.encode_state_as_update_v1(&StateVector::default());
+  drop(txn);
+
+  let preview = preview::render_preview(&doc).await;
+  db.notes().set_content(uuid, content, preview).await?;
+
+  let Some(owner) = db.notes().get_owner_id(uuid).await? else {
+    bail!(NOT_FOUND, "note not found");
+  };
+  let mut users = db.notes().shared_user_ids(uuid).await?;
+  users.push(owner);
+
+  for user in users {
+    updater
+      .send_to(user, UpdateMessage::NoteContent { uuid })
+      .await;
+  }
+
+  // TODO also update live notes
+
+  Ok(())
+}
+
 async fn info_public(
   db: Connection,
   Path(NotePath { uuid }): Path<NotePath>,
@@ -129,7 +182,15 @@ async fn info_public(
   Ok(Json(note))
 }
 
-async fn note_content(db: Connection, Path(NotePath { uuid }): Path<NotePath>) -> Result<Bytes> {
+async fn note_content(
+  auth: JwtAuth,
+  db: Connection,
+  Path(NotePath { uuid }): Path<NotePath>,
+) -> Result<Bytes> {
+  if !db.notes().has_access(auth.user_id, uuid).await? {
+    bail!(NOT_FOUND, "note not found");
+  }
+
   let Some(content) = db.notes().content(uuid).await? else {
     bail!(NOT_FOUND, "note not found");
   };

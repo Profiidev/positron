@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 use serde_json::Value;
 use tauri_plugin_http::reqwest::{Method, StatusCode};
+use uuid::Uuid;
 
 impl super::Client {
   /// GET a JSON resource behind auth, proxying the body through verbatim so the
@@ -27,6 +28,15 @@ impl super::Client {
     } else {
       serde_json::from_slice(&bytes)?
     })
+  }
+
+  pub async fn note_update(&self, note_id: Uuid, body: Vec<u8>) -> Result<()> {
+    let req = self
+      .builder(Method::PUT, &format!("/api/notes/management/{}", note_id))
+      .await?;
+    self.send_auth(req.body(body)).await?;
+
+    Ok(())
   }
 
   /// Send a request behind auth without bailing on non-success, returning the

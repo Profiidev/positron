@@ -8,6 +8,7 @@ const ownedNote = (id: string): NoteInfo => ({
   can_edit: true,
   id,
   is_owner: true,
+  last_updated: new Date().toISOString(),
   owner: { id: 'user-1', name: 'Me' },
   preview: '',
   shared_with: [],

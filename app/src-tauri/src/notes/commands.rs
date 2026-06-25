@@ -14,7 +14,13 @@ pub async fn list_notes(
   client: State<'_, Client>,
   store: State<'_, NotesStore>,
 ) -> tauri::Result<Vec<NoteInfo>> {
-  let raw_notes = client.notes_get("/api/notes/management").await?;
+  let raw_notes = match client.notes_get("/api/notes/management").await {
+    Ok(raw_notes) => raw_notes,
+    Err(e) => {
+      println!("{e}");
+      return Ok(store.get_notes().await);
+    }
+  };
   let notes: Vec<NoteInfo> = serde_json::from_value(raw_notes)?;
   store.set_notes(notes.clone()).await?;
 
