@@ -9,12 +9,13 @@
   import type { NoteActiveEditor } from '../notes/types';
   import {
     noteContent,
+    saveNoteContent,
     TauriWebsocketProvider
   } from '$lib/commands/notes.svelte';
   import { extensions } from './config';
   import Collaboration from '@tiptap/extension-collaboration';
   import CollaborationCaret from '@tiptap/extension-collaboration-caret';
-  import { Doc, applyUpdate } from 'yjs';
+  import { Doc, applyUpdate, encodeStateAsUpdate } from 'yjs';
 
   type AwarenessUser = {
     name?: string;
@@ -47,6 +48,15 @@
   let lastEditable = $state<boolean | undefined>(undefined);
   const userColor = getRandomColor();
   const doc = new Doc();
+  let updateDebounce: ReturnType<typeof setTimeout> | undefined;
+
+  doc.on('update', () => {
+    let content = encodeStateAsUpdate(doc);
+    if (updateDebounce) clearTimeout(updateDebounce);
+    updateDebounce = setTimeout(() => {
+      saveNoteContent(id, content);
+    }, 1000);
+  });
 
   // svelte-ignore state_referenced_locally
   noteContent(id).then((content) => {

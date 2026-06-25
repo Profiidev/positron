@@ -116,6 +116,21 @@ export const noteContent = async (
   }
 };
 
+export const saveNoteContent = async (
+  noteId: string,
+  content: Uint8Array
+): Promise<boolean> => {
+  try {
+    await invoke('save_note_content', {
+      content: Array.from(content),
+      id: noteId
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const editNote = async (
   noteId: string,
   title: string

@@ -5,7 +5,7 @@ use chrono::Utc;
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType,
+  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType, Order,
   QueryOrder, QuerySelect, TransactionTrait, prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -217,6 +217,7 @@ impl<'db> NoteTable<'db> {
           .add(note::Column::Id.is_in(shared_note_ids)),
       )
       .join(JoinType::LeftJoin, note::Relation::User.def())
+      .order_by(note::Column::LastUpdated, Order::Desc)
       .into_partial_model()
       .all(self.db)
       .await?;

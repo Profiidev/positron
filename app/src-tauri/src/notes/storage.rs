@@ -7,10 +7,12 @@ use tauri::{AppHandle, Manager, State, Wry, async_runtime::spawn};
 use tauri_plugin_store::StoreExt;
 use tokio::{fs, sync::Mutex};
 use uuid::Uuid;
+use yrs::{AsyncTransact, Doc, Update, updates::decoder::Decode};
 
 use crate::{
   api::Client,
-  updater::{Updater, WsUpdateMessage},
+  notes::preview,
+  updater::{UpdateMessage, Updater, WsUpdateMessage},
 };
 
 const STORE_PATH: &str = "notes.json";
@@ -18,7 +20,9 @@ const NOTES_KEY: &str = "notes";
 
 #[tauri::command]
 pub async fn list_notes_store(store: State<'_, NotesStore>) -> tauri::Result<Vec<NoteInfo>> {
-  Ok(store.get_notes().await)
+  let mut notes = store.get_notes().await;
+  notes.sort_unstable_by_key(|n| n.last_updated);
+  Ok(notes)
 }
 
 #[tauri::command]
@@ -35,6 +39,18 @@ pub async fn note_content(
   id: Uuid,
 ) -> tauri::Result<Option<Vec<u8>>> {
   Ok(store.get_note_content(id).await)
+}
+
+#[tauri::command]
+pub async fn save_note_content(
+  store: State<'_, NotesStore>,
+  updater: State<'_, Updater>,
+  id: Uuid,
+  content: Vec<u8>,
+) -> tauri::Result<()> {
+  store.save_note_content(id, content).await?;
+  updater.send(UpdateMessage::NotesUpdated).await;
+  Ok(())
 }
 
 pub struct NotesStore {
@@ -75,6 +91,8 @@ pub struct NoteInfo {
   pub is_owner: bool,
   pub can_edit: bool,
   pub last_updated: NaiveDateTime,
+  #[serde(default)]
+  pub local_changes: bool,
 }
 
 impl NotesStore {
@@ -202,5 +220,28 @@ impl NotesStore {
   pub async fn get_note_content(&self, id: Uuid) -> Option<Vec<u8>> {
     let file_path = self.dir.join(id.to_string());
     fs::read(file_path).await.ok()
+  }
+
+  pub async fn save_note_content(&self, id: Uuid, content: Vec<u8>) -> Result<()> {
+    let doc = Doc::new();
+    if !content.is_empty() {
+      doc
+        .transact_mut()
+        .await
+        .apply_update(Update::decode_v1(&content)?)?
+    }
+
+    let preview = preview::render_preview(&doc).await;
+
+    let file_path = self.dir.join(id.to_string());
+    fs::write(file_path, content).await?;
+
+    let mut notes = self.notes.lock().await;
+    if let Some(note) = notes.iter_mut().find(|n| n.id == id) {
+      note.local_changes = true;
+      note.preview = preview;
+    }
+
+    Ok(())
   }
 }
