@@ -30,6 +30,15 @@ export const resetMockState = async (): Promise<void> => {
   await fetch(`${MOCK_URL}/__test__/reset`, { method: 'POST' }).catch(() => {});
 };
 
+/** Sets the mock backend's per-user note quota (undefined = unlimited). */
+export const setNoteLimit = async (max: number): Promise<void> => {
+  await fetch(`${MOCK_URL}/__test__/config`, {
+    body: JSON.stringify({ max_per_user: max }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST'
+  }).catch(() => {});
+};
+
 /**
  * Waits until the system browser has actually fetched the mock login page,
  * returning the PKCE challenge it carried. Proves the app's "Login" button drove

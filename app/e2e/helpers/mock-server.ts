@@ -60,6 +60,47 @@ const freshState = (): MockState => ({
 
 let state: MockState = freshState();
 
+/**
+ * A note as the backend's `/api/notes/management` endpoints return it. The shape
+ * must match the Rust `NoteInfo` struct exactly — `list_notes` deserializes the
+ * array into `Vec<NoteInfo>`, so a missing field (notably `last_updated`, which
+ * has no serde default) makes the whole list fetch fail. Every note is owned by
+ * the mock user so the owner-only UI (delete, share, transfer) is reachable.
+ */
+interface MockNote {
+  id: string;
+  title: string;
+  preview: string;
+  owner: { id: string; name: string };
+  shared_with: never[];
+  public_access: null;
+  is_owner: boolean;
+  can_edit: boolean;
+  last_updated: string;
+}
+
+let notes = new Map<string, MockNote>();
+// `undefined` means unlimited; set via `POST /__test__/config` for limit tests.
+let noteMaxPerUser: number | undefined = undefined;
+
+const resetNotes = (): void => {
+  notes = new Map();
+  noteMaxPerUser = undefined;
+};
+
+const makeNote = (title: string): MockNote => ({
+  can_edit: true,
+  id: globalThis.crypto.randomUUID(),
+  is_owner: true,
+  last_updated: '2026-06-25T12:00:00',
+  owner: { id: MOCK_USER.uuid, name: MOCK_USER.name },
+  preview: '',
+  // oxlint-disable-next-line no-null
+  public_access: null,
+  shared_with: [],
+  title
+});
+
 let server: Server | undefined = undefined;
 
 /**
@@ -114,6 +155,7 @@ const readBody = async (req: IncomingMessage): Promise<unknown> => {
 
 export const startMockServer = async (): Promise<void> =>
   new Promise((resolve, reject) => {
+    // oxlint-disable-next-line complexity
     server = createServer((req, res) => {
       const method = req.method ?? 'GET';
       const fullUrl = req.url ?? '';
@@ -130,8 +172,25 @@ export const startMockServer = async (): Promise<void> =>
 
       if (route === 'POST /__test__/reset') {
         state = freshState();
+        resetNotes();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok' }));
+        return;
+      }
+
+      // Sets the per-user note quota so limit handling (409 / disabled Create)
+      // can be exercised. Host-only; never hit by the app.
+      if (route === 'POST /__test__/config') {
+        readBody(req)
+          .then((body) => {
+            noteMaxPerUser = (body as { max_per_user?: number })?.max_per_user;
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+          })
+          .catch(() => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'read failed' }));
+          });
         return;
       }
 
@@ -219,6 +278,112 @@ export const startMockServer = async (): Promise<void> =>
       if (url.startsWith('/api/user/info/avatar/')) {
         res.writeHead(200, { 'Content-Type': 'image/webp' });
         res.end(Buffer.from([0x52, 0x49, 0x46, 0x46]));
+        return;
+      }
+
+      // --- Notes management -------------------------------------------------
+      // Note quota; `{}` (no limit) by default. Checked before the `/{id}` match.
+      if (route === 'GET /api/notes/management/config') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify(
+            noteMaxPerUser === undefined ? {} : { max_per_user: noteMaxPerUser }
+          )
+        );
+        return;
+      }
+
+      // Users a note can be shared with. Empty for the single-user mock.
+      if (route === 'GET /api/notes/management/users') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify([]));
+        return;
+      }
+
+      if (url === '/api/notes/management') {
+        if (method === 'GET') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify([...notes.values()]));
+          return;
+        }
+        if (method === 'POST') {
+          readBody(req)
+            .then((body) => {
+              if (
+                noteMaxPerUser !== undefined &&
+                notes.size >= noteMaxPerUser
+              ) {
+                res.writeHead(409, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'limit' }));
+                return;
+              }
+              const note = makeNote((body as { title?: string })?.title ?? '');
+              notes.set(note.id, note);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(note));
+            })
+            .catch(() => {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'read failed' }));
+            });
+          return;
+        }
+        if (method === 'PUT') {
+          readBody(req)
+            .then((body) => {
+              const { note_id, title } = (body ?? {}) as {
+                note_id?: string;
+                title?: string;
+              };
+              const note = note_id ? notes.get(note_id) : undefined;
+              if (note && title !== undefined) {
+                note.title = title;
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ status: 'ok' }));
+            })
+            .catch(() => {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'read failed' }));
+            });
+          return;
+        }
+        if (method === 'DELETE') {
+          readBody(req)
+            .then((body) => {
+              const { note_id } = (body ?? {}) as { note_id?: string };
+              if (note_id) {
+                notes.delete(note_id);
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ status: 'ok' }));
+            })
+            .catch(() => {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'read failed' }));
+            });
+          return;
+        }
+      }
+
+      // Single note (loaded by the editor page after create / on open).
+      if (method === 'GET' && url.startsWith('/api/notes/management/')) {
+        const id = url.slice('/api/notes/management/'.length);
+        const note = notes.get(id);
+        if (note) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(note));
+          return;
+        }
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'not found' }));
+        return;
+      }
+
+      // Snapshots list — empty; the editor tolerates an empty history.
+      if (method === 'GET' && url.startsWith('/api/notes/snapshots/')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify([]));
         return;
       }
 
