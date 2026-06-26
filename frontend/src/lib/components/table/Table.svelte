@@ -5,10 +5,12 @@
   import { createTable } from '@profidev/pleiades/components/table/helpers.svelte';
   import { cn } from '@profidev/pleiades/utils';
   import type { ColumnDef } from '@tanstack/table-core';
+  import { Input } from '@profidev/pleiades/components/ui/input';
 
   type Props = {
     data?: T[] | Promise<T[] | undefined>;
     class?: string;
+    searchColumns?: (keyof T)[];
   } & (
     | {
         columns: (columnData: CD) => ColumnDef<T>[];
@@ -20,10 +22,28 @@
       }
   );
 
-  let { class: className, data, columns, columnData }: Props = $props();
+  let {
+    class: className,
+    data,
+    columns,
+    columnData,
+    searchColumns
+  }: Props = $props();
 
   let rows = $state<T[]>([]);
+  let searchTerm = $state('');
   let isLoading = $state(true);
+
+  let filteredRows = $derived.by(() => {
+    let search = searchTerm.trim().toLowerCase();
+    if (!searchColumns || !search) return rows;
+
+    return rows.filter((row) => {
+      return searchColumns.some((column) => {
+        return String(row[column]).toLowerCase().includes(search);
+      });
+    });
+  });
 
   $effect(() => {
     if (data instanceof Promise) {
@@ -39,11 +59,19 @@
   });
 
   let table = $derived(
-    createTable(rows, columns(columnData as any), () => true)
+    createTable(filteredRows, columns(columnData as any), () => true)
   );
 </script>
 
 <div class={cn('flex w-full flex-col', className)}>
+  {#if searchColumns}
+    <Input
+      bind:value={searchTerm}
+      class="mb-2"
+      placeholder="Search..."
+      autofocus
+    />
+  {/if}
   <ScrollArea class="grid min-h-0 flex-1 rounded-md border" orientation="both">
     <Table.Root
       class={`min-w-[${table.getHeaderGroups()[0].headers.length * 100}px]`}

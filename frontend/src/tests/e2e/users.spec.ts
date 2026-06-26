@@ -21,6 +21,40 @@ test.describe('users list', () => {
 
     await expect(page.getByText('No results.')).toBeVisible();
   });
+
+  test('filters the table via the search input', async ({ page }) => {
+    await gotoReady(page, '/users');
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+    await expect(page.getByText('cara@example.com')).toBeVisible();
+
+    await page.getByPlaceholder('Search...').fill('bob');
+
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+    await expect(page.getByText('cara@example.com')).not.toBeVisible();
+  });
+
+  test('shows "No results." when the search matches nothing', async ({
+    page
+  }) => {
+    await gotoReady(page, '/users');
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+
+    await page.getByPlaceholder('Search...').fill('zzz-no-match');
+
+    await expect(page.getByText('No results.')).toBeVisible();
+  });
+
+  test('restores all rows when the search is cleared', async ({ page }) => {
+    await gotoReady(page, '/users');
+
+    const search = page.getByPlaceholder('Search...');
+    await search.fill('bob');
+    await expect(page.getByText('cara@example.com')).not.toBeVisible();
+
+    await search.fill('');
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+    await expect(page.getByText('cara@example.com')).toBeVisible();
+  });
 });
 
 test.describe('user create', () => {

@@ -90,6 +90,7 @@
       user,
       admin_group: adminGroup
     }}
+    searchColumns={['id', 'name', 'users', 'permissions']}
   />
 </div>
 <FormDialog
