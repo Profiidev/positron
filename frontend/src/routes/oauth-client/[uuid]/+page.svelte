@@ -28,7 +28,7 @@
   } from '$lib/client';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { clientSettings, formatData } from './schema.svelte.js';
-  import FormTags from '$lib/components/FormTags.svelte';
+  import FormTags from '@profidev/pleiades/components/form/form-tags.svelte';
   import { Label } from '@profidev/pleiades/components/ui/label';
   import { Input } from '@profidev/pleiades/components/ui/input';
   import { onMount } from 'svelte';
