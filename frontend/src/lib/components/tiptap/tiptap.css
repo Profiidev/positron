@@ -232,10 +232,42 @@
 }
 
 /* Lists */
-.ProseMirror ul,
+.ProseMirror ul[class='list-disc'],
 .ProseMirror ol {
   margin: var(--editor-spacing-4) 0;
   padding-left: var(--editor-spacing-6);
+}
+
+.ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  margin-left: 0;
+  padding: 0;
+  height: auto;
+
+  li {
+    align-items: flex-start;
+    display: flex;
+    padding-left: var(--editor-spacing-1);
+
+    > label {
+      flex: 0 0 auto;
+      margin-right: var(--editor-spacing-4);
+      user-select: none;
+      margin-top: 0.2rem;
+    }
+
+    > div {
+      flex: 1 1 auto;
+    }
+  }
+
+  input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  ul[data-type='taskList'] {
+    margin: 0;
+  }
 }
 
 .ProseMirror li {
@@ -243,15 +275,15 @@
   padding-left: var(--editor-spacing-2);
 }
 
-.ProseMirror ul {
+.ProseMirror ul[class='list-disc'] {
   list-style-type: disc;
 }
 
-.ProseMirror ul ul {
+.ProseMirror ul[class='list-disc'] ul[class='list-disc'] {
   list-style-type: circle;
 }
 
-.ProseMirror ul ul ul {
+.ProseMirror ul[class='list-disc'] ul[class='list-disc'] ul[class='list-disc'] {
   list-style-type: square;
 }
 
