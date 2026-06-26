@@ -44,7 +44,7 @@
             <div class="flex aspect-square w-72 flex-col">
               <Button
                 variant="ghost"
-                class="h-full grow"
+                class="h-full grow cursor-pointer"
                 onclick={() => itemClick(apod.date.toString())}
               >
                 <img
