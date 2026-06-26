@@ -42,9 +42,9 @@ export const extensions = [
   }),
   TaskList,
   TaskItem.configure({
-    nested: true,
     HTMLAttributes: {
       class: 'custom-task-item'
-    }
+    },
+    nested: true
   })
 ] satisfies Extensions;
