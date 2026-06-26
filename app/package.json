@@ -17,7 +17,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
-    "@profidev/pleiades": "1.11.0",
+    "@profidev/pleiades": "1.11.1",
     "@sveltejs/enhanced-img": "0.11.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-barcode-scanner": "^2.4.5",
