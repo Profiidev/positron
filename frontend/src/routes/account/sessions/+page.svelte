@@ -3,7 +3,7 @@
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import LogOut from '@lucide/svelte/icons/log-out';
-  import Table from '$lib/components/table/Table.svelte';
+  import Table from '@profidev/pleiades/components/table/clean-table.svelte';
   import { revokeSession, type SessionInfo } from '$lib/client';
   import { z } from 'zod';
   import { columns } from './table.svelte';
