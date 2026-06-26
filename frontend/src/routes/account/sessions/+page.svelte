@@ -66,7 +66,7 @@
   };
 </script>
 
-<div class="space-y-4">
+<div class="flex h-full w-full flex-col space-y-4">
   <div
     class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
   >
@@ -87,6 +87,7 @@
     {columns}
     columnData={{ revoke: startRevoke }}
     searchColumns={['operating_system', 'name', 'application']}
+    class="min-h-0 grow"
   />
 </div>
 <FormDialog

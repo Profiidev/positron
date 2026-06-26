@@ -30,14 +30,14 @@
   </div>
   <Separator class="my-4" />
   <div
-    class="flex grow flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-6"
+    class="flex min-h-0 min-w-0 grow flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-6"
   >
     <aside class="lg:w-40">
       <SimpleSidebar items={routes} class="" />
     </aside>
     <Separator orientation="horizontal" class="lg:hidden" />
     <Separator orientation="vertical" class="hidden lg:block" />
-    <div class="flex-1">
+    <div class="min-h-0 min-w-0 flex-1 grow">
       {@render children()}
     </div>
   </div>
