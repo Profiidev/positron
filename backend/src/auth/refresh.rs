@@ -40,7 +40,7 @@ async fn test_token(
 ) -> (CookieJar, Json<TestTokenResponse>) {
   if let Some(auth) = auth {
     let relative_exp = auth.exp - Utc::now().timestamp();
-    let exp_short = relative_exp <= jwt.exp / 10;
+    let exp_short = relative_exp <= jwt.exp / 50;
 
     (
       cookies,
