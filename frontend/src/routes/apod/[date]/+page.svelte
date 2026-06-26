@@ -120,7 +120,7 @@
           {#if info}
             <Button
               variant={info.user ? 'destructive' : 'default'}
-              class="ml-auto"
+              class="ml-auto cursor-pointer"
               onclick={select}
               disabled={isLoading}
             >
