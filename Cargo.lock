@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "backend"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "aide",
  "argon2",
@@ -5490,7 +5490,7 @@ checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
 name = "positron"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
