@@ -213,10 +213,14 @@ impl NotesStore {
     state.write_local_edits(&old_notes).await;
 
     for note_id in note_content_to_sync {
-      state.sync_note_content(note_id, &client).await.ok();
+      if let Err(e) = state.sync_note_content(note_id, &client).await {
+        eprintln!("Failed to sync note content: {}", e);
+      }
     }
 
     state.initialized.store(true, Ordering::Relaxed);
+
+    let mut found_notes = HashSet::new();
 
     // cleanup deleted notes
     let mut read = fs::read_dir(&state.dir).await?;
@@ -228,6 +232,15 @@ impl NotesStore {
 
       if !note_ids.contains(&id) {
         fs::remove_file(entry.path()).await.ok();
+      } else {
+        found_notes.insert(id);
+      }
+    }
+
+    // all notes that are not found in the local directory are new and need to be synced
+    for note_id in note_ids.difference(&found_notes) {
+      if let Err(e) = state.sync_note_content(*note_id, &client).await {
+        eprintln!("Failed to sync new note: {}", e);
       }
     }
 
