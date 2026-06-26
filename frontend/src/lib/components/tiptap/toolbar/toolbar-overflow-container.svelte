@@ -17,6 +17,7 @@
   import LinkToolbar from './link.svelte';
   import BulletListToolbar from './bullet-list.svelte';
   import OrderedListToolbar from './ordered-list.svelte';
+  import TaskListToolbar from './task-list.svelte';
   import AlignmentToolbar from './alignment.svelte';
   import ColorHighlightToolbar from './color-and-highlight.svelte';
   import SearchAndReplaceToolbar from './search-and-replace-toolbar.svelte';
@@ -59,6 +60,7 @@
     { id: 'code-block', component: CodeBlockToolbar },
     { id: 'bullet-list', component: BulletListToolbar },
     { id: 'ordered-list', component: OrderedListToolbar },
+    { id: 'task-list', component: TaskListToolbar },
     { id: 'sep-blocks', isSeparator: true },
     { id: 'link', component: LinkToolbar },
     { id: 'sep-link', isSeparator: true },

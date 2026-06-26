@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import type { Extensions } from '@tiptap/core';
 import SearchAndReplace from './extensions/search-and-replace';
 import CharacterCount from '@tiptap/extension-character-count';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
 
 export const extensions = [
   StarterKit.configure({
@@ -38,5 +39,12 @@ export const extensions = [
     autoTrim: true,
     limit: 50_000,
     mode: 'nodeSize'
+  }),
+  TaskList,
+  TaskItem.configure({
+    nested: true,
+    HTMLAttributes: {
+      class: 'custom-task-item'
+    }
   })
 ] satisfies Extensions;

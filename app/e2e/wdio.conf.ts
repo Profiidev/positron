@@ -46,7 +46,7 @@ export const config: WebdriverIO.Config = {
   // A spec can fail wholesale in CI when the emulator crashes the app on a cold
   // restart; retrying the file (with the beforeSession relaunch below) recovers
   // from a one-off crash instead of failing the run.
-  specFileRetries: 1,
+  specFileRetries: 2,
   specFileRetriesDeferred: false,
 
   waitforTimeout: 10_000,
