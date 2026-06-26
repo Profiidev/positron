@@ -90,6 +90,15 @@
       deleteClient: startDeleteClient,
       user
     }}
+    searchColumns={[
+      'additional_redirect_uris',
+      'client_id',
+      'default_scope',
+      'group_access',
+      'name',
+      'redirect_uri',
+      'user_access'
+    ]}
   />
 </div>
 <FormDialog

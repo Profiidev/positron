@@ -90,6 +90,7 @@
       deleteScope: startDeleteScope,
       user
     }}
+    searchColumns={['name', 'policies', 'scope', 'uuid']}
   />
 </div>
 <FormDialog

@@ -90,6 +90,7 @@
       deletePolicy: startDeletePolicy,
       user
     }}
+    searchColumns={['claim', 'content', 'default', 'name', 'uuid']}
   />
 </div>
 <FormDialog

@@ -82,7 +82,12 @@
     </Button>
   </div>
 
-  <Table data={sessions} {columns} columnData={{ revoke: startRevoke }} />
+  <Table
+    data={sessions}
+    {columns}
+    columnData={{ revoke: startRevoke }}
+    searchColumns={['operating_system', 'name', 'application']}
+  />
 </div>
 <FormDialog
   title="Revoke session"

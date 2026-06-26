@@ -82,6 +82,7 @@
       deleteUser: startDeleteUser,
       canEdit
     }}
+    searchColumns={['email', 'groups', 'name', 'uuid']}
   />
 </div>
 <FormDialog
