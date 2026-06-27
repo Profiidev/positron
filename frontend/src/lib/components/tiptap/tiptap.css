@@ -261,6 +261,14 @@
     }
   }
 
+  li[data-checked='true'] > div {
+    > p,
+    > p > span {
+      text-decoration: line-through;
+      filter: brightness(0.8);
+    }
+  }
+
   input[type='checkbox'] {
     cursor: pointer;
   }
