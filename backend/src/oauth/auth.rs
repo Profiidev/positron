@@ -723,6 +723,42 @@ mod test {
     }
 
     #[tokio::test]
+    async fn authorize_confirm_invalid_request_redirects_with_error() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&db, &jwt, user).await;
+      let client_id = setup_client(&db, user, true).await;
+
+      let state = AuthorizeState::init(&Config::default());
+      let code = Uuid::new_v4();
+      let mut req = auth_req(client_id);
+      // unsupported response_type -> validate_req fails inside auth_redirect
+      req.response_type = "token".into();
+      state.auth_pending.insert(code, (Instant::now(), req));
+
+      let resp = app(db, jwt, state.clone())
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri(format!("/authorize_confirm?code={code}&allow=true"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::OK);
+      let location = body_json(resp).await["location"]
+        .as_str()
+        .unwrap()
+        .to_string();
+      assert!(location.contains("error="), "location was {location}");
+      // pending request is still consumed even on validation failure
+      assert!(state.auth_pending.is_empty());
+    }
+
+    #[tokio::test]
     async fn authorize_confirm_without_access_is_unauthorized() {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
@@ -796,6 +832,114 @@ mod test {
         .unwrap();
       // authorize_start returns a redirect to the frontend login page
       assert_eq!(resp.status(), StatusCode::FOUND);
+    }
+
+    #[tokio::test]
+    async fn authorize_get_with_session_and_access_fast_tracks() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&db, &jwt, user).await;
+      let client_id = setup_client(&db, user, true).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state.clone())
+        .oneshot(
+          Request::builder()
+            .uri(format!(
+              "/authorize?response_type=code&client_id={client_id}"
+            ))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::FOUND);
+      let location = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+      // redirected straight to the client callback with an auth code, skipping
+      // the consent/login page
+      assert!(location.starts_with(REDIRECT), "location was {location}");
+      assert!(location.contains("code="), "location was {location}");
+      // fast track must not leave a pending consent request behind
+      assert!(state.auth_pending.is_empty());
+    }
+
+    #[tokio::test]
+    async fn authorize_get_with_session_without_access_falls_back_to_login() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&db, &jwt, user).await;
+      // client exists but the user is not granted access -> no fast track
+      let client_id = setup_client(&db, user, false).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state.clone())
+        .oneshot(
+          Request::builder()
+            .uri(format!(
+              "/authorize?response_type=code&client_id={client_id}"
+            ))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::FOUND);
+      let location = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+      assert!(location.contains("login?code="), "location was {location}");
+      // falling back to login must store the pending consent request
+      assert_eq!(state.auth_pending.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn authorize_post_form_with_session_fast_tracks() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&db, &jwt, user).await;
+      let client_id = setup_client(&db, user, true).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state.clone())
+        .oneshot(
+          Request::builder()
+            .method("POST")
+            .uri("/authorize")
+            .header(header::COOKIE, &cookie)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+              "response_type=code&client_id={client_id}"
+            )))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::FOUND);
+      let location = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+      assert!(location.starts_with(REDIRECT), "location was {location}");
+      assert!(location.contains("code="), "location was {location}");
+      assert!(state.auth_pending.is_empty());
     }
 
     #[tokio::test]
