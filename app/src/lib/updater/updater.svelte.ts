@@ -2,7 +2,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { toast } from '@profidev/pleiades/components/util/general';
 import { Channel, invoke } from '@tauri-apps/api/core';
-import { authStatusState, triggerUpdates } from './state.svelte';
+import { triggerUpdates } from './state.svelte';
 import { type UpdateMessage, UpdateMessageType } from './types.svelte';
 
 export const setOnline = async (online: boolean): Promise<boolean> => {
@@ -44,16 +44,10 @@ const handleMessage = (message: UpdateMessage) => {
       break;
     }
     case UpdateMessageType.Disconnected: {
-      if (connected && authStatusState.value) {
-        toast.warning('Failed to connect to server');
-      }
       connected = false;
       break;
     }
     case UpdateMessageType.Connected: {
-      if (!connected && authStatusState.value) {
-        toast.success('Connection restored');
-      }
       connected = true;
       triggerUpdates();
       break;

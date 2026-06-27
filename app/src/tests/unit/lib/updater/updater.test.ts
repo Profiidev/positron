@@ -97,11 +97,9 @@ describe('handleMessage', () => {
   it('warns and flips connection on Disconnected, restores on Connected', () => {
     expect(isConnected()).toBe(true);
     send({ type: UpdateMessageType.Disconnected });
-    expect(toast.warning).toHaveBeenCalledWith('Failed to connect to server');
     expect(isConnected()).toBe(false);
 
     send({ type: UpdateMessageType.Connected });
-    expect(toast.success).toHaveBeenCalledWith('Connection restored');
     expect(isConnected()).toBe(true);
   });
 
