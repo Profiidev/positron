@@ -46,23 +46,30 @@ pub fn router() -> ApiRouter {
 }
 
 async fn authorize_get(
+  auth: Option<JwtAuth>,
   Query(req): Query<AuthReq>,
   state: AuthorizeState,
   db: Connection,
 ) -> Result<Redirect> {
-  authorize_start(req, state, db).await
+  authorize_start(auth, req, state, db).await
 }
 
 async fn authorize_post(
+  auth: Option<JwtAuth>,
   state: AuthorizeState,
   db: Connection,
   Form(req): Form<AuthReq>,
 ) -> Result<Redirect> {
-  authorize_start(req, state, db).await
+  authorize_start(auth, req, state, db).await
 }
 
-#[instrument(skip(state, db))]
-async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) -> Result<Redirect> {
+#[instrument(skip(state, db, auth))]
+async fn authorize_start(
+  auth: Option<JwtAuth>,
+  req: AuthReq,
+  state: AuthorizeState,
+  db: Connection,
+) -> Result<Redirect> {
   let uuid = Uuid::new_v4();
   let client_id = req.client_id;
 
@@ -75,19 +82,31 @@ async fn authorize_start(req: AuthReq, state: AuthorizeState, db: Connection) ->
     bail!("Invalid code challenge length: {}", challenge.len());
   }
 
-  let client = db.oauth_client().get_client(client_id).await?;
+  let fast_url = if let Some(auth) = &auth {
+    auth_redirect(req.clone(), &db, auth, &state)
+      .await
+      .map(|(url, _)| url)
+      .ok()
+  } else {
+    None
+  };
 
-  state.auth_pending.insert(uuid, (Instant::now(), req));
+  let url = if let Some(fast_url) = fast_url {
+    fast_url
+  } else {
+    let client = db.oauth_client().get_client(client_id).await?;
 
-  // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
-  Ok(Redirect::found(
+    state.auth_pending.insert(uuid, (Instant::now(), req));
+
+    // unwrap is safe because the URL is constructed from a trusted base and query parameters are properly encoded
     Url::from_str(&format!(
       "{}login?code={}&name={}",
       state.frontend_url, uuid, client.name,
     ))
     .unwrap()
-    .to_string(),
-  ))
+  };
+
+  Ok(Redirect::found(url.to_string()))
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -116,10 +135,25 @@ async fn authorize_confirm(
     }));
   }
 
-  let Some(mut data) = state.auth_pending.get(&query.code).map(|d| d.1.clone()) else {
+  let Some(data) = state.auth_pending.get(&query.code).map(|d| d.1.clone()) else {
     bail!("authorization request not found")
   };
 
+  let (url, client_name) = auth_redirect(data, &db, &auth, &state).await?;
+  state.auth_pending.remove(&query.code);
+
+  tracing::info!("User {} logged in to {}", auth.user_id, client_name);
+  Ok(Json(AuthRes {
+    location: url.to_string(),
+  }))
+}
+
+async fn auth_redirect(
+  mut data: AuthReq,
+  db: &Connection,
+  auth: &JwtAuth,
+  state: &AuthorizeState,
+) -> Result<(Url, String)> {
   let client_id = data.client_id;
   let client = db.oauth_client().get_client(client_id).await?;
   let user = db.user().get_user_by_id(auth.user_id).await?;
@@ -131,8 +165,6 @@ async fn authorize_confirm(
   {
     bail!(UNAUTHORIZED, "user does not have access to the client");
   }
-
-  state.auth_pending.remove(&query.code);
 
   let initial_redirect_uri = data.redirect_uri.clone();
   let additional_redirect_uris = db
@@ -152,9 +184,10 @@ async fn authorize_confirm(
     validate_req(&mut data, &client, additional_redirect_uris, default_scope)
   {
     tracing::warn!("Authorization request validation failed: {:?}", error);
-    return Ok(Json(AuthRes {
-      location: format!("{}?error={}", client.redirect_uri, error_response),
-    }));
+    return Ok((
+      Url::parse(&format!("{}?error={}", client.redirect_uri, error_response))?,
+      client.name,
+    ));
   }
 
   let auth_code = Uuid::new_v4();
@@ -193,11 +226,7 @@ async fn authorize_confirm(
 
   // redirect_uri is guaranteed to be Some after validate_req, so unwrap is safe
   let url = Url::parse_with_params(data.redirect_uri.as_ref().unwrap(), query).unwrap();
-
-  tracing::info!("User {} logged in to {}", auth.user_id, client.name);
-  Ok(Json(AuthRes {
-    location: url.to_string(),
-  }))
+  Ok((url, client.name))
 }
 
 #[instrument]
@@ -483,7 +512,7 @@ mod test {
       let state = AuthorizeState::init(&Config::default());
 
       assert!(state.auth_pending.is_empty());
-      let res = authorize_start(auth_req(client_id), state.clone(), db).await;
+      let res = authorize_start(None, auth_req(client_id), state.clone(), db).await;
       assert!(res.is_ok());
       assert_eq!(state.auth_pending.len(), 1);
     }
@@ -493,7 +522,7 @@ mod test {
       let db = test_db().await;
       let state = AuthorizeState::init(&Config::default());
       // no client inserted -> get_client fails
-      let res = authorize_start(auth_req(Uuid::new_v4()), state, db).await;
+      let res = authorize_start(None, auth_req(Uuid::new_v4()), state, db).await;
       assert!(res.is_err());
     }
 
@@ -505,7 +534,7 @@ mod test {
 
       let mut req = auth_req(client_id);
       req.code_challenge = Some("too-short".into()); // < 43 chars
-      assert!(authorize_start(req, state, db).await.is_err());
+      assert!(authorize_start(None, req, state, db).await.is_err());
     }
 
     #[tokio::test]
@@ -517,7 +546,7 @@ mod test {
       let mut req = auth_req(client_id);
       // 43 chars but contains a space (not URL-safe)
       req.code_challenge = Some(format!(" {}", "a".repeat(42)));
-      assert!(authorize_start(req, state, db).await.is_err());
+      assert!(authorize_start(None, req, state, db).await.is_err());
     }
 
     #[tokio::test]
@@ -528,7 +557,7 @@ mod test {
 
       let mut req = auth_req(client_id);
       req.code_challenge = Some("a".repeat(43));
-      assert!(authorize_start(req, state, db).await.is_ok());
+      assert!(authorize_start(None, req, state, db).await.is_ok());
     }
 
     #[tokio::test]
