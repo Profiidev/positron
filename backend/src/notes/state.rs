@@ -24,6 +24,7 @@ use centaurus::{
 use chrono::{DateTime, TimeDelta, Utc};
 use dashmap::DashMap;
 use image::EncodableLayout;
+use sha2::{Digest, Sha256};
 use tokio::{
   spawn,
   sync::{
@@ -84,6 +85,7 @@ pub struct NoteState {
   updater: Updater,
   owner_id: Uuid,
   snapshot_data: Mutex<SnapshotData>,
+  old_content_hash: Mutex<Vec<u8>>,
 }
 
 impl NoteEditing {
@@ -187,6 +189,7 @@ impl NoteEditing {
         last_snapshot: latest_snapshot,
         last_snapshot_size: content.len(),
       }),
+      old_content_hash: Mutex::new(hash_content(&content)),
     });
 
     state.clone().start_save_task(db.clone(), note_id);
@@ -334,7 +337,6 @@ impl NoteState {
   pub async fn save(&self, db: &Connection, note_id: Uuid) -> Result<()> {
     let awareness = self.doc.lock().await;
     let doc = awareness.doc();
-    doc.transact_mut().await.gc(None);
     let content = doc
       .transact()
       .await
@@ -378,7 +380,12 @@ impl NoteState {
     }
     drop(snapshot_data);
 
-    db.notes().set_content(note_id, content, preview).await?;
+    let content_hash = hash_content(&content);
+    let mut old_content_hash = self.old_content_hash.lock().await;
+    if content_hash != *old_content_hash {
+      db.notes().set_content(note_id, content, preview).await?;
+      *old_content_hash = content_hash;
+    }
 
     let mut users = db.notes().shared_user_ids(note_id).await?;
     users.push(self.owner_id);
@@ -477,6 +484,13 @@ async fn handle_read_only_message(
   }
 
   Ok(responses)
+}
+
+fn hash_content(content: &[u8]) -> Vec<u8> {
+  let mut hasher = Sha256::new();
+  hasher.update(content);
+  let result = hasher.finalize();
+  result.to_vec()
 }
 
 #[cfg(test)]
