@@ -82,7 +82,12 @@ async fn authorize_start(
     bail!("Invalid code challenge length: {}", challenge.len());
   }
 
-  let fast_url = if let Some(auth) = &auth {
+  let fast_url = if let Some(auth) = &auth
+    && let Ok(conf) = <Connection as DBTrait>::settings(&db)
+      .get(auth.user_id)
+      .await
+    && conf.o_auth_instant_confirm
+  {
     auth_redirect(req.clone(), &db, auth, &state)
       .await
       .map(|(url, _)| url)
@@ -582,6 +587,7 @@ mod test {
       db::{
         DBTrait,
         test::{auth_cookie, auth_state, body_json, insert_user, test_db},
+        user::settings::SettingsInfo,
       },
       oauth::state::{AuthReq, AuthorizeState},
     };
@@ -647,6 +653,19 @@ mod test {
         code_challenge: None,
         code_challenge_method: None,
       }
+    }
+
+    /// Opt the user into instant OAuth confirmation (fast track).
+    async fn enable_instant_confirm(db: &Connection, user: Uuid) {
+      db.settings()
+        .set(
+          user,
+          SettingsInfo {
+            o_auth_instant_confirm: true,
+          },
+        )
+        .await
+        .unwrap();
     }
 
     fn app(db: Connection, jwt: JwtState, state: AuthorizeState) -> Router {
@@ -841,6 +860,7 @@ mod test {
       let user = insert_user(&db, "u", "u@x.com").await;
       let cookie = auth_cookie(&db, &jwt, user).await;
       let client_id = setup_client(&db, user, true).await;
+      enable_instant_confirm(&db, user).await;
       let state = AuthorizeState::init(&Config::default());
 
       let resp = app(db, jwt, state.clone())
@@ -907,12 +927,47 @@ mod test {
     }
 
     #[tokio::test]
+    async fn authorize_get_with_access_but_instant_confirm_disabled_falls_back_to_login() {
+      let db = test_db().await;
+      let jwt = auth_state(&db).await;
+      let user = insert_user(&db, "u", "u@x.com").await;
+      let cookie = auth_cookie(&db, &jwt, user).await;
+      // user has access but has NOT opted into instant confirm -> no fast track
+      let client_id = setup_client(&db, user, true).await;
+      let state = AuthorizeState::init(&Config::default());
+
+      let resp = app(db, jwt, state.clone())
+        .oneshot(
+          Request::builder()
+            .uri(format!(
+              "/authorize?response_type=code&client_id={client_id}"
+            ))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+      assert_eq!(resp.status(), StatusCode::FOUND);
+      let location = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+      assert!(location.contains("login?code="), "location was {location}");
+      assert_eq!(state.auth_pending.len(), 1);
+    }
+
+    #[tokio::test]
     async fn authorize_post_form_with_session_fast_tracks() {
       let db = test_db().await;
       let jwt = auth_state(&db).await;
       let user = insert_user(&db, "u", "u@x.com").await;
       let cookie = auth_cookie(&db, &jwt, user).await;
       let client_id = setup_client(&db, user, true).await;
+      enable_instant_confirm(&db, user).await;
       let state = AuthorizeState::init(&Config::default());
 
       let resp = app(db, jwt, state.clone())

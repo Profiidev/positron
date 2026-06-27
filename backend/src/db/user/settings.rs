@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct SettingsInfo {
-  o_auth_instant_confirm: bool,
+  pub o_auth_instant_confirm: bool,
 }
 
 pub struct SettingsTable<'db> {
