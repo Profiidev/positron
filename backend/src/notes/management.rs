@@ -151,13 +151,15 @@ async fn apply_note_edit(
     .apply_update(Update::decode_v1(&data).context("failed to decode note content")?)
     .context("failed to apply update")?;
 
-  let content = txn.encode_state_as_update_v1(&StateVector::default());
+  let new_content = txn.encode_state_as_update_v1(&StateVector::default());
   drop(txn);
 
   let preview = preview::render_preview(&doc).await;
 
-  state.apply_update(uuid, &content).await?;
-  db.notes().set_content(uuid, content, preview).await?;
+  if new_content != content {
+    state.apply_update(uuid, &new_content).await?;
+    db.notes().set_content(uuid, new_content, preview).await?;
+  }
   drop(lock);
 
   let Some(owner) = db.notes().get_owner_id(uuid).await? else {
