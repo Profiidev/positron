@@ -12,7 +12,7 @@
   let { session, revoke }: Props = $props();
 </script>
 
-<div class="flex w-full justify-end">
+<div class="flex w-full justify-end mr-2">
   {#if session.current}
     <Button
       variant="outline"
