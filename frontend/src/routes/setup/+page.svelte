@@ -9,7 +9,8 @@
   import { goto, invalidate } from '$app/navigation';
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { completeSetup } from '$lib/client';
-  import { getEncrypt, getSessionMeta } from '$lib/backend/auth.svelte';
+  import { getEncrypt } from '$lib/backend/auth.svelte';
+  import { getSessionMeta } from '@profidev/pleiades/util/info.svelte';
 
   let { data } = $props();
 
