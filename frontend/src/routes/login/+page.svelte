@@ -14,12 +14,14 @@
   import {
     appLoginWebsocket,
     cancelAppLogin,
-    generateCodeChallenge,
-    generateCodeVerifier,
     getEncrypt,
-    getSessionMeta,
     openAppLoginDeepLink
   } from '$lib/backend/auth.svelte';
+  import { getSessionMeta } from '@profidev/pleiades/util/info.svelte';
+  import {
+    generateCodeChallenge,
+    generateCodeVerifier
+  } from '@profidev/pleiades/util/crypto.svelte';
   import {
     finishAuthentication,
     passwordAuthenticate,
