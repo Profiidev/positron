@@ -1,28 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:best-practices",
-    "group:allNonMajor",
-    ":automergeMinor",
-    "schedule:monthly"
-  ],
+  "extends": ["github>profiidev/renovate-config"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/bower_components/**",
     "app/src-tauri/gen/**"
-  ],
-  "packageRules": [
-    {
-      "abandonmentThreshold": "5 years",
-      "matchPackageNames": ["dotenvy", "figment"],
-      "matchDatasources": ["crate"]
-    }
-  ],
-  "osvVulnerabilityAlerts": true,
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "vulnerabilityFixStrategy": "highest",
-    "schedule": ["at any time"],
-    "automerge": true
-  }
+  ]
 }
