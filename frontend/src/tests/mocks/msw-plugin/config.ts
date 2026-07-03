@@ -8,7 +8,7 @@ export const defaultConfig: MswPlugin['Config'] = {
   dependencies: ['@hey-api/typescript'],
   handler,
   name: 'msw',
-  tags: ['mocker']
+  tags: ['handler']
 };
 
 /**

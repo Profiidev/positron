@@ -10,7 +10,7 @@ class ResizeObserverStub {
 globalThis.ResizeObserver ??= ResizeObserverStub as never;
 
 if (!globalThis.matchMedia) {
-  globalThis.matchMedia = ((query: string) => ({
+  globalThis.matchMedia = (query: string) => ({
     addEventListener: () => {},
     addListener: () => {},
     dispatchEvent: () => false,
@@ -19,7 +19,7 @@ if (!globalThis.matchMedia) {
     onchange: null,
     removeEventListener: () => {},
     removeListener: () => {}
-  })) as never;
+  });
 }
 
 if (!Element.prototype.scrollIntoView) {
@@ -50,8 +50,8 @@ class MemoryStorage {
   }
 }
 if (!globalThis.localStorage) {
-  globalThis.localStorage = new MemoryStorage() as never;
+  globalThis.localStorage = new MemoryStorage();
 }
 if (!globalThis.sessionStorage) {
-  globalThis.sessionStorage = new MemoryStorage() as never;
+  globalThis.sessionStorage = new MemoryStorage();
 }

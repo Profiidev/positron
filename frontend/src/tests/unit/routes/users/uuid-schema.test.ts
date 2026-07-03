@@ -23,7 +23,7 @@ describe('userSettings schema', () => {
 
 describe('reformatData', () => {
   it('builds the edit request and keeps the uuid', () => {
-    const data = { groups: ['g1'], name: 'Bob' } as unknown as UserForm;
+    const data = { groups: ['g1'], name: 'Bob' };
     expect(reformatData(data, 'uid')).toEqual({
       groups: ['g1'],
       name: 'Bob',
