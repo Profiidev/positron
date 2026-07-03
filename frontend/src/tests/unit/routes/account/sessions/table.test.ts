@@ -127,7 +127,7 @@ describe('sessions table columns', () => {
     const noRefresh: SessionInfo = {
       ...browserSession,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      refreshed_at: undefined as any
+      refreshed_at: undefined
     };
     expect(cellHtml(cols, 'refreshed_at', noRefresh)).toContain('-');
   });

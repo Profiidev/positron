@@ -15,7 +15,7 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
 // Connection toasts are now gated on the auth status, and every message forwards
 // Its type to `triggerUpdates`. Mock the state module so both are controllable.
-const authStatusState = vi.hoisted(() => ({ value: true as unknown }));
+const authStatusState = vi.hoisted(() => ({ value: true }));
 const triggerUpdates = vi.hoisted(() => vi.fn());
 vi.mock('$lib/updater/state.svelte', () => ({
   authStatusState,
