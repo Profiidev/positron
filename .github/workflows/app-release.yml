@@ -81,7 +81,7 @@ jobs:
 
       - name: Build app
         if: github.event_name == 'pull_request' || github.event_name == 'push'
-        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # v0
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
