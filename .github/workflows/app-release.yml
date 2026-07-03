@@ -93,7 +93,7 @@ jobs:
 
       - name: Build and release app
         if: github.event_name != 'pull_request' && github.event_name != 'push'
-        uses: tauri-apps/tauri-action@61337b436e85a75347fec553393c9e2be16a0d85 # dev
+        uses: tauri-apps/tauri-action@7f1a1fc1989f3d1e114195e2a9624d147de78612 # dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
