@@ -1,7 +1,9 @@
 use aide::axum::ApiRouter;
 use axum::Extension;
+use centaurus::db::init::Connection;
 pub use state::ConfigurationState;
 use state::{AuthorizeState, ClientState};
+use token::InvalidJwtCleanup;
 
 use crate::config::Config;
 
@@ -24,9 +26,10 @@ pub fn router() -> ApiRouter {
     .merge(user::router())
 }
 
-pub async fn state(router: ApiRouter, config: &Config) -> ApiRouter {
+pub async fn state(router: ApiRouter, config: &Config, db: &Connection) -> ApiRouter {
   router
     .layer(Extension(AuthorizeState::init(config)))
     .layer(Extension(ClientState::init(config)))
     .layer(Extension(ConfigurationState::init(config)))
+    .layer(Extension(InvalidJwtCleanup::init(db.clone())))
 }

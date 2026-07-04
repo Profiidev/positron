@@ -6,9 +6,13 @@ use centaurus::{
   db::{init::Connection, tables::ConnectionExt},
   serde::empty_string_as_none,
 };
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
+use entity::invalid_jwt;
+use sea_orm::{ActiveModelTrait, ActiveValue::Set};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
+use tokio::{spawn, task::JoinHandle, time::sleep};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -33,6 +37,28 @@ pub fn router() -> Router {
   Router::new()
     .route("/token", post(token))
     .route("/revoke", post(revoke))
+}
+
+#[derive(Clone)]
+pub struct InvalidJwtCleanup {
+  _handle: Arc<JoinHandle<()>>,
+}
+
+impl InvalidJwtCleanup {
+  pub fn init(db: Connection) -> Self {
+    let handle = spawn(async move {
+      loop {
+        if let Err(err) = db.invalid_jwt().remove_expired().await {
+          tracing::warn!(?err, "oauth token denylist cleanup failed");
+        }
+        sleep(std::time::Duration::from_secs(600)).await;
+      }
+    });
+
+    Self {
+      _handle: Arc::new(handle),
+    }
+  }
 }
 
 #[derive(Serialize)]
@@ -199,6 +225,17 @@ async fn refresh_token(
       Error::from_str("invalid_grant")
     })?;
 
+  // Reject revoked refresh tokens (fail closed on db error).
+  if !db
+    .invalid_jwt()
+    .is_token_valid(&body.refresh_token)
+    .await
+    .unwrap_or(false)
+  {
+    tracing::warn!("revoked refresh token for client: {}", client_id);
+    return Err(Error::from_str("invalid_grant"));
+  }
+
   if claims.aud != client_id {
     tracing::warn!(
       "client id mismatch for refresh token: {}, expected {}, got {}",
@@ -332,10 +369,11 @@ struct RevokeReq {
   token: String,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, db))]
 async fn revoke(
   Query(req_p): Query<RevokeReqOption>,
   state: JwtStateOther,
+  db: Connection,
   Form(req_b): Form<RevokeReqOption>,
 ) -> centaurus::error::Result<()> {
   let req = if let Some(req) = req_p.try_into() {
@@ -346,7 +384,19 @@ async fn revoke(
     bail!("invalid_request");
   };
 
-  let _claims = state.validate_token::<OAuthClaims>(&req.token)?;
+  let exp = if let Ok(claims) = state.validate_token::<OAuthClaims>(&req.token) {
+    claims.exp
+  } else {
+    state.validate_token::<RefreshTokenClaims>(&req.token)?.exp
+  };
+  let exp = DateTime::from_timestamp(exp, 0).unwrap_or_else(Utc::now);
+
+  let model = invalid_jwt::ActiveModel {
+    token: Set(req.token),
+    exp: Set(exp.naive_utc()),
+    id: Set(Uuid::now_v7()),
+  };
+  model.insert(&db.0).await?;
 
   Ok(())
 }
@@ -369,6 +419,8 @@ mod test {
   };
   use axum::{Form, extract::Query};
   use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+  use centaurus::db::tables::ConnectionExt;
+  use chrono::{Duration, Utc};
   use sha2::{Digest, Sha256};
   use std::{collections::HashMap, time::Instant};
   use uuid::Uuid;
@@ -934,13 +986,62 @@ mod test {
     };
     let tok = c.jwt.create_generic_token(&claims).unwrap();
 
+    // token is accepted before revocation
+    assert!(c.db.invalid_jwt().is_token_valid(&tok).await.unwrap());
+
     revoke(
       Query(RevokeReqOption { token: None }),
       c.jwt,
-      Form(RevokeReqOption { token: Some(tok) }),
+      c.db.clone(),
+      Form(RevokeReqOption {
+        token: Some(tok.clone()),
+      }),
     )
     .await
     .unwrap();
+
+    // after revocation the token is on the denylist
+    assert!(!c.db.invalid_jwt().is_token_valid(&tok).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn revoke_rejects_invalid_token() {
+    let c = ctx().await;
+    let res = revoke(
+      Query(RevokeReqOption { token: None }),
+      c.jwt,
+      c.db,
+      Form(RevokeReqOption {
+        token: Some("garbage".into()),
+      }),
+    )
+    .await;
+    assert!(res.is_err());
+  }
+
+  #[tokio::test]
+  async fn refresh_token_rejects_revoked_token() {
+    let c = ctx().await;
+    let claims = refresh_claims(c.client_id, c.user, c.config.issuer.to_string());
+    let rt = c.jwt.create_generic_token(&claims).unwrap();
+
+    // denylist the refresh token
+    c.db
+      .invalid_jwt()
+      .invalidate_jwt(
+        rt.clone(),
+        Utc::now() + Duration::seconds(3600),
+        std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0)),
+      )
+      .await
+      .unwrap();
+
+    let body = TokenRefreshReq { refresh_token: rt };
+    let err = refresh_token(c.jwt, c.db, c.config, body, c.client_id)
+      .await
+      .map(|_| ())
+      .unwrap_err();
+    assert_eq!(err_code(err), "invalid_grant");
   }
 
   #[tokio::test]
@@ -949,6 +1050,7 @@ mod test {
     let res = revoke(
       Query(RevokeReqOption { token: None }),
       c.jwt,
+      c.db,
       Form(RevokeReqOption { token: None }),
     )
     .await;

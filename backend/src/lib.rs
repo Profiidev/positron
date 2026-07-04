@@ -114,7 +114,7 @@ async fn state(mut router: ApiRouter, config: Config) -> ApiRouter {
   );
   router = auth::state(router, &config, &db).await;
   router = mail::state(router, &db, &config).await;
-  router = oauth::state(router, &config).await;
+  router = oauth::state(router, &config, &db).await;
   router = services::state(router).await;
   router = well_known::state(router, &config).await;
 
@@ -162,9 +162,9 @@ mod test {
     let db = test_db().await;
     let (_state, updater) = UpdateState::<UpdateMessage>::init().await;
     router = notes::state(router, storage.clone(), updater, db.clone(), &config);
-    router = user::state(router, db);
+    router = user::state(router, db.clone());
     router = services::state(router).await;
-    router = oauth::state(router, &config).await;
+    router = oauth::state(router, &config, &db).await;
     router = well_known::state(router, &config).await;
     let _ = router;
   }

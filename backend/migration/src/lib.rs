@@ -16,6 +16,7 @@ mod m20260620_055816_note_snapshots;
 mod m20260622_123434_create_session_table;
 mod m20260622_145232_drop_invalid_jwt_table;
 mod m20260625_134247_note_last_updated;
+mod m20260704_120000_recreate_invalid_jwt;
 
 pub struct Migrator;
 
@@ -46,6 +47,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20260622_123434_create_session_table::Migration),
       Box::new(m20260622_145232_drop_invalid_jwt_table::Migration),
       Box::new(m20260625_134247_note_last_updated::Migration),
+      Box::new(m20260704_120000_recreate_invalid_jwt::Migration),
     ]
   }
 }

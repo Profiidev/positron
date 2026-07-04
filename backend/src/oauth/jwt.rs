@@ -7,6 +7,7 @@ use centaurus::{
     request::extract::StateExtractExt,
   },
   bail,
+  db::{init::Connection, tables::ConnectionExt},
 };
 use http::request::Parts;
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,16 @@ impl<S: Sync> FromRequestParts<S> for OAuthClaims {
     let Ok(claims) = state.validate_token(&token) else {
       bail!(UNAUTHORIZED, "invalid token");
     };
+
+    let db = parts.extract_state::<Connection>().await;
+    if !db
+      .invalid_jwt()
+      .is_token_valid(&token)
+      .await
+      .unwrap_or(false)
+    {
+      bail!(UNAUTHORIZED, "revoked token");
+    }
 
     Ok(claims)
   }
