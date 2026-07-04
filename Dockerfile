@@ -85,7 +85,10 @@ ENV DB_URL="sqlite:/data/positron.db?mode=rwc"
 ENV STORAGE_PATH="/data/storage"
 ENV SITE_URL="http://localhost:8000"
 
-RUN mkdir -p /data/storage
+RUN mkdir -p /data/storage \
+    && groupadd -r positron \
+    && useradd -r -g positron positron \
+    && chown -R positron:positron /data
 
 COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
@@ -94,5 +97,7 @@ COPY --from=frontend-builder /app/frontend/build /app/frontend
 COPY --from=frontend-builder /app/frontend/package.json /app/frontend/package.json
 COPY --from=frontend-builder /app/package-lock.json /app/package-lock.json
 COPY --from=backend-builder /app/app /usr/local/bin/positron
+
+USER positron
 
 ENTRYPOINT ["positron", "serve"]
