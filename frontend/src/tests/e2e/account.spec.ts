@@ -135,7 +135,7 @@ test.describe('account sessions', () => {
 
   test('surfaces an error when revoking fails', async ({ page, network }) => {
     network.use(
-      gen.revokeSessionMswHandler(
+      gen.handleRevokeSession(
         () => new HttpResponse(null, { status: 500 }) as never
       )
     );

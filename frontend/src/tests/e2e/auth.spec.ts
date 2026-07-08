@@ -96,7 +96,7 @@ test.describe('login page', () => {
     network
   }) => {
     network.use(
-      gen.passwordAuthenticateMswHandler(() =>
+      gen.handlePasswordAuthenticate(() =>
         HttpResponse.json(
           { user: 'user-uuid' },
           {
@@ -125,7 +125,7 @@ test.describe('login page', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let body: any = undefined;
     network.use(
-      gen.passwordAuthenticateMswHandler(async ({ request }) => {
+      gen.handlePasswordAuthenticate(async ({ request }) => {
         body = await request.json();
         return HttpResponse.json(
           { user: 'user-uuid' },
@@ -154,7 +154,7 @@ test.describe('totp login', () => {
   // A password login for a 2FA-enabled account succeeds but returns no `user`,
   // Which flips the form into the TOTP step instead of completing the login.
   const totpRequiredAuth = () =>
-    gen.passwordAuthenticateMswHandler(() => HttpResponse.json({}));
+    gen.handlePasswordAuthenticate(() => HttpResponse.json({}));
 
   const submitPassword = async (page: Page) => {
     await page.getByPlaceholder('mail@example.com').fill('user@example.com');
@@ -187,7 +187,7 @@ test.describe('totp login', () => {
   }) => {
     network.use(
       totpRequiredAuth(),
-      gen.totpConfirmMswHandler(() =>
+      gen.handleTotpConfirm(() =>
         HttpResponse.json(
           { user: 'user-uuid' },
           { headers: { 'Set-Cookie': 'centaurus_jwt=e2e-token; Path=/' } }
@@ -212,7 +212,7 @@ test.describe('totp login', () => {
   test('shows an error for an invalid TOTP code', async ({ page, network }) => {
     network.use(
       totpRequiredAuth(),
-      gen.totpConfirmMswHandler(() => HttpResponse.json({}, { status: 401 }))
+      gen.handleTotpConfirm(() => HttpResponse.json({}, { status: 401 }))
     );
 
     await gotoReady(page, '/login');
