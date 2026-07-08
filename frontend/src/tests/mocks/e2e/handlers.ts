@@ -1,7 +1,10 @@
 import { HttpResponse, http, ws } from 'msw';
-import { client } from '$mocks/msw-runtime';
 import * as gen from '$lib/client/msw.gen';
 import * as data from './data';
+import { type Client, createClient, createConfig } from '$lib/client/client';
+import type { ClientOptions } from '$lib/client/types.gen';
+
+const client: Client = createClient(createConfig<ClientOptions>());
 
 /**
  * No-op WebSocket mock for the updater channel. The app opens this socket on
@@ -26,7 +29,7 @@ const publicUpdaterWs = ws.link('*/api/notes/update/*');
 const appLoginWs = ws.link('*/api/auth/app/device_login');
 
 /**
- * Reuses the generated `*MswHandler` factories (the same mock api the unit
+ * Reuses the generated `handle*` factories (the same mock api the unit
  * tests use). The factories build their URL from the client's `baseUrl`; in the
  * preview server every `/api/*` request is host-rewritten to the backend by
  * `handleFetch`, so we build the handlers with `baseUrl = '*'` to match any
@@ -46,112 +49,108 @@ export const handlers = [
     client.send('device-login-code');
   }),
 
-  gen.isSetupMswHandler(({ cookies }) => j(data.isSetupOf(cookies))),
-  gen.getOidcSettingsMswHandler(() => j(data.oidcSettings)),
-  gen.infoMswHandler(({ cookies }) =>
+  gen.handleIsSetup(({ cookies }) => j(data.isSetupOf(cookies))),
+  gen.handleGetOidcSettings(() => j(data.oidcSettings)),
+  gen.handleInfo(({ cookies }) =>
     data.isAnonymous(cookies)
       ? (new HttpResponse(null, { status: 401 }) as never)
       : j(data.adminUser)
   ),
-  gen.authConfigMswHandler(() => j(data.authConfig)),
-  gen.accountSettingsMswHandler(() => j(data.accountSettings)),
-  gen.mailActiveMswHandler(({ cookies }) => j(data.mailActiveOf(cookies))),
-  gen.getMailSettingsMswHandler(() => j(data.mailSettings)),
-  gen.siteUrlMswHandler(() => j(data.siteUrl)),
-  gen.keyMswHandler(() => j({ key: 'test-public-key' })),
+  gen.handleAuthConfig(() => j(data.authConfig)),
+  gen.handleAccountSettings(() => j(data.accountSettings)),
+  gen.handleMailActive(({ cookies }) => j(data.mailActiveOf(cookies))),
+  gen.handleGetMailSettings(() => j(data.mailSettings)),
+  gen.handleSiteUrl(() => j(data.siteUrl)),
+  gen.handleKey(() => j({ key: 'test-public-key' })),
 
   // Lists (scenario-aware: `mock_scenario=empty` cookie => empty state).
-  gen.listGroupsMswHandler(({ cookies }) => j(data.groups[scn(cookies)])),
-  gen.listUsersMswHandler(({ cookies }) => j(data.users[scn(cookies)])),
-  gen.listNotesMswHandler(({ cookies }) =>
+  gen.handleListGroups(({ cookies }) => j(data.groups[scn(cookies)])),
+  gen.handleListUsers(({ cookies }) => j(data.users[scn(cookies)])),
+  gen.handleListNotes(({ cookies }) =>
     j(data.notes[data.notesScenarioOf(cookies)])
   ),
-  gen.notesConfigMswHandler(({ cookies }) =>
+  gen.handleNotesConfig(({ cookies }) =>
     j(data.notesConfig[data.notesScenarioOf(cookies)])
   ),
-  gen.listOauthClientsMswHandler(({ cookies }) =>
+  gen.handleListOauthClients(({ cookies }) =>
     j(data.oauthClients[scn(cookies)])
   ),
-  gen.listOAuthScopesMswHandler(({ cookies }) =>
-    j(data.oauthScopes[scn(cookies)])
-  ),
-  gen.listOAuthPoliciesMswHandler(({ cookies }) =>
+  gen.handleListOAuthScopes(({ cookies }) => j(data.oauthScopes[scn(cookies)])),
+  gen.handleListOAuthPolicies(({ cookies }) =>
     j(data.oauthPolicies[scn(cookies)])
   ),
-  gen.listPasskeysMswHandler(({ cookies }) => j(data.passkeys[scn(cookies)])),
-  gen.listSessionsMswHandler(({ cookies }) => j(data.sessions[scn(cookies)])),
-  gen.revokeSessionMswHandler(
+  gen.handleListPasskeys(({ cookies }) => j(data.passkeys[scn(cookies)])),
+  gen.handleListSessions(({ cookies }) => j(data.sessions[scn(cookies)])),
+  gen.handleRevokeSession(
     () => new HttpResponse(null, { status: 200 }) as never
   ),
-  gen.listApodMswHandler(({ cookies }) => j(data.apodList[scn(cookies)])),
-  gen.getApodImageInfoMswHandler(() => j(data.apodImageInfo)),
+  gen.handleListApod(({ cookies }) => j(data.apodList[scn(cookies)])),
+  gen.handleGetApodImageInfo(() => j(data.apodImageInfo)),
 
   // Simple lists used by detail/create pages.
-  gen.listGroupsSimpleMswHandler(({ cookies }) =>
+  gen.handleListGroupsSimple(({ cookies }) =>
     j(data.simpleGroups[scn(cookies)])
   ),
-  gen.listUsersSimpleMswHandler(({ cookies }) =>
-    j(data.simpleUsers[scn(cookies)])
-  ),
-  gen.listUsersNoteMswHandler(({ cookies }) => j(data.noteUsers[scn(cookies)])),
-  gen.listGroupsOAuthClientMswHandler(({ cookies }) =>
+  gen.handleListUsersSimple(({ cookies }) => j(data.simpleUsers[scn(cookies)])),
+  gen.handleListUsersNote(({ cookies }) => j(data.noteUsers[scn(cookies)])),
+  gen.handleListGroupsOAuthClient(({ cookies }) =>
     j(data.simpleGroups[scn(cookies)])
   ),
-  gen.listUsersOAuthClientMswHandler(({ cookies }) =>
+  gen.handleListUsersOAuthClient(({ cookies }) =>
     j(data.simpleUsers[scn(cookies)])
   ),
-  gen.listScopesOAuthClientMswHandler(({ cookies }) =>
+  gen.handleListScopesOAuthClient(({ cookies }) =>
     j(data.simpleScopes[scn(cookies)])
   ),
-  gen.listPoliciesOAuthScopeMswHandler(({ cookies }) =>
+  gen.handleListPoliciesOAuthScope(({ cookies }) =>
     j(data.simplePolicies[scn(cookies)])
   ),
-  gen.listGroupsOAuthPolicyMswHandler(({ cookies }) =>
+  gen.handleListGroupsOAuthPolicy(({ cookies }) =>
     j(data.simpleGroups[scn(cookies)])
   ),
 
   // Details.
-  gen.groupInfoMswHandler(({ params }) =>
+  gen.handleGroupInfo(({ params }) =>
     // The uuid is a path param; return a non-admin group for group-staff so its
     // Editable permissions matrix renders (the admin group hides it).
     j(
       params.uuid === 'group-staff' ? data.groupStaffDetails : data.groupDetails
     )
   ),
-  gen.userInfoMswHandler(() => j(data.userDetails)),
-  gen.infoOauthClientMswHandler(() => j(data.oauthClientDetails)),
-  gen.infoOAuthScopeMswHandler(() => j(data.oauthScopeDetails)),
-  gen.infoOAuthPolicyMswHandler(() => j(data.oauthPolicyDetails)),
-  gen.infoNoteMswHandler(({ cookies }) =>
+  gen.handleUserInfo(() => j(data.userDetails)),
+  gen.handleInfoOauthClient(() => j(data.oauthClientDetails)),
+  gen.handleInfoOAuthScope(() => j(data.oauthScopeDetails)),
+  gen.handleInfoOAuthPolicy(() => j(data.oauthPolicyDetails)),
+  gen.handleInfoNote(({ cookies }) =>
     j(
       data.isReadonlyNote(cookies) ? data.noteDetailsReadonly : data.noteDetails
     )
   ),
-  gen.infoNoteShareMswHandler(({ cookies }) => j(data.publicNoteOf(cookies))),
-  gen.listNoteSnapshotsMswHandler(({ cookies }) =>
+  gen.handleInfoNoteShare(({ cookies }) => j(data.publicNoteOf(cookies))),
+  gen.handleListNoteSnapshots(({ cookies }) =>
     j(data.noteSnapshots[scn(cookies)])
   ),
   // `snapshot-missing` reports a 404 so the view page's not-found redirect
   // (back to the note with `?error=not_found`) can be exercised.
-  gen.infoNoteSnapshotMswHandler(({ params }) =>
+  gen.handleInfoNoteSnapshot(({ params }) =>
     params.snapshot_id === 'snapshot-missing'
       ? (new HttpResponse(null, { status: 404 }) as never)
       : j(data.noteSnapshotDetail)
   ),
   // The readonly editor applies an empty yjs update, so serve an empty body.
-  gen.getNoteSnapshotContentMswHandler(
+  gen.handleGetNoteSnapshotContent(
     () => new HttpResponse(new ArrayBuffer(0), { status: 200 }) as never
   ),
-  gen.deleteNoteSnapshotMswHandler(
+  gen.handleDeleteNoteSnapshot(
     () => new HttpResponse(null, { status: 200 }) as never
   ),
-  gen.restoreNoteSnapshotMswHandler(
+  gen.handleRestoreNoteSnapshot(
     () => new HttpResponse(null, { status: 200 }) as never
   ),
-  gen.shareNotePublicMswHandler(
+  gen.handleShareNotePublic(
     () => new HttpResponse(null, { status: 200 }) as never
   ),
-  gen.transferNoteMswHandler(({ cookies }) => {
+  gen.handleTransferNote(({ cookies }) => {
     if (cookies.mock_scenario === 'transfer-at-limit') {
       return new HttpResponse(null, { status: 409 }) as never;
     }
@@ -159,15 +158,15 @@ export const handlers = [
   }),
 
   // Mutations return a generic success so submit flows resolve.
-  gen.createGroupMswHandler(() => j({ uuid: 'group-new' })),
-  gen.createUserMswHandler(() => j({ uuid: 'user-new' })),
-  gen.createNoteMswHandler(() => j({ id: 'note-new' })),
-  gen.createOauthClientMswHandler(() =>
+  gen.handleCreateGroup(() => j({ uuid: 'group-new' })),
+  gen.handleCreateUser(() => j({ uuid: 'user-new' })),
+  gen.handleCreateNote(() => j({ id: 'note-new' })),
+  gen.handleCreateOauthClient(() =>
     j({ client_id: 'client-new', client_secret: 'secret' })
   ),
-  gen.createOAuthScopeMswHandler(() => j({ uuid: 'scope-new' })),
-  gen.createOAuthPolicyMswHandler(() => j({ uuid: 'policy-new' })),
-  gen.sendResetLinkMswHandler(() => new HttpResponse(null, { status: 200 })),
+  gen.handleCreateOAuthScope(() => j({ uuid: 'scope-new' })),
+  gen.handleCreateOAuthPolicy(() => j({ uuid: 'policy-new' })),
+  gen.handleSendResetLink(() => new HttpResponse(null, { status: 200 })),
 
   // Catch-all: any other `/api/*` call resolves with an empty 200 so unmocked
   // Endpoints never crash a page render.

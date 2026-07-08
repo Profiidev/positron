@@ -395,6 +395,7 @@ export class TauriWebsocketProvider extends ObservableV2<TauriWebsocketProviderE
         encoder,
         awarenessProtocol.encodeAwarenessUpdate(
           provider.awareness,
+          // oxlint-disable-next-line max-nested-calls
           Array.from(provider.awareness.getStates().keys())
         )
       );

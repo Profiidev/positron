@@ -18,7 +18,7 @@ test.describe('password reset from an email link', () => {
     // `test_token` (which leaves `valid` undefined and hides the redirect), so
     // We model the real, logged-out response explicitly.
     network.use(
-      gen.testTokenMswHandler(() =>
+      gen.handleTestToken(() =>
         HttpResponse.json({ exp_short: false, valid: false })
       )
     );
