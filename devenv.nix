@@ -46,8 +46,6 @@ in
   '';
 
   env = {
-    RUSTC_WRAPPER = "";
-    __NV_DISABLE_EXPLICIT_SYNC = "1";
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright.browsers}";
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
     PLAYWRIGHT_NODEJS_PATH = "${pkgs.nodejs}/bin/node";
