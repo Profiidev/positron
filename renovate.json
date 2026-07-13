@@ -6,5 +6,5 @@
     "**/bower_components/**",
     "app/src-tauri/gen/**"
   ],
-  "ignoreDeps": ["typebox", "@playwright/test"]
+  "ignoreDeps": ["@playwright/test"]
 }

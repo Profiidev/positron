@@ -1048,6 +1048,44 @@ mod test {
     assert!(db.note_snapshot().find(kept).await.unwrap().is_some());
   }
 
+  // Buckets are absolute (floor(epoch / bucket_secs)), so the newest snapshot in
+  // a fixed calendar window is a stable survivor that graduates tier-to-tier
+  // rather than being re-thinned away at each transition.
+  #[tokio::test]
+  async fn aging_across_cycles_graduates_snapshot_into_month_tier() {
+    use chrono::TimeDelta;
+    let db = test_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note = db.notes().create(owner, "T".into()).await.unwrap();
+    let t0 = fixed_now();
+
+    // hourly snapshots across the first 7 days
+    for h in 0..(7 * 24) {
+      db.note_snapshot()
+        .create_at(note, format!("h{h}"), t0 + TimeDelta::hours(h))
+        .await
+        .unwrap();
+    }
+
+    // run cleanup daily from day 8 to day 60
+    for d in 8..=60 {
+      let now = t0 + TimeDelta::days(d);
+      for tier in RetentionTier::all() {
+        let ids: Vec<Uuid> = evict_ids(&db, *tier, now).await;
+        db.note_snapshot().delete_many(&ids).await.unwrap();
+      }
+    }
+
+    let now = t0 + TimeDelta::days(60);
+    let remaining = db.note_snapshot().list_for_note(note).await.unwrap();
+    assert!(
+      remaining
+        .iter()
+        .any(|s| s.created_at.and_utc() <= now - TimeDelta::days(30)),
+      "a snapshot must survive into the 30-365d tier, not be thinned away at transitions"
+    );
+  }
+
   #[tokio::test]
   async fn ids_to_evict_identical_created_at_evicts_lower_id() {
     let db = test_db().await;
