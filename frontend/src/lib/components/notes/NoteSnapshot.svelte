@@ -77,56 +77,46 @@
               )
             )}
 
-            <Tooltip.Provider delayDuration={300}>
-              <Tooltip.Root>
-                <Tooltip.Trigger>
-                  {#snippet child({ props })}
-                    <Command.Item
-                      value={created_at}
-                      class="cursor-pointer gap-2 [&_svg.cn-command-item-indicator]:hidden!"
-                      onSelect={() => openSnapshot(snapshot.id)}
-                      {...props}
-                    >
-                      <span class="min-w-0 flex-1 truncate font-medium">
-                        {created_at}
-                      </span>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger
-                          class={buttonVariants({
-                            variant: 'outline',
-                            size: 'icon',
-                            class: 'cursor-pointer'
-                          })}
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            restoreSnapshot(snapshot.id);
-                          }}
-                        >
-                          <ArchiveRestore />
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>
-                          <p>Restore Snapshot</p>
-                        </Tooltip.Content>
-                      </Tooltip.Root>
-                      <Button
-                        size="icon"
-                        class="cursor-pointer"
-                        variant="destructive"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                          deleteSnapshot(snapshot.id);
-                        }}
-                      >
-                        <Trash />
-                      </Button>
-                    </Command.Item>
-                  {/snippet}
-                </Tooltip.Trigger>
-                <Tooltip.Content>
-                  <p>View Snapshot</p>
-                </Tooltip.Content>
-              </Tooltip.Root>
-            </Tooltip.Provider>
+            <Command.Item
+              value={created_at}
+              class="cursor-pointer gap-2 [&_svg.cn-command-item-indicator]:hidden!"
+              onSelect={() => openSnapshot(snapshot.id)}
+            >
+              <span class="min-w-0 flex-1 truncate font-medium">
+                {created_at}
+              </span>
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger
+                    class={buttonVariants({
+                      variant: 'outline',
+                      size: 'icon',
+                      class: 'cursor-pointer'
+                    })}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      restoreSnapshot(snapshot.id);
+                    }}
+                  >
+                    <ArchiveRestore />
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <p>Restore Snapshot</p>
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+              <Button
+                size="icon"
+                class="cursor-pointer"
+                variant="destructive"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  deleteSnapshot(snapshot.id);
+                }}
+              >
+                <Trash />
+              </Button>
+            </Command.Item>
           {/each}
         </ScrollArea>
       </Command.List>
