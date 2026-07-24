@@ -11,8 +11,9 @@ use centaurus::{
   },
   db::init::Connection,
   error::{ErrorReportStatusExt, Result},
+  eyre::ContextCompat,
 };
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use schemars::JsonSchema;
 use serde::Serialize;
 
@@ -75,7 +76,10 @@ async fn refresh_token(
     .to_string();
 
   let token = create_session_raw_token(&jwt, auth.user_id).await?;
-  db.session().refresh(&old_token, token.clone()).await?;
+  let exp = Utc::now()
+    .checked_add_signed(Duration::seconds(jwt.exp))
+    .context("Failed to add exp")?;
+  db.session().refresh(&old_token, token.clone(), exp).await?;
   cookies = cookies.add(jwt.create_cookie(JWT_COOKIE_NAME, token));
 
   Ok((cookies, TokenRes(())))
@@ -144,6 +148,66 @@ mod test {
     let body = body_json(resp).await;
     assert_eq!(body["valid"], true);
     // a freshly minted token is not close to expiry
+    assert_eq!(body["exp_short"], false);
+  }
+
+  #[tokio::test]
+  async fn test_token_reports_exp_short_past_half_life() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    // mint a token with only 10s remaining, then check it against a threshold
+    // whose half-life (50s) is well above that remainder
+    let mut mint_jwt = jwt.clone();
+    mint_jwt.exp = 10;
+    let cookie = auth_cookie(&db, &mint_jwt, user).await;
+
+    let mut check_jwt = jwt.clone();
+    check_jwt.exp = 100;
+
+    let resp = app(db, check_jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/test_token")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    let body = body_json(resp).await;
+    assert_eq!(body["valid"], true);
+    assert_eq!(body["exp_short"], true);
+  }
+
+  #[tokio::test]
+  async fn test_token_reports_exp_not_short_before_half_life() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+
+    // mint a token with 90s remaining against a threshold whose half-life
+    // (50s) is well below that remainder
+    let mut mint_jwt = jwt.clone();
+    mint_jwt.exp = 90;
+    let cookie = auth_cookie(&db, &mint_jwt, user).await;
+
+    let mut check_jwt = jwt.clone();
+    check_jwt.exp = 100;
+
+    let resp = app(db, check_jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/test_token")
+          .header(header::COOKIE, &cookie)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    let body = body_json(resp).await;
+    assert_eq!(body["valid"], true);
     assert_eq!(body["exp_short"], false);
   }
 
