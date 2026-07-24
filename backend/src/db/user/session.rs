@@ -57,9 +57,15 @@ impl<'db> SessionTable<'db> {
     Ok(())
   }
 
-  pub async fn refresh(&self, old_token: &str, new_token: String) -> Result<(), DbErr> {
+  pub async fn refresh(
+    &self,
+    old_token: &str,
+    new_token: String,
+    expires_at: DateTime<Utc>,
+  ) -> Result<(), DbErr> {
     let mut row: session::ActiveModel = self.get_by_token(old_token).await?.into();
     row.token = Set(new_token);
+    row.expires_at = Set(expires_at.naive_utc());
     row.refreshed_at = Set(Some(Utc::now().naive_utc()));
     row.last_used_at = Set(Utc::now().naive_utc());
     row.update(self.db).await?;
@@ -155,7 +161,10 @@ mod test {
       )
       .await
       .unwrap();
-    db.session().refresh(&old, new.clone()).await.unwrap();
+    db.session()
+      .refresh(&old, new.clone(), Utc::now())
+      .await
+      .unwrap();
 
     assert!(db.session().get_by_token(&old).await.is_err());
     let row = db.session().get_by_token(&new).await.unwrap();
@@ -251,9 +260,44 @@ mod test {
   }
 
   #[tokio::test]
+  async fn refresh_bumps_expires_at() {
+    let db = test_db().await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let old = "old-token".to_string();
+    let new = "new-token".to_string();
+
+    db.session()
+      .create(
+        user,
+        old.clone(),
+        false,
+        Utc::now(),
+        "".to_string(),
+        "".to_string(),
+        "".to_string(),
+      )
+      .await
+      .unwrap();
+
+    let new_expires_at = Utc::now() + chrono::Duration::days(1);
+    db.session()
+      .refresh(&old, new.clone(), new_expires_at)
+      .await
+      .unwrap();
+
+    let row = db.session().get_by_token(&new).await.unwrap();
+    assert_eq!(row.expires_at, new_expires_at.naive_utc());
+  }
+
+  #[tokio::test]
   async fn refresh_unknown_token_errors() {
     let db = test_db().await;
-    assert!(db.session().refresh("missing", "new".into()).await.is_err());
+    assert!(
+      db.session()
+        .refresh("missing", "new".into(), Utc::now())
+        .await
+        .is_err()
+    );
   }
 
   #[tokio::test]
