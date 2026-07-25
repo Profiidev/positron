@@ -1,6 +1,10 @@
 use aide::axum::{ApiRouter, routing::get_with};
 use axum::Json;
-use axum_extra::extract::CookieJar;
+use axum_extra::{
+  TypedHeader,
+  extract::CookieJar,
+  headers::{Authorization, authorization::Bearer},
+};
 use centaurus::{
   backend::{
     auth::{
@@ -65,15 +69,16 @@ async fn test_token(
 
 async fn refresh_token(
   auth: JwtAuth,
+  bearer: Option<TypedHeader<Authorization<Bearer>>>,
   mut cookies: CookieJar,
   jwt: JwtState,
   db: Connection,
 ) -> Result<(CookieJar, TokenRes)> {
-  let old_token = cookies
-    .get(JWT_COOKIE_NAME)
-    .status_context(http::StatusCode::UNAUTHORIZED, "Missing auth cookie")?
-    .value()
-    .to_string();
+  // token transport mirrors `JwtAuth`/`jwt_from_request`: bearer header first, then cookie
+  let old_token = bearer
+    .map(|TypedHeader(bearer)| bearer.token().to_string())
+    .or_else(|| cookies.get(JWT_COOKIE_NAME).map(|c| c.value().to_string()))
+    .status_context(http::StatusCode::UNAUTHORIZED, "Missing auth token")?;
 
   let token = create_session_raw_token(&jwt, auth.user_id).await?;
   let exp = Utc::now()
@@ -230,6 +235,36 @@ mod test {
       .unwrap();
     assert!(resp.status().is_success());
     // a refreshed auth cookie is set on the response
+    assert!(
+      resp
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .any(|v| v.to_str().unwrap().starts_with(JWT_COOKIE_NAME))
+    );
+  }
+
+  #[tokio::test]
+  async fn refresh_token_succeeds_with_bearer_auth_and_no_cookie() {
+    let db = test_db().await;
+    let jwt = auth_state(&db).await;
+    let user = insert_user(&db, "u", "u@x.com").await;
+    let cookie = auth_cookie(&db, &jwt, user).await;
+    // the app authenticates via `Authorization: Bearer`, never a cookie
+    let token = cookie.split('=').nth(1).unwrap().to_string();
+
+    let resp = app(db, jwt)
+      .oneshot(
+        Request::builder()
+          .uri("/refresh_token")
+          .header(header::AUTHORIZATION, format!("Bearer {token}"))
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+
+    assert!(resp.status().is_success());
     assert!(
       resp
         .headers()
