@@ -50,7 +50,13 @@ impl ApodState {
         return Ok(None);
       };
 
-      let Some(img_src) = img.value().attr("src") else {
+      let high_res_img_src = img
+        .parent()
+        .and_then(|parent| parent.value().as_element())
+        .and_then(|el| el.attr("href"));
+      let base_img_src = img.value().attr("src");
+
+      let Some(img_src) = high_res_img_src.or(base_img_src) else {
         return Ok(None);
       };
 
