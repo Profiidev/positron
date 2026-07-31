@@ -1,3 +1,6 @@
+#[cfg(desktop)]
+use tauri::Manager;
+
 use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
@@ -10,40 +13,48 @@ use crate::{
     connection::{NoteState, connect_note, disconnect_note, send_note},
     storage::{NotesStore, get_note_store, list_notes_store, note_content, save_note_content},
   },
+  settings::{get_settings, save_settings},
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater, set_online},
   user::{any_user_avatar, user_avatar, user_info},
 };
 
+#[cfg(target_os = "linux")]
+pub use linux::cli::run as run_cli;
+
 mod api;
 mod auth;
 mod deep_link;
+#[cfg(target_os = "linux")]
+mod linux;
 mod notes;
+mod settings;
 mod setup;
 mod store;
 mod updater;
 mod user;
 
-#[cfg(desktop)]
-mod tauri_plugin_barcode_scanner {
-  use tauri::Wry;
-
-  pub fn init() -> tauri::plugin::TauriPlugin<Wry> {
-    unimplemented!()
-  }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let builder = tauri::Builder::default();
 
+  #[cfg(desktop)]
+  let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let _ = app
+      .get_webview_window("main")
+      .expect("no main window")
+      .set_focus();
+  }));
+
   #[cfg(feature = "test")]
   let builder = builder.plugin(tauri_plugin_webdriver::init());
 
+  #[cfg(mobile)]
+  let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+
   builder
     .plugin(tauri_plugin_http::init())
-    .plugin(tauri_plugin_barcode_scanner::init())
     .plugin(tauri_plugin_store::Builder::new().build())
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_opener::init())
@@ -83,14 +94,29 @@ pub fn run() {
       get_note_store,
       note_content,
       save_note_content,
+      save_settings,
+      get_settings
     ])
     .setup(|app| {
+      #[cfg(all(any(windows, target_os = "linux"), debug_assertions))]
+      {
+        use tauri_plugin_deep_link::DeepLinkExt;
+        app.deep_link().register_all()?;
+      }
+
       Store::init(app.handle())?;
+
+      #[cfg(target_os = "linux")]
+      linux::layer_shell::init(app)?;
+      #[cfg(target_os = "linux")]
+      linux::ipc::spawn_server(app.handle());
+
       Updater::init(app.handle());
       Client::init(app.handle())?;
       NoteState::init(app.handle());
       NotesStore::init(app.handle())?;
       deep_link::setup_deep_link(app.handle())?;
+
       Ok(())
     })
     .run(tauri::generate_context!())

@@ -11,6 +11,10 @@ in
     librsvg
     webkitgtk_4_1
     nodejs
+    gtk-layer-shell
+    glib-networking
+    desktop-file-utils
+    xvfb-run
   ];
 
   android = {
@@ -50,5 +54,6 @@ in
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
     PLAYWRIGHT_NODEJS_PATH = "${pkgs.nodejs}/bin/node";
     PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH = "${pkgs.playwright.browsers}/chromium-${chromium-rev}/chrome-linux/chrome";
+    GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules";
   };
 }

@@ -13,6 +13,7 @@ const INSTANCE_URL_KEY: &str = "instance_url";
 const TOKEN_KEY: &str = "token";
 const AUTH_VERIFIER_KEY: &str = "auth_verifier";
 const USER_INFO_KEY: &str = "user_info";
+const SETTINGS_KEY: &str = "settings";
 
 const AVATAR_STORE_PATH: &str = "avatar_store.json";
 const AVATAR_STORE_KEY: &str = "avatar";
@@ -29,8 +30,54 @@ pub struct Store {
   avatar_store: Arc<tauri_plugin_store::Store<Wry>>,
   auth_verifier: Mutex<Option<String>>,
   user_info: Mutex<Option<UserInfo>>,
+  settings: Mutex<Settings>,
   pub instance_url: Arc<Mutex<Option<Url>>>,
   pub token: Arc<Mutex<Option<String>>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub enum HorizontalLayout {
+  Left,
+  #[default]
+  Center,
+  Right,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub enum VerticalLayout {
+  Top,
+  #[default]
+  Center,
+  Bottom,
+}
+
+fn default_width() -> u32 {
+  800
+}
+
+fn default_height() -> u32 {
+  500
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Settings {
+  pub horizontal_layout: HorizontalLayout,
+  pub vertical_layout: VerticalLayout,
+  #[serde(default = "default_width")]
+  pub width: u32,
+  #[serde(default = "default_height")]
+  pub height: u32,
+}
+
+impl Default for Settings {
+  fn default() -> Self {
+    Self {
+      horizontal_layout: HorizontalLayout::default(),
+      vertical_layout: VerticalLayout::default(),
+      width: default_width(),
+      height: default_height(),
+    }
+  }
 }
 
 impl Store {
@@ -56,11 +103,17 @@ impl Store {
       .get(AUTH_VERIFIER_KEY)
       .and_then(|val| val.as_str().map(|s| s.to_string()));
 
+    let settings = store
+      .get(SETTINGS_KEY)
+      .and_then(|val| serde_json::from_value(val).ok())
+      .unwrap_or_default();
+
     let store = Self {
       store,
       avatar_store,
       auth_verifier: Mutex::new(auth_verifier),
       instance_url: Arc::new(Mutex::new(instance_url)),
+      settings: Mutex::new(settings),
       token: Arc::new(Mutex::new(token)),
       user_info: Mutex::new(user_info),
     };
@@ -147,6 +200,19 @@ impl Store {
     self.avatar_store.save()?;
     Ok(())
   }
+
+  pub async fn settings(&self) -> Settings {
+    self.settings.lock().await.clone()
+  }
+
+  pub async fn set_settings(&self, settings: Settings) -> Result<()> {
+    self
+      .store
+      .set(SETTINGS_KEY, serde_json::to_value(&settings)?);
+    *self.settings.lock().await = settings;
+    self.store.save()?;
+    Ok(())
+  }
 }
 
 #[cfg(test)]
@@ -191,5 +257,62 @@ mod test {
   fn user_info_deserialization_fails_on_invalid_uuid() {
     let json = r#"{"uuid":"not-a-uuid","name":"n","email":"e"}"#;
     assert!(serde_json::from_str::<UserInfo>(json).is_err());
+  }
+
+  use super::{HorizontalLayout, Settings, VerticalLayout};
+
+  #[test]
+  fn settings_default_is_centered_with_default_size() {
+    let settings = Settings::default();
+    assert!(settings.horizontal_layout == HorizontalLayout::Center);
+    assert!(settings.vertical_layout == VerticalLayout::Center);
+    assert_eq!(settings.width, 800);
+    assert_eq!(settings.height, 500);
+  }
+
+  #[test]
+  fn settings_round_trips_through_json() {
+    let original = Settings {
+      horizontal_layout: HorizontalLayout::Left,
+      vertical_layout: VerticalLayout::Bottom,
+      width: 1024,
+      height: 640,
+    };
+    let value = serde_json::to_value(&original).unwrap();
+    let restored: Settings = serde_json::from_value(value).unwrap();
+
+    assert!(restored.horizontal_layout == HorizontalLayout::Left);
+    assert!(restored.vertical_layout == VerticalLayout::Bottom);
+    assert_eq!(restored.width, 1024);
+    assert_eq!(restored.height, 640);
+  }
+
+  #[test]
+  fn settings_deserialization_defaults_width_and_height_when_absent() {
+    // `init()` loads a previously persisted `SETTINGS_KEY` blob with
+    // `serde_json::from_value`; a store written before width/height existed
+    // must still deserialize instead of falling back to `Settings::default()`
+    // (which would also discard the persisted layout).
+    let json = serde_json::json!({
+      "horizontal_layout": "Right",
+      "vertical_layout": "Top",
+    });
+    let settings: Settings = serde_json::from_value(json).unwrap();
+
+    assert!(settings.horizontal_layout == HorizontalLayout::Right);
+    assert!(settings.vertical_layout == VerticalLayout::Top);
+    assert_eq!(settings.width, 800);
+    assert_eq!(settings.height, 500);
+  }
+
+  #[test]
+  fn settings_deserialization_fails_on_invalid_layout_value() {
+    let json = serde_json::json!({
+      "horizontal_layout": "Diagonal",
+      "vertical_layout": "Top",
+      "width": 800,
+      "height": 500,
+    });
+    assert!(serde_json::from_value::<Settings>(json).is_err());
   }
 }

@@ -12,6 +12,7 @@ export default defineConfig(() => ({
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
   define: {
+    __desktop__: process.env.DESKTOP_APP_TARGET === 'true',
     __version__: JSON.stringify(process.env.npm_package_version)
   },
   plugins: [enhancedImages(), tailwindcss(), sveltekit()],

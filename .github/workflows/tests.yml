@@ -164,7 +164,7 @@ jobs:
 
       - uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # latest
         with:
-          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-layer-shell-dev
           version: 1.2
 
       - name: Cache cargo and rust files
@@ -186,8 +186,64 @@ jobs:
           path: ${{ github.workspace }}/target/nextest/app/junit-app-backend.xml
           retention-days: 5
 
+  app_e2e_desktop:
+    name: App E2E Tests (Linux Desktop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+
+      - name: refresh apt index (ubuntu only)
+        run: sudo apt-get update
+
+      - name: install dependencies (ubuntu only)
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-layer-shell-dev xvfb xdg-utils desktop-file-utils
+          version: 1.2
+          execute_install_scripts: true
+
+      - name: install frontend dependencies
+        uses: bahmutov/npm-install@v1
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: app/e2e
+
+      - name: Cache cargo and rust files
+        id: rust_cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+          shared-key: 'app_e2e_desktop_test_cache'
+
+      - name: Generate svelte data
+        run: |
+          echo "BACKEND_URL=http://localhost:8000" > frontend/.env
+          cd frontend && npm run sync && cd ..
+          cd app && npm run sync && cd ..
+
+      - name: Build app
+        run: cd app/e2e && npm run build:linux
+
+      - name: run tests
+        run: cd app/e2e && xvfb-run -a npm run test:desktop
+
+      - name: Upload Test Result File
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: test-results-app-e2e-desktop
+          path: ${{ github.workspace }}/app/e2e/reports/app-e2e-tests.xml
+          retention-days: 5
+
   app_e2e:
-    name: App E2E Tests
+    name: App E2E Tests (Android)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -303,6 +359,7 @@ jobs:
       - frontend_e2e
       - app_frontend_unit
       - app_backend
+      - app_e2e_desktop
       - app_e2e
     steps:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3

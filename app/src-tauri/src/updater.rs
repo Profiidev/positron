@@ -73,6 +73,15 @@ pub enum UpdateMessage {
     redirect: Option<String>,
   },
   UsersUpdated,
+  AppSettings,
+  #[allow(unused)]
+  OpenNote {
+    uuid: Uuid,
+  },
+  #[allow(unused)]
+  OpenNotes,
+  #[allow(unused)]
+  OpenSettings,
 }
 
 #[tauri::command]

@@ -4,7 +4,6 @@
   import type { Stage } from '@profidev/pleiades/components/form/types';
   import MultiStepForm from '@profidev/pleiades/components/form/multistep-form.svelte';
   import Information from './Information.svelte';
-  import Nav from '$lib/components/Nav.svelte';
   import { createNote } from '$lib/commands/notes.svelte';
   import { notesConfigState, notesState } from '$lib/updater/state.svelte';
 

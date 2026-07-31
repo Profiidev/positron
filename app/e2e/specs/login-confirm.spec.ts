@@ -22,9 +22,11 @@ import {
  * so the deep link stands in for it.
  */
 describe('Login confirmation page', () => {
+  // Deep links are delivered directly (adb on Android, relaunch-with-argv on
+  // desktop); iOS has no such mechanism in this harness.
   // oxlint-disable-next-line func-names
   before(function () {
-    if (process.env.TAURI_TEST_PLATFORM !== 'android') {
+    if (process.env.TAURI_TEST_PLATFORM === 'ios') {
       this.skip();
     }
   });

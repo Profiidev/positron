@@ -7,6 +7,7 @@ import {
   getMockState,
   getRoute,
   invokeCommand,
+  isMobile,
   resetAppData,
   resetMockState,
   seedSetup,
@@ -16,14 +17,14 @@ import {
 /**
  * Exercises the `positron://auth` deep-link half of authentication directly
  * (the browser hop in front of it is covered in auth.spec.ts). Delivering the
- * link via adb lets us drive the success path and the failure branches the UI
- * can't reach on its own.
+ * link directly (adb on Android, a relaunch-with-argv on desktop) lets us
+ * drive the success path and the failure branches the UI can't reach on its
+ * own. iOS has no such delivery mechanism in this harness.
  */
 describe('Authentication deep link', () => {
-  // Deep links are delivered through adb, so these only run on Android.
   // oxlint-disable-next-line func-names
   before(function () {
-    if (process.env.TAURI_TEST_PLATFORM !== 'android') {
+    if (process.env.TAURI_TEST_PLATFORM === 'ios') {
       this.skip();
     }
   });
@@ -39,7 +40,10 @@ describe('Authentication deep link', () => {
 
     expect(await getRoute()).toBe('/');
     await expect(byButton('Logout')).toBeDisplayed();
-    await expect(byButton('Scan Login')).toBeDisplayed();
+    // The nav shows "Scan Login" on mobile, "Settings" on desktop.
+    await expect(
+      byButton(isMobile() ? 'Scan Login' : 'Settings')
+    ).toBeDisplayed();
   });
 
   it('exchanges the deep-link code together with the stored verifier', async () => {

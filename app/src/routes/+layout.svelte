@@ -70,4 +70,6 @@
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-{@render children()}
+<div class="bg-background size-full rounded-2xl">
+  {@render children()}
+</div>

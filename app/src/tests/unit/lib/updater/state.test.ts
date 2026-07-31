@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  appSettingsState,
   authStatusState,
   noteUsersState,
   notesConfigState,
@@ -70,6 +71,18 @@ describe('updater state', () => {
     mockCommand('list_users_note', [{ id: 'u1', name: 'Ada' }]);
     await noteUsersState.update();
     expect(noteUsersState.value).toEqual([{ id: 'u1', name: 'Ada' }]);
+  });
+
+  it('appSettingsState populates from get_settings', async () => {
+    const settings = {
+      height: 500,
+      horizontal_layout: 'Center',
+      vertical_layout: 'Center',
+      width: 800
+    };
+    mockCommand('get_settings', settings);
+    await appSettingsState.update();
+    expect(appSettingsState.value).toEqual(settings);
   });
 });
 
