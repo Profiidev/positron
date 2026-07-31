@@ -74,10 +74,13 @@ pub enum UpdateMessage {
   },
   UsersUpdated,
   AppSettings,
+  #[allow(unused)]
   OpenNote {
     uuid: Uuid,
   },
+  #[allow(unused)]
   OpenNotes,
+  #[allow(unused)]
   OpenSettings,
 }
 
