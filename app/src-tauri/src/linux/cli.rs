@@ -25,6 +25,10 @@ enum Commands {
     #[command(subcommand)]
     page: Page,
   },
+  #[command(hide = true)]
+  DeepLink {
+    url: String,
+  },
 }
 
 pub fn run() {
@@ -65,6 +69,12 @@ async fn exec(cmd: Commands) {
         .open(ctx, page)
         .await
         .expect("Failed to send open command");
+    }
+    Commands::DeepLink { url } => {
+      client
+        .deep_link(ctx, url)
+        .await
+        .expect("Failed to send deep-link command");
     }
   }
 }

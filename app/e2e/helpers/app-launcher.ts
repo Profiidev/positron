@@ -167,12 +167,18 @@ export const ensureAndroidAppRunning = async (port = 4445): Promise<void> => {
  *
  * - Android: sent via `adb`. The URL is single-quoted so the device shell
  *   keeps `&` query separators intact instead of backgrounding the command.
- * - Desktop: the OS equivalent of a registered scheme handler invoking the app
- *   again is a second process launched with the URL as argv. `setup_deep_link`
- *   registers the scheme at runtime on Linux/Windows debug builds, and
- *   `tauri-plugin-single-instance`'s `deep-link` feature (see
- *   `src-tauri/Cargo.toml`) forwards that argv to the already-running instance
- *   before this short-lived process exits, so no adb-style bridge is needed.
+ * - Desktop: delivered via `positron ipc deep-link <url>` (see
+ *   `runIpcCommand` below and `src-tauri/src/linux/ipc.rs`), the same
+ *   Unix-socket control channel `show`/`hide`/`toggle`/`open` already use.
+ *
+ *   The OS-faithful alternative - relaunching the binary with the URL as
+ *   argv, relying on `tauri-plugin-single-instance`'s dbus duplicate-instance
+ *   check to forward it to the running instance - was tried first and does
+ *   not reliably work in this CI's environment: the dbus check silently
+ *   doesn't detect the duplicate (no error, just a second full app instance
+ *   that never exits), independent of exec mechanism (confirmed with both a
+ *   direct relaunch and `xdg-open`/`gio open`). The IPC socket sidesteps dbus
+ *   entirely and has been reliable across every environment tested.
  */
 export const openDeepLink = (url: string): void => {
   const platform = getPlatform();
@@ -197,52 +203,11 @@ export const openDeepLink = (url: string): void => {
   }
 
   if (platform === 'desktop') {
-    // The intended, OS-level way a `positron://...` link reaches a running
-    // instance: `register_all()` (src-tauri/src/lib.rs, linux/windows debug
-    // builds) registers the app as the `positron` scheme handler via
-    // `xdg-mime`/a generated `.desktop` file, so `xdg-open` resolves the link
-    // through that real registration and execs the app exactly as a click in
-    // a browser would - rather than us guessing/duplicating that invocation
-    // by spawning the binary directly with the URL as argv.
-    //
-    // `timeout` is a safety net, not the expected path: if the running
-    // instance's dbus duplicate-check (tauri-plugin-single-instance) doesn't
-    // fire, this becomes a second real app instance with its own event loop
-    // that never exits on its own - without a timeout that hangs the whole
-    // test run instead of failing with a clear error.
-    //
-    // A CI/Xvfb session has no desktop environment running, so xdg-open's own
-    // `detectDE()` lands on `DE=generic`, whose handler parses the `.desktop`
-    // file's `Exec=` line with plain shell word-splitting - it doesn't strip
-    // the surrounding quotes tauri-plugin-deep-link wraps the binary path in
-    // (`Exec="<path>" %u`), so `which` looks up a filename that literally
-    // includes the quote characters, finds nothing, and xdg-open ends up
-    // trying to exec an empty string ("xdg-open: 811: : Permission denied").
-    // Forcing `XDG_CURRENT_DESKTOP=GNOME` routes it through the `gnome3`
-    // handler instead, which shells out to `gio open` - GLib's real
-    // desktop-file parser, which handles the quoting correctly.
-    const result = spawnSync('xdg-open', [url], {
-      encoding: 'utf8',
-      env: { ...process.env, XDG_CURRENT_DESKTOP: 'GNOME' },
-      timeout: 10_000
-    });
-
-    if (result.error) {
-      throw new Error(
-        `Failed to run xdg-open for ${url}: ${result.error.message}`
-      );
+    const result = runIpcCommand(['deep-link', url]);
+    if (!result.success) {
+      throw new Error(`Failed to open deep link ${url}: ${result.output}`);
     }
-    if (result.signal) {
-      throw new Error(
-        `xdg-open for ${url} did not exit on its own (killed after timeout with ${result.signal}) - the running instance likely never detected the relaunch as a duplicate`
-      );
-    }
-    if (result.status !== 0) {
-      const output = `${result.stdout || ''}${result.stderr || ''}`;
-      throw new Error(`xdg-open exited ${result.status} for ${url}: ${output}`);
-    }
-
-    console.log(`Opened deep link via xdg-open: ${url}`);
+    console.log(`Opened deep link via ipc: ${url}`);
     return;
   }
 

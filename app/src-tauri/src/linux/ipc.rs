@@ -11,6 +11,7 @@ use tauri::{AppHandle, Manager, async_runtime::spawn};
 use uuid::Uuid;
 
 use crate::{
+  deep_link,
   linux::layer_shell::{self, GtkThreadRPC},
   updater::{UpdateMessage, Updater},
 };
@@ -30,6 +31,7 @@ pub trait AppIpc {
   async fn hide();
   async fn toggle();
   async fn open(page: Page);
+  async fn deep_link(url: String);
 }
 
 #[derive(Clone)]
@@ -58,6 +60,12 @@ impl AppIpc for AppIpcServer {
         Page::Note { uuid } => UpdateMessage::OpenNote { uuid },
       })
       .await;
+  }
+
+  async fn deep_link(self, _: tarpc::context::Context, url: String) -> () {
+    if let Err(e) = deep_link::open_url(&self.0, &url).await {
+      println!("Failed to handle deep link via ipc: {:?}", e);
+    }
   }
 }
 

@@ -8,6 +8,12 @@ use crate::{
   updater::{UpdateMessage, Updater},
 };
 
+pub async fn open_url(handle: &AppHandle, url: &str) -> Result<()> {
+  let url = Url::parse(url)?;
+  handle_links(handle, vec![url]).await;
+  Ok(())
+}
+
 pub fn setup_deep_link(handle: &AppHandle) -> Result<()> {
   let deep_link = handle.deep_link().get_current()?;
   if let Some(links) = deep_link {
