@@ -207,6 +207,7 @@ jobs:
         with:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-layer-shell-dev xvfb
           version: 1.2
+          execute_install_scripts: true
 
       - name: install frontend dependencies
         uses: bahmutov/npm-install@v1
