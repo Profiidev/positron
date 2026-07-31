@@ -1,5 +1,9 @@
+#[cfg(target_os = "linux")]
+use tauri::AppHandle;
 use tauri::{Result, State};
 
+#[cfg(target_os = "linux")]
+use crate::layer_shell;
 use crate::{
   store::{Settings, Store},
   updater::{UpdateMessage, Updater},
@@ -14,8 +18,15 @@ pub async fn get_settings(state: State<'_, Store>) -> Result<Settings> {
 pub async fn save_settings(
   state: State<'_, Store>,
   updater: State<'_, Updater>,
+  #[cfg(target_os = "linux")] handle: AppHandle,
   settings: Settings,
 ) -> Result<()> {
+  #[cfg(target_os = "linux")]
+  layer_shell::send_rpc(
+    &handle,
+    layer_shell::GtkThreadRPC::ApplySettings(settings.clone()),
+  )
+  .await;
   state.set_settings(settings).await?;
   updater.send(UpdateMessage::AppSettings).await;
   Ok(())

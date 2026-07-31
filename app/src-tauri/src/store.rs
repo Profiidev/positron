@@ -38,15 +38,15 @@ pub struct Store {
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub enum HorizontalLayout {
   Left,
-  Center,
   #[default]
+  Center,
   Right,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub enum VerticalLayout {
-  #[default]
   Top,
+  #[default]
   Center,
   Bottom,
 }

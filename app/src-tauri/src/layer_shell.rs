@@ -1,9 +1,15 @@
 use anyhow::{Context, Result};
 use gtk::traits::{ContainerExt, GtkWindowExt, WidgetExt};
 use gtk_layer_shell::LayerShell;
-use tauri::{App, Manager, async_runtime::block_on};
+use tauri::{App, AppHandle, Manager, async_runtime::block_on};
 
-use crate::store::{HorizontalLayout, Store, VerticalLayout};
+use crate::store::{HorizontalLayout, Settings, Store, VerticalLayout};
+
+pub enum GtkThreadRPC {
+  ApplySettings(Settings),
+}
+
+pub struct GtkThreadState(async_channel::Sender<GtkThreadRPC>);
 
 pub fn init(app: &App) -> Result<()> {
   let store = app.state::<Store>();
@@ -57,5 +63,43 @@ pub fn init(app: &App) -> Result<()> {
   #[cfg(debug_assertions)]
   gtk_window.show_all();
 
+  let (sender, receiver) = async_channel::bounded::<GtkThreadRPC>(10);
+
+  gtk::glib::spawn_future_local(async move {
+    while let Ok(msg) = receiver.recv().await {
+      handle_rpc(msg, &gtk_window);
+    }
+  });
+
+  app.manage(GtkThreadState(sender));
+
   Ok(())
+}
+
+pub async fn send_rpc(app: &AppHandle, msg: GtkThreadRPC) {
+  let gtk_thread_state = app.state::<GtkThreadState>();
+  gtk_thread_state.0.send(msg).await.ok();
+}
+
+pub fn handle_rpc(msg: GtkThreadRPC, gtk_window: &gtk::ApplicationWindow) {
+  match msg {
+    GtkThreadRPC::ApplySettings(settings) => {
+      gtk_window.set_anchor(
+        gtk_layer_shell::Edge::Top,
+        settings.vertical_layout == VerticalLayout::Top,
+      );
+      gtk_window.set_anchor(
+        gtk_layer_shell::Edge::Left,
+        settings.horizontal_layout == HorizontalLayout::Left,
+      );
+      gtk_window.set_anchor(
+        gtk_layer_shell::Edge::Right,
+        settings.horizontal_layout == HorizontalLayout::Right,
+      );
+      gtk_window.set_anchor(
+        gtk_layer_shell::Edge::Bottom,
+        settings.vertical_layout == VerticalLayout::Bottom,
+      );
+    }
+  }
 }

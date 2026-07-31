@@ -1,20 +1,20 @@
 import { invoke } from '@tauri-apps/api/core';
 
 export enum HorizontalLayout {
-  Left = 'left',
-  Center = 'center',
-  Right = 'right'
+  Left = 'Left',
+  Center = 'Center',
+  Right = 'Right'
 }
 
 export enum VerticalLayout {
-  Top = 'top',
-  Center = 'center',
-  Bottom = 'bottom'
+  Top = 'Top',
+  Center = 'Center',
+  Bottom = 'Bottom'
 }
 
 export interface Settings {
-  horizontalLayout: HorizontalLayout;
-  verticalLayout: VerticalLayout;
+  horizontal_layout: HorizontalLayout;
+  vertical_layout: VerticalLayout;
 }
 
 export const getSettings = async () => {
