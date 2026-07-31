@@ -53,8 +53,8 @@ pub fn init(app: &App) -> Result<()> {
     settings.vertical_layout == VerticalLayout::Bottom,
   );
 
-  gtk_window.set_width_request(800);
-  gtk_window.set_height_request(400);
+  gtk_window.set_width_request(settings.width as i32);
+  gtk_window.set_height_request(settings.height as i32);
 
   gtk_window.set_keyboard_mode(gtk_layer_shell::KeyboardMode::OnDemand);
 
@@ -100,6 +100,9 @@ pub fn handle_rpc(msg: GtkThreadRPC, gtk_window: &gtk::ApplicationWindow) {
         gtk_layer_shell::Edge::Bottom,
         settings.vertical_layout == VerticalLayout::Bottom,
       );
+
+      gtk_window.set_width_request(settings.width as i32);
+      gtk_window.set_height_request(settings.height as i32);
     }
   }
 }

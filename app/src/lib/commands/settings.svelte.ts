@@ -15,6 +15,8 @@ export enum VerticalLayout {
 export interface Settings {
   horizontal_layout: HorizontalLayout;
   vertical_layout: VerticalLayout;
+  width: number;
+  height: number;
 }
 
 export const getSettings = async () => {

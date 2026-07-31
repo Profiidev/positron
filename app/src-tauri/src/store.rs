@@ -51,10 +51,33 @@ pub enum VerticalLayout {
   Bottom,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+fn default_width() -> u32 {
+  800
+}
+
+fn default_height() -> u32 {
+  500
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {
   pub horizontal_layout: HorizontalLayout,
   pub vertical_layout: VerticalLayout,
+  #[serde(default = "default_width")]
+  pub width: u32,
+  #[serde(default = "default_height")]
+  pub height: u32,
+}
+
+impl Default for Settings {
+  fn default() -> Self {
+    Self {
+      horizontal_layout: HorizontalLayout::default(),
+      vertical_layout: VerticalLayout::default(),
+      width: default_width(),
+      height: default_height(),
+    }
+  }
 }
 
 impl Store {
