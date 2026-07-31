@@ -38,6 +38,8 @@ pub fn init(app: &App) -> Result<()> {
 
   gtk_window.init_layer_shell();
 
+  gtk_window.set_namespace("positron");
+
   gtk_window.set_layer(gtk_layer_shell::Layer::Top);
   gtk_window.set_anchor(
     gtk_layer_shell::Edge::Top,
