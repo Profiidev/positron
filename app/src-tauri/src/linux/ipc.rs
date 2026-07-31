@@ -1,8 +1,12 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use clap::Subcommand;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
-use tarpc::server::{BaseChannel, Channel};
+use tarpc::{
+  server::{BaseChannel, Channel},
+  tokio_serde::formats::Bincode,
+};
 use tauri::{AppHandle, Manager, async_runtime::spawn};
 use uuid::Uuid;
 
@@ -13,15 +17,15 @@ use crate::{
 
 const SOCKET_PATH: &str = "/tmp/positron.sock";
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Subcommand)]
 pub enum Page {
   Settings,
   Notes,
-  Note(Uuid),
+  Note { uuid: Uuid },
 }
 
 #[tarpc::service]
-trait AppIpc {
+pub trait AppIpc {
   async fn show();
   async fn hide();
   async fn toggle();
@@ -51,7 +55,7 @@ impl AppIpc for AppIpcServer {
       .send(match page {
         Page::Notes => UpdateMessage::OpenNotes,
         Page::Settings => UpdateMessage::OpenSettings,
-        Page::Note(uuid) => UpdateMessage::OpenNote { uuid },
+        Page::Note { uuid } => UpdateMessage::OpenNote { uuid },
       })
       .await;
   }
@@ -84,4 +88,12 @@ async fn run_server(sock_path: PathBuf, handle: AppHandle) -> anyhow::Result<()>
     .await;
 
   Ok(())
+}
+
+pub async fn client() -> anyhow::Result<AppIpcClient> {
+  let transport =
+    tarpc::serde_transport::unix::connect(Path::new(SOCKET_PATH), Bincode::default).await?;
+
+  let client = AppIpcClient::new(tarpc::client::Config::default(), transport).spawn();
+  Ok(client)
 }

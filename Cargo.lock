@@ -5545,6 +5545,7 @@ dependencies = [
  "async-channel",
  "base64 0.22.1",
  "chrono",
+ "clap",
  "cookie",
  "dashmap",
  "futures",

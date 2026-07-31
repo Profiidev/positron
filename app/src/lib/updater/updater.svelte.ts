@@ -90,7 +90,7 @@ const handleMessage = (message: UpdateMessage) => {
       break;
     }
     case UpdateMessageType.OpenNotes: {
-      goto('/notes').catch(() => {});
+      goto('/').catch(() => {});
       break;
     }
     case UpdateMessageType.OpenSettings: {

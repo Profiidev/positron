@@ -20,6 +20,9 @@ use crate::{
   user::{any_user_avatar, user_avatar, user_info},
 };
 
+#[cfg(target_os = "linux")]
+pub use linux::cli::run as run_cli;
+
 mod api;
 mod auth;
 mod deep_link;
