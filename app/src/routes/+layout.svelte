@@ -9,6 +9,7 @@
   import { authStatusState, setupStatusState } from '$lib/updater/state.svelte';
   import { setOnline, startListener } from '$lib/updater/updater.svelte';
   import { online } from 'svelte/reactivity/window';
+  import { IS_DESKTOP } from '$lib/env';
 
   const setupStatus = $derived(setupStatusState.value);
   const authStatus = $derived(authStatusState.value);
@@ -70,6 +71,9 @@
 <ModeWatcher />
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
-<div class="bg-background size-full rounded-2xl">
+<div
+  class={'bg-background size-full rounded-2xl' +
+    (IS_DESKTOP ? ' border-2' : '')}
+>
   {@render children()}
 </div>
