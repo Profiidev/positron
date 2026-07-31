@@ -1,3 +1,5 @@
+use tauri::Manager;
+
 use crate::{
   api::Client,
   auth::{auth_status, confirm_code, logout, start_auth},
@@ -19,31 +21,32 @@ use crate::{
 mod api;
 mod auth;
 mod deep_link;
+#[cfg(target_os = "linux")]
+mod layer_shell;
 mod notes;
 mod setup;
 mod store;
 mod updater;
 mod user;
 
-#[cfg(desktop)]
-mod tauri_plugin_barcode_scanner {
-  use tauri::Wry;
-
-  pub fn init() -> tauri::plugin::TauriPlugin<Wry> {
-    unimplemented!()
-  }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  let builder = tauri::Builder::default();
+  let builder =
+    tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+      let _ = app
+        .get_webview_window("main")
+        .expect("no main window")
+        .set_focus();
+    }));
 
   #[cfg(feature = "test")]
   let builder = builder.plugin(tauri_plugin_webdriver::init());
 
+  #[cfg(mobile)]
+  let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+
   builder
     .plugin(tauri_plugin_http::init())
-    .plugin(tauri_plugin_barcode_scanner::init())
     .plugin(tauri_plugin_store::Builder::new().build())
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_opener::init())
@@ -85,6 +88,15 @@ pub fn run() {
       save_note_content,
     ])
     .setup(|app| {
+      #[cfg(any(windows, target_os = "linux"))]
+      {
+        use tauri_plugin_deep_link::DeepLinkExt;
+        app.deep_link().register_all()?;
+      }
+
+      #[cfg(target_os = "linux")]
+      layer_shell::init(app)?;
+
       Store::init(app.handle())?;
       Updater::init(app.handle());
       Client::init(app.handle())?;
