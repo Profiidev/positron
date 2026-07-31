@@ -228,7 +228,9 @@ export const openDeepLink = (url: string): void => {
     });
 
     if (result.error) {
-      throw new Error(`Failed to run xdg-open for ${url}: ${result.error.message}`);
+      throw new Error(
+        `Failed to run xdg-open for ${url}: ${result.error.message}`
+      );
     }
     if (result.signal) {
       throw new Error(
