@@ -1,4 +1,3 @@
-#[cfg(target_os = "linux")]
 use tauri::AppHandle;
 use tauri::{Result, State};
 
