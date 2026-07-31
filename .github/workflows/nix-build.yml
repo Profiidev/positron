@@ -1,0 +1,33 @@
+name: Cache App
+
+on:
+  pull_request:
+  release:
+    types:
+      - published
+
+jobs:
+  cache-app:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31
+      - name: Install Hibernation CLI
+        uses: profiidev/hibernation@e422963eee9a8dfacc6a6e4f588236a448013ea4 # v0
+        if: github.event_name != 'pull_request'
+        with:
+          url: ${{ secrets.HIBERNATION_URL }}
+          token: ${{ secrets.HIBERNATION_TOKEN }}
+          signing-key: ${{ secrets.HIBERNATION_SIGNING_KEY }}
+
+      - name: Run build
+        run: nix build . -Lv --print-out-paths --accept-flake-config
+
+      - name: Cache results
+        if: github.event_name != 'pull_request'
+        run: hibernation push projects $(readlink result)
