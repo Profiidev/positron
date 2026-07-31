@@ -52,6 +52,12 @@ tauri-plugin-barcode-scanner = "2"
 gtk = "0.18.2"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 async-channel = "2.5.0"
+tarpc = { version = "0.37.0", features = [
+  "serde-transport-bincode",
+  "tokio1",
+  "unix"
+] }
+futures = "0.3.33"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

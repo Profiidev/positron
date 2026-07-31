@@ -74,6 +74,11 @@ pub enum UpdateMessage {
   },
   UsersUpdated,
   AppSettings,
+  OpenNote {
+    uuid: Uuid,
+  },
+  OpenNotes,
+  OpenSettings,
 }
 
 #[tauri::command]

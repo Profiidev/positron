@@ -85,6 +85,18 @@ const handleMessage = (message: UpdateMessage) => {
       goto('/').catch(() => {});
       break;
     }
+    case UpdateMessageType.OpenNote: {
+      goto(`/notes/${message.uuid}`).catch(() => {});
+      break;
+    }
+    case UpdateMessageType.OpenNotes: {
+      goto('/notes').catch(() => {});
+      break;
+    }
+    case UpdateMessageType.OpenSettings: {
+      goto('/settings').catch(() => {});
+      break;
+    }
     default: {
       break;
     }

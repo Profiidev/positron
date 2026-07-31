@@ -7,6 +7,9 @@ use crate::store::{HorizontalLayout, Settings, Store, VerticalLayout};
 
 pub enum GtkThreadRPC {
   ApplySettings(Settings),
+  Show,
+  Hide,
+  Toggle,
 }
 
 pub struct GtkThreadState(async_channel::Sender<GtkThreadRPC>);
@@ -103,6 +106,19 @@ pub fn handle_rpc(msg: GtkThreadRPC, gtk_window: &gtk::ApplicationWindow) {
 
       gtk_window.set_width_request(settings.width as i32);
       gtk_window.set_height_request(settings.height as i32);
+    }
+    GtkThreadRPC::Show => {
+      gtk_window.show_all();
+    }
+    GtkThreadRPC::Hide => {
+      gtk_window.hide();
+    }
+    GtkThreadRPC::Toggle => {
+      if gtk_window.is_visible() {
+        gtk_window.hide();
+      } else {
+        gtk_window.show_all();
+      }
     }
   }
 }

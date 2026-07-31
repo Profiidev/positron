@@ -24,6 +24,8 @@ mod api;
 mod auth;
 mod deep_link;
 #[cfg(target_os = "linux")]
+mod ipc;
+#[cfg(target_os = "linux")]
 mod layer_shell;
 mod notes;
 mod settings;
@@ -105,12 +107,15 @@ pub fn run() {
 
       #[cfg(target_os = "linux")]
       layer_shell::init(app)?;
+      #[cfg(target_os = "linux")]
+      ipc::spawn_server(app.handle());
 
       Updater::init(app.handle());
       Client::init(app.handle())?;
       NoteState::init(app.handle());
       NotesStore::init(app.handle())?;
       deep_link::setup_deep_link(app.handle())?;
+
       Ok(())
     })
     .run(tauri::generate_context!())

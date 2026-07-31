@@ -14,7 +14,10 @@ export enum UpdateMessageType {
   ConfirmAuthMissingCode = 'ConfirmAuthMissingCode',
   None = 'None',
   UsersUpdated = 'UsersUpdated',
-  AppSettings = 'AppSettings'
+  AppSettings = 'AppSettings',
+  OpenNotes = 'OpenNotes',
+  OpenNote = 'OpenNote',
+  OpenSettings = 'OpenSettings'
 }
 
 // oxlint-disable-next-line consistent-type-definitions
@@ -33,10 +36,17 @@ export type UpdateMessage =
         | UpdateMessageType.SetupUpdated
         | UpdateMessageType.UserInfoUpdated
         | UpdateMessageType.NotesUpdated
-        | UpdateMessageType.UsersUpdated;
+        | UpdateMessageType.UsersUpdated
+        | UpdateMessageType.AppSettings
+        | UpdateMessageType.OpenNotes
+        | UpdateMessageType.OpenSettings;
     }
   | {
       type: UpdateMessageType.ConfirmAuth;
       code: string;
       redirect?: string;
+    }
+  | {
+      type: UpdateMessageType.OpenNote;
+      uuid: string;
     };
