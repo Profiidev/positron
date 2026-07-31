@@ -24,9 +24,7 @@ mod api;
 mod auth;
 mod deep_link;
 #[cfg(target_os = "linux")]
-mod ipc;
-#[cfg(target_os = "linux")]
-mod layer_shell;
+mod linux;
 mod notes;
 mod settings;
 mod setup;
@@ -106,9 +104,9 @@ pub fn run() {
       Store::init(app.handle())?;
 
       #[cfg(target_os = "linux")]
-      layer_shell::init(app)?;
+      linux::layer_shell::init(app)?;
       #[cfg(target_os = "linux")]
-      ipc::spawn_server(app.handle());
+      linux::ipc::spawn_server(app.handle());
 
       Updater::init(app.handle());
       Client::init(app.handle())?;

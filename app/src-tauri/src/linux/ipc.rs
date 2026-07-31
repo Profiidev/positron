@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager, async_runtime::spawn};
 use uuid::Uuid;
 
 use crate::{
-  layer_shell::{self, GtkThreadRPC},
+  linux::layer_shell::{self, GtkThreadRPC},
   updater::{UpdateMessage, Updater},
 };
 

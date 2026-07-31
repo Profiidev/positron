@@ -3,7 +3,7 @@ use tauri::AppHandle;
 use tauri::{Result, State};
 
 #[cfg(target_os = "linux")]
-use crate::layer_shell;
+use crate::linux::layer_shell;
 use crate::{
   store::{Settings, Store},
   updater::{UpdateMessage, Updater},
