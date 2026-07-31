@@ -8,6 +8,7 @@ import {
   listUsersNote,
   notesConfig
 } from '$lib/commands/notes.svelte';
+import { getSettings } from '$lib/commands/settings.svelte';
 
 const updater_cbs = new Map<UpdateMessageType, Map<string, () => void>>();
 
@@ -118,6 +119,11 @@ export const notesConfigState = create_updater(
 export const noteUsersState = create_updater(
   UpdateMessageType.UsersUpdated,
   listUsersNote
+);
+
+export const appSettingsState = create_updater(
+  UpdateMessageType.AppSettings,
+  getSettings
 );
 
 export const onUpdate = (type: UpdateMessageType, cb: () => void) => {

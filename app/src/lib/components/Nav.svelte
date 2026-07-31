@@ -7,6 +7,7 @@
   import NotebookPen from '@lucide/svelte/icons/notebook-pen';
   import ScanLine from '@lucide/svelte/icons/scan-line';
   import LogOut from '@lucide/svelte/icons/log-out';
+  import Settings from '@lucide/svelte/icons/settings';
   import { IS_MOBILE } from '$lib/env';
 </script>
 
@@ -23,6 +24,15 @@
     >
       <ScanLine />
       Scan Login
+    </Button>
+  {:else}
+    <Button
+      variant="ghost"
+      class="cursor-pointer"
+      onclick={() => goto('/settings')}
+    >
+      <Settings />
+      Settings
     </Button>
   {/if}
   {#if !isConnected()}

@@ -73,6 +73,7 @@ pub enum UpdateMessage {
     redirect: Option<String>,
   },
   UsersUpdated,
+  AppSettings,
 }
 
 #[tauri::command]

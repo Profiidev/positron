@@ -13,7 +13,8 @@ export enum UpdateMessageType {
   ConfirmAuth = 'ConfirmAuth',
   ConfirmAuthMissingCode = 'ConfirmAuthMissingCode',
   None = 'None',
-  UsersUpdated = 'UsersUpdated'
+  UsersUpdated = 'UsersUpdated',
+  AppSettings = 'AppSettings'
 }
 
 // oxlint-disable-next-line consistent-type-definitions

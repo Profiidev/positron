@@ -1,9 +1,14 @@
 use anyhow::{Context, Result};
 use gtk::traits::{ContainerExt, GtkWindowExt, WidgetExt};
 use gtk_layer_shell::LayerShell;
-use tauri::{App, Manager};
+use tauri::{App, Manager, async_runtime::block_on};
+
+use crate::store::{HorizontalLayout, Store, VerticalLayout};
 
 pub fn init(app: &App) -> Result<()> {
+  let store = app.state::<Store>();
+  let settings = block_on(store.settings());
+
   let main_window = app
     .get_webview_window("main")
     .context("Main window missing")?;
@@ -25,10 +30,22 @@ pub fn init(app: &App) -> Result<()> {
   gtk_window.init_layer_shell();
 
   gtk_window.set_layer(gtk_layer_shell::Layer::Top);
-  gtk_window.set_anchor(gtk_layer_shell::Edge::Top, false);
-  gtk_window.set_anchor(gtk_layer_shell::Edge::Left, false);
-  gtk_window.set_anchor(gtk_layer_shell::Edge::Right, false);
-  gtk_window.set_anchor(gtk_layer_shell::Edge::Bottom, false);
+  gtk_window.set_anchor(
+    gtk_layer_shell::Edge::Top,
+    settings.vertical_layout == VerticalLayout::Top,
+  );
+  gtk_window.set_anchor(
+    gtk_layer_shell::Edge::Left,
+    settings.horizontal_layout == HorizontalLayout::Left,
+  );
+  gtk_window.set_anchor(
+    gtk_layer_shell::Edge::Right,
+    settings.horizontal_layout == HorizontalLayout::Right,
+  );
+  gtk_window.set_anchor(
+    gtk_layer_shell::Edge::Bottom,
+    settings.vertical_layout == VerticalLayout::Bottom,
+  );
 
   gtk_window.set_width_request(800);
   gtk_window.set_height_request(400);

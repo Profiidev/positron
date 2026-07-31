@@ -13,6 +13,7 @@ const INSTANCE_URL_KEY: &str = "instance_url";
 const TOKEN_KEY: &str = "token";
 const AUTH_VERIFIER_KEY: &str = "auth_verifier";
 const USER_INFO_KEY: &str = "user_info";
+const SETTINGS_KEY: &str = "settings";
 
 const AVATAR_STORE_PATH: &str = "avatar_store.json";
 const AVATAR_STORE_KEY: &str = "avatar";
@@ -29,8 +30,31 @@ pub struct Store {
   avatar_store: Arc<tauri_plugin_store::Store<Wry>>,
   auth_verifier: Mutex<Option<String>>,
   user_info: Mutex<Option<UserInfo>>,
+  settings: Mutex<Settings>,
   pub instance_url: Arc<Mutex<Option<Url>>>,
   pub token: Arc<Mutex<Option<String>>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub enum HorizontalLayout {
+  Left,
+  Center,
+  #[default]
+  Right,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub enum VerticalLayout {
+  #[default]
+  Top,
+  Center,
+  Bottom,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct Settings {
+  pub horizontal_layout: HorizontalLayout,
+  pub vertical_layout: VerticalLayout,
 }
 
 impl Store {
@@ -56,11 +80,17 @@ impl Store {
       .get(AUTH_VERIFIER_KEY)
       .and_then(|val| val.as_str().map(|s| s.to_string()));
 
+    let settings = store
+      .get(SETTINGS_KEY)
+      .and_then(|val| serde_json::from_value(val).ok())
+      .unwrap_or_default();
+
     let store = Self {
       store,
       avatar_store,
       auth_verifier: Mutex::new(auth_verifier),
       instance_url: Arc::new(Mutex::new(instance_url)),
+      settings: Mutex::new(settings),
       token: Arc::new(Mutex::new(token)),
       user_info: Mutex::new(user_info),
     };
@@ -145,6 +175,19 @@ impl Store {
       self.avatar_store.delete(AVATAR_STORE_KEY);
     }
     self.avatar_store.save()?;
+    Ok(())
+  }
+
+  pub async fn settings(&self) -> Settings {
+    self.settings.lock().await.clone()
+  }
+
+  pub async fn set_settings(&self, settings: Settings) -> Result<()> {
+    self
+      .store
+      .set(SETTINGS_KEY, serde_json::to_value(&settings)?);
+    *self.settings.lock().await = settings;
+    self.store.save()?;
     Ok(())
   }
 }

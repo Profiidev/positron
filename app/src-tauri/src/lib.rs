@@ -13,6 +13,7 @@ use crate::{
     connection::{NoteState, connect_note, disconnect_note, send_note},
     storage::{NotesStore, get_note_store, list_notes_store, note_content, save_note_content},
   },
+  settings::{get_settings, save_settings},
   setup::{reset_setup, setup, setup_status},
   store::Store,
   updater::{Updater, connect_updater, disconnect_updater, set_online},
@@ -25,6 +26,7 @@ mod deep_link;
 #[cfg(target_os = "linux")]
 mod layer_shell;
 mod notes;
+mod settings;
 mod setup;
 mod store;
 mod updater;
@@ -89,6 +91,8 @@ pub fn run() {
       get_note_store,
       note_content,
       save_note_content,
+      save_settings,
+      get_settings
     ])
     .setup(|app| {
       #[cfg(all(any(windows, target_os = "linux"), debug_assertions))]
@@ -97,10 +101,11 @@ pub fn run() {
         app.deep_link().register_all()?;
       }
 
+      Store::init(app.handle())?;
+
       #[cfg(target_os = "linux")]
       layer_shell::init(app)?;
 
-      Store::init(app.handle())?;
       Updater::init(app.handle());
       Client::init(app.handle())?;
       NoteState::init(app.handle());
