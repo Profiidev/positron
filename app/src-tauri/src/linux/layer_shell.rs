@@ -62,6 +62,12 @@ pub fn init(app: &App) -> Result<()> {
   gtk_window.set_keyboard_mode(gtk_layer_shell::KeyboardMode::OnDemand);
 
   #[cfg(not(debug_assertions))]
+  gtk_window.connect_focus_out_event(move |window, _event| {
+    window.hide();
+    gtk::glib::Propagation::Stop
+  });
+
+  #[cfg(not(debug_assertions))]
   gtk_window.hide();
   #[cfg(debug_assertions)]
   gtk_window.show_all();

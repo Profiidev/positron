@@ -18,7 +18,7 @@ pub async fn get_settings(state: State<'_, Store>) -> Result<Settings> {
 pub async fn save_settings(
   state: State<'_, Store>,
   updater: State<'_, Updater>,
-  #[cfg(target_os = "linux")] handle: AppHandle,
+  #[allow(unused)] handle: AppHandle,
   settings: Settings,
 ) -> Result<()> {
   #[cfg(target_os = "linux")]
