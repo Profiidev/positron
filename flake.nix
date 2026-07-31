@@ -36,6 +36,8 @@
 
           src = ./.;
 
+          DESKTOP_APP_TARGET = "true";
+
           npmDeps = pkgs.importNpmLock {
             npmRoot = src;
           };
