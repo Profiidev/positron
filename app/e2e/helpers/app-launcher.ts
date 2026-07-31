@@ -210,6 +210,27 @@ export const openDeepLink = (url: string): void => {
   throw new Error(`openDeepLink is not implemented for platform ${platform}`);
 };
 
+/**
+ * Runs the Linux layer-shell control CLI (`positron ipc show|hide|toggle|open
+ * ...`, see `src-tauri/src/linux/cli.rs`) against the already-running desktop
+ * instance, over the same Unix-socket IPC server the CLI uses in real usage
+ * (`src-tauri/src/linux/ipc.rs`). Desktop-only: this module doesn't exist on
+ * Android/iOS builds.
+ */
+export const runIpcCommand = (
+  args: string[]
+): { success: boolean; output: string } => {
+  const appPath = getAppPath();
+  const result = spawnSync(appPath, ['ipc', ...args], { encoding: 'utf8' });
+
+  if (result.error) {
+    return { output: result.error.message, success: false };
+  }
+
+  const output = (result.stdout || '') + (result.stderr || '');
+  return { output, success: result.status === 0 };
+};
+
 // Forces the X11 GDK backend. Without this, a spawned GTK app inherits
 // whatever `WAYLAND_DISPLAY`/session type the parent shell has (a Wayland
 // desktop locally, or a leaked env var in CI) and tries to connect there
