@@ -207,9 +207,7 @@ export const openDeepLink = (url: string): void => {
     return;
   }
 
-  throw new Error(
-    `openDeepLink is not implemented for platform ${platform}`
-  );
+  throw new Error(`openDeepLink is not implemented for platform ${platform}`);
 };
 
 // Forces the X11 GDK backend. Without this, a spawned GTK app inherits
