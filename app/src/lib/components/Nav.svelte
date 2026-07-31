@@ -11,7 +11,7 @@
   import { IS_MOBILE } from '$lib/env';
 </script>
 
-<nav class="bg-background mb-1 flex items-center gap-1 border-b p-2 pb-1">
+<nav class="mb-1 flex items-center gap-1 border-b p-2 pb-1">
   <Button variant="ghost" class="cursor-pointer" onclick={() => goto('/')}>
     <NotebookPen />
     Notes
