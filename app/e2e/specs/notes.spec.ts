@@ -30,10 +30,11 @@ const CARD_TRASH = 'a[href^="/notes/"] button';
  * can't serve, so it's only exercised as far as create/open navigation.
  */
 describe('Notes', () => {
-  // Authentication is delivered over adb deep links, so Android only.
+  // Authentication is delivered via a deep link (adb on Android,
+  // relaunch-with-argv on desktop); iOS has no such mechanism in this harness.
   // oxlint-disable-next-line func-names
   before(function () {
-    if (process.env.TAURI_TEST_PLATFORM !== 'android') {
+    if (process.env.TAURI_TEST_PLATFORM === 'ios') {
       this.skip();
     }
   });

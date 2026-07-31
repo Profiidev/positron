@@ -69,37 +69,80 @@ export const isMobile = (): boolean => {
  * Calls a Tauri command through the IPC bridge that the runtime injects into
  * every webview (`window.__TAURI_INTERNALS__`). This lets specs drive and reset
  * the Rust-side app state directly, without going through the UI.
+ *
+ * Desktop (WebKitGTK) uses `executeAsync` (the WebDriver `execute/async`
+ * endpoint): `tauri-plugin-webdriver`'s desktop `execute/sync` handler
+ * evaluates the script and serializes whatever it synchronously completes
+ * with — for an `async` callback that's the unresolved `Promise` object
+ * itself, which serializes to `null` — while `execute/async` has a dedicated
+ * resolve/reject wrapper built for exactly this. Mobile keeps plain `execute`
+ * with an awaited callback: Android/iOS's webview already resolves a returned
+ * promise correctly there, and its `execute/async` native bridge has been
+ * unreliable (observed hanging to the script timeout in practice).
  */
 export const invokeCommand = async <T = unknown>(
   command: string,
   args: Record<string, unknown> = {}
 ): Promise<T> => {
-  const result = await browser.execute(
-    async (cmd: string, payload: Record<string, unknown>) => {
-      const internals = (
-        window as unknown as {
-          __TAURI_INTERNALS__?: {
-            invoke: (c: string, a?: unknown) => Promise<unknown>;
-          };
-        }
-      ).__TAURI_INTERNALS__;
+  interface CommandResult {
+    __ok?: T;
+    __error?: string;
+  }
 
-      if (!internals?.invoke) {
-        return { __error: 'Tauri IPC bridge not available' };
-      }
+  const result = isMobile()
+    ? await browser.execute(
+        async (cmd: string, payload: Record<string, unknown>) => {
+          const internals = (
+            window as unknown as {
+              __TAURI_INTERNALS__?: {
+                invoke: (c: string, a?: unknown) => Promise<unknown>;
+              };
+            }
+          ).__TAURI_INTERNALS__;
 
-      try {
-        const value = await internals.invoke(cmd, payload);
-        return { __ok: value };
-      } catch (error: unknown) {
-        return { __error: String(error) };
-      }
-    },
-    command,
-    args
-  );
+          if (!internals?.invoke) {
+            return { __error: 'Tauri IPC bridge not available' };
+          }
 
-  const typed = result as { __ok?: T; __error?: string };
+          try {
+            const value = await internals.invoke(cmd, payload);
+            return { __ok: value };
+          } catch (error: unknown) {
+            return { __error: String(error) };
+          }
+        },
+        command,
+        args
+      )
+    : await browser.executeAsync(
+        (
+          cmd: string,
+          payload: Record<string, unknown>,
+          done: (result: CommandResult) => void
+        ) => {
+          const internals = (
+            window as unknown as {
+              __TAURI_INTERNALS__?: {
+                invoke: (c: string, a?: unknown) => Promise<unknown>;
+              };
+            }
+          ).__TAURI_INTERNALS__;
+
+          if (!internals?.invoke) {
+            done({ __error: 'Tauri IPC bridge not available' });
+            return;
+          }
+
+          internals.invoke(cmd, payload).then(
+            (value) => done({ __ok: value as T }),
+            (error: unknown) => done({ __error: String(error) })
+          );
+        },
+        command,
+        args
+      );
+
+  const typed = result as CommandResult;
   if (typed.__error !== undefined) {
     throw new Error(`invoke(${command}) failed: ${typed.__error}`);
   }

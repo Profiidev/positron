@@ -4,6 +4,7 @@ import {
   authenticateViaDeepLink,
   byButton,
   getRoute,
+  isMobile,
   resetAppData,
   resetMockState,
   seedSetup,
@@ -12,9 +13,11 @@ import {
 } from '../helpers/test-utils.js';
 
 describe('Main page (authenticated)', () => {
+  // Authentication is delivered via a deep link (adb on Android,
+  // relaunch-with-argv on desktop); iOS has no such mechanism in this harness.
   // oxlint-disable-next-line func-names
   before(function () {
-    if (process.env.TAURI_TEST_PLATFORM !== 'android') {
+    if (process.env.TAURI_TEST_PLATFORM === 'ios') {
       this.skip();
     }
   });
@@ -31,7 +34,10 @@ describe('Main page (authenticated)', () => {
     expect(await getRoute()).toBe('/');
     // The nav exposes the global actions; the page itself shows the notes list.
     await expect(byButton('Logout')).toBeDisplayed();
-    await expect(byButton('Scan Login')).toBeDisplayed();
+    // The nav shows "Scan Login" on mobile, "Settings" on desktop.
+    await expect(
+      byButton(isMobile() ? 'Scan Login' : 'Settings')
+    ).toBeDisplayed();
     await waitForBodyText('Notes');
     await waitForBodyText('No notes yet');
   });

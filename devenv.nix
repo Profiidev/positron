@@ -14,6 +14,7 @@ in
     gtk-layer-shell
     glib-networking
     desktop-file-utils
+    xvfb-run
   ];
 
   android = {

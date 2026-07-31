@@ -161,39 +161,69 @@ export const ensureAndroidAppRunning = async (port = 4445): Promise<void> => {
 };
 
 /**
- * Fires an OS deep link at the app via `adb`, the way the real auth flow
- * delivers `positron://auth?...` / `positron://login?...` URLs back to the app
- * after the external browser step. The URL is single-quoted so the device
- * shell keeps `&` query separators intact instead of backgrounding the command.
+ * Fires an OS deep link at the app, the way the real auth flow delivers
+ * `positron://auth?...` / `positron://login?...` URLs back to the app after the
+ * external browser step.
+ *
+ * - Android: sent via `adb`. The URL is single-quoted so the device shell
+ *   keeps `&` query separators intact instead of backgrounding the command.
+ * - Desktop: the OS equivalent of a registered scheme handler invoking the app
+ *   again is a second process launched with the URL as argv. `setup_deep_link`
+ *   registers the scheme at runtime on Linux/Windows debug builds, and
+ *   `tauri-plugin-single-instance`'s `deep-link` feature (see
+ *   `src-tauri/Cargo.toml`) forwards that argv to the already-running instance
+ *   before this short-lived process exits, so no adb-style bridge is needed.
  */
 export const openDeepLink = (url: string): void => {
   const platform = getPlatform();
-  if (platform !== 'android') {
-    throw new Error(
-      `openDeepLink is only implemented for android (got ${platform})`
-    );
+
+  if (platform === 'android') {
+    const result = runAdb([
+      'shell',
+      'am',
+      'start',
+      '-W',
+      '-a',
+      'android.intent.action.VIEW',
+      '-d',
+      `'${url}'`,
+      ANDROID_PACKAGE
+    ]);
+    if (!result.success) {
+      throw new Error(`Failed to open deep link ${url}: ${result.output}`);
+    }
+    console.log(`Opened deep link: ${url}`);
+    return;
   }
 
-  const result = runAdb([
-    'shell',
-    'am',
-    'start',
-    '-W',
-    '-a',
-    'android.intent.action.VIEW',
-    '-d',
-    `'${url}'`,
-    ANDROID_PACKAGE
-  ]);
-  if (!result.success) {
-    throw new Error(`Failed to open deep link ${url}: ${result.output}`);
+  if (platform === 'desktop') {
+    const appPath = getAppPath();
+    const child = spawn(appPath, [url], {
+      env: desktopAppEnv(),
+      stdio: 'ignore'
+    });
+    child.unref();
+    console.log(`Opened deep link via relaunch: ${url}`);
+    return;
   }
-  console.log(`Opened deep link: ${url}`);
+
+  throw new Error(
+    `openDeepLink is not implemented for platform ${platform}`
+  );
 };
 
-export const getAppPath = (): string => {
-  const base = path.resolve(currentDirname, '../../src-tauri/target/release');
+// Forces the X11 GDK backend. Without this, a spawned GTK app inherits
+// whatever `WAYLAND_DISPLAY`/session type the parent shell has (a Wayland
+// desktop locally, or a leaked env var in CI) and tries to connect there
+// instead of the X server (real or Xvfb) the app-launcher actually targets,
+// crashing immediately with "Gdk-Message: Error 71 (Protocol error)
+// dispatching to Wayland display."
+const desktopAppEnv = (): NodeJS.ProcessEnv => ({
+  ...process.env,
+  GDK_BACKEND: 'x11'
+});
 
+const resolveBinaryInBase = (base: string): string => {
   switch (process.platform) {
     case 'darwin': {
       // Try bundled app first, fall back to unbundled binary (--no-bundle)
@@ -216,29 +246,24 @@ export const getAppPath = (): string => {
   }
 };
 
-export const getDevAppPath = (): string => {
-  const base = path.resolve(currentDirname, '../../src-tauri/target/debug');
+// `app/src-tauri` is a member of the root Cargo workspace (see /Cargo.toml), so
+// cargo (and thus `tauri build`) puts binaries in the *workspace* target dir at
+// the repo root, not `app/src-tauri/target`.
+const WORKSPACE_TARGET_DIR = path.resolve(currentDirname, '../../../target');
 
-  switch (process.platform) {
-    case 'darwin': {
-      // Try bundled app first, fall back to unbundled binary
-      const bundledPath = path.resolve(
-        base,
-        `bundle/macos/${PRODUCT_NAME}.app/Contents/MacOS/${BINARY_NAME}`
-      );
-      const unbundledPath = path.resolve(base, BINARY_NAME);
-      return existsSync(bundledPath) ? bundledPath : unbundledPath;
-    }
-    case 'win32': {
-      return path.resolve(base, `${BINARY_NAME}.exe`);
-    }
-    case 'linux': {
-      return path.resolve(base, BINARY_NAME);
-    }
-    default: {
-      throw new Error(`Unsupported platform: ${process.platform}`);
-    }
+/**
+ * Resolves the built app binary, preferring a `--debug` build (what
+ * `npm run build:linux` produces) and falling back to a `--release` one.
+ */
+export const getAppPath = (): string => {
+  const debugPath = resolveBinaryInBase(
+    path.resolve(WORKSPACE_TARGET_DIR, 'debug')
+  );
+  if (existsSync(debugPath)) {
+    return debugPath;
   }
+
+  return resolveBinaryInBase(path.resolve(WORKSPACE_TARGET_DIR, 'release'));
 };
 
 const waitForServer = async (port: number, timeout = 30_000): Promise<void> => {
@@ -297,7 +322,7 @@ export const startApp = async (
 
   appProcess = spawn(appPath, [], {
     env: {
-      ...process.env,
+      ...desktopAppEnv(),
       TAURI_WEBDRIVER_PORT: port.toString()
     },
     stdio: ['ignore', 'pipe', 'pipe']

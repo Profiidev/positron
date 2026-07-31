@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "wdio run wdio.conf.js",
+    "test:desktop": "TAURI_TEST_PLATFORM=desktop npm run test",
     "test:android": "TAURI_TEST_PLATFORM=android npm run test",
+    "build:linux": "cd .. && npm run tauri:desktop build -- --debug --no-bundle --features test",
     "build:x86": "cd .. && npm run tauri android build -- --apk --target x86_64 --debug --features test",
     "build:arm": "cd .. && npm run tauri android build -- --apk --target aarch64 --debug --features test",
     "appium": "appium"

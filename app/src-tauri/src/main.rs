@@ -5,7 +5,7 @@ fn main() {
   #[cfg(target_os = "linux")]
   {
     let args = std::env::args().collect::<Vec<String>>();
-    if args.len() > 1 {
+    if args.get(1).map(String::as_str) == Some("ipc") {
       positron_lib::run_cli();
     } else {
       positron_lib::run();
