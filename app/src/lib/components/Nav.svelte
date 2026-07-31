@@ -7,6 +7,7 @@
   import NotebookPen from '@lucide/svelte/icons/notebook-pen';
   import ScanLine from '@lucide/svelte/icons/scan-line';
   import LogOut from '@lucide/svelte/icons/log-out';
+  import { IS_MOBILE } from '$lib/env';
 </script>
 
 <nav class="bg-background mb-1 flex items-center gap-1 border-b p-2 pb-1">
@@ -14,10 +15,16 @@
     <NotebookPen />
     Notes
   </Button>
-  <Button variant="ghost" class="cursor-pointer" onclick={() => goto('/scan')}>
-    <ScanLine />
-    Scan Login
-  </Button>
+  {#if IS_MOBILE}
+    <Button
+      variant="ghost"
+      class="cursor-pointer"
+      onclick={() => goto('/scan')}
+    >
+      <ScanLine />
+      Scan Login
+    </Button>
+  {/if}
   {#if !isConnected()}
     <Badge variant="destructive">Disconnected</Badge>
   {/if}

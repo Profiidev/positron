@@ -11,7 +11,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "sync": "svelte-kit sync",
-    "tauri": "tauri",
+    "tauri:desktop": "DESKTOP_APP_TARGET=true tauri",
+    "tauri:mobile": "tauri",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"

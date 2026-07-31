@@ -4,7 +4,7 @@
     "app"
   ],
   "scripts": {
-    "build": "npm run sync -w frontend && cd app && npm run build"
+    "build": "DESKTOP_APP_TARGET=true npm run sync -w frontend && cd app && npm run build"
   },
   "dependencies": {
     "y-websocket": "^3.0.0"
