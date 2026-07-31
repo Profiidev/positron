@@ -1,3 +1,4 @@
+#[cfg(desktop)]
 use tauri::Manager;
 
 use crate::{
@@ -31,13 +32,15 @@ mod user;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  let builder =
-    tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-      let _ = app
-        .get_webview_window("main")
-        .expect("no main window")
-        .set_focus();
-    }));
+  let builder = tauri::Builder::default();
+
+  #[cfg(desktop)]
+  let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let _ = app
+      .get_webview_window("main")
+      .expect("no main window")
+      .set_focus();
+  }));
 
   #[cfg(feature = "test")]
   let builder = builder.plugin(tauri_plugin_webdriver::init());
