@@ -3,6 +3,9 @@
     "frontend",
     "app"
   ],
+  "scripts": {
+    "build": "npm run sync -w frontend && cd app && npm run build"
+  },
   "dependencies": {
     "y-websocket": "^3.0.0"
   },

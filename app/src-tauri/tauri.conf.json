@@ -39,7 +39,10 @@
           "scheme": ["positron"],
           "appLink": false
         }
-      ]
+      ],
+      "desktop": {
+        "schemes": ["positron"]
+      }
     }
   }
 }

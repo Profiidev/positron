@@ -88,7 +88,7 @@ pub fn run() {
       save_note_content,
     ])
     .setup(|app| {
-      #[cfg(any(windows, target_os = "linux"))]
+      #[cfg(all(any(windows, target_os = "linux"), debug_assertions))]
       {
         use tauri_plugin_deep_link::DeepLinkExt;
         app.deep_link().register_all()?;

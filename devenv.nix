@@ -13,6 +13,7 @@ in
     nodejs
     gtk-layer-shell
     glib-networking
+    desktop-file-utils
   ];
 
   android = {

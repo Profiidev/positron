@@ -40,7 +40,10 @@
 
     if (ret.data && ret.response?.status === 200) {
       window.location.href = `positron://auth?code=${ret.data.code}`;
-      window.close();
+      const isMobile = navigator.userAgentData?.mobile ?? false;
+      if (isMobile) {
+        window.close();
+      }
     } else {
       toast.error('There was an error while login in');
     }
