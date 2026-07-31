@@ -178,4 +178,25 @@ describe('handleMessage', () => {
     send({ code: 'xyz', type: UpdateMessageType.ConfirmAuth });
     expect(goto).toHaveBeenCalledWith('/login?code=xyz');
   });
+
+  it('navigates home on OpenNotes', () => {
+    send({ type: UpdateMessageType.OpenNotes });
+    expect(goto).toHaveBeenCalledWith('/');
+  });
+
+  it('navigates to /settings on OpenSettings', () => {
+    send({ type: UpdateMessageType.OpenSettings });
+    expect(goto).toHaveBeenCalledWith('/settings');
+  });
+
+  it('navigates to /notes/:uuid on OpenNote', () => {
+    send({ type: UpdateMessageType.OpenNote, uuid: 'note-1' });
+    expect(goto).toHaveBeenCalledWith('/notes/note-1');
+  });
+
+  it('forwards AppSettings to triggerUpdates without navigating', () => {
+    send({ type: UpdateMessageType.AppSettings });
+    expect(goto).not.toHaveBeenCalled();
+    expect(triggerUpdates).toHaveBeenCalledWith(UpdateMessageType.AppSettings);
+  });
 });

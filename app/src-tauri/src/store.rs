@@ -258,4 +258,61 @@ mod test {
     let json = r#"{"uuid":"not-a-uuid","name":"n","email":"e"}"#;
     assert!(serde_json::from_str::<UserInfo>(json).is_err());
   }
+
+  use super::{HorizontalLayout, Settings, VerticalLayout};
+
+  #[test]
+  fn settings_default_is_centered_with_default_size() {
+    let settings = Settings::default();
+    assert!(settings.horizontal_layout == HorizontalLayout::Center);
+    assert!(settings.vertical_layout == VerticalLayout::Center);
+    assert_eq!(settings.width, 800);
+    assert_eq!(settings.height, 500);
+  }
+
+  #[test]
+  fn settings_round_trips_through_json() {
+    let original = Settings {
+      horizontal_layout: HorizontalLayout::Left,
+      vertical_layout: VerticalLayout::Bottom,
+      width: 1024,
+      height: 640,
+    };
+    let value = serde_json::to_value(&original).unwrap();
+    let restored: Settings = serde_json::from_value(value).unwrap();
+
+    assert!(restored.horizontal_layout == HorizontalLayout::Left);
+    assert!(restored.vertical_layout == VerticalLayout::Bottom);
+    assert_eq!(restored.width, 1024);
+    assert_eq!(restored.height, 640);
+  }
+
+  #[test]
+  fn settings_deserialization_defaults_width_and_height_when_absent() {
+    // `init()` loads a previously persisted `SETTINGS_KEY` blob with
+    // `serde_json::from_value`; a store written before width/height existed
+    // must still deserialize instead of falling back to `Settings::default()`
+    // (which would also discard the persisted layout).
+    let json = serde_json::json!({
+      "horizontal_layout": "Right",
+      "vertical_layout": "Top",
+    });
+    let settings: Settings = serde_json::from_value(json).unwrap();
+
+    assert!(settings.horizontal_layout == HorizontalLayout::Right);
+    assert!(settings.vertical_layout == VerticalLayout::Top);
+    assert_eq!(settings.width, 800);
+    assert_eq!(settings.height, 500);
+  }
+
+  #[test]
+  fn settings_deserialization_fails_on_invalid_layout_value() {
+    let json = serde_json::json!({
+      "horizontal_layout": "Diagonal",
+      "vertical_layout": "Top",
+      "width": 800,
+      "height": 500,
+    });
+    assert!(serde_json::from_value::<Settings>(json).is_err());
+  }
 }
