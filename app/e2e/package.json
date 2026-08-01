@@ -17,11 +17,11 @@
   },
   "devDependencies": {
     "@testing-library/webdriverio": "3.2.1",
-    "@types/node": "26.0.1",
+    "@types/node": "26.1.2",
     "@wdio/globals": "9.29.1",
     "@wdio/junit-reporter": "9.29.1",
-    "@wdio/local-runner": "9.29.1",
-    "@wdio/mocha-framework": "9.29.1",
+    "@wdio/local-runner": "9.30.0",
+    "@wdio/mocha-framework": "9.30.0",
     "@wdio/spec-reporter": "9.29.1",
     "junit-report-merger": "9.0.4"
   }
