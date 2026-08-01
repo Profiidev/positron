@@ -36,6 +36,11 @@
 
           src = ./.;
 
+          cargoBuildFlags = [
+            "-p"
+            "positron"
+          ];
+
           DESKTOP_APP_TARGET = "true";
 
           npmDeps = pkgs.importNpmLock {
