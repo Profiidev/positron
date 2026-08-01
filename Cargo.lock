@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "backend"
-version = "0.2.19"
+version = "0.3.0"
 dependencies = [
  "aide",
  "argon2",
@@ -5545,7 +5545,7 @@ checksum = "3d20d5497ef88037a52ff98267d066e7f11fcc5e99bbfbd58a42336193aacec3"
 
 [[package]]
 name = "positron"
-version = "0.2.19"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-channel",
