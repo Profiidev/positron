@@ -59,16 +59,22 @@ impl<'db> OauthClientTable<'db> {
   pub async fn has_user_access(&self, user: Uuid, client_id: Uuid) -> Result<bool, DbErr> {
     let count = o_auth_client::Entity::find()
       .filter(o_auth_client::Column::Id.eq(client_id))
-      .left_join(o_auth_client_user::Entity)
-      .left_join(o_auth_client_group::Entity)
+      .join_rev(
+        JoinType::LeftJoin,
+        o_auth_client_user::Relation::OAuthClient.def(),
+      )
+      .join_rev(
+        JoinType::LeftJoin,
+        o_auth_client_group::Relation::OAuthClient.def(),
+      )
       .join(
         JoinType::LeftJoin,
         o_auth_client_group::Relation::Group.def(),
       )
-      .join(JoinType::LeftJoin, group::Relation::GroupUser.def())
+      .join_rev(JoinType::LeftJoin, group_user::Relation::Group.def())
       .filter(
         Condition::any()
-          .add(o_auth_client_user::Column::User.eq(user))
+          .add(o_auth_client_user::Column::UserId.eq(user))
           .add(group_user::Column::UserId.eq(user)),
       )
       .count(self.db)
@@ -250,7 +256,7 @@ impl<'db> OauthClientTable<'db> {
     for user_id in users {
       let model = o_auth_client_user::Model {
         client: client_id,
-        user: user_id,
+        user_id,
       }
       .into_active_model();
       models.push(model);
@@ -277,7 +283,7 @@ impl<'db> OauthClientTable<'db> {
     for group_id in groups {
       let model = o_auth_client_group::Model {
         client: client_id,
-        group: group_id,
+        group_id,
       }
       .into_active_model();
       models.push(model);

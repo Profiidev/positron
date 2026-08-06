@@ -150,7 +150,7 @@ pub mod test {
       name: Set(name.to_string()),
       data: Set("{}".to_string()),
       cred_id: Set(cred_id.to_string()),
-      user: Set(user_id),
+      user_id: Set(user_id),
       created: Set(Utc::now().naive_utc()),
       used: Set(Utc::now().naive_utc()),
     })

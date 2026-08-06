@@ -51,9 +51,9 @@ impl<'db> OAuthScopeTable<'db> {
     let scope_ids: Vec<Uuid> = self.scope_ids(scope).await?;
 
     let policies = o_auth_policy::Entity::find()
-      .join(
+      .join_rev(
         JoinType::InnerJoin,
-        o_auth_policy::Relation::OAuthScopeOAuthPolicy.def(),
+        o_auth_scope_o_auth_policy::Relation::OAuthPolicy.def(),
       )
       .filter(o_auth_scope_o_auth_policy::Column::Scope.is_in(scope_ids))
       .find_with_related(OAuthPolicyContent)
@@ -65,7 +65,7 @@ impl<'db> OAuthScopeTable<'db> {
     for (policy, contents) in policies {
       let content = contents
         .into_iter()
-        .filter(|content| groups.contains(&content.group))
+        .filter(|content| groups.contains(&content.group_id))
         .min_by_key(|content| content.index);
 
       let content = content.map(|c| c.content).unwrap_or(policy.default);

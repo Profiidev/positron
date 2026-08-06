@@ -20,7 +20,7 @@ impl<'db> SettingsTable<'db> {
 
   async fn get_by_user(&self, user: Uuid) -> Result<user_settings::Model, DbErr> {
     let res = UserSettings::find()
-      .filter(user_settings::Column::User.eq(user))
+      .filter(user_settings::Column::UserId.eq(user))
       .one(self.db)
       .await?;
     if let Some(res) = res {
@@ -28,7 +28,7 @@ impl<'db> SettingsTable<'db> {
     } else {
       let settings = user_settings::ActiveModel {
         id: Set(Uuid::now_v7()),
-        user: Set(user),
+        user_id: Set(user),
         o_auth_instant_confirm: Set(false),
       };
 

@@ -141,7 +141,7 @@ async fn finish_registration(
       id: Uuid::now_v7(),
       data: json_key,
       cred_id: BASE64_STANDARD.encode(key.cred_id()),
-      user: user.id,
+      user_id: user.id,
       name: req.name,
       created: Utc::now().naive_utc(),
       used: Utc::now().naive_utc(),
@@ -217,7 +217,7 @@ async fn finish_authentication(
     .await?;
   let mut passkey = serde_json::from_str::<Passkey>(&passkey_db.data)?;
 
-  let user = db.user().get_user_by_id(passkey_db.user).await?;
+  let user = db.user().get_user_by_id(passkey_db.user_id).await?;
 
   let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
 

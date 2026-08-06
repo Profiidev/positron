@@ -49,7 +49,7 @@ impl<'db> PasskeyTable<'db> {
   ) -> Result<passkey::Model, DbErr> {
     let res = Passkey::find()
       .filter(passkey::Column::Name.eq(name))
-      .filter(passkey::Column::User.eq(user))
+      .filter(passkey::Column::UserId.eq(user))
       .one(self.db)
       .await?;
 
@@ -96,7 +96,7 @@ impl<'db> PasskeyTable<'db> {
   pub async fn passkey_name_exists(&self, user: Uuid, name: String) -> Result<bool, DbErr> {
     let res = Passkey::find()
       .filter(passkey::Column::Name.eq(name))
-      .filter(passkey::Column::User.eq(user))
+      .filter(passkey::Column::UserId.eq(user))
       .one(self.db)
       .await?;
 
@@ -115,13 +115,13 @@ mod test {
   use sea_orm::DbErr;
   use uuid::Uuid;
 
-  fn model(id: Uuid, user: Uuid, name: &str, cred_id: &str) -> passkey::Model {
+  fn model(id: Uuid, user_id: Uuid, name: &str, cred_id: &str) -> passkey::Model {
     passkey::Model {
       id,
       name: name.to_string(),
       data: "data".to_string(),
       cred_id: cred_id.to_string(),
-      user,
+      user_id,
       created: Utc::now().naive_utc(),
       used: Utc::now().naive_utc(),
     }
