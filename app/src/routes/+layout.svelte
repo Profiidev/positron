@@ -72,6 +72,7 @@
 <Toaster position="top-right" closeButton={true} richColors={true} />
 
 <div
+  id="app-bg"
   class={'bg-background size-full rounded-2xl' +
     (IS_DESKTOP ? ' border-2' : '')}
 >

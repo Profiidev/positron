@@ -37,7 +37,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum NoteSnapshot {
+pub enum NoteSnapshot {
   Table,
   Id,
   CreatedAt,

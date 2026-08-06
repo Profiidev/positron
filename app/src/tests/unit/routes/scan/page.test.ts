@@ -22,6 +22,7 @@ const Page = (await import('$routes/scan/+page.svelte')).default;
 beforeEach(() => {
   checkPermissions.mockResolvedValue('granted');
   requestPermissions.mockResolvedValue('granted');
+  document.body.innerHTML = '<div id="app-bg"></div>';
 });
 afterEach(() => vi.clearAllMocks());
 

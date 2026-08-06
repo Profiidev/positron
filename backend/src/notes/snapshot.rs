@@ -192,16 +192,16 @@ async fn delete(
     bail!(NOT_FOUND, "snapshot not found");
   };
 
-  require_owner(&auth, &db, snapshot.note).await?;
+  require_owner(&auth, &db, snapshot.note_id).await?;
 
   if storage
     .note_snapshot()
-    .exists(snapshot.note, snapshot.id)
+    .exists(snapshot.note_id, snapshot.id)
     .await?
   {
     storage
       .note_snapshot()
-      .delete(snapshot.note, snapshot.id)
+      .delete(snapshot.note_id, snapshot.id)
       .await?;
   }
 
@@ -214,7 +214,7 @@ async fn delete(
       auth.user_id,
       UpdateMessage::NoteSnapshot {
         uuid: snapshot.id,
-        note_id: snapshot.note,
+        note_id: snapshot.note_id,
       },
     )
     .await;
@@ -233,21 +233,21 @@ async fn restore(
     bail!(NOT_FOUND, "snapshot not found");
   };
 
-  require_owner(&auth, &db, snapshot.note).await?;
+  require_owner(&auth, &db, snapshot.note_id).await?;
 
   let content = storage
     .note_snapshot()
-    .read(snapshot.note, snapshot.id)
+    .read(snapshot.note_id, snapshot.id)
     .await?;
   let data = axum::body::to_bytes(content, 10 * MB)
     .await
     .context("Failed to read snapshot")?;
 
   db.notes()
-    .set_content(snapshot.note, data.to_vec(), snapshot.preview)
+    .set_content(snapshot.note_id, data.to_vec(), snapshot.preview)
     .await?;
 
-  state.restore(snapshot.note, &data).await?;
+  state.restore(snapshot.note_id, &data).await?;
 
   Ok(())
 }
@@ -276,11 +276,11 @@ async fn content(
     bail!(NOT_FOUND, "snapshot not found");
   };
 
-  require_owner(&auth, &db, snapshot.note).await?;
+  require_owner(&auth, &db, snapshot.note_id).await?;
 
   let body = storage
     .note_snapshot()
-    .read(snapshot.note, snapshot.id)
+    .read(snapshot.note_id, snapshot.id)
     .await?;
 
   Ok(

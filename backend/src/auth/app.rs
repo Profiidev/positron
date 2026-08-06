@@ -36,7 +36,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::{spawn, sync::mpsc, time::sleep};
-use tower_governor::GovernorLayer;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -57,7 +56,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       "/retrieve_token",
       post_with(retrieve_token, |op| op.id("retrieveAppToken")),
     )
-    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .layer(rate_limiter.create_limiter())
     .route(
       "/approve",
       post_with(approve_code, |op| op.id("approveAppCode")),

@@ -5,7 +5,7 @@ use chrono::Utc;
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType, Order,
+  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, ExprTrait, JoinType, Order,
   QueryOrder, QuerySelect, TransactionTrait, prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 pub mod snapshot;
 
-#[derive(DerivePartialModel, FromQueryResult)]
+#[derive(DerivePartialModel)]
 #[sea_orm(entity = "user::Entity")]
 pub struct PartialUser {
   #[sea_orm(from_alias = "owner_id")]
@@ -22,7 +22,7 @@ pub struct PartialUser {
   name: String,
 }
 
-#[derive(DerivePartialModel, FromQueryResult)]
+#[derive(DerivePartialModel)]
 #[sea_orm(entity = "note::Entity")]
 struct NoteWithOwner {
   id: Uuid,
@@ -87,8 +87,8 @@ impl<'db> NoteTable<'db> {
     }
 
     let count = note_user::Entity::find()
-      .filter(note_user::Column::Note.eq(note_id))
-      .filter(note_user::Column::User.eq(user_id))
+      .filter(note_user::Column::NoteId.eq(note_id))
+      .filter(note_user::Column::UserId.eq(user_id))
       .count(self.db)
       .await?;
 
@@ -101,8 +101,8 @@ impl<'db> NoteTable<'db> {
     }
 
     let row = note_user::Entity::find()
-      .filter(note_user::Column::Note.eq(note_id))
-      .filter(note_user::Column::User.eq(user_id))
+      .filter(note_user::Column::NoteId.eq(note_id))
+      .filter(note_user::Column::UserId.eq(user_id))
       .one(self.db)
       .await?;
 
@@ -116,13 +116,13 @@ impl<'db> NoteTable<'db> {
 
   pub async fn shared_users(&self, note_id: Uuid) -> Result<Vec<NoteShareEntry>> {
     let shared_users = note_user::Entity::find()
-      .filter(note_user::Column::Note.eq(note_id))
-      .order_by_asc(note_user::Column::User)
+      .filter(note_user::Column::NoteId.eq(note_id))
+      .order_by_asc(note_user::Column::UserId)
       .all(self.db)
       .await?
       .into_iter()
       .map(|row| NoteShareEntry {
-        user_id: row.user,
+        user_id: row.user_id,
         access: row.access,
       })
       .collect();
@@ -181,7 +181,7 @@ impl<'db> NoteTable<'db> {
     }
 
     let rows = note_user::Entity::find()
-      .filter(note_user::Column::Note.is_in(note_ids.to_vec()))
+      .filter(note_user::Column::NoteId.is_in(note_ids.to_vec()))
       .find_also_related(user::Entity)
       .all(self.db)
       .await?;
@@ -191,7 +191,7 @@ impl<'db> NoteTable<'db> {
       let Some(user) = user else {
         continue;
       };
-      map.entry(share.note).or_default().push(SharedUserInfo {
+      map.entry(share.note_id).or_default().push(SharedUserInfo {
         id: user.id,
         name: user.name,
         access: share.access,
@@ -203,11 +203,11 @@ impl<'db> NoteTable<'db> {
 
   pub async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<NoteInfo>> {
     let shared_note_ids: Vec<Uuid> = note_user::Entity::find()
-      .filter(note_user::Column::User.eq(user_id))
+      .filter(note_user::Column::UserId.eq(user_id))
       .all(self.db)
       .await?
       .into_iter()
-      .map(|row| row.note)
+      .map(|row| row.note_id)
       .collect();
 
     let notes_with_owners: Vec<NoteWithOwner> = note::Entity::find()
@@ -276,7 +276,7 @@ impl<'db> NoteTable<'db> {
       .ok_or(DbErr::RecordNotFound("owner not found".into()))?;
 
     let shared_with = note_user::Entity::find()
-      .filter(note_user::Column::Note.eq(note_id))
+      .filter(note_user::Column::NoteId.eq(note_id))
       .find_also_related(user::Entity)
       .all(self.db)
       .await?
@@ -423,12 +423,12 @@ impl<'db> NoteTable<'db> {
       .await?;
 
     let current_shares = note_user::Entity::find()
-      .filter(note_user::Column::Note.eq(note_id))
+      .filter(note_user::Column::NoteId.eq(note_id))
       .all(&txn)
       .await?
       .into_iter()
       .map(|row| NoteShareEntry {
-        user_id: row.user,
+        user_id: row.user_id,
         access: row.access,
       })
       .collect::<Vec<_>>();
@@ -543,7 +543,7 @@ async fn replace_shared_users<C: ConnectionTrait>(
   shared_with: Vec<NoteShareEntry>,
 ) -> Result<()> {
   note_user::Entity::delete_many()
-    .filter(note_user::Column::Note.eq(note_id))
+    .filter(note_user::Column::NoteId.eq(note_id))
     .exec(conn)
     .await?;
 
@@ -559,8 +559,8 @@ async fn replace_shared_users<C: ConnectionTrait>(
   let models = users
     .into_iter()
     .map(|s| note_user::ActiveModel {
-      note: Set(note_id),
-      user: Set(s.user_id),
+      note_id: Set(note_id),
+      user_id: Set(s.user_id),
       access: Set(s.access),
     })
     .collect::<Vec<_>>();
@@ -874,8 +874,8 @@ mod test {
     let recipient = insert_user(&db, "recipient", "recipient@x.com").await;
     let id = db.notes().create(owner, "T".into()).await.unwrap();
     note_user::ActiveModel {
-      note: Set(id),
-      user: Set(owner),
+      note_id: Set(id),
+      user_id: Set(owner),
       access: Set(NoteShareAccess::View),
     }
     .insert(&db.0)

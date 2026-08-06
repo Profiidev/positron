@@ -4,7 +4,7 @@ use entity::{note, note_snapshot};
 use schemars::JsonSchema;
 use sea_orm::{
   ActiveValue::Set,
-  DatabaseBackend, EntityTrait, FromQueryResult, QueryOrder, QuerySelect,
+  DatabaseBackend, EntityTrait, ExprTrait, FromQueryResult, QueryOrder, QuerySelect,
   prelude::*,
   sea_query::{Alias, Expr, Func, Order, OverStatement, Query, WindowStatement},
 };
@@ -121,7 +121,7 @@ impl<'db> NoteSnapshotTable<'db> {
   pub async fn create(&self, note_id: Uuid, preview: String) -> Result<Uuid> {
     let snapshot = note_snapshot::ActiveModel {
       id: Set(Uuid::now_v7()),
-      note: Set(note_id),
+      note_id: Set(note_id),
       preview: Set(preview),
       created_at: Set(Utc::now().naive_utc()),
     };
@@ -133,7 +133,7 @@ impl<'db> NoteSnapshotTable<'db> {
 
   pub async fn list_for_note(&self, note_id: Uuid) -> Result<Vec<NoteSnapshotInfo>> {
     let rows = note_snapshot::Entity::find()
-      .filter(note_snapshot::Column::Note.eq(note_id))
+      .filter(note_snapshot::Column::NoteId.eq(note_id))
       .order_by_desc(note_snapshot::Column::CreatedAt)
       .all(self.db)
       .await?;
@@ -143,7 +143,7 @@ impl<'db> NoteSnapshotTable<'db> {
         .into_iter()
         .map(|row| NoteSnapshotInfo {
           id: row.id,
-          note_id: row.note,
+          note_id: row.note_id,
           preview: row.preview,
           created_at: row.created_at,
         })
@@ -164,7 +164,7 @@ impl<'db> NoteSnapshotTable<'db> {
       return Ok(None);
     };
 
-    let Some((note_id, title)) = note::Entity::find_by_id(snapshot.note)
+    let Some((note_id, title)) = note::Entity::find_by_id(snapshot.note_id)
       .select_only()
       .column(note::Column::Id)
       .column(note::Column::Title)
@@ -191,7 +191,7 @@ impl<'db> NoteSnapshotTable<'db> {
 
   pub async fn latest_snapshot(&self, note_id: Uuid) -> Result<Option<DateTime<Utc>>> {
     let snapshot = note_snapshot::Entity::find()
-      .filter(note_snapshot::Column::Note.eq(note_id))
+      .filter(note_snapshot::Column::NoteId.eq(note_id))
       .order_by_desc(note_snapshot::Column::CreatedAt)
       .one(self.db)
       .await?;
@@ -210,7 +210,7 @@ impl<'db> NoteSnapshotTable<'db> {
 
     let mut window = WindowStatement::new();
     window
-      .partition_by((note_snapshot::Entity, note_snapshot::Column::Note))
+      .partition_by((note_snapshot::Entity, note_snapshot::Column::NoteId))
       .partition_by_customs([bucket_expr])
       .order_by(
         (note_snapshot::Entity, note_snapshot::Column::CreatedAt),
@@ -228,7 +228,7 @@ impl<'db> NoteSnapshotTable<'db> {
         Alias::new("id"),
       )
       .expr_as(
-        Expr::col((note_snapshot::Entity, note_snapshot::Column::Note)),
+        Expr::col((note_snapshot::Entity, note_snapshot::Column::NoteId)),
         Alias::new("note"),
       )
       .expr_as(
@@ -243,7 +243,7 @@ impl<'db> NoteSnapshotTable<'db> {
       .from(note_snapshot::Entity)
       .inner_join(
         note::Entity,
-        Expr::col((note_snapshot::Entity, note_snapshot::Column::Note))
+        Expr::col((note_snapshot::Entity, note_snapshot::Column::NoteId))
           .equals((note::Entity, note::Column::Id)),
       )
       .and_where(note_snapshot::Column::CreatedAt.lte(tier.newest_inclusive(now).naive_utc()));
@@ -290,7 +290,7 @@ impl<'db> NoteSnapshotTable<'db> {
   ) -> Result<Uuid> {
     let snapshot = note_snapshot::ActiveModel {
       id: Set(Uuid::new_v4()),
-      note: Set(note_id),
+      note_id: Set(note_id),
       preview: Set(preview),
       created_at: Set(created_at.naive_utc()),
     };
@@ -327,7 +327,7 @@ mod test {
 
     let found = db.note_snapshot().find(id).await.unwrap().unwrap();
     assert_eq!(found.id, id);
-    assert_eq!(found.note, note);
+    assert_eq!(found.note_id, note);
     assert_eq!(found.preview, "the preview");
   }
 

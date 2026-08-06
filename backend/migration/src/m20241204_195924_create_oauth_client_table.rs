@@ -143,14 +143,14 @@ pub enum OAuthClientAdditionalRedirectUri {
 }
 
 #[derive(DeriveIden)]
-enum OAuthClientUser {
+pub enum OAuthClientUser {
   Table,
   Client,
   User,
 }
 
 #[derive(DeriveIden)]
-enum OAuthClientGroup {
+pub enum OAuthClientGroup {
   Table,
   Client,
   Group,

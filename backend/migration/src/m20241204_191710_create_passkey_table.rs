@@ -39,7 +39,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum Passkey {
+pub enum Passkey {
   Table,
   Id,
   Name,

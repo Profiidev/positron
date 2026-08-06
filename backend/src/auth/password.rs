@@ -14,7 +14,6 @@ use centaurus::{
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tower_governor::GovernorLayer;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -36,7 +35,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       "/special_access",
       post_with(special_access, |op| op.id("passwordSpecialAccess")),
     )
-    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .layer(rate_limiter.create_limiter())
     .api_route("/key", key_route())
     .api_route("/change", post_with(change, |op| op.id("changePassword")))
 }

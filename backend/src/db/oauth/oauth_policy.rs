@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use entity::{group, o_auth_policy, o_auth_policy_content, prelude::*};
+use entity::{group, o_auth_policy, o_auth_policy_content};
 use schemars::JsonSchema;
 use sea_orm::{ActiveValue::Set, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -38,7 +38,7 @@ impl<'db> OAuthPolicyTable<'db> {
   }
 
   pub async fn list(&self) -> Result<Vec<OAuthPolicyInfo>, DbErr> {
-    let policies_data = OAuthPolicy::find().all(self.db).await?;
+    let policies_data = o_auth_policy::Entity::find().all(self.db).await?;
 
     let contents = o_auth_policy_content::Entity::find()
       .find_also_related(group::Entity)
@@ -49,7 +49,7 @@ impl<'db> OAuthPolicyTable<'db> {
     for (content, group) in contents {
       if let Some(group) = group {
         let data = OAuthPolicyContent {
-          group_id: content.group,
+          group_id: content.group_id,
           group_name: group.name,
           content: content.content,
           index: content.index,
@@ -90,7 +90,7 @@ impl<'db> OAuthPolicyTable<'db> {
     for (content, group) in contents {
       if let Some(group) = group {
         content_data.push(OAuthPolicyContent {
-          group_id: content.group,
+          group_id: content.group_id,
           group_name: group.name,
           content: content.content,
           index: content.index,
@@ -134,7 +134,7 @@ impl<'db> OAuthPolicyTable<'db> {
     default: String,
     content: Vec<OAuthPolicyContent>,
   ) -> Result<(), DbErr> {
-    let Some(policy) = OAuthPolicy::find_by_id(uuid).one(self.db).await? else {
+    let Some(policy) = o_auth_policy::Entity::find_by_id(uuid).one(self.db).await? else {
       return Ok(());
     };
     let mut policy: o_auth_policy::ActiveModel = policy.into();
@@ -155,7 +155,7 @@ impl<'db> OAuthPolicyTable<'db> {
       content_models.push(o_auth_policy_content::ActiveModel {
         id: Set(Uuid::now_v7()),
         policy: Set(uuid),
-        group: Set(content.group_id),
+        group_id: Set(content.group_id),
         content: Set(content.content),
         index: Set(content.index),
       });
@@ -184,7 +184,7 @@ impl<'db> OAuthPolicyTable<'db> {
     let new_content = o_auth_policy_content::ActiveModel {
       id: Set(Uuid::now_v7()),
       policy: Set(policy_id),
-      group: Set(group_id),
+      group_id: Set(group_id),
       content: Set(content),
       index: Set(count as i32),
     };
@@ -194,7 +194,7 @@ impl<'db> OAuthPolicyTable<'db> {
   }
 
   pub async fn by_name(&self, name: &str) -> Result<Option<Uuid>, DbErr> {
-    let res = OAuthPolicy::find()
+    let res = o_auth_policy::Entity::find()
       .filter(o_auth_policy::Column::Name.eq(name))
       .one(self.db)
       .await?;
@@ -209,7 +209,7 @@ impl<'db> OAuthPolicyTable<'db> {
   }
 
   pub async fn simple_list(&self) -> Result<Vec<SimpleOAuthPolicyInfo>, DbErr> {
-    let res = OAuthPolicy::find().all(self.db).await?;
+    let res = o_auth_policy::Entity::find().all(self.db).await?;
 
     Ok(
       res
@@ -223,12 +223,12 @@ impl<'db> OAuthPolicyTable<'db> {
   }
 
   pub async fn get_policy(&self, id: Uuid) -> Result<Option<o_auth_policy::Model>, DbErr> {
-    let res = OAuthPolicy::find_by_id(id).one(self.db).await?;
+    let res = o_auth_policy::Entity::find_by_id(id).one(self.db).await?;
     Ok(res)
   }
 
   pub async fn policy_exists(&self, name: String, uuid: Uuid) -> Result<bool, DbErr> {
-    let group = OAuthPolicy::find()
+    let group = o_auth_policy::Entity::find()
       .filter(o_auth_policy::Column::Name.eq(name))
       .filter(o_auth_policy::Column::Id.ne(uuid))
       .one(self.db)

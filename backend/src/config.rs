@@ -81,7 +81,11 @@ impl Default for Config {
   }
 }
 
-const REQUIRED_ORIGINS: &[&str] = &["http://tauri.localhost"];
+const REQUIRED_ORIGINS: &[&str] = &[
+  "http://tauri.localhost",
+  "http://localhost:1420",
+  "tauri://localhost",
+];
 
 impl Config {
   #[instrument]

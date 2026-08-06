@@ -26,12 +26,12 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-deep-link = "2"
-tokio = "1.52.3"
+tokio = "1.53.1"
 tauri-plugin-store = "2"
-anyhow = "1.0.102"
-uuid = { version = "1.23.2", features = ["v4"] }
+anyhow = "1.0.104"
+uuid = { version = "1.24.0", features = ["v4"] }
 dashmap = "6.2.1"
-rand = "0.10.1"
+rand = "0.10.2"
 sha2 = "0.11.0"
 base64 = "0.23.0"
 cookie = "0.18.1"
@@ -41,9 +41,9 @@ tokio-tungstenite = { version = "0.30.0", features = [
   "rustls-tls-webpki-roots",
   "url"
 ] }
-futures-util = "0.3.32"
+futures-util = "0.3.33"
 chrono = { version = "0.4.45", features = ["serde"] }
-yrs = { version = "0.27.2", features = ["sync"] }
+yrs = { version = "0.27.3", features = ["sync"] }
 
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
 tauri-plugin-barcode-scanner = "2"
@@ -58,7 +58,7 @@ tarpc = { version = "0.37.0", features = [
   "unix"
 ] }
 futures = "0.3.33"
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6.5", features = ["derive"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

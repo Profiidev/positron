@@ -15,8 +15,15 @@
       }
     }
 
-    document.body.classList.add('bg-transparent');
-    document.body.classList.add('pt-0!');
+    const backgroundDiv = document.querySelector('#app-bg');
+    if (!backgroundDiv) {
+      toast.error('Failed to show scanner');
+      goto('/');
+      return;
+    }
+
+    backgroundDiv.classList.add('bg-transparent');
+    backgroundDiv.classList.add('pt-0!');
 
     try {
       const result = await scan({ formats: [Format.QRCode], windowed: true });
@@ -35,8 +42,8 @@
       toast.error('Failed to scan QR code');
     }
 
-    document.body.classList.remove('bg-transparent');
-    document.body.classList.remove('pt-0!');
+    backgroundDiv.classList.remove('bg-transparent');
+    backgroundDiv.classList.remove('pt-0!');
   });
 
   onDestroy(async () => {
