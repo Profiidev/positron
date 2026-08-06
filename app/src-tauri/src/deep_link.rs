@@ -8,6 +8,7 @@ use crate::{
   updater::{UpdateMessage, Updater},
 };
 
+#[allow(dead_code)]
 pub async fn open_url(handle: &AppHandle, url: &str) -> Result<()> {
   let url = Url::parse(url)?;
   handle_links(handle, vec![url]).await;
