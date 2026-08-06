@@ -83,7 +83,7 @@ pub enum Note {
 }
 
 #[derive(DeriveIden)]
-enum NoteUser {
+pub enum NoteUser {
   Table,
   Note,
   User,

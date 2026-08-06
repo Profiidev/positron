@@ -71,7 +71,7 @@ pub enum OAuthPolicy {
 }
 
 #[derive(DeriveIden)]
-enum OAuthPolicyContent {
+pub enum OAuthPolicyContent {
   Table,
   Id,
   Index,

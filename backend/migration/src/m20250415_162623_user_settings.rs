@@ -35,7 +35,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum UserSettings {
+pub enum UserSettings {
   Table,
   Id,
   User,

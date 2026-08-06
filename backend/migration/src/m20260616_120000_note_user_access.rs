@@ -66,7 +66,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum NoteUser {
+pub enum NoteUser {
   Table,
   Access,
 }
