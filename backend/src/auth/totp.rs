@@ -19,7 +19,6 @@ use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Rfc6238, Secret, TOTP};
-use tower_governor::GovernorLayer;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -37,7 +36,7 @@ use super::state::TotpState;
 pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
   ApiRouter::new()
     .api_route("/confirm", post_with(confirm, |op| op.id("totpConfirm")))
-    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .layer(rate_limiter.create_limiter())
     .api_route(
       "/start_setup",
       get_with(start_setup, |op| op.id("totpStartSetup")),

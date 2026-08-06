@@ -5,7 +5,7 @@ use chrono::Utc;
 use entity::{note, note_user, prelude::*, sea_orm_active_enums::NoteShareAccess, user};
 use schemars::JsonSchema;
 use sea_orm::{
-  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, FromQueryResult, JoinType, Order,
+  ActiveValue::Set, Condition, ConnectionTrait, DatabaseBackend, ExprTrait, JoinType, Order,
   QueryOrder, QuerySelect, TransactionTrait, prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 pub mod snapshot;
 
-#[derive(DerivePartialModel, FromQueryResult)]
+#[derive(DerivePartialModel)]
 #[sea_orm(entity = "user::Entity")]
 pub struct PartialUser {
   #[sea_orm(from_alias = "owner_id")]
@@ -22,7 +22,7 @@ pub struct PartialUser {
   name: String,
 }
 
-#[derive(DerivePartialModel, FromQueryResult)]
+#[derive(DerivePartialModel)]
 #[sea_orm(entity = "note::Entity")]
 struct NoteWithOwner {
   id: Uuid,

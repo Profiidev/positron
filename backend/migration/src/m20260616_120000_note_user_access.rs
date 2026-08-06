@@ -11,6 +11,7 @@ fn database_backend(manager: &SchemaManager<'_>) -> DatabaseBackend {
   match manager.get_connection() {
     SchemaManagerConnection::Connection(conn) => conn.get_database_backend(),
     SchemaManagerConnection::Transaction(trans) => trans.get_database_backend(),
+    SchemaManagerConnection::OwnedTransaction(trans) => trans.get_database_backend(),
   }
 }
 

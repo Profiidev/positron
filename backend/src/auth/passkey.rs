@@ -23,7 +23,6 @@ use entity::passkey;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tower_governor::GovernorLayer;
 use uuid::Uuid;
 use webauthn_rs::prelude::{Passkey, PublicKeyCredential, RegisterPublicKeyCredential};
 use webauthn_rs_proto::ResidentKeyRequirement;
@@ -66,7 +65,7 @@ pub fn router(rate_limiter: &mut RateLimiter) -> ApiRouter {
       "/start_special_access",
       get_with(start_special_access, |op| op.id("startSpecialAccess")),
     )
-    .layer(GovernorLayer::new(rate_limiter.create_limiter()))
+    .layer(rate_limiter.create_limiter())
     .api_route("/list", get_with(list, |op| op.id("listPasskeys")))
     .api_route("/remove", post_with(remove, |op| op.id("removePasskey")))
     .api_route(

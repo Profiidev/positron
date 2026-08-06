@@ -4,7 +4,7 @@ use entity::{note, note_snapshot};
 use schemars::JsonSchema;
 use sea_orm::{
   ActiveValue::Set,
-  DatabaseBackend, EntityTrait, FromQueryResult, QueryOrder, QuerySelect,
+  DatabaseBackend, EntityTrait, ExprTrait, FromQueryResult, QueryOrder, QuerySelect,
   prelude::*,
   sea_query::{Alias, Expr, Func, Order, OverStatement, Query, WindowStatement},
 };
