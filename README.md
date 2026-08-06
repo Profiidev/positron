@@ -43,11 +43,11 @@ the UI and stored in the database but can be overridden via environment variable
 
 #### Server & Site
 
-| Variable          | Description                                                                              | Default                 |
-| ----------------- | ---------------------------------------------------------------------------------------- | ----------------------- |
-| `PORT`            | Port for the backend server to listen on                                                 | `8000`                  |
-| `SITE_URL`        | URL where the app is hosted. Important for email links and OIDC.                         | `http://localhost:8000` |
-| `LOG_LEVEL`       | Log level for the backend (e.g. `info`, `debug`)                                         | `info`                  |
+| Variable          | Description                                                                                                                                 | Default                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `PORT`            | Port for the backend server to listen on                                                                                                    | `8000`                  |
+| `SITE_URL`        | URL where the app is hosted. Important for email links and OIDC.                                                                            | `http://localhost:8000` |
+| `LOG_LEVEL`       | Log level for the backend (e.g. `info`, `debug`)                                                                                            | `info`                  |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins. `http://tauri.localhost`, `http://localhost:1420`, and `tauri://localhost` are always added so the app works. | -                       |
 
 #### Database
