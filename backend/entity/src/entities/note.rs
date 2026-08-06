@@ -19,8 +19,16 @@ pub struct Model {
   pub last_updated: DateTime,
   #[sea_orm(has_many)]
   pub note_snapshots: HasMany<super::note_snapshot::Entity>,
-  #[sea_orm(has_many, via = "note_user")]
-  pub users: HasMany<super::user::Entity>,
+  #[sea_orm(has_many, via = "note_user", relation_enum = "SharedUser")]
+  pub shared_users: HasMany<super::user::Entity>,
+  #[sea_orm(
+    belongs_to,
+    from = "owner",
+    to = "id",
+    on_update = "Cascade",
+    on_delete = "Cascade"
+  )]
+  pub user: BelongsTo<super::user::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -30,8 +30,10 @@ pub struct Model {
   pub user_settings: HasOne<super::user_settings::Entity>,
   #[sea_orm(has_many, via = "group_user")]
   pub groups: HasMany<super::group::Entity>,
-  #[sea_orm(has_many, via = "note_user")]
+  #[sea_orm(has_many, via_rel = "User")]
   pub notes: HasMany<super::note::Entity>,
+  #[sea_orm(has_many, via = "note_user", relation_enum = "SharedNote")]
+  pub shared_notes: HasMany<super::note::Entity>,
   #[sea_orm(has_many, via = "o_auth_client_user")]
   pub o_auth_clients: HasMany<super::o_auth_client::Entity>,
 }
