@@ -98,6 +98,8 @@ COPY --from=frontend-builder /app/frontend/package.json /app/frontend/package.js
 COPY --from=frontend-builder /app/package-lock.json /app/package-lock.json
 COPY --from=backend-builder /app/app /usr/local/bin/positron
 
+EXPOSE 8000
+
 USER positron
 
 ENTRYPOINT ["positron", "serve"]
