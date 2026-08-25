@@ -1,4 +1,4 @@
-#[cfg(desktop)]
+#[cfg(all(desktop, not(target_os = "linux")))]
 use tauri::Manager;
 
 use crate::{
@@ -41,6 +41,15 @@ pub fn run() {
 
   #[cfg(desktop)]
   let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    #[cfg(target_os = "linux")]
+    {
+      let app = app.clone();
+      tauri::async_runtime::spawn(async move {
+        linux::layer_shell::send_rpc(&app, linux::layer_shell::GtkThreadRPC::Show).await;
+      });
+    }
+
+    #[cfg(not(target_os = "linux"))]
     let _ = app
       .get_webview_window("main")
       .expect("no main window")
