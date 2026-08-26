@@ -1,21 +1,33 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   browsers =
     (builtins.fromJSON (builtins.readFile "${pkgs.playwright-driver}/browsers.json")).browsers;
   chromium-rev = (builtins.head (builtins.filter (x: x.name == "chromium") browsers)).revision;
+
+  libs = with pkgs; [
+    gtk-layer-shell
+    webkitgtk_4_1
+    gtk3
+    glib
+    dbus
+    gdk-pixbuf
+    libsoup_3
+    cairo
+  ];
 in
 {
-  packages = with pkgs; [
-    pkg-config
-    librsvg
-    webkitgtk_4_1
-    nodejs
-    gtk-layer-shell
-    glib-networking
-    desktop-file-utils
-    xvfb-run
-  ];
+  packages =
+    with pkgs;
+    [
+      pkg-config
+      librsvg
+      nodejs
+      glib-networking
+      desktop-file-utils
+      xvfb-run
+    ]
+    ++ libs;
 
   android = {
     enable = true;
@@ -50,6 +62,7 @@ in
   '';
 
   env = {
+    LD_LIBRARY_PATH = lib.makeLibraryPath libs;
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright.browsers}";
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
     PLAYWRIGHT_NODEJS_PATH = "${pkgs.nodejs}/bin/node";
