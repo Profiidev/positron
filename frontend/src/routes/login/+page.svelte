@@ -7,7 +7,7 @@
   import { FieldSeparator } from '@profidev/pleiades/components/ui/field';
   import { login, totpSchema } from './schema.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
-  import { goto, invalidate } from '$app/navigation';
+  import { afterNavigate, goto, invalidate } from '$app/navigation';
   import { connectWebsocket } from '$lib/backend/updater.svelte';
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
@@ -54,10 +54,12 @@
     });
   });
 
-  $effect(() => {
-    const url = new URL(window.location.href);
-    let updated = false;
-    if (data.error) {
+  let errorToasted = false;
+  afterNavigate(() => {
+    if (!data.error) return;
+
+    if (!errorToasted) {
+      errorToasted = true;
       let error = '';
       switch (data.error) {
         case 'missing_code':
@@ -74,13 +76,11 @@
       }
 
       toast.error(error);
+    }
 
-      url.searchParams.delete('error');
-      updated = true;
-    }
-    if (updated) {
-      window.history.replaceState({}, '', url);
-    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('error');
+    window.history.replaceState({}, '', url);
   });
 
   const loginSuccess = (user: string) => {
