@@ -33,6 +33,8 @@ impl super::Client {
       "Android".to_string()
     } else if cfg!(target_os = "ios") {
       "iOS".to_string()
+    } else if cfg!(target_os = "linux") {
+      "Linux".to_string()
     } else {
       "Unknown".to_string()
     };
