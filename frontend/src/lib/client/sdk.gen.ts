@@ -283,6 +283,7 @@ import type {
   TestMailErrors,
   TestMailResponses,
   TestTokenData,
+  TestTokenErrors,
   TotpConfirmData,
   TotpConfirmErrors,
   TotpFinishSetupData,
@@ -668,11 +669,15 @@ export const retrieveAppToken = <ThrowOnError extends boolean = false>(
   });
 
 export const testToken = <ThrowOnError extends boolean = false>(
-  options?: Options<TestTokenData, ThrowOnError>
-): RequestResult<unknown, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<unknown, unknown, ThrowOnError>({
+  options: Options<TestTokenData, ThrowOnError>
+): RequestResult<unknown, TestTokenErrors, ThrowOnError> =>
+  (options.client ?? client).get<unknown, TestTokenErrors, ThrowOnError>({
     url: '/api/auth/test_token',
-    ...options
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
   });
 
 export const refreshToken = <ThrowOnError extends boolean = false>(

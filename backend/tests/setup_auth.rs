@@ -123,11 +123,38 @@ async fn login_with_wrong_password_is_unauthorized() {
 async fn test_token_valid_and_invalid() {
   let (server, _) = TestServer::start_with_admin().await;
 
-  let body: Value = server.get("/auth/test_token").await.json().await.unwrap();
+  let meta = serde_json::json!({
+    "name": "test",
+    "application": "test",
+    "operating_system": "test"
+  });
+
+  let body: Value = server
+    .get_with_body("/auth/test_token", meta.clone())
+    .await
+    .json()
+    .await
+    .unwrap();
   assert_eq!(body["valid"], true);
 
+  // the session meta sent along with a valid test_token call is persisted
+  let sessions: Value = server
+    .get("/user/account/sessions")
+    .await
+    .json()
+    .await
+    .unwrap();
+  assert_eq!(sessions[0]["name"], "test");
+  assert_eq!(sessions[0]["application"], "test");
+  assert_eq!(sessions[0]["operating_system"], "test");
+
   server.clear_cookies();
-  let body: Value = server.get("/auth/test_token").await.json().await.unwrap();
+  let body: Value = server
+    .get_with_body("/auth/test_token", meta)
+    .await
+    .json()
+    .await
+    .unwrap();
   assert_eq!(body["valid"], false);
 }
 

@@ -482,6 +482,12 @@ export type SessionInfo = {
   refreshed_at?: Date | null;
 };
 
+export type SessionMeta = {
+  application: string;
+  name: string;
+  operating_system: string;
+};
+
 export type SetGoodReq = {
   date: Date;
   good: boolean;
@@ -1361,14 +1367,34 @@ export type RetrieveAppTokenError =
   RetrieveAppTokenErrors[keyof RetrieveAppTokenErrors];
 
 export type TestTokenData = {
-  body?: never;
+  body: SessionMeta;
   path?: never;
   query?: never;
   url: '/api/auth/test_token';
 };
 
+export type TestTokenErrors = {
+  /**
+   * Failed to parse the request body as JSON
+   */
+  400: string;
+  /**
+   * Expected request with `Content-Type: application/json`
+   */
+  415: string;
+  /**
+   * Failed to deserialize the JSON body into the target type
+   */
+  422: string;
+};
+
+export type TestTokenError = TestTokenErrors[keyof TestTokenErrors];
+
 export type RefreshTokenData = {
   body?: never;
+  headers?: {
+    authorization?: string;
+  };
   path?: never;
   query?: never;
   url: '/api/auth/refresh_token';

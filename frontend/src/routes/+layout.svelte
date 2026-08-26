@@ -19,6 +19,7 @@
   import Atom from '@lucide/svelte/icons/atom';
   import { avatarUrl } from '$lib/permissions.svelte';
   import { buildLoginUrl } from '$lib/redirect';
+  import { getSessionMeta } from '@profidev/pleiades/util/info.svelte';
 
   // @ts-ignore this is injected at build time via Vite's define option
   let version = __version__;
@@ -35,7 +36,7 @@
   });
 
   onMount(() => {
-    testToken().then(async ({ data: dataRaw }) => {
+    testToken({ body: getSessionMeta() }).then(async ({ data: dataRaw }) => {
       let { valid, exp_short } = (dataRaw as
         | { valid: boolean; exp_short: boolean }
         | undefined) ?? {
