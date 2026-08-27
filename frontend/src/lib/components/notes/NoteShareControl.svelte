@@ -123,6 +123,7 @@
         saving && 'pointer-events-none opacity-60'
       )}
       disabled={saving}
+      aria-label="Share"
     >
       {#if selected.length > 0 || isPublic}
         <div

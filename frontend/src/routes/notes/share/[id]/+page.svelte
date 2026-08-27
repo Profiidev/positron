@@ -80,8 +80,7 @@
           username={note.owner.name}
           class="size-6.5 shrink-0"
         />
-        <span class="hidden max-w-32 truncate lg:inline">{note.owner.name}</span
-        >
+        <span class="max-w-32 truncate">{note.owner.name}</span>
         <Lock class="text-muted-foreground hidden size-3.5 shrink-0 lg:block" />
       </div>
     {/if}

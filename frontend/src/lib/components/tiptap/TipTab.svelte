@@ -178,8 +178,16 @@
 <svelte:window onbeforeunload={cleanup} />
 
 {#if editorState.editor}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="bg-card relative mt-2 flex h-full w-full flex-col overflow-hidden rounded-md border"
+    onkeydown={(event) => {
+      // Prevent formatting shortcuts (e.g. Mod-b for bold) from bubbling up
+      // to the app's global sidebar-toggle shortcut (also bound to Mod-b).
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+        event.stopPropagation();
+      }
+    }}
   >
     {#if editable && editorState.editor}
       {/* @ts-ignore */ null}
