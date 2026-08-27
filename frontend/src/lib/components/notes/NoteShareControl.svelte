@@ -157,7 +157,9 @@
         <span class="hidden md:inline">{triggerLabel}</span>
       {:else}
         <Users class="text-muted-foreground mx-1 size-4 md:mr-0 md:ml-2" />
-        <span class="text-muted-foreground hidden md:inline">{triggerLabel}</span>
+        <span class="text-muted-foreground hidden md:inline"
+          >{triggerLabel}</span
+        >
       {/if}
     </Popover.Trigger>
     <Popover.Content class="w-80 gap-0 p-0">
