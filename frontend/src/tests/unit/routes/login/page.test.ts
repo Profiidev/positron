@@ -7,8 +7,8 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({
 }));
 
 // The page reads the error param via `afterNavigate` (not `$effect`) so the
-// cleanup can't run before SvelteKit finishes hydration; override the global
-// no-op stub so it actually invokes the callback like a real navigation would.
+// Cleanup can't run before SvelteKit finishes hydration; override the global
+// No-op stub so it actually invokes the callback like a real navigation would.
 vi.mock('$app/navigation', () => ({
   afterNavigate: (fn: () => void) => fn(),
   beforeNavigate: vi.fn(),
