@@ -8,7 +8,7 @@
   import Trash from '@lucide/svelte/icons/trash';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { invalidate } from '$app/navigation';
+  import { afterNavigate, invalidate } from '$app/navigation';
   import { deleteNote, type NoteInfo } from '$lib/client';
 
   const { data } = $props();
@@ -36,18 +36,22 @@
     maxPerUser !== undefined && ownedCount >= maxPerUser
   );
 
-  $effect(() => {
-    if (data.error) {
+  let errorToasted = false;
+  afterNavigate(() => {
+    if (!data.error) return;
+
+    if (!errorToasted) {
+      errorToasted = true;
       if (data.error === 'not_found') {
         toast.error('Note not found');
       } else if (data.error === 'other') {
         toast.error('Failed to load note');
       }
-
-      const url = new URL(window.location.href);
-      url.searchParams.delete('error');
-      window.history.replaceState({}, '', url);
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('error');
+    window.history.replaceState({}, '', url);
   });
 
   const deleteItemConfirm = async () => {

@@ -51,6 +51,13 @@
   const extraCount = $derived(Math.max(0, selected.length - 4));
   const shareUrl = $derived(`${origin}/notes/share/${noteId}`);
   const isPublic = $derived(publicAccess !== null);
+  const triggerLabel = $derived(
+    selected.length > 0 || isPublic
+      ? isPublic && selected.length === 0
+        ? 'Public'
+        : `${selected.length + (isPublic ? 1 : 0)} shared`
+      : 'Share'
+  );
 
   const shareForUser = (userId: string) =>
     shares.find((share) => share.userId === userId);
@@ -123,6 +130,7 @@
         saving && 'pointer-events-none opacity-60'
       )}
       disabled={saving}
+      aria-label={triggerLabel}
     >
       {#if selected.length > 0 || isPublic}
         <div
@@ -146,16 +154,12 @@
             </div>
           {/if}
         </div>
-        <span class="hidden md:inline">
-          {#if isPublic && selected.length === 0}
-            Public
-          {:else}
-            {selected.length + (isPublic ? 1 : 0)} shared
-          {/if}
-        </span>
+        <span class="hidden md:inline">{triggerLabel}</span>
       {:else}
         <Users class="text-muted-foreground mx-1 size-4 md:mr-0 md:ml-2" />
-        <span class="text-muted-foreground hidden md:inline">Share</span>
+        <span class="text-muted-foreground hidden md:inline"
+          >{triggerLabel}</span
+        >
       {/if}
     </Popover.Trigger>
     <Popover.Content class="w-80 gap-0 p-0">

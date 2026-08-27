@@ -140,6 +140,7 @@ import type {
   StartRegistrationResponses,
   StartSpecialAccessResponses,
   TestMailResponses,
+  TestTokenData,
   TotpConfirmData,
   TotpFinishSetupData,
   TotpStartSetupResponses,
@@ -1098,10 +1099,12 @@ export type HandleTestTokenResponse = {
  * Handler for the `GET /api/auth/test_token` operation.
  */
 export function handleTestToken(
-  response?: HandleTestTokenResponse | HttpResponseResolver<never, never>,
+  response?:
+    | HandleTestTokenResponse
+    | HttpResponseResolver<never, TestTokenData['body']>,
   options?: RequestHandlerOptions
 ): HttpHandler {
-  return http.get<never, never>(
+  return http.get<never, TestTokenData['body']>(
     `${options?.baseUrl ?? '*'}/api/auth/test_token`,
     (info) => {
       if (typeof response === 'function') {

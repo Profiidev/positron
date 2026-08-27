@@ -181,6 +181,10 @@ impl TestServer {
     self.send(self.client.get(self.root_url(path))).await
   }
 
+  pub async fn get_with_body(&self, path: &str, body: Value) -> Response {
+    self.send(self.client.get(self.url(path)).json(&body)).await
+  }
+
   pub async fn post(&self, path: &str, body: Value) -> Response {
     self
       .send(self.client.post(self.url(path)).json(&body))

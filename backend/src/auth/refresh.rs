@@ -8,6 +8,7 @@ use axum_extra::{
 use centaurus::{
   backend::{
     auth::{
+      jwt::jwt_from_request,
       jwt_auth::JwtAuth,
       jwt_state::{JWT_COOKIE_NAME, JwtState},
     },
@@ -18,10 +19,14 @@ use centaurus::{
   eyre::ContextCompat,
 };
 use chrono::{Duration, Utc};
+use http::request::Parts;
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::{auth::session_auth::create_session_raw_token, db::DBTrait};
+use crate::{
+  auth::session_auth::{SessionMeta, create_session_raw_token},
+  db::DBTrait,
+};
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
@@ -42,10 +47,25 @@ async fn test_token(
   auth: Option<JwtAuth>,
   mut cookies: CookieJar,
   jwt: JwtState,
+  mut parts: Parts,
+  db: Connection,
+  Json(session): Json<SessionMeta>,
 ) -> (CookieJar, Json<TestTokenResponse>) {
   if let Some(auth) = auth {
     let relative_exp = auth.exp - Utc::now().timestamp();
     let exp_short = relative_exp <= jwt.exp / 2;
+
+    if let Ok(token) = jwt_from_request(&mut parts, JWT_COOKIE_NAME).await {
+      let _ = db
+        .session()
+        .update_meta(
+          &token,
+          session.name,
+          session.application,
+          session.operating_system,
+        )
+        .await;
+    }
 
     (
       cookies,
@@ -98,7 +118,7 @@ mod test {
     db::test::{auth_cookie, auth_state, body_json, insert_jwt_key, insert_user, test_db},
   };
   use axum::{
-    Extension, Router,
+    Extension, Json, Router,
     body::Body,
     http::{Request, header},
     routing::get,
@@ -107,6 +127,34 @@ mod test {
   use centaurus::backend::auth::jwt_state::{JWT_COOKIE_NAME, JwtState};
   use centaurus::db::init::Connection;
   use tower::ServiceExt;
+
+  use crate::auth::session_auth::SessionMeta;
+
+  fn session_meta() -> SessionMeta {
+    SessionMeta {
+      name: "test".to_string(),
+      application: "test".to_string(),
+      operating_system: "test".to_string(),
+    }
+  }
+
+  fn test_token_request(cookie: &str) -> Request<Body> {
+    let meta = session_meta();
+    Request::builder()
+      .method("GET")
+      .uri("/test_token")
+      .header(header::COOKIE, cookie)
+      .header(header::CONTENT_TYPE, "application/json")
+      .body(Body::from(
+        serde_json::json!({
+          "name": meta.name,
+          "application": meta.application,
+          "operating_system": meta.operating_system,
+        })
+        .to_string(),
+      ))
+      .unwrap()
+  }
 
   fn app(db: Connection, jwt: JwtState) -> Router {
     Router::new()
@@ -125,7 +173,13 @@ mod test {
 
     // start with a jwt cookie present so we can observe it being removed
     let cookies = CookieJar::new().add((JWT_COOKIE_NAME, "stale"));
-    let (cookies, axum::Json(res)) = test_token(None, cookies, jwt).await;
+    let parts = Request::builder()
+      .body(Body::empty())
+      .unwrap()
+      .into_parts()
+      .0;
+    let (cookies, axum::Json(res)) =
+      test_token(None, cookies, jwt, parts, db, Json(session_meta())).await;
 
     assert!(!res.valid);
     assert!(!res.exp_short);
@@ -141,13 +195,7 @@ mod test {
     let cookie = auth_cookie(&db, &jwt, user).await;
 
     let resp = app(db, jwt)
-      .oneshot(
-        Request::builder()
-          .uri("/test_token")
-          .header(header::COOKIE, &cookie)
-          .body(Body::empty())
-          .unwrap(),
-      )
+      .oneshot(test_token_request(&cookie))
       .await
       .unwrap();
     let body = body_json(resp).await;
@@ -172,13 +220,7 @@ mod test {
     check_jwt.exp = 100;
 
     let resp = app(db, check_jwt)
-      .oneshot(
-        Request::builder()
-          .uri("/test_token")
-          .header(header::COOKIE, &cookie)
-          .body(Body::empty())
-          .unwrap(),
-      )
+      .oneshot(test_token_request(&cookie))
       .await
       .unwrap();
     let body = body_json(resp).await;
@@ -202,13 +244,7 @@ mod test {
     check_jwt.exp = 100;
 
     let resp = app(db, check_jwt)
-      .oneshot(
-        Request::builder()
-          .uri("/test_token")
-          .header(header::COOKIE, &cookie)
-          .body(Body::empty())
-          .unwrap(),
-      )
+      .oneshot(test_token_request(&cookie))
       .await
       .unwrap();
     let body = body_json(resp).await;

@@ -42,6 +42,21 @@ impl<'db> SessionTable<'db> {
     Ok(())
   }
 
+  pub async fn update_meta(
+    &self,
+    token: &str,
+    name: String,
+    application: String,
+    operating_system: String,
+  ) -> Result<(), DbErr> {
+    let mut row: session::ActiveModel = self.get_by_token(token).await?.into();
+    row.name = Set(name);
+    row.application = Set(application);
+    row.operating_system = Set(operating_system);
+    row.update(self.db).await?;
+    Ok(())
+  }
+
   pub async fn get_by_token(&self, token: &str) -> Result<session::Model, DbErr> {
     Session::find()
       .filter(session::Column::Token.eq(token))

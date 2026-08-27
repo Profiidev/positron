@@ -16,6 +16,18 @@ struct TestTokenResponse {
   exp_short: bool,
 }
 
+fn os() -> &'static str {
+  if cfg!(target_os = "android") {
+    "Android"
+  } else if cfg!(target_os = "ios") {
+    "iOS"
+  } else if cfg!(target_os = "linux") {
+    "Linux"
+  } else {
+    "Unknown"
+  }
+}
+
 impl super::Client {
   pub async fn confirm_code(&self, code: String) -> Result<()> {
     let req = self
@@ -29,14 +41,8 @@ impl super::Client {
   }
 
   pub async fn exchange_code(&self, code: String, verifier: String) -> Result<()> {
-    let os = if cfg!(target_os = "android") {
-      "Android".to_string()
-    } else if cfg!(target_os = "ios") {
-      "iOS".to_string()
-    } else {
-      "Unknown".to_string()
-    };
     let version = &self.handle.package_info().version;
+    let os = os();
 
     let req = self
       .builder(Method::POST, "/api/auth/app/exchange")
@@ -67,7 +73,18 @@ impl super::Client {
       return Ok(false);
     }
 
-    let req = self.builder(Method::GET, "/api/auth/test_token").await?;
+    let version = &self.handle.package_info().version;
+    let os = os();
+
+    let req = self
+      .builder(Method::GET, "/api/auth/test_token")
+      .await?
+      .json(&json!({
+        "application": format!("Positron App {}", version),
+        "operating_system": os,
+        "name": format!("App {}", os),
+      }));
+
     let res = self.send_auth(req).await?;
     let body = res.json::<TestTokenResponse>().await?;
 

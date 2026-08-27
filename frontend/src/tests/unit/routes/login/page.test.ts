@@ -6,6 +6,23 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({
   toast: { error: toastError, success: vi.fn() }
 }));
 
+// The page reads the error param via `afterNavigate` (not `$effect`) so the
+// Cleanup can't run before SvelteKit finishes hydration; override the global
+// No-op stub so it actually invokes the callback like a real navigation would.
+vi.mock('$app/navigation', () => ({
+  afterNavigate: (fn: () => void) => fn(),
+  beforeNavigate: vi.fn(),
+  disableScrollHandling: vi.fn(),
+  goto: vi.fn(async () => Promise.resolve()),
+  invalidate: vi.fn(async () => Promise.resolve()),
+  invalidateAll: vi.fn(async () => Promise.resolve()),
+  onNavigate: vi.fn(),
+  preloadCode: vi.fn(async () => Promise.resolve()),
+  preloadData: vi.fn(async () => Promise.resolve()),
+  pushState: vi.fn(),
+  replaceState: vi.fn()
+}));
+
 const Page = (await import('$routes/login/+page.svelte')).default;
 
 const data = (error?: string, redirectTo = '/') =>

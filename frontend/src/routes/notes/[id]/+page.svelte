@@ -7,7 +7,7 @@
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { goto } from '$app/navigation';
+  import { afterNavigate, goto } from '$app/navigation';
   import {
     deleteNote,
     deleteNoteSnapshot,
@@ -64,18 +64,22 @@
     users?.filter((user) => user.id !== note?.owner.id) ?? []
   );
 
-  $effect(() => {
-    if (data.error) {
+  let errorToasted = false;
+  afterNavigate(() => {
+    if (!data.error) return;
+
+    if (!errorToasted) {
+      errorToasted = true;
       if (data.error === 'not_found') {
         toast.error('Snapshot not found');
       } else if (data.error === 'other') {
         toast.error('Failed to load snapshot');
       }
-
-      const url = new URL(window.location.href);
-      url.searchParams.delete('error');
-      window.history.replaceState({}, '', url);
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('error');
+    window.history.replaceState({}, '', url);
   });
 
   $effect(() => {
