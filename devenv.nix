@@ -35,7 +35,7 @@ in
       "35"
       "36"
     ];
-    platformTools.version = "35.0.2";
+    platformTools.version = "37.0.1";
     buildTools.version = [
       "35.0.0"
       "36.0.0"
