@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import type * as SvelteTable from '@tanstack/svelte-table';
 
-vi.mock('@profidev/pleiades/components/ui/data-table', () => ({
+vi.mock('@tanstack/svelte-table', async (importActual) => ({
+  ...(await importActual<typeof SvelteTable>()),
   renderComponent: (component: unknown, props: unknown) => ({
     component,
     props

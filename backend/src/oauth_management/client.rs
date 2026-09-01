@@ -2,8 +2,9 @@ use aide::axum::{
   ApiRouter,
   routing::{delete_with, get_with, post_with, put_with},
 };
-use argon2::password_hash::SaltString;
+use argon2::password_hash::generate_salt;
 use axum::{Json, extract::Path};
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use centaurus::{
   backend::{
     auth::{jwt_auth::JwtAuth, pw_state::PasswordState},
@@ -17,7 +18,6 @@ use centaurus::{
   error::Result,
 };
 use entity::o_auth_client;
-use rsa::rand_core::OsRng;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -135,7 +135,7 @@ async fn create(
   let secret = generate_secret();
   let client_id = Uuid::now_v7();
 
-  let salt = SaltString::generate(OsRng {}).to_string();
+  let salt = BASE64_STANDARD_NO_PAD.encode(generate_salt());
   let client_secret = pw_state.pw_hash_raw(&salt, &secret)?;
 
   db.oauth_client()

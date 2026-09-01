@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import type * as Svelte from 'svelte';
+import type * as SvelteTable from '@tanstack/svelte-table';
 import type { SessionInfo } from '$lib/client';
 import {
   formatRelativeOptional,
   formatRelativePast
 } from '$routes/account/sessions/session-utils';
 
-vi.mock('@profidev/pleiades/components/ui/data-table', () => ({
+vi.mock('@tanstack/svelte-table', async (importActual) => ({
+  ...(await importActual<typeof SvelteTable>()),
   renderComponent: (component: unknown, props: unknown) => ({
     component,
     props

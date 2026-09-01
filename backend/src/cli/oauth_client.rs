@@ -1,7 +1,7 @@
-use argon2::password_hash::SaltString;
+use argon2::password_hash::generate_salt;
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use centaurus::{backend::auth::pw_state::hash_secret, bail, db::init::Connection, error::Result};
 use entity::o_auth_client;
-use rsa::rand_core::OsRng;
 use serde::Serialize;
 use tracing::info;
 use url::Url;
@@ -58,7 +58,7 @@ impl OAuthClientCommands {
         let id = Uuid::now_v7();
         let secret = generate_secret();
 
-        let salt = SaltString::generate(OsRng {}).to_string();
+        let salt = BASE64_STANDARD_NO_PAD.encode(generate_salt());
         let pepper: Vec<u8> = auth_pepper.as_bytes().to_vec();
         let client_secret = hash_secret(&pepper, &salt, secret.as_bytes())?;
 

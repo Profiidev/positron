@@ -1,6 +1,8 @@
-import type { ColumnDef } from '@tanstack/table-core';
-import * as DataTable from '@profidev/pleiades/components/ui/data-table';
-import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import { renderComponent } from '@tanstack/svelte-table';
+import {
+  type TableColumnDef,
+  createColumn
+} from '@profidev/pleiades/components/table/helpers.svelte';
 import type { SessionInfo } from '$lib/client';
 import { formatRelativeOptional, formatRelativePast } from './session-utils';
 import SessionCell from './SessionCell.svelte';
@@ -12,17 +14,16 @@ export const columns = ({
   revoke
 }: {
   revoke: (session: SessionInfo) => void;
-}): ColumnDef<SessionInfo>[] => [
+}): TableColumnDef<SessionInfo>[] => [
   {
     accessorKey: 'session',
-    cell: ({ row }) =>
-      DataTable.renderComponent(SessionCell, { session: row.original }),
+    cell: ({ row }) => renderComponent(SessionCell, { session: row.original }),
     header: () => 'Session'
   },
   {
     accessorKey: 'is_app',
     cell: ({ row }) =>
-      DataTable.renderComponent(SessionTypeCell, {
+      renderComponent(SessionTypeCell, {
         isApp: row.original.is_app
       }),
     header: () => 'Type'
@@ -39,7 +40,7 @@ export const columns = ({
   {
     accessorKey: 'expires_at',
     cell: ({ row }) =>
-      DataTable.renderComponent(ExpiresCell, {
+      renderComponent(ExpiresCell, {
         expiresAt: new Date(row.original.expires_at)
       }),
     header: () => 'Expires'
@@ -47,7 +48,7 @@ export const columns = ({
   {
     accessorKey: 'actions',
     cell: ({ row }) =>
-      DataTable.renderComponent(SessionActions, {
+      renderComponent(SessionActions, {
         revoke,
         session: row.original
       }),
