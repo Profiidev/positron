@@ -1,5 +1,8 @@
 import { renderComponent } from '@tanstack/svelte-table';
-import { type TableColumnDef, createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import {
+  type TableColumnDef,
+  createColumn
+} from '@profidev/pleiades/components/table/helpers.svelte';
 import type { SessionInfo } from '$lib/client';
 import { formatRelativeOptional, formatRelativePast } from './session-utils';
 import SessionCell from './SessionCell.svelte';
@@ -14,8 +17,7 @@ export const columns = ({
 }): TableColumnDef<SessionInfo>[] => [
   {
     accessorKey: 'session',
-    cell: ({ row }) =>
-      renderComponent(SessionCell, { session: row.original }),
+    cell: ({ row }) => renderComponent(SessionCell, { session: row.original }),
     header: () => 'Session'
   },
   {

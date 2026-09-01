@@ -1,5 +1,8 @@
 import { renderComponent } from '@tanstack/svelte-table';
-import { type TableColumnDef, createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import {
+  type TableColumnDef,
+  createColumn
+} from '@profidev/pleiades/components/table/helpers.svelte';
 import type { SimpleGroupInfo, UserListInfo } from '$lib/client';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
 import UserAvatar from '$lib/components/UserAvatar.svelte';
@@ -19,7 +22,7 @@ export const columns = ({
         userId: row.original.uuid,
         username: row.original.name
       }),
-    header: () => {},
+    header: () => {}
   },
   createColumn('name', 'Name'),
   createColumn('email', 'Email'),

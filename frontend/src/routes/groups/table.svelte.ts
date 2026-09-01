@@ -1,5 +1,8 @@
 import { renderComponent } from '@tanstack/svelte-table';
-import { type TableColumnDef, createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import {
+  type TableColumnDef,
+  createColumn
+} from '@profidev/pleiades/components/table/helpers.svelte';
 import { Permission } from '$lib/permissions.svelte';
 import type { GroupInfo, SimpleUserInfo, UserInfo } from '$lib/client';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
@@ -32,9 +35,7 @@ export const columns = ({
       const disabled = !user
         ? true
         : !user?.permissions.includes(Permission.GROUP_EDIT) ||
-          row.original.permissions.some(
-            (p) => !user?.permissions.includes(p)
-          );
+          row.original.permissions.some((p) => !user?.permissions.includes(p));
 
       return renderComponent(Actions, {
         delete_disabled: disabled || row.original.id === admin_group,

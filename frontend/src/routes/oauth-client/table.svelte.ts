@@ -1,5 +1,8 @@
 import { renderComponent } from '@tanstack/svelte-table';
-import { type TableColumnDef, createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import {
+  type TableColumnDef,
+  createColumn
+} from '@profidev/pleiades/components/table/helpers.svelte';
 import { Permission } from '$lib/permissions.svelte';
 import type {
   OAuthClientInfo,
