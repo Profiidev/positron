@@ -8,6 +8,7 @@ import SearchAndReplace from './extensions/search-and-replace';
 import CharacterCount from '@tiptap/extension-character-count';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 
+// oxlint-disable-next-line no-unsafe-type-assertion
 export const extensions = [
   StarterKit.configure({
     bulletList: {
@@ -47,4 +48,4 @@ export const extensions = [
     },
     nested: true
   })
-] satisfies Extensions;
+] as Extensions;

@@ -1,6 +1,5 @@
-import type { ColumnDef } from '@tanstack/table-core';
-import * as DataTable from '@profidev/pleiades/components/ui/data-table';
-import { createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
+import { renderComponent } from '@tanstack/svelte-table';
+import { type TableColumnDef, createColumn } from '@profidev/pleiades/components/table/helpers.svelte';
 import { Permission } from '$lib/permissions.svelte';
 import type {
   OAuthClientInfo,
@@ -17,7 +16,7 @@ export const columns = ({
 }: {
   deleteClient: (client: OAuthClientInfo) => void;
   user?: UserInfo;
-}): ColumnDef<OAuthClientInfo>[] => [
+}): TableColumnDef<OAuthClientInfo>[] => [
   createColumn('name', 'Name'),
   createColumn('client_id', 'Client ID'),
   createColumn('redirect_uri', 'Redirect URI'),
@@ -51,7 +50,7 @@ export const columns = ({
         ? true
         : !user?.permissions.includes(Permission.OAUTH_CLIENT_EDIT);
 
-      return DataTable.renderComponent(Actions, {
+      return renderComponent(Actions, {
         delete_disabled: disabled,
         edit: `/oauth-client/${row.original.client_id}`,
         edit_disabled: disabled,
