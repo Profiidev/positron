@@ -42,6 +42,8 @@ jobs:
       - name: Fix restored cache ownership
         if: steps.cache-restore.outputs.cache-matched-key != ''
         run: |
+          mkdir -p /tmp/renovate/cache/renovate/repository
+          mkdir -p /tmp/renovate/cache/containerbase
           sudo chown -R 12021:0 /tmp/renovate/
           ls -R $cache_dir
 
