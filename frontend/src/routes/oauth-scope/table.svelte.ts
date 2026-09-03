@@ -24,7 +24,7 @@ export const columns = ({
     'policies',
     'Policies',
     (policies: SimpleOAuthPolicyInfo[]) =>
-      policies.map((u) => u.name).join(', ') || 'No Policies'
+      policies.map((u) => u.name).join(', ') || '-'
   ),
   createColumn('uuid', 'Uuid'),
   {
