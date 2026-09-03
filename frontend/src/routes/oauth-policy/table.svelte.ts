@@ -25,8 +25,7 @@ export const columns = ({
     'content',
     'Group Mappings',
     (mappings: OAuthPolicyContent[]) =>
-      mappings.map((u) => `${u.group_name}: ${u.content}`).join(', ') ||
-      'No Mappings'
+      mappings.map((u) => `${u.group_name}: ${u.content}`).join(', ') || '-'
   ),
   createColumn('uuid', 'Uuid'),
   {

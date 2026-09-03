@@ -26,25 +26,22 @@ export const columns = ({
   createColumn(
     'additional_redirect_uris',
     'Other Redirect URIs',
-    (uris: string[]) => uris.join(', ') || 'No Additional Redirect URIs'
+    (uris: string[]) => uris.join(', ') || '-'
   ),
   createColumn(
     'default_scope',
     'Default Scope',
-    (s: SimpleOAuthScopeInfo[]) =>
-      s.map((d) => d.name).join(', ') || 'No Scopes'
+    (s: SimpleOAuthScopeInfo[]) => s.map((d) => d.name).join(', ') || '-'
   ),
   createColumn(
     'group_access',
     'Groups',
-    (groups: SimpleGroupInfo[]) =>
-      groups.map((u) => u.name).join(', ') || 'No Groups'
+    (groups: SimpleGroupInfo[]) => groups.map((u) => u.name).join(', ') || '-'
   ),
   createColumn(
     'user_access',
     'Users',
-    (users: SimpleUserInfo[]) =>
-      users.map((u) => u.name).join(', ') || 'No Users'
+    (users: SimpleUserInfo[]) => users.map((u) => u.name).join(', ') || '-'
   ),
   {
     accessorKey: 'actions',
