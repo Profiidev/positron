@@ -40,7 +40,6 @@ jobs:
             ${{ env.cache_key }}-
 
       - name: Fix restored cache ownership
-        if: steps.cache-restore.outputs.cache-matched-key != ''
         run: |
           mkdir -p /tmp/renovate/cache/renovate/repository
           mkdir -p /tmp/renovate/cache/containerbase
