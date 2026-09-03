@@ -8,6 +8,7 @@ on:
   schedule:
     - cron: '0 1 * * 1' # every Monday at 1:00 AM
     - cron: '0 1 1 * *' # every first day of the month at 1:00 AM
+  pull_request:
 
 env:
   cache_dir: /tmp/renovate/cache/renovate/repository
