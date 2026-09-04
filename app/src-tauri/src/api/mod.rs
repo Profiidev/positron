@@ -20,10 +20,7 @@ pub struct Client {
 
 impl Client {
   pub fn init(handle: &AppHandle) -> Result<()> {
-    let client = reqwest::Client::builder()
-      .timeout(Duration::from_secs(10))
-      .connect_timeout(Duration::from_secs(10))
-      .build()?;
+    let client = client();
     let store = handle.state::<Store>();
 
     let client = Client {
@@ -71,4 +68,13 @@ impl Client {
 
     Ok(res)
   }
+}
+
+pub fn client() -> reqwest::Client {
+  reqwest::Client::builder()
+    .user_agent(format!("Positron App v{}", env!("CARGO_PKG_VERSION")))
+    .timeout(Duration::from_secs(10))
+    .connect_timeout(Duration::from_secs(10))
+    .build()
+    .expect("Failed to build HTTP client")
 }

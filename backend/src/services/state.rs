@@ -4,6 +4,8 @@ use centaurus::error::Result;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 
+use crate::utils::client;
+
 #[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
 pub struct ApodState {
@@ -17,9 +19,7 @@ pub struct Image {
 
 impl ApodState {
   pub fn init() -> Self {
-    Self {
-      client: Client::new(),
-    }
+    Self { client: client() }
   }
 }
 

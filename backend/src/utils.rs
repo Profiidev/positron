@@ -7,6 +7,7 @@ use centaurus::{
   permission,
 };
 use rand::{RngExt, distr::Alphanumeric};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -83,6 +84,13 @@ permission!(OAuthScopeView, "oauth_scope:view");
 permission!(OAuthScopeEdit, "oauth_scope:edit");
 permission!(OAuthPolicyView, "oauth_policy:view");
 permission!(OAuthPolicyEdit, "oauth_policy:edit");
+
+pub fn client() -> Client {
+  Client::builder()
+    .user_agent(format!("Positron v{}", env!("CARGO_PKG_VERSION")))
+    .build()
+    .expect("Failed to build HTTP client")
+}
 
 #[cfg(test)]
 mod test {
