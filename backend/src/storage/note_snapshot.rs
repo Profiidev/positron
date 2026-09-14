@@ -1,26 +1,38 @@
 use std::io::Cursor;
 
 use axum::body::Body;
-use centaurus::{error::Result, storage::FileStorage};
+use centaurus::{
+  error::Result,
+  storage::{FileStorage, StoragePath},
+};
 use uuid::Uuid;
 
 pub struct NoteSnapshotFolder<'b> {
   storage: &'b FileStorage,
+  base: StoragePath,
 }
 
 impl<'b> NoteSnapshotFolder<'b> {
   pub fn new(storage: &'b FileStorage) -> Self {
-    Self { storage }
+    Self {
+      storage,
+      base: "notes".into(),
+    }
   }
 
-  fn path(&self, note_id: Uuid, snapshot_id: Uuid) -> String {
-    format!("notes/{}/snapshots/{}", note_id, snapshot_id)
+  fn path(&self, note_id: Uuid, snapshot_id: Uuid) -> StoragePath {
+    self
+      .base
+      .clone()
+      .join(note_id.to_string())
+      .join("snapshots")
+      .join(snapshot_id.to_string())
   }
 
   pub async fn create(&self, note_id: Uuid, snapshot_id: Uuid, data: &[u8]) -> Result<()> {
     self
       .storage
-      .save_file(&mut Cursor::new(data), &self.path(note_id, snapshot_id))
+      .save_file(&mut Cursor::new(data), self.path(note_id, snapshot_id))
       .await
   }
 
