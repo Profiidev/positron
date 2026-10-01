@@ -4,7 +4,7 @@ use aide::OperationIo;
 use axum::{Extension, extract::FromRequestParts};
 use dashmap::DashMap;
 use tokio::spawn;
-use totp_rs::TOTP;
+use totp_rs::Totp;
 use uuid::Uuid;
 use webauthn_rs::{
   Webauthn, WebauthnBuilder,
@@ -25,7 +25,7 @@ pub struct PasskeyState {
 #[from_request(via(Extension))]
 pub struct TotpState {
   pub issuer: String,
-  pub reg_state: Arc<DashMap<Uuid, (TOTP, Instant)>>,
+  pub reg_state: Arc<DashMap<Uuid, (Totp, Instant)>>,
 }
 
 #[derive(Clone, FromRequestParts, OperationIo)]
