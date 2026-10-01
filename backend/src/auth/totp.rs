@@ -18,7 +18,7 @@ use centaurus::{
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use totp_rs::{Rfc6238, Secret, TOTP};
+use totp_rs::{Builder, Secret};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -77,24 +77,19 @@ async fn start_setup(
     bail!("TOTP is already set up for this user");
   }
 
-  let Ok(totp) = TOTP::from_rfc6238(
-    Rfc6238::new(
-      6,
-      Secret::generate_secret()
-        .to_bytes()
-        .context("Failed to generate totop secret")?,
-      Some(state.issuer.clone()),
-      user.email,
-    )
-    .context("Failed to create Rfc6238 instance")?,
-  ) else {
+  let Ok(totp) = Builder::new()
+    .with_secret(Secret::generate())
+    .with_issuer(Some(state.issuer.clone()))
+    .with_account_name(user.email)
+    .build()
+  else {
     bail!(INTERNAL_SERVER_ERROR, "failed to create TOTP instance");
   };
 
-  let Ok(qr) = totp.get_qr_base64() else {
+  let Ok(qr) = totp.to_qr_base64() else {
     bail!(INTERNAL_SERVER_ERROR, "failed to generate QR code");
   };
-  let code = totp.get_secret_base32();
+  let code = totp.secret().to_base32();
 
   state.reg_state.insert(auth.user_id, (totp, Instant::now()));
 
@@ -113,16 +108,12 @@ async fn finish_setup(
     .reg_state
     .get(&auth.user_id)
     .context("Failed to lock")?;
-  let valid = totp
-    .0
-    .check_current(&req.code)
-    .context("Failed to check code")?;
-  if !valid {
+  if totp.0.check_current(&req.code).is_none() {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   }
 
   db.user_ext()
-    .add_totp(auth.user_id, totp.0.get_secret_base32())
+    .add_totp(auth.user_id, totp.0.secret().to_base32())
     .await?;
 
   drop(totp);
@@ -149,21 +140,13 @@ async fn confirm(
 ) -> Result<(CookieJar, TokenRes<AuthRes>)> {
   let user = db.user_ext().get_user_by_id(auth.user_id).await?;
 
-  let Ok(totp) = TOTP::from_rfc6238(
-    Rfc6238::with_defaults(
-      Secret::Encoded(user.totp.context("no totop")?)
-        .to_bytes()
-        .context("Failed to decode totp secret")?,
-    )
-    .context("Failed to create Rfc6238 instance")?,
-  ) else {
+  let secret = Secret::try_from_base32(user.totp.context("no totop")?)
+    .context("Failed to decode totp secret")?;
+  let Ok(totp) = Builder::new().with_secret(secret).build() else {
     bail!(INTERNAL_SERVER_ERROR, "failed to create TOTP instance");
   };
 
-  if !totp
-    .check_current(&req.code)
-    .context("Failed to check code")?
-  {
+  if totp.check_current(&req.code).is_none() {
     bail!(UNAUTHORIZED, "Invalid TOTP code");
   } else {
     let cookie = create_session_cookie(&db, &jwt, auth.user_id, false, req.session).await?;
@@ -209,22 +192,15 @@ mod test {
   use centaurus::backend::endpoints::websocket::state::Updater;
   use centaurus::db::init::Connection;
   use serde_json::{Value, json};
-  use totp_rs::{Rfc6238, Secret, TOTP};
+  use totp_rs::{Builder, Secret};
   use tower::ServiceExt;
 
   /// Generates the current 6-digit code for a base32 secret, matching how the
   /// handlers build their TOTP instances.
   fn current_code(base32_secret: &str) -> String {
-    let totp = TOTP::from_rfc6238(
-      Rfc6238::with_defaults(
-        Secret::Encoded(base32_secret.to_string())
-          .to_bytes()
-          .unwrap(),
-      )
-      .unwrap(),
-    )
-    .unwrap();
-    totp.generate_current().unwrap()
+    let secret = Secret::try_from_base32(base32_secret).unwrap();
+    let totp = Builder::new().with_secret(secret).build().unwrap();
+    totp.generate_current().to_string()
   }
 
   fn totp_state() -> TotpState {

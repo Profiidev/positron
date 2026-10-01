@@ -3,16 +3,14 @@ mod common;
 use common::TestServer;
 use reqwest::StatusCode;
 use serde_json::Value;
-use totp_rs::{Rfc6238, Secret, TOTP};
+use totp_rs::{Builder, Secret};
 
 /// Generate the current 6-digit code for a base32 secret, matching how the
 /// server reconstructs the TOTP in `confirm`/`finish_setup`.
 fn current_code(secret_base32: &str) -> String {
-  let bytes = Secret::Encoded(secret_base32.to_string())
-    .to_bytes()
-    .expect("decode secret");
-  let totp = TOTP::from_rfc6238(Rfc6238::with_defaults(bytes).expect("rfc6238")).expect("totp");
-  totp.generate_current().expect("generate code")
+  let secret = Secret::try_from_base32(secret_base32).expect("decode secret");
+  let totp = Builder::new().with_secret(secret).build().expect("totp");
+  totp.generate_current().to_string()
 }
 
 #[tokio::test]
