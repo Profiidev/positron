@@ -1,4 +1,4 @@
-FROM ghcr.io/profiidev/images/rust-musl-watch:main@sha256:b03ecb064002e849d0f65dfa3690053241b0bfe4b893926f527d70655ff8bedc
+FROM ghcr.io/profiidev/images/rust-musl-watch:main@sha256:835dc0aeec70be66e78132969d1cf485a9b843a4e3204aab4426b5f6e034c931
 
 RUN apt update
 RUN apt install build-essential pkg-config libssl-dev -y
