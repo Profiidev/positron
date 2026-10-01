@@ -36,7 +36,7 @@ use tokio::{
 };
 use uuid::Uuid;
 use yrs::{
-  AsyncTransact, ClientID, Doc, ReadTxn, StateVector, Subscription, Update, XmlFragment, XmlOut,
+  AsyncTransact, ClientID, Doc, ReadTxn, StateVector, Update, XmlFragment, XmlOut,
   encoding::{read::Cursor, write::Write},
   sync::{
     Awareness, DefaultProtocol, Message as YrsMessage, SyncMessage,
@@ -57,6 +57,7 @@ use crate::{
 };
 
 pub const MB: usize = 1024 * 1024;
+const OBSERVER_KEY: &str = "note";
 
 #[derive(Clone, FromRequestParts, OperationIo)]
 #[from_request(via(Extension))]
@@ -75,10 +76,6 @@ struct SnapshotData {
 pub struct NoteState {
   doc: Arc<Mutex<Awareness>>,
   sender: Sender<WsMessage>,
-  #[allow(dead_code)]
-  doc_subscription: Subscription,
-  #[allow(dead_code)]
-  awareness_subscription: Subscription,
   subscriber_count: AtomicUsize,
   save_counter: AtomicIsize,
   storage: Arc<FileStorage>,
@@ -135,8 +132,8 @@ impl NoteEditing {
     }
 
     let (sender, _) = channel(10);
-    let doc_subscription = doc
-      .observe_update_v1({
+    doc
+      .observe_update_v1(OBSERVER_KEY, {
         let sender = sender.clone();
 
         move |_txn, update| {
@@ -151,7 +148,7 @@ impl NoteEditing {
 
     let mut awareness = Awareness::new(doc);
     let (awareness_sender, mut awareness_receiver) = mpsc::channel(10);
-    let awareness_subscription = awareness.on_update(move |_awareness, event, _origin| {
+    awareness.on_update(OBSERVER_KEY, move |_awareness, event, _origin| {
       let changes = event.all_changes();
       let _ = awareness_sender.try_send(changes);
     });
@@ -179,8 +176,6 @@ impl NoteEditing {
       doc: doc_arc,
       subscriber_count: AtomicUsize::new(1),
       save_counter: AtomicIsize::new(0),
-      doc_subscription,
-      awareness_subscription,
       sender,
       storage: self.storage.clone(),
       updater: self.updater.clone(),
@@ -215,6 +210,14 @@ impl NoteEditing {
     let Some((_, state)) = self.docs.remove(&note_id) else {
       return Ok(());
     };
+
+    let mut awareness = state.doc.lock().await;
+    awareness.unobserve_update(OBSERVER_KEY);
+    awareness
+      .doc()
+      .unobserve_update_v1(OBSERVER_KEY)
+      .context("failed to unobserve update")?;
+    drop(awareness);
 
     state.save(db, note_id).await?;
     drop(lock);
@@ -560,6 +563,16 @@ mod note_editing_test {
     // after full close a new open allocates a fresh document
     let fresh = editing.get_or_open_note(note_id, &db).await.unwrap();
     assert!(!Arc::ptr_eq(&first, &fresh));
+
+    // full close drops the awareness observer, so the awareness task exits and
+    // releases its handle on the old document
+    for _ in 0..100 {
+      if Arc::strong_count(&first.doc) == 1 {
+        break;
+      }
+      tokio::task::yield_now().await;
+    }
+    assert_eq!(Arc::strong_count(&first.doc), 1);
   }
 
   #[tokio::test]
