@@ -10,14 +10,14 @@
     "y-websocket": "^3.0.0"
   },
   "devDependencies": {
-    "oxfmt": "0.65.0",
-    "oxlint": "1.80.0",
-    "oxlint-tsgolint": "7.0.2001",
+    "oxfmt": "0.70.0",
+    "oxlint": "1.85.0",
+    "oxlint-tsgolint": "7.0.2003",
     "prettier-plugin-svelte": "4.1.1",
     "prettier-plugin-tailwindcss": "0.8.1"
   },
   "overrides": {
-    "@tiptap/extension-floating-menu": "3.30.5"
+    "@tiptap/extension-floating-menu": "3.31.3"
   },
   "allowScripts": {
     "sharp": true,
