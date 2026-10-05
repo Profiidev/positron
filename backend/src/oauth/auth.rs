@@ -141,7 +141,7 @@ async fn authorize_confirm(
   }
 
   let Some(data) = state.auth_pending.get(&query.code).map(|d| d.1.clone()) else {
-    bail!("authorization request not found")
+    bail!("authorization request not found");
   };
 
   let (url, client_name) = auth_redirect(data, &db, &auth, &state).await?;
