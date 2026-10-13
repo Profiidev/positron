@@ -2,7 +2,8 @@ use aide::OperationIo;
 use axum::{Extension, extract::FromRequestParts};
 use centaurus::error::Result;
 use chrono::{DateTime, Utc};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
+use serde::Deserialize;
 
 use crate::utils::client;
 
@@ -10,6 +11,21 @@ use crate::utils::client;
 #[from_request(via(Extension))]
 pub struct ApodState {
   client: Client,
+}
+
+#[derive(Deserialize)]
+struct ImageRes {
+  hdurl: Option<String>,
+  media_type: String,
+  title: String,
+}
+
+impl ImageRes {
+  /// The full-size image, `None` for videos and posts without one
+  fn image_url(self) -> Option<(String, String)> {
+    let url = self.hdurl.filter(|url| !url.is_empty())?;
+    (self.media_type == "image").then_some((url, self.title))
+  }
 }
 
 pub struct Image {
@@ -31,47 +47,26 @@ impl ApodState {
     let res = self
       .client
       .get(format!(
-        "https://apod.nasa.gov/apod/ap{}.html",
+        "https://science.nasa.gov/wp-json/wp/v2/apod-basic/{}",
         formatted_date
       ))
       .send()
-      .await?
-      .text()
       .await?;
+    if res.status() == StatusCode::NOT_FOUND {
+      return Ok(None);
+    }
+    let res: ImageRes = res.error_for_status()?.json().await?;
 
-    let (img_src, title) = {
-      let html = scraper::Html::parse_document(&res);
-
-      let img_selector = scraper::Selector::parse("img").unwrap();
-      let title_selector =
-        scraper::Selector::parse("body > center:nth-of-type(2) b:first-of-type").unwrap();
-
-      let Some(img) = html.select(&img_selector).next() else {
-        return Ok(None);
-      };
-
-      let high_res_img_src = img
-        .parent()
-        .and_then(|parent| parent.value().as_element())
-        .and_then(|el| el.attr("href"));
-      let base_img_src = img.value().attr("src");
-
-      let Some(img_src) = high_res_img_src.or(base_img_src) else {
-        return Ok(None);
-      };
-
-      let Some(title) = html.select(&title_selector).next() else {
-        return Ok(None);
-      };
-
-      (img_src.to_string(), title.inner_html())
+    let Some((image_url, title)) = res.image_url() else {
+      return Ok(None);
     };
 
     let image_res = self
       .client
-      .get(format!("https://apod.nasa.gov/apod/{}", img_src))
+      .get(image_url)
       .send()
       .await?
+      .error_for_status()?
       .bytes()
       .await?;
 
@@ -79,5 +74,33 @@ impl ApodState {
       image: image_res.to_vec(),
       title,
     }))
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::ImageRes;
+  use serde_json::json;
+
+  fn res(value: serde_json::Value) -> ImageRes {
+    serde_json::from_value(value).unwrap()
+  }
+
+  #[test]
+  fn image_url_uses_hdurl_of_images_only() {
+    let image = res(json!({ "hdurl": "https://x/a.jpg", "media_type": "image", "title": "A" }));
+    assert_eq!(
+      image.image_url(),
+      Some(("https://x/a.jpg".into(), "A".into()))
+    );
+
+    for skipped in [
+      json!({ "hdurl": "https://x/v.jpg", "media_type": "video", "title": "V" }),
+      json!({ "hdurl": "", "media_type": "image", "title": "E" }),
+      json!({ "hdurl": null, "media_type": "image", "title": "N" }),
+      json!({ "media_type": "image", "title": "M" }),
+    ] {
+      assert_eq!(res(skipped).image_url(), None);
+    }
   }
 }
