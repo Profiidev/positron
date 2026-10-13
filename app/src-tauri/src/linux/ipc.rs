@@ -1,13 +1,21 @@
-use std::path::{Path, PathBuf};
-
-use clap::Subcommand;
-use futures::StreamExt;
-use serde::{Deserialize, Serialize};
-use tarpc::{
-  server::{BaseChannel, Channel},
-  tokio_serde::formats::Bincode,
+use std::{
+  fs::{self, DirBuilder, Permissions},
+  io::{BufRead, BufReader, Write},
+  os::unix::{
+    fs::{DirBuilderExt, MetadataExt, PermissionsExt},
+    net::UnixStream,
+  },
+  path::{Path, PathBuf},
 };
+
+use anyhow::{Result, anyhow, ensure};
+use clap::Subcommand;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, async_runtime::spawn};
+use tokio::{
+  io::{AsyncBufReadExt, AsyncWriteExt},
+  net::UnixListener,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -16,8 +24,6 @@ use crate::{
   updater::{UpdateMessage, Updater},
 };
 
-const SOCKET_PATH: &str = "/tmp/positron.sock";
-
 #[derive(Serialize, Deserialize, Clone, Debug, Subcommand)]
 pub enum Page {
   Settings,
@@ -25,83 +31,214 @@ pub enum Page {
   Note { uuid: Uuid },
 }
 
-#[tarpc::service]
-pub trait AppIpc {
-  async fn show();
-  async fn hide();
-  async fn toggle();
-  async fn open(page: Page);
-  async fn deep_link(url: String);
+/// One request per connection: a JSON line `{"command": .., "data": ..}`,
+/// answered by a JSON line `{"Ok": null}` or `{"Err": ".."}`
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "command", content = "data", rename_all = "kebab-case")]
+pub enum Command {
+  Show,
+  Hide,
+  Toggle,
+  Open(Page),
+  DeepLink(String),
 }
 
-#[derive(Clone)]
-struct AppIpcServer(AppHandle);
-
-impl AppIpc for AppIpcServer {
-  async fn hide(self, _: tarpc::context::Context) -> () {
-    layer_shell::send_rpc(&self.0, GtkThreadRPC::Hide).await;
+fn socket_file_name() -> String {
+  if let Ok(display) = std::env::var("WAYLAND_DISPLAY") {
+    format!("positron-{}.sock", display)
+  } else {
+    "positron.sock".to_string()
   }
+}
 
-  async fn show(self, _: tarpc::context::Context) -> () {
-    layer_shell::send_rpc(&self.0, GtkThreadRPC::Show).await;
+pub fn socket_path() -> PathBuf {
+  if let Ok(path) = std::env::var("POSITRON_SOCKET") {
+    return PathBuf::from(path);
   }
-
-  async fn toggle(self, _: tarpc::context::Context) -> () {
-    layer_shell::send_rpc(&self.0, GtkThreadRPC::Toggle).await;
+  let file_name = socket_file_name();
+  if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+    PathBuf::from(runtime_dir).join(file_name)
+  } else {
+    fallback_dir().join(file_name)
   }
+}
 
-  async fn open(self, _: tarpc::context::Context, page: Page) -> () {
-    layer_shell::send_rpc(&self.0, GtkThreadRPC::Show).await;
-    let updater = self.0.state::<Updater>();
-    updater
-      .send(match page {
-        Page::Notes => UpdateMessage::OpenNotes,
-        Page::Settings => UpdateMessage::OpenSettings,
-        Page::Note { uuid } => UpdateMessage::OpenNote { uuid },
-      })
-      .await;
+/// `/tmp/positron-<uid>`: `/tmp` itself is anyone's to squat a socket in
+fn fallback_dir() -> PathBuf {
+  PathBuf::from(format!(
+    "/tmp/positron-{}",
+    rustix::process::getuid().as_raw()
+  ))
+}
+
+/// Creates the fallback directory of `socket` and refuses one that someone
+/// else could have planted or can enter
+fn private_dir(socket: &Path) -> Result<()> {
+  let dir = fallback_dir();
+  if socket.parent() != Some(dir.as_path()) {
+    return Ok(());
   }
+  if let Err(e) = DirBuilder::new().mode(0o700).create(&dir) {
+    ensure!(e.kind() == std::io::ErrorKind::AlreadyExists, e);
+  }
+  let meta = fs::symlink_metadata(&dir)?;
+  ensure!(
+    meta.is_dir() && meta.uid() == rustix::process::getuid().as_raw() && meta.mode() & 0o077 == 0,
+    "{} is not a private directory of this user",
+    dir.display()
+  );
+  Ok(())
+}
 
-  async fn deep_link(self, _: tarpc::context::Context, url: String) -> () {
-    if let Err(e) = deep_link::open_url(&self.0, &url).await {
-      println!("Failed to handle deep link via ipc: {:?}", e);
+pub fn send(command: &Command) -> Result<()> {
+  let socket = socket_path();
+  private_dir(&socket)?;
+  let mut stream = UnixStream::connect(socket)?;
+
+  let mut buf = serde_json::to_vec(command)?;
+  buf.push(b'\n');
+  stream.write_all(&buf)?;
+
+  let mut line = String::new();
+  BufReader::new(stream).read_line(&mut line)?;
+  let res: Result<(), String> = serde_json::from_str(&line)?;
+  res.map_err(|e| anyhow!(e))
+}
+
+/// Binds the socket, `None` when another instance is already listening on it
+fn bind() -> Result<Option<UnixListener>> {
+  let socket_path = socket_path();
+  private_dir(&socket_path)?;
+
+  let listener = match UnixListener::bind(&socket_path) {
+    Ok(listener) => listener,
+    Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+      if UnixStream::connect(&socket_path).is_ok() {
+        return Ok(None);
+      }
+      fs::remove_file(&socket_path)?;
+      UnixListener::bind(&socket_path)?
     }
-  }
+    Err(e) => return Err(e.into()),
+  };
+  fs::set_permissions(&socket_path, Permissions::from_mode(0o600))?;
+  Ok(Some(listener))
 }
 
 pub fn spawn_server(handle: &AppHandle) {
   let handle = handle.clone();
-  spawn(run_server(PathBuf::from(SOCKET_PATH), handle));
+  spawn(async move {
+    if let Err(e) = run_server(handle).await {
+      println!("IPC server failed: {:?}", e);
+    }
+  });
 }
 
-async fn run_server(sock_path: PathBuf, handle: AppHandle) -> anyhow::Result<()> {
-  let _ = std::fs::remove_file(&sock_path);
+async fn run_server(handle: AppHandle) -> Result<()> {
+  let Some(listener) = bind()? else {
+    println!("IPC socket is in use by another instance");
+    return Ok(());
+  };
 
-  let mut listener =
-    tarpc::serde_transport::unix::listen(&sock_path, tarpc::tokio_serde::formats::Bincode::default)
-      .await?;
-
-  let server = AppIpcServer(handle);
-
-  listener.config_mut().max_frame_length(64 * 1024 * 1024); // Set max frame length to 64MB
-  listener
-    .filter_map(|r| async { r.ok() })
-    .map(BaseChannel::with_defaults)
-    .for_each(|channel| {
-      let server = server.clone();
-      async move {
-        channel.execute(server.serve()).for_each(|fut| fut).await;
+  loop {
+    let (stream, _) = listener.accept().await?;
+    let handle = handle.clone();
+    // a slow answer must not hold up the next connection
+    spawn(async move {
+      if let Err(e) = serve(stream, handle).await {
+        println!("Error on IPC connection: {:?}", e);
       }
-    })
-    .await;
+    });
+  }
+}
 
+async fn serve(stream: tokio::net::UnixStream, handle: AppHandle) -> Result<()> {
+  let (read, mut write) = stream.into_split();
+  let mut line = String::new();
+  // empty connection = liveness probe from a second instance
+  if tokio::io::BufReader::new(read).read_line(&mut line).await? == 0 {
+    return Ok(());
+  }
+  let res = handle_command(serde_json::from_str(&line)?, &handle)
+    .await
+    .map_err(|e| e.to_string());
+
+  let mut buf = serde_json::to_vec(&res)?;
+  buf.push(b'\n');
+  Ok(write.write_all(&buf).await?)
+}
+
+async fn handle_command(command: Command, handle: &AppHandle) -> Result<()> {
+  match command {
+    Command::Show => layer_shell::send_rpc(handle, GtkThreadRPC::Show).await,
+    Command::Hide => layer_shell::send_rpc(handle, GtkThreadRPC::Hide).await,
+    Command::Toggle => layer_shell::send_rpc(handle, GtkThreadRPC::Toggle).await,
+    Command::Open(page) => {
+      layer_shell::send_rpc(handle, GtkThreadRPC::Show).await;
+      handle
+        .state::<Updater>()
+        .send(match page {
+          Page::Notes => UpdateMessage::OpenNotes,
+          Page::Settings => UpdateMessage::OpenSettings,
+          Page::Note { uuid } => UpdateMessage::OpenNote { uuid },
+        })
+        .await;
+    }
+    Command::DeepLink(url) => deep_link::open_url(handle, &url).await?,
+  }
   Ok(())
 }
 
-pub async fn client() -> anyhow::Result<AppIpcClient> {
-  let transport =
-    tarpc::serde_transport::unix::connect(Path::new(SOCKET_PATH), Bincode::default).await?;
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-  let client = AppIpcClient::new(tarpc::client::Config::default(), transport).spawn();
-  Ok(client)
+  #[test]
+  fn path_from_env() {
+    let cases = [
+      (
+        Some("wayland-1"),
+        Some("/run/user/1"),
+        "/run/user/1/positron-wayland-1.sock",
+      ),
+      (None, Some("/run/user/1"), "/run/user/1/positron.sock"),
+      (Some("wayland-1"), None, "positron-wayland-1.sock"),
+      (None, None, "positron.sock"),
+    ];
+    unsafe { std::env::remove_var("POSITRON_SOCKET") };
+    for (display, runtime, want) in cases {
+      unsafe {
+        match display {
+          Some(d) => std::env::set_var("WAYLAND_DISPLAY", d),
+          None => std::env::remove_var("WAYLAND_DISPLAY"),
+        }
+        match runtime {
+          Some(r) => std::env::set_var("XDG_RUNTIME_DIR", r),
+          None => std::env::remove_var("XDG_RUNTIME_DIR"),
+        }
+      }
+      let want = match runtime {
+        Some(_) => PathBuf::from(want),
+        None => fallback_dir().join(want),
+      };
+      assert_eq!(socket_path(), want);
+    }
+    unsafe { std::env::set_var("POSITRON_SOCKET", "/tmp/dev.sock") };
+    assert_eq!(socket_path(), PathBuf::from("/tmp/dev.sock"));
+  }
+
+  #[test]
+  fn wire_format() {
+    let json = |c: &Command| serde_json::to_value(c).unwrap();
+    assert_eq!(
+      json(&Command::Show),
+      serde_json::json!({ "command": "show" })
+    );
+    assert_eq!(
+      json(&Command::DeepLink("x".into())),
+      serde_json::json!({ "command": "deep-link", "data": "x" })
+    );
+    let open: Command = serde_json::from_str(r#"{"command":"open","data":"Notes"}"#).unwrap();
+    assert!(matches!(open, Command::Open(Page::Notes)));
+  }
 }
