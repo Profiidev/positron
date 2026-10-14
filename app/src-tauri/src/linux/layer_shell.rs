@@ -1,9 +1,21 @@
+use std::{cell::RefCell, rc::Rc};
+
 use anyhow::{Context, Result};
-use gtk::traits::{ContainerExt, GtkWindowExt, WidgetExt};
-use gtk_layer_shell::LayerShell;
+use gtk::{
+  cairo::Operator,
+  gdk,
+  glib::Propagation,
+  prelude::WidgetExtManual,
+  traits::{ContainerExt, GtkWindowExt, WidgetExt},
+};
+use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use tauri::{App, AppHandle, Manager, async_runtime::block_on};
 
 use crate::store::{HorizontalLayout, Settings, Store, VerticalLayout};
+
+/// One transparent surface per monitor behind the window; a click on one
+/// closes the window, like the panels of corona.
+type Backdrops = Rc<RefCell<Vec<gtk::Window>>>;
 
 pub enum GtkThreadRPC {
   ApplySettings(Settings),
@@ -40,34 +52,26 @@ pub fn init(app: &App) -> Result<()> {
 
   gtk_window.set_namespace("positron");
 
-  gtk_window.set_layer(gtk_layer_shell::Layer::Top);
+  // above the backdrops, which sit on `Top` like the bars
+  gtk_window.set_layer(Layer::Overlay);
+  gtk_window.set_anchor(Edge::Top, settings.vertical_layout == VerticalLayout::Top);
   gtk_window.set_anchor(
-    gtk_layer_shell::Edge::Top,
-    settings.vertical_layout == VerticalLayout::Top,
-  );
-  gtk_window.set_anchor(
-    gtk_layer_shell::Edge::Left,
+    Edge::Left,
     settings.horizontal_layout == HorizontalLayout::Left,
   );
   gtk_window.set_anchor(
-    gtk_layer_shell::Edge::Right,
+    Edge::Right,
     settings.horizontal_layout == HorizontalLayout::Right,
   );
   gtk_window.set_anchor(
-    gtk_layer_shell::Edge::Bottom,
+    Edge::Bottom,
     settings.vertical_layout == VerticalLayout::Bottom,
   );
 
   gtk_window.set_width_request(settings.width as i32);
   gtk_window.set_height_request(settings.height as i32);
 
-  gtk_window.set_keyboard_mode(gtk_layer_shell::KeyboardMode::OnDemand);
-
-  #[cfg(not(debug_assertions))]
-  gtk_window.connect_focus_out_event(move |window, _event| {
-    window.hide();
-    gtk::glib::Propagation::Stop
-  });
+  gtk_window.set_keyboard_mode(KeyboardMode::OnDemand);
 
   #[cfg(not(debug_assertions))]
   gtk_window.hide();
@@ -76,9 +80,10 @@ pub fn init(app: &App) -> Result<()> {
 
   let (sender, receiver) = async_channel::bounded::<GtkThreadRPC>(10);
 
+  let backdrops = Backdrops::default();
   gtk::glib::spawn_future_local(async move {
     while let Ok(msg) = receiver.recv().await {
-      handle_rpc(msg, &gtk_window);
+      handle_rpc(msg, &gtk_window, &backdrops);
     }
   });
 
@@ -92,41 +97,103 @@ pub async fn send_rpc(app: &AppHandle, msg: GtkThreadRPC) {
   gtk_thread_state.0.send(msg).await.ok();
 }
 
-pub fn handle_rpc(msg: GtkThreadRPC, gtk_window: &gtk::ApplicationWindow) {
+pub fn handle_rpc(msg: GtkThreadRPC, gtk_window: &gtk::ApplicationWindow, backdrops: &Backdrops) {
   match msg {
     GtkThreadRPC::ApplySettings(settings) => {
+      gtk_window.set_anchor(Edge::Top, settings.vertical_layout == VerticalLayout::Top);
       gtk_window.set_anchor(
-        gtk_layer_shell::Edge::Top,
-        settings.vertical_layout == VerticalLayout::Top,
-      );
-      gtk_window.set_anchor(
-        gtk_layer_shell::Edge::Left,
+        Edge::Left,
         settings.horizontal_layout == HorizontalLayout::Left,
       );
       gtk_window.set_anchor(
-        gtk_layer_shell::Edge::Right,
+        Edge::Right,
         settings.horizontal_layout == HorizontalLayout::Right,
       );
       gtk_window.set_anchor(
-        gtk_layer_shell::Edge::Bottom,
+        Edge::Bottom,
         settings.vertical_layout == VerticalLayout::Bottom,
       );
 
       gtk_window.set_width_request(settings.width as i32);
       gtk_window.set_height_request(settings.height as i32);
     }
-    GtkThreadRPC::Show => {
-      gtk_window.show_all();
-    }
-    GtkThreadRPC::Hide => {
-      gtk_window.hide();
-    }
+    GtkThreadRPC::Show => show(gtk_window, backdrops),
+    GtkThreadRPC::Hide => hide(gtk_window, backdrops),
     GtkThreadRPC::Toggle => {
       if gtk_window.is_visible() {
-        gtk_window.hide();
+        hide(gtk_window, backdrops);
       } else {
-        gtk_window.show_all();
+        show(gtk_window, backdrops);
       }
     }
   }
+}
+
+fn show(window: &gtk::ApplicationWindow, backdrops: &Backdrops) {
+  if window.is_visible() {
+    return;
+  }
+
+  // monitors come and go, so the backdrops are made per show
+  if let Some(display) = gdk::Display::default() {
+    let mut list = backdrops.borrow_mut();
+    for i in 0..display.n_monitors() {
+      let Some(monitor) = display.monitor(i) else {
+        continue;
+      };
+      let (window, backdrops) = (window.clone(), backdrops.clone());
+      let backdrop = backdrop(&monitor, move || hide(&window, &backdrops));
+      backdrop.show_all();
+      list.push(backdrop);
+    }
+  }
+
+  window.show_all();
+}
+
+fn hide(window: &gtk::ApplicationWindow, backdrops: &Backdrops) {
+  window.hide();
+
+  let backdrops: Vec<_> = backdrops.borrow_mut().drain(..).collect();
+  // this can run in the click handler of a backdrop, which must not
+  // be destroyed while it handles the event
+  gtk::glib::idle_add_local_once(move || {
+    for backdrop in backdrops {
+      backdrop.close();
+    }
+  });
+}
+
+/// A transparent surface over `monitor`, taking no keyboard focus. It leaves
+/// the exclusive zones of the bars alone, so those stay usable.
+fn backdrop(monitor: &gdk::Monitor, on_click: impl Fn() + 'static) -> gtk::Window {
+  let window = gtk::Window::new(gtk::WindowType::Toplevel);
+
+  window.set_app_paintable(true);
+  if let Some(visual) = WidgetExt::screen(&window).and_then(|screen| screen.rgba_visual()) {
+    window.set_visual(Some(&visual));
+  }
+  // GTK would paint the theme's window background otherwise
+  window.connect_draw(|_, cr| {
+    cr.set_operator(Operator::Clear);
+    let _ = cr.paint();
+    Propagation::Stop
+  });
+
+  window.init_layer_shell();
+  window.set_namespace("positron_backdrop");
+  window.set_layer(Layer::Top);
+  window.set_monitor(monitor);
+  for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+    window.set_anchor(edge, true);
+  }
+  window.set_keyboard_mode(KeyboardMode::None);
+
+  window.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
+  window.connect_button_press_event(move |_, _| {
+    on_click();
+    Propagation::Stop
+  });
+
+  window
 }
