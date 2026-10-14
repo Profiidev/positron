@@ -3,8 +3,7 @@
   import { Button } from '@profidev/pleiades/components/ui/form';
   import Trash from '@lucide/svelte/icons/trash';
   import Plus from '@lucide/svelte/icons/plus';
-  import ChevronUp from '@lucide/svelte/icons/chevron-up';
-  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
   import { type OAuthPolicyContent, type SimpleGroupInfo } from '$lib/client';
   import { Input } from '@profidev/pleiades/components/ui/input';
 
@@ -23,59 +22,86 @@
   );
 
   let sortedMappings = $derived(mappings.toSorted((a, b) => a.index - b.index));
+
+  // pointer-based drag so the row only moves vertically
+  let drag: { index: number; startY: number; dy: number; step: number } | null =
+    $state(null);
+
+  const move = (from: number, to: number) => {
+    const next = [...sortedMappings];
+    next.splice(to, 0, ...next.splice(from, 1));
+    mappings = next.map((m, index) => ({ ...m, index }));
+  };
+
+  const onpointermove = (e: PointerEvent) => {
+    if (!drag) return;
+    drag.dy = e.clientY - drag.startY;
+    // swap with neighbour once dragged past half of its slot
+    if (drag.dy > drag.step / 2 && drag.index < sortedMappings.length - 1) {
+      move(drag.index, ++drag.index);
+      drag.startY += drag.step;
+      drag.dy -= drag.step;
+    } else if (drag.dy < -drag.step / 2 && drag.index > 0) {
+      move(drag.index, --drag.index);
+      drag.startY -= drag.step;
+      drag.dy += drag.step;
+    }
+  };
 </script>
+
+<!-- window, not pointer capture: reordering moves the row node and drops capture -->
+<svelte:window
+  {onpointermove}
+  onpointerup={() => (drag = null)}
+  onpointercancel={() => (drag = null)}
+/>
 
 <h5>Group Mapping</h5>
 <div class="my-2 flex grow flex-col">
-  <div class="flex flex-col gap-2">
-    {#each sortedMappings as mapping, i}
-      <div class="grid grid-cols-[2rem_2rem_1fr_1fr_2rem] gap-2">
-        <Button
-          size="icon"
-          type="button"
-          variant="outline"
-          class="min-w-8 cursor-pointer"
-          disabled={i === 0 || disabled}
-          onclick={() => {
-            mappings = sortedMappings.map((m, j) => {
-              if (j === i) {
-                const newIndex = m.index - 1;
-                if (newIndex < 0) return m; // Can't move up
-                return { ...m, index: newIndex };
-              } else if (j === i - 1) {
-                const newIndex = m.index + 1;
-                if (newIndex >= mappings.length) return m; // Can't move down
-                return { ...m, index: newIndex };
-              }
-              return m;
-            });
+  <div class="flex flex-col gap-2" role="list">
+    {#each sortedMappings as mapping, i (mapping.group_id)}
+      <div
+        class="bg-background grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 rounded-md border p-2 {drag?.index ===
+        i
+          ? 'relative z-10 shadow-lg'
+          : ''}"
+        style:transform={drag?.index === i
+          ? `translateY(${drag.dy}px)`
+          : undefined}
+        role="listitem"
+      >
+        <div
+          role="button"
+          tabindex={disabled ? -1 : 0}
+          aria-label="Drag to reorder, or use arrow keys"
+          class="flex touch-none items-center justify-center {disabled
+            ? 'opacity-50'
+            : drag
+              ? 'cursor-grabbing'
+              : 'cursor-grab'}"
+          onpointerdown={(e) => {
+            if (disabled || e.button !== 0) return;
+            // no text selection while dragging
+            e.preventDefault();
+            const handle = e.currentTarget as HTMLElement;
+            // row height + list gap
+            const row = handle.parentElement!;
+            const step =
+              row.getBoundingClientRect().height +
+              parseFloat(getComputedStyle(row.parentElement!).rowGap);
+            drag = { index: i, startY: e.clientY, dy: 0, step };
+          }}
+          onkeydown={(e) => {
+            if (disabled) return;
+            if (e.key === 'ArrowUp' && i > 0) move(i, i - 1);
+            else if (e.key === 'ArrowDown' && i < sortedMappings.length - 1)
+              move(i, i + 1);
+            else return;
+            e.preventDefault();
           }}
         >
-          <ChevronUp />
-        </Button>
-        <Button
-          size="icon"
-          type="button"
-          variant="outline"
-          class="min-w-8 cursor-pointer"
-          disabled={i === mappings.length - 1 || disabled}
-          onclick={() => {
-            mappings = sortedMappings.map((m, j) => {
-              if (j === i) {
-                const newIndex = m.index + 1;
-                if (newIndex >= mappings.length) return m; // Can't move down
-                return { ...m, index: newIndex };
-              } else if (j === i + 1) {
-                const newIndex = m.index - 1;
-                if (newIndex < 0) return m; // Can't move up
-                return { ...m, index: newIndex };
-              }
-              return m;
-            });
-          }}
-        >
-          <ChevronDown />
-        </Button>
+          <GripVertical class="size-4" />
+        </div>
         <Multiselect
           data={[
             {
