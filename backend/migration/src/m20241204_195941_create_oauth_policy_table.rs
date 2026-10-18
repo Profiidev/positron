@@ -92,6 +92,7 @@ impl MigrationTrait for Migration {
         Table::drop()
           .table(OAuthScope::Table)
           .table(OAuthScopeOAuthPolicy::Table)
+          .table(OAuthClientOAuthScope::Table)
           .to_owned(),
       )
       .await

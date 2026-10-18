@@ -83,3 +83,4 @@ base64 = "=0.23.1"
 rsa = "=0.9.10"
 uuid = { version = "=1.26.1", features = ["v4"] }
 totp-rs = { version = "=6.0.0", features = ["gen_secret", "otpauth"] }
+testcontainers-modules = { version = "=0.15.0", features = ["postgres"] }

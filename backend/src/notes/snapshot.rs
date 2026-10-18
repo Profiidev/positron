@@ -830,16 +830,34 @@ mod test {
 
   #[tokio::test]
   async fn cleanup_deletes_excess_snapshots_and_storage() {
-    use chrono::{TimeDelta, TimeZone, Utc};
-
     let s = setup().await;
     let storage = crate::storage::test::init_test_storage().await;
+    cleanup_deletes_excess(&s.db, s.user, &storage).await;
+  }
+
+  #[tokio::test]
+  async fn pg_cleanup_deletes_excess_snapshots_and_storage() {
+    let (db, _pg) = crate::db::test::test_pg_db().await;
+    let user = insert_user(&db, "owner", "owner@x.com").await;
+    let storage = crate::storage::test::init_test_storage().await;
+    cleanup_deletes_excess(&db, user, &storage).await;
+  }
+
+  #[tokio::test]
+  async fn s3_cleanup_deletes_excess_snapshots_and_storage() {
+    let s = setup().await;
+    let (storage, _s3) = crate::storage::test::init_s3_storage().await;
+    cleanup_deletes_excess(&s.db, s.user, &storage).await;
+  }
+
+  async fn cleanup_deletes_excess(db: &Connection, user: Uuid, storage: &FileStorage) {
+    use chrono::{TimeDelta, TimeZone, Utc};
+
     let updater = crate::db::test::updater().await;
-    let note = s.db.notes().create(s.user, "T".into()).await.unwrap();
+    let note = db.notes().create(user, "T".into()).await.unwrap();
     let now = Utc.with_ymd_and_hms(2024, 6, 1, 12, 0, 0).unwrap();
 
-    let more_recent = s
-      .db
+    let more_recent = db
       .note_snapshot()
       .create_at(
         note,
@@ -848,8 +866,7 @@ mod test {
       )
       .await
       .unwrap();
-    let less_recent = s
-      .db
+    let less_recent = db
       .note_snapshot()
       .create_at(
         note,
@@ -858,8 +875,7 @@ mod test {
       )
       .await
       .unwrap();
-    let recent = s
-      .db
+    let recent = db
       .note_snapshot()
       .create_at(note, "recent".into(), now - TimeDelta::minutes(30))
       .await
@@ -881,11 +897,11 @@ mod test {
       .await
       .unwrap();
 
-    super::run_cleanup_cycle_at(&s.db, &storage, &updater, now)
+    super::run_cleanup_cycle_at(db, storage, &updater, now)
       .await
       .unwrap();
 
-    let remaining = snapshot_ids(&s.db, note).await;
+    let remaining = snapshot_ids(db, note).await;
     assert_eq!(remaining.len(), 2);
     assert!(remaining.contains(&more_recent));
     assert!(remaining.contains(&recent));

@@ -306,7 +306,7 @@ mod test {
   use crate::db::{
     DBTrait,
     notes::snapshot::RetentionTier,
-    test::{insert_user, test_db},
+    test::{insert_user, test_db, test_pg_db},
   };
   use chrono::Utc;
   use uuid::Uuid;
@@ -1148,5 +1148,89 @@ mod test {
       vec![dropped]
     );
     assert!(db.note_snapshot().find(kept).await.unwrap().is_some());
+  }
+
+  // ---- postgres ----
+  //
+  // The bucket partition expression is backend specific
+  // (`EXTRACT(EPOCH ...)` on postgres), so the eviction query is checked for
+  // every tier against a real postgres.
+
+  #[tokio::test]
+  async fn pg_ids_to_evict_every_tier() {
+    use chrono::TimeDelta;
+
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let now = fixed_now();
+
+    for tier in RetentionTier::all() {
+      let bucket = tier.bucket_secs();
+      // a point well inside the tier range, then the start of its bucket
+      let newest = tier.newest_inclusive(now);
+      let inside = match tier.oldest_exclusive(now) {
+        Some(oldest) => oldest + (newest - oldest) / 2,
+        None => newest - TimeDelta::seconds(2 * bucket),
+      };
+      let start = inside.timestamp().div_euclid(bucket) * bucket;
+      let at = |secs: i64| chrono::DateTime::from_timestamp(secs, 0).unwrap();
+
+      let note = db.notes().create(owner, format!("{tier:?}")).await.unwrap();
+      let older = db
+        .note_snapshot()
+        .create_at(note, "older".into(), at(start + 1))
+        .await
+        .unwrap();
+      db.note_snapshot()
+        .create_at(note, "newer".into(), at(start + 2))
+        .await
+        .unwrap();
+      // only snapshot in the previous bucket, must be kept
+      db.note_snapshot()
+        .create_at(note, "other".into(), at(start - bucket / 2))
+        .await
+        .unwrap();
+
+      let rows = db
+        .note_snapshot()
+        .ids_to_evict_for_tier(*tier, now)
+        .await
+        .unwrap();
+      let evicted: Vec<Uuid> = rows
+        .iter()
+        .filter(|row| row.note == note)
+        .map(|row| row.id)
+        .collect();
+      assert_eq!(evicted, vec![older], "tier {tier:?}");
+      assert!(rows.iter().all(|row| row.owner == owner));
+
+      // clean up so later tiers only see their own note
+      db.notes().delete(note).await.unwrap();
+    }
+  }
+
+  #[tokio::test]
+  async fn pg_ids_to_evict_identical_created_at_evicts_lower_id() {
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let note = db.notes().create(owner, "T".into()).await.unwrap();
+    let now = fixed_now();
+    let created_at = now - chrono::TimeDelta::hours(2) - chrono::TimeDelta::minutes(15);
+
+    let first = db
+      .note_snapshot()
+      .create_at(note, "first".into(), created_at)
+      .await
+      .unwrap();
+    let second = db
+      .note_snapshot()
+      .create_at(note, "second".into(), created_at)
+      .await
+      .unwrap();
+
+    assert_eq!(
+      evict_ids(&db, RetentionTier::H2ToH4, now).await,
+      vec![first.min(second)]
+    );
   }
 }

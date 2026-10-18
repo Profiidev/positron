@@ -153,4 +153,73 @@ mod test {
 
     fix_s3(path).run(db).await.unwrap();
   }
+
+  #[tokio::test]
+  async fn s3_fix_s3_creates_missing_preview() {
+    use std::io::Cursor;
+
+    use centaurus::storage::FileStorage;
+    use entity::apod;
+    use image::{ImageFormat, RgbImage};
+
+    use crate::{
+      db::DBTrait,
+      storage::{StorageExt, test::s3_storage_config},
+    };
+
+    let db = test_db().await;
+    let (config, _s3) = s3_storage_config().await;
+    let date = chrono::NaiveDate::from_ymd_opt(2024, 1, 2).unwrap();
+    db.apod()
+      .create(apod::Model {
+        id: Uuid::new_v4(),
+        title: "APOD".into(),
+        date,
+        selector: None,
+      })
+      .await
+      .unwrap();
+
+    // the full size image already exists in S3, so no NASA request is made
+    let mut image = Cursor::new(Vec::new());
+    RgbImage::new(512, 512)
+      .write_to(&mut image, ImageFormat::WebP)
+      .unwrap();
+    image.set_position(0);
+    let storage = FileStorage::init(&config).await.unwrap();
+    storage
+      .apod()
+      .upload("2024-01-02.webp", &mut image)
+      .await
+      .unwrap();
+    assert!(
+      !storage
+        .apod()
+        .exists("2024-01-02_preview.webp")
+        .await
+        .unwrap()
+    );
+
+    ApodCommands::FixS3 {
+      storage_path: Some(config.storage_path.clone()),
+      s3_bucket: config.s3_bucket.clone(),
+      s3_region: config.s3_region.clone(),
+      s3_host: config.s3_host.clone(),
+      s3_access_key: config.s3_access_key.clone(),
+      s3_secret_key: config.s3_secret_key.clone(),
+      s3_force_path_style: config.s3_force_path_style,
+    }
+    .run(db)
+    .await
+    .unwrap();
+
+    let preview = storage
+      .apod()
+      .download("2024-01-02_preview.webp")
+      .await
+      .unwrap();
+    let preview = axum::body::to_bytes(preview, usize::MAX).await.unwrap();
+    let preview = image::load_from_memory(&preview).unwrap();
+    assert_eq!((preview.width(), preview.height()), (256, 256));
+  }
 }

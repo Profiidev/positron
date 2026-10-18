@@ -75,6 +75,10 @@ pub mod test {
   use entity::{group, group_user, user};
   use migration::{Migrator, MigratorTrait};
   use sea_orm::{ConnectOptions, Database, EntityTrait, Set};
+  use testcontainers_modules::{
+    postgres::Postgres,
+    testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner},
+  };
   use uuid::Uuid;
 
   /// Creates an in-memory SQLite database with all migrations applied.
@@ -95,6 +99,34 @@ pub mod test {
       .expect("Failed to run database migrations");
 
     Connection(conn)
+  }
+
+  /// Starts a throwaway Postgres container (same major version as production)
+  /// and runs all migrations on it.
+  ///
+  /// The container must be kept alive for the duration of the test; dropping it
+  /// stops and removes postgres.
+  pub async fn test_pg_db() -> (Connection, ContainerAsync<Postgres>) {
+    let container = Postgres::default()
+      .with_tag("18-alpine")
+      .start()
+      .await
+      .expect("Failed to start postgres container");
+    let url = format!(
+      "postgres://postgres:postgres@{}:{}/postgres",
+      container.get_host().await.unwrap(),
+      container.get_host_port_ipv4(5432).await.unwrap()
+    );
+
+    let conn = Database::connect(url)
+      .await
+      .expect("Failed to connect to postgres");
+
+    Migrator::up(&conn, None)
+      .await
+      .expect("Failed to run database migrations");
+
+    (Connection(conn), container)
   }
 
   /// Inserts a bare user row and returns its id. Many tables have a foreign key
@@ -348,5 +380,33 @@ pub mod test {
       .unwrap();
     // email is lowercased on insert by the helper
     assert_eq!(user.email, "alice@example.com");
+  }
+
+  async fn pg_type_exists(conn: &Connection, name: &str) -> bool {
+    use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
+    conn
+      .query_one_raw(Statement::from_sql_and_values(
+        DatabaseBackend::Postgres,
+        "SELECT 1 FROM pg_type WHERE typname = $1",
+        [name.into()],
+      ))
+      .await
+      .unwrap()
+      .is_some()
+  }
+
+  #[tokio::test]
+  async fn pg_migrations_down_then_up() {
+    let (conn, _pg) = test_pg_db().await;
+    // the note_share_access enum type is only created on postgres
+    assert!(pg_type_exists(&conn, "note_share_access").await);
+
+    // every migration's `down` must work on postgres, including the enum drop
+    Migrator::down(&conn.0, None).await.unwrap();
+    assert!(!pg_type_exists(&conn, "note_share_access").await);
+
+    Migrator::up(&conn.0, None).await.unwrap();
+    assert!(pg_type_exists(&conn, "note_share_access").await);
+    assert!(user::Entity::find().all(&conn.0).await.unwrap().is_empty());
   }
 }

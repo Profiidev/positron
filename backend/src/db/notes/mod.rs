@@ -578,7 +578,7 @@ mod test {
   use crate::db::{
     DBTrait,
     notes::NoteShareEntry,
-    test::{insert_user, test_db},
+    test::{insert_user, test_db, test_pg_db},
   };
   use uuid::Uuid;
 
@@ -1210,5 +1210,172 @@ mod test {
     let notes = db.notes().list_for_user(owner).await.unwrap();
     assert_eq!(notes[0].id, first);
     assert_eq!(notes[1].id, second);
+  }
+
+  // ---- postgres ----
+  //
+  // `note_share_access` is a native enum type on postgres (plain text on
+  // sqlite), and `set_public_access` casts to it only on postgres, so every
+  // query reading or writing `note.public_access` / `note_user.access` is
+  // exercised against a real postgres here.
+
+  #[tokio::test]
+  async fn pg_public_access_set_get_clear() {
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let stranger = insert_user(&db, "stranger", "stranger@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+    assert!(db.notes().info_public(id).await.unwrap().is_none());
+    assert!(!db.notes().has_access(stranger, id).await.unwrap());
+
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::View))
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().get_public_access(id).await.unwrap(),
+      Some(NoteShareAccess::View)
+    );
+    let public = db.notes().info_public(id).await.unwrap().unwrap();
+    assert_eq!(public.owner.id, owner);
+    assert!(!public.can_edit);
+    assert!(db.notes().has_access(stranger, id).await.unwrap());
+    assert!(!db.notes().can_edit(stranger, id).await.unwrap());
+
+    db.notes()
+      .set_public_access(id, Some(NoteShareAccess::Edit))
+      .await
+      .unwrap();
+    assert!(db.notes().info_public(id).await.unwrap().unwrap().can_edit);
+    assert!(db.notes().can_edit(stranger, id).await.unwrap());
+    let info = db.notes().info(id, owner).await.unwrap().unwrap();
+    assert_eq!(info.public_access, Some(NoteShareAccess::Edit));
+
+    db.notes().set_public_access(id, None).await.unwrap();
+    assert_eq!(db.notes().get_public_access(id).await.unwrap(), None);
+    assert!(!db.notes().has_access(stranger, id).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn pg_shared_users_enum_round_trip() {
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let viewer = insert_user(&db, "viewer", "viewer@x.com").await;
+    let editor = insert_user(&db, "editor", "editor@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    db.notes()
+      .set_shared_users(id, owner, vec![view(viewer), edit(editor)])
+      .await
+      .unwrap();
+
+    let mut shared = db.notes().shared_users(id).await.unwrap();
+    shared.sort_by_key(|s| s.user_id);
+    let mut expected = vec![view(viewer), edit(editor)];
+    expected.sort_by_key(|s| s.user_id);
+    assert_eq!(shared, expected);
+
+    assert!(db.notes().has_access(viewer, id).await.unwrap());
+    assert!(!db.notes().can_edit(viewer, id).await.unwrap());
+    assert!(db.notes().can_edit(editor, id).await.unwrap());
+
+    let viewer_list = db.notes().list_for_user(viewer).await.unwrap();
+    assert_eq!(viewer_list.len(), 1);
+    assert!(!viewer_list[0].can_edit);
+    assert!(db.notes().list_for_user(editor).await.unwrap()[0].can_edit);
+
+    let owner_info = db.notes().info(id, owner).await.unwrap().unwrap();
+    assert_eq!(owner_info.shared_with.len(), 2);
+    assert_eq!(owner_info.public_access, None);
+    let viewer_info = db.notes().info(id, viewer).await.unwrap().unwrap();
+    assert!(!viewer_info.can_edit);
+
+    // replacing the shares works inside the transaction on postgres too
+    db.notes()
+      .set_shared_users(id, owner, vec![edit(viewer)])
+      .await
+      .unwrap();
+    assert_eq!(
+      db.notes().shared_users(id).await.unwrap(),
+      vec![edit(viewer)]
+    );
+    assert_eq!(db.notes().shared_user_ids(id).await.unwrap(), vec![viewer]);
+  }
+
+  #[tokio::test]
+  async fn pg_transfer_owner_rewrites_shares() {
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let new_owner = insert_user(&db, "new", "new@x.com").await;
+    let viewer = insert_user(&db, "viewer", "viewer@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+    db.notes()
+      .set_shared_users(id, owner, vec![view(new_owner), view(viewer)])
+      .await
+      .unwrap();
+
+    db.notes()
+      .transfer_owner(id, owner, new_owner)
+      .await
+      .unwrap();
+
+    assert_eq!(db.notes().get_owner_id(id).await.unwrap(), Some(new_owner));
+    let mut shared = db.notes().shared_users(id).await.unwrap();
+    shared.sort_by_key(|s| s.user_id);
+    let mut expected = vec![edit(owner), view(viewer)];
+    expected.sort_by_key(|s| s.user_id);
+    assert_eq!(shared, expected);
+  }
+
+  #[tokio::test]
+  async fn pg_note_user_access_defaults_to_edit() {
+    use sea_orm::{ConnectionTrait, DatabaseBackend, EntityTrait, Statement};
+
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let shared = insert_user(&db, "shared", "shared@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    db.execute_raw(Statement::from_sql_and_values(
+      DatabaseBackend::Postgres,
+      "INSERT INTO note_user (note_id, user_id) VALUES ($1, $2)",
+      [id.into(), shared.into()],
+    ))
+    .await
+    .unwrap();
+
+    let row = note_user::Entity::find_by_id((id, shared))
+      .one(&db.0)
+      .await
+      .unwrap()
+      .unwrap();
+    assert_eq!(row.access, NoteShareAccess::Edit);
+  }
+
+  #[tokio::test]
+  async fn pg_remaining_note_queries() {
+    let (db, _pg) = test_pg_db().await;
+    let owner = insert_user(&db, "owner", "owner@x.com").await;
+    let id = db.notes().create(owner, "T".into()).await.unwrap();
+
+    db.notes().edit_title(id, "New".into()).await.unwrap();
+    db.notes()
+      .set_content(id, vec![0, 1, 255], "preview".into())
+      .await
+      .unwrap();
+    assert_eq!(db.notes().get_content(id).await.unwrap(), vec![0, 1, 255]);
+    assert_eq!(db.notes().content(id).await.unwrap(), Some(vec![0, 1, 255]));
+
+    let info = db.notes().info(id, owner).await.unwrap().unwrap();
+    assert_eq!(info.title, "New");
+    assert_eq!(info.preview, "preview");
+    assert!(info.is_owner);
+    assert_eq!(db.notes().count_owned(owner).await.unwrap(), 1);
+    assert_eq!(db.notes().list_owned_ids(owner).await.unwrap(), vec![id]);
+
+    db.notes().delete(id).await.unwrap();
+    assert!(db.notes().info(id, owner).await.unwrap().is_none());
   }
 }

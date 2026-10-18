@@ -8,6 +8,10 @@
 //! [`prepare_env`] is isolated per test, so the shared `sqlite::memory:`
 //! database never leaks between tests.
 //!
+//! [`TestServer::start_pg`] / [`TestServer::start_s3`] boot the same server
+//! against a throwaway postgres / S3 container (testcontainers, needs Docker)
+//! instead of sqlite / the local filesystem.
+//!
 //! The server sets its auth cookies with the `Secure` flag, which `reqwest`'s
 //! own cookie store refuses to persist over plain HTTP. We therefore keep a
 //! tiny cookie jar of our own ([`TestServer`]) that captures every
@@ -36,6 +40,14 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use rsa::{Pkcs1v15Encrypt, RsaPublicKey, pkcs1::DecodeRsaPublicKey, rand_core::OsRng};
 use serde_json::Value;
+use testcontainers_modules::{
+  postgres::Postgres,
+  testcontainers::{
+    ContainerAsync, GenericImage, ImageExt,
+    core::{ContainerPort, WaitFor},
+    runners::AsyncRunner,
+  },
+};
 use tokio::{spawn, time::sleep};
 use uuid::Uuid;
 
@@ -61,11 +73,18 @@ pub fn prepare_env() {
   }
 }
 
+/// A container the server depends on; kept alive as long as the server.
+pub enum TestContainer {
+  Postgres(ContainerAsync<Postgres>),
+  S3(ContainerAsync<GenericImage>),
+}
+
 /// A running test server plus a client (with a hand-rolled cookie jar).
 pub struct TestServer {
   pub port: u16,
   client: Client,
   cookies: Mutex<HashMap<String, String>>,
+  containers: Vec<TestContainer>,
 }
 
 impl TestServer {
@@ -73,7 +92,57 @@ impl TestServer {
   /// become ready.
   pub async fn start() -> TestServer {
     prepare_env();
+    TestServer::boot(Vec::new()).await
+  }
 
+  /// Boot a fresh server backed by a throwaway postgres container (same major
+  /// version as production) instead of sqlite.
+  pub async fn start_pg() -> TestServer {
+    prepare_env();
+    let container = Postgres::default()
+      .with_tag("18-alpine")
+      .start()
+      .await
+      .expect("start postgres container");
+    let url = format!(
+      "postgres://postgres:postgres@{}:{}/postgres",
+      container.get_host().await.unwrap(),
+      container.get_host_port_ipv4(5432).await.unwrap()
+    );
+    unsafe {
+      std::env::set_var("DB_URL", url);
+    }
+    TestServer::boot(vec![TestContainer::Postgres(container)]).await
+  }
+
+  /// Boot a fresh server whose file storage is an S3 bucket in a throwaway
+  /// S3Mock container (the MinIO images are no longer published).
+  pub async fn start_s3() -> TestServer {
+    prepare_env();
+    let container = GenericImage::new("adobe/s3mock", "5.2.3")
+      .with_exposed_port(ContainerPort::Tcp(9090))
+      .with_wait_for(WaitFor::message_on_stdout("Started S3MockApplication"))
+      .with_env_var("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS", "positron")
+      .start()
+      .await
+      .expect("start S3Mock container");
+    let host = format!(
+      "http://{}:{}",
+      container.get_host().await.unwrap(),
+      container.get_host_port_ipv4(9090).await.unwrap()
+    );
+    unsafe {
+      std::env::set_var("S3_BUCKET", "positron");
+      std::env::set_var("S3_REGION", "us-east-1");
+      std::env::set_var("S3_HOST", host);
+      std::env::set_var("S3_ACCESS_KEY", "test");
+      std::env::set_var("S3_SECRET_KEY", "test");
+      std::env::set_var("S3_FORCE_PATH_STYLE", "true");
+    }
+    TestServer::boot(vec![TestContainer::S3(container)]).await
+  }
+
+  async fn boot(containers: Vec<TestContainer>) -> TestServer {
     let app = App::new().await;
     let port = app.port();
     spawn(app.run());
@@ -88,6 +157,7 @@ impl TestServer {
       port,
       client,
       cookies: Mutex::new(HashMap::new()),
+      containers,
     };
 
     // Wait until the server is accepting requests.
@@ -104,7 +174,11 @@ impl TestServer {
 
   /// Boot a server and complete first-run setup with a default admin.
   pub async fn start_with_admin() -> (TestServer, Uuid) {
-    let server = TestServer::start().await;
+    TestServer::with_admin(TestServer::start().await).await
+  }
+
+  /// Complete first-run setup with a default admin on an already booted server.
+  pub async fn with_admin(server: TestServer) -> (TestServer, Uuid) {
     let id = server
       .setup_admin("admin", "admin@example.com", "hunter2pass")
       .await;

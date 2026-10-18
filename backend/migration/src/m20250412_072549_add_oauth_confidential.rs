@@ -27,6 +27,7 @@ impl MigrationTrait for Migration {
     manager
       .alter_table(
         Table::alter()
+          .table(OAuthClient::Table)
           .drop_column(OauthClientConfidential::Confidential)
           .to_owned(),
       )
