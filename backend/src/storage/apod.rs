@@ -66,7 +66,16 @@ mod test {
 
   #[tokio::test]
   async fn upload_exists_and_download_roundtrip() {
-    let storage = local_storage().await;
+    roundtrip(local_storage().await).await;
+  }
+
+  #[tokio::test]
+  async fn s3_upload_exists_and_download_roundtrip() {
+    let (storage, _minio) = crate::storage::test::init_s3_storage().await;
+    roundtrip(storage).await;
+  }
+
+  async fn roundtrip(storage: FileStorage) {
     let folder = storage.apod();
 
     // not present initially

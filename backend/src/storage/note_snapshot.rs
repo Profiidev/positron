@@ -54,3 +54,41 @@ impl<'b> NoteSnapshotFolder<'b> {
       .await
   }
 }
+
+#[cfg(test)]
+mod test {
+  use axum::body::to_bytes;
+  use centaurus::storage::FileStorage;
+  use uuid::Uuid;
+
+  use crate::storage::{
+    StorageExt,
+    test::{init_s3_storage, init_test_storage},
+  };
+
+  async fn create_exists_read_delete(storage: FileStorage) {
+    let folder = storage.note_snapshot();
+    let (note, snapshot) = (Uuid::new_v4(), Uuid::new_v4());
+
+    assert!(!folder.exists(note, snapshot).await.unwrap());
+    folder.create(note, snapshot, b"state").await.unwrap();
+    assert!(folder.exists(note, snapshot).await.unwrap());
+
+    let body = folder.read(note, snapshot).await.unwrap();
+    assert_eq!(to_bytes(body, usize::MAX).await.unwrap().as_ref(), b"state");
+
+    folder.delete(note, snapshot).await.unwrap();
+    assert!(!folder.exists(note, snapshot).await.unwrap());
+  }
+
+  #[tokio::test]
+  async fn local_create_exists_read_delete() {
+    create_exists_read_delete(init_test_storage().await).await;
+  }
+
+  #[tokio::test]
+  async fn s3_create_exists_read_delete() {
+    let (storage, _minio) = init_s3_storage().await;
+    create_exists_read_delete(storage).await;
+  }
+}
