@@ -70,6 +70,25 @@ test.describe('app login confirm', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('confirming keeps the challenge and requests an app code', async ({
+    page
+  }) => {
+    // Browsers refuse GET requests with a body, so test_token must be a POST
+    // Or the layout treats the session as invalid and redirects to /login.
+    const tokenTest = page.waitForRequest(
+      (r) => r.url().endsWith('/api/auth/test_token') && r.method() === 'POST'
+    );
+    await gotoReady(page, '/auth/app?challenge=challenge-token');
+    await tokenTest;
+    await expect(page).toHaveURL(/challenge=challenge-token/);
+
+    const request = page.waitForRequest('**/api/auth/app/code');
+    await page.getByRole('button', { name: 'Confirm' }).click();
+    expect((await request).postDataJSON()).toEqual({
+      challenge: 'challenge-token'
+    });
+  });
+
   test('cancelling the app login returns to the login guard', async ({
     page
   }) => {

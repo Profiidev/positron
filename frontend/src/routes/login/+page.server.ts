@@ -7,6 +7,7 @@ export const load: PageServerLoad = ({ cookies, url }) => {
   const code = url.searchParams.get('code');
   const name = url.searchParams.get('name');
   const auth = url.searchParams.get('auth');
+  const challenge = url.searchParams.get('challenge');
 
   if (cookie) {
     if (code && name) {
@@ -14,7 +15,10 @@ export const load: PageServerLoad = ({ cookies, url }) => {
     }
 
     if (auth) {
-      redirect(302, `/auth/${auth}`);
+      const query = challenge
+        ? `?challenge=${encodeURIComponent(challenge)}`
+        : '';
+      redirect(302, `/auth/${auth}${query}`);
     }
 
     if (url.pathname === '/login') {

@@ -47,7 +47,7 @@
     "@hey-api/openapi-ts": "0.99.0",
     "@lucide/svelte": "1.48.0",
     "@msw/playwright": "0.6.7",
-    "@playwright/test": "=1.61.1",
+    "@playwright/test": "=1.63.0",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "2.70.3",
     "@sveltejs/vite-plugin-svelte": "7.3.1",

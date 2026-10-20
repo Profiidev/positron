@@ -31,10 +31,25 @@ describe('login +page.server load', () => {
   it('redirects an authenticated user with an auth param to /auth/*', async () => {
     const redirect = await catchRedirect(async () =>
       load(
-        ev({ cookies: cookies('jwt'), url: new URL('http://x/login?auth=app') })
+        ev({
+          cookies: cookies('jwt'),
+          url: new URL('http://x/login?auth=app')
+        })
       )
     );
     expect(redirect.location).toBe('/auth/app');
+  });
+
+  it('keeps the challenge when redirecting an authenticated user to /auth/*', async () => {
+    const redirect = await catchRedirect(async () =>
+      load(
+        ev({
+          cookies: cookies('jwt'),
+          url: new URL('http://x/login?auth=app&challenge=abc')
+        })
+      )
+    );
+    expect(redirect.location).toBe('/auth/app?challenge=abc');
   });
 
   it('redirects an authenticated user on /login to /', async () => {
