@@ -1096,7 +1096,7 @@ export type HandleTestTokenResponse = {
 };
 
 /**
- * Handler for the `GET /api/auth/test_token` operation.
+ * Handler for the `POST /api/auth/test_token` operation.
  */
 export function handleTestToken(
   response?:
@@ -1104,7 +1104,7 @@ export function handleTestToken(
     | HttpResponseResolver<never, TestTokenData['body']>,
   options?: RequestHandlerOptions
 ): HttpHandler {
-  return http.get<never, TestTokenData['body']>(
+  return http.post<never, TestTokenData['body']>(
     `${options?.baseUrl ?? '*'}/api/auth/test_token`,
     (info) => {
       if (typeof response === 'function') {
@@ -4182,7 +4182,7 @@ export type MswHandlerFactories = {
    */
   retrieveAppToken: typeof handleRetrieveAppToken;
   /**
-   * Handler for the `GET /api/auth/test_token` operation.
+   * Handler for the `POST /api/auth/test_token` operation.
    */
   testToken: typeof handleTestToken;
   /**

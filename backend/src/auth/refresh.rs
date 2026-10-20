@@ -1,4 +1,7 @@
-use aide::axum::{ApiRouter, routing::get_with};
+use aide::axum::{
+  ApiRouter,
+  routing::{get_with, post_with},
+};
 use axum::Json;
 use axum_extra::{
   TypedHeader,
@@ -30,7 +33,10 @@ use crate::{
 
 pub fn router() -> ApiRouter {
   ApiRouter::new()
-    .api_route("/test_token", get_with(test_token, |op| op.id("testToken")))
+    .api_route(
+      "/test_token",
+      post_with(test_token, |op| op.id("testToken")),
+    )
     .api_route(
       "/refresh_token",
       get_with(refresh_token, |op| op.id("refreshToken")),
@@ -121,7 +127,7 @@ mod test {
     Extension, Json, Router,
     body::Body,
     http::{Request, header},
-    routing::get,
+    routing::{get, post},
   };
   use axum_extra::extract::CookieJar;
   use centaurus::backend::auth::jwt_state::{JWT_COOKIE_NAME, JwtState};
@@ -141,7 +147,7 @@ mod test {
   fn test_token_request(cookie: &str) -> Request<Body> {
     let meta = session_meta();
     Request::builder()
-      .method("GET")
+      .method("POST")
       .uri("/test_token")
       .header(header::COOKIE, cookie)
       .header(header::CONTENT_TYPE, "application/json")
@@ -158,7 +164,7 @@ mod test {
 
   fn app(db: Connection, jwt: JwtState) -> Router {
     Router::new()
-      .route("/test_token", get(super::test_token))
+      .route("/test_token", post(super::test_token))
       .route("/refresh_token", get(super::refresh_token))
       .layer(Extension(jwt))
       .layer(Extension(db))

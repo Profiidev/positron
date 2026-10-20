@@ -671,7 +671,7 @@ export const retrieveAppToken = <ThrowOnError extends boolean = false>(
 export const testToken = <ThrowOnError extends boolean = false>(
   options: Options<TestTokenData, ThrowOnError>
 ): RequestResult<unknown, TestTokenErrors, ThrowOnError> =>
-  (options.client ?? client).get<unknown, TestTokenErrors, ThrowOnError>({
+  (options.client ?? client).post<unknown, TestTokenErrors, ThrowOnError>({
     url: '/api/auth/test_token',
     ...options,
     headers: {

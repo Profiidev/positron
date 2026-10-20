@@ -77,7 +77,7 @@ impl super::Client {
     let os = os();
 
     let req = self
-      .builder(Method::GET, "/api/auth/test_token")
+      .builder(Method::POST, "/api/auth/test_token")
       .await?
       .json(&json!({
         "application": format!("Positron App {}", version),

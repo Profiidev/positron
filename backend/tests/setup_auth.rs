@@ -130,7 +130,7 @@ async fn test_token_valid_and_invalid() {
   });
 
   let body: Value = server
-    .get_with_body("/auth/test_token", meta.clone())
+    .post("/auth/test_token", meta.clone())
     .await
     .json()
     .await
@@ -150,7 +150,7 @@ async fn test_token_valid_and_invalid() {
 
   server.clear_cookies();
   let body: Value = server
-    .get_with_body("/auth/test_token", meta)
+    .post("/auth/test_token", meta)
     .await
     .json()
     .await
