@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "backend"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "aide",
  "argon2",
@@ -5495,7 +5495,7 @@ dependencies = [
 
 [[package]]
 name = "positron"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "async-channel",
