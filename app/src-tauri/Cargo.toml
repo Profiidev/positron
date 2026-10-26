@@ -26,6 +26,8 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-deep-link = "2"
+# rust-ini 0.21.3 added fields to ParseOption, breaking tauri-plugin-deep-link 2.6.2; drop once deep-link is fixed
+rust-ini = "=0.21.1"
 tokio = "1.53.1"
 tauri-plugin-store = "2"
 anyhow = "1.0.104"
