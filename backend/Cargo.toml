@@ -23,7 +23,7 @@ argon2 = { version = "0.6.0" }
 axum = { version = "0.8.9", features = ["macros", "tracing", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
 base64 = "0.23.1"
-centaurus = { version = "0.17.2", features = [
+centaurus = { version = "0.17.9", features = [
   "fix-migrations",
   "uuid",
   "webauthn",
@@ -47,7 +47,6 @@ image = { version = "0.25.10", default-features = false, features = [
 ] }
 jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
 migration = { path = "migration" }
-openssl = { version = "0.10.81", features = ["vendored"] }
 rand = { version = "0.10.2", default-features = false, features = ["std"] }
 reqwest = { version = "0.13.4", features = ["form", "json"] }
 rsa = "0.9.10"
@@ -67,8 +66,8 @@ tower_governor = { version = "0.8.0", features = ["axum"] }
 tracing = "0.1.44"
 url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.24.0", features = ["v4", "v7"] }
-webauthn-rs = { version = "0.6.0", features = ["conditional-ui"] }
-webauthn-rs-proto = "0.6.0"
+webauthn-rs = { version = "0.6.2", features = ["conditional-ui"] }
+webauthn-rs-proto = "0.6.2"
 yrs = { version = "0.28.0", features = ["sync"] }
 
 [features]

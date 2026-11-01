@@ -26,13 +26,7 @@ COPY frontend/static ./static
 
 RUN npm run build
 
-# only tmp when webauthn-rs removes openssl dependency
-FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:58cb837025f0f8eb4b256b8a2ef0ef93958961ba6835123578d8b0c338a974a8 AS chef
-
-RUN apt update
-RUN apt install build-essential pkg-config libssl-dev -y
-
-FROM chef AS backend-planner
+FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:58cb837025f0f8eb4b256b8a2ef0ef93958961ba6835123578d8b0c338a974a8 AS backend-planner
 
 ARG TARGET
 ARG RUSTFLAGS
@@ -49,7 +43,7 @@ RUN \
   --mount=type=cache,target=/app/target \
   cargo chef prepare --recipe-path recipe.json --bin backend
 
-FROM chef AS backend-builder
+FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:58cb837025f0f8eb4b256b8a2ef0ef93958961ba6835123578d8b0c338a974a8 AS backend-builder
 
 ARG TARGET
 ARG RUSTFLAGS
