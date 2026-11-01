@@ -219,7 +219,7 @@ async fn finish_authentication(
 
   let user = db.user().get_user_by_id(passkey_db.user_id).await?;
 
-  let res = webauthn.finish_discoverable_authentication(&auth, auth_state, &[(&passkey).into()])?;
+  let res = webauthn.finish_discoverable_authentication_v2(&auth, auth_state, &passkey)?;
 
   if res.needs_update() {
     passkey.update_credential(&res);

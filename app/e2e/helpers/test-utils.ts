@@ -70,15 +70,16 @@ export const isMobile = (): boolean => {
  * every webview (`window.__TAURI_INTERNALS__`). This lets specs drive and reset
  * the Rust-side app state directly, without going through the UI.
  *
- * Desktop (WebKitGTK) uses `executeAsync` (the WebDriver `execute/async`
- * endpoint): `tauri-plugin-webdriver`'s desktop `execute/sync` handler
- * evaluates the script and serializes whatever it synchronously completes
- * with — for an `async` callback that's the unresolved `Promise` object
- * itself, which serializes to `null` — while `execute/async` has a dedicated
- * resolve/reject wrapper built for exactly this. Mobile keeps plain `execute`
- * with an awaited callback: Android/iOS's webview already resolves a returned
- * promise correctly there, and its `execute/async` native bridge has been
- * unreliable (observed hanging to the script timeout in practice).
+ * Desktop (WebKitGTK) passes an `async` callback, which WebdriverIO routes
+ * to the WebDriver `execute/async` endpoint: `tauri-plugin-webdriver`'s
+ * desktop `execute/sync` handler evaluates the script and serializes whatever
+ * it synchronously completes with — for a promise that's the unresolved
+ * `Promise` object itself, which serializes to `null` — while `execute/async`
+ * has a dedicated resolve/reject wrapper built for exactly this. Mobile passes
+ * a plain (non-`async`) callback returning a promise, which stays on
+ * `execute/sync`: Android/iOS's webview already resolves a returned promise
+ * correctly there, and its `execute/async` native bridge has been unreliable
+ * (observed hanging to the script timeout in practice).
  */
 export const invokeCommand = async <T = unknown>(
   command: string,
@@ -91,6 +92,31 @@ export const invokeCommand = async <T = unknown>(
 
   const result = isMobile()
     ? await browser.execute(
+        (
+          cmd: string,
+          payload: Record<string, unknown>
+        ): CommandResult | Promise<CommandResult> => {
+          const internals = (
+            window as unknown as {
+              __TAURI_INTERNALS__?: {
+                invoke: (c: string, a?: unknown) => Promise<unknown>;
+              };
+            }
+          ).__TAURI_INTERNALS__;
+
+          if (!internals?.invoke) {
+            return { __error: 'Tauri IPC bridge not available' };
+          }
+
+          return internals.invoke(cmd, payload).then(
+            (value) => ({ __ok: value as T }),
+            (error: unknown) => ({ __error: String(error) })
+          );
+        },
+        command,
+        args
+      )
+    : await browser.execute(
         async (cmd: string, payload: Record<string, unknown>) => {
           const internals = (
             window as unknown as {
@@ -110,33 +136,6 @@ export const invokeCommand = async <T = unknown>(
           } catch (error: unknown) {
             return { __error: String(error) };
           }
-        },
-        command,
-        args
-      )
-    : await browser.executeAsync(
-        (
-          cmd: string,
-          payload: Record<string, unknown>,
-          done: (result: CommandResult) => void
-        ) => {
-          const internals = (
-            window as unknown as {
-              __TAURI_INTERNALS__?: {
-                invoke: (c: string, a?: unknown) => Promise<unknown>;
-              };
-            }
-          ).__TAURI_INTERNALS__;
-
-          if (!internals?.invoke) {
-            done({ __error: 'Tauri IPC bridge not available' });
-            return;
-          }
-
-          internals.invoke(cmd, payload).then(
-            (value) => done({ __ok: value as T }),
-            (error: unknown) => done({ __error: String(error) })
-          );
         },
         command,
         args
