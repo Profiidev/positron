@@ -62,6 +62,7 @@ export const appLoginWebsocket = (
     }
   };
 
+  // oxlint-disable-next-line no-unsafe-type-assertion
   interval = setInterval(() => {
     if (
       !socket ||
@@ -73,7 +74,6 @@ export const appLoginWebsocket = (
     }
 
     socket.send('heartbeat');
-    // oxlint-disable-next-line no-unsafe-type-assertion
   }, 10_000) as unknown as number;
 };
 
