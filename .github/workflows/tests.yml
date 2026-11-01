@@ -24,7 +24,7 @@ jobs:
         run: cd backend && cargo nextest run --all-features --nff
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-backend
@@ -46,7 +46,7 @@ jobs:
         run: cd frontend && npm run test:unit -- --reporter junit --reporter default --outputFile test-results-frontend-unit.xml
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-frontend-unit
@@ -97,7 +97,7 @@ jobs:
           mv ${{ github.workspace }}/frontend/test-results/frontend-e2e.xml ${{ github.workspace }}/frontend/test-results/frontend-e2e-${{ matrix.file }}.xml
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-frontend-e2e-${{ matrix.file }}
@@ -105,7 +105,7 @@ jobs:
           retention-days: 5
 
       - name: Upload Test Report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-report-frontend-e2e-${{ matrix.file }}
@@ -144,7 +144,7 @@ jobs:
         run: cd app && npm run test:unit -- --reporter junit --reporter default --outputFile test-results-app-frontend-unit.xml
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-app-frontend-unit
@@ -180,7 +180,7 @@ jobs:
         run: cd app/src-tauri && cargo nextest run --all-features --nff --profile app
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-app-backend
@@ -236,7 +236,7 @@ jobs:
         run: cd app/e2e && xvfb-run -a npm run test:desktop
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-app-e2e-desktop
@@ -343,7 +343,7 @@ jobs:
             cd app/e2e && npm run test:android
 
       - name: Upload Test Result File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: test-results-app-e2e
@@ -356,7 +356,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Upload Event File
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: event-file
           path: ${{ github.event_path }}
