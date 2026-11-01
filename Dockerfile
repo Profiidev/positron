@@ -8,7 +8,7 @@ ARG FRONTEND_DIR=/app/frontend
 ARG FRONTEND_URL="http://localhost:3000/"
 ARG BACKEND_URL="http://localhost:8000"
 
-FROM node:26-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS frontend-builder
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -27,7 +27,7 @@ COPY frontend/static ./static
 RUN npm run build
 
 # only tmp when webauthn-rs removes openssl dependency
-FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:58cb837025f0f8eb4b256b8a2ef0ef93958961ba6835123578d8b0c338a974a8 AS chef
+FROM ghcr.io/profiidev/images/rust-gnu-builder:main@sha256:ec481bc66b89eb0d7e489013b2b0396155c9f863032ac8be3e75362e6c86be91 AS chef
 
 RUN apt update
 RUN apt install build-essential pkg-config libssl-dev -y
@@ -79,7 +79,7 @@ RUN \
   cd backend && cargo build --release --target $TARGET \
   && mv ../target/$TARGET/release/backend ../app
 
-FROM node:26-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39
 
 ENV DB_URL="sqlite:/data/positron.db?mode=rwc"
 ENV STORAGE_PATH="/data/storage"
