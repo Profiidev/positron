@@ -6,5 +6,19 @@
     "**/bower_components/**",
     "app/src-tauri/gen/**"
   ],
-  "ignoreDeps": ["@playwright/test"]
+  "ignoreDeps": ["@playwright/test"],
+  "packageRules": [
+    {
+      "description": "gtk must match the version used by tauri and gtk-layer-shell",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["gtk"],
+      "allowedVersions": "<0.19"
+    },
+    {
+      "description": "rust-ini 0.21.3 breaks tauri-plugin-deep-link, see app/src-tauri/Cargo.toml",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["rust-ini"],
+      "allowedVersions": "<0.21.3"
+    }
+  ]
 }

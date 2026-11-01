@@ -27,7 +27,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-deep-link = "2"
 # rust-ini 0.21.3 added fields to ParseOption, breaking tauri-plugin-deep-link 2.6.2; drop once deep-link is fixed
-rust-ini = "=0.21.3"
+rust-ini = "=0.21.1"
 tokio = "1.53.1"
 tauri-plugin-store = "2"
 anyhow = "1.0.104"
@@ -51,7 +51,7 @@ yrs = { version = "0.28.0", features = ["sync"] }
 tauri-plugin-barcode-scanner = "2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-gtk = "0.19.0"
+gtk = "0.18.2"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 async-channel = "2.5.0"
 tokio = { version = "1.53.1", features = ["net", "io-util"] }
