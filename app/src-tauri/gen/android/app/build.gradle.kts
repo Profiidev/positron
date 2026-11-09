@@ -15,7 +15,7 @@ val tauriProperties = Properties().apply {
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     namespace = "io.profidev.positron"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
@@ -63,10 +63,14 @@ android {
         }
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     buildFeatures {
         buildConfig = true
+    }
+    // lintVital crashes in Kotlin analysis of build scripts (lint bug)
+    lint {
+        checkReleaseBuilds = false
     }
 }
 
