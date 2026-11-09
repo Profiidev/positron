@@ -68,6 +68,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    // lintVital crashes in Kotlin analysis of build scripts (lint bug)
+    lint {
+        checkReleaseBuilds = false
+    }
 }
 
 rust {
