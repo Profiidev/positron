@@ -64,6 +64,7 @@
             glib-networking
             gsettings-desktop-schemas
             gtk-layer-shell
+            aws-lc
           ];
 
           cargoLock = {
