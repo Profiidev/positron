@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State, Url, async_runtime::spawn, ipc::Channel};
-use tauri_plugin_http::reqwest::header::AUTHORIZATION;
+use tauri_plugin_http::reqwest::header::{AUTHORIZATION, USER_AGENT};
 use tokio::{
   sync::{Mutex, Notify, mpsc},
   time::sleep,
@@ -240,6 +240,9 @@ impl Updater {
     request
       .headers_mut()
       .append(AUTHORIZATION, format!("Bearer {}", token).parse()?);
+    request
+      .headers_mut()
+      .append(USER_AGENT, crate::api::USER_AGENT.parse()?);
 
     let (mut stream, _) = connect_async(request).await?;
 
