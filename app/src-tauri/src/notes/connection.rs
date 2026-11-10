@@ -9,7 +9,7 @@ use tauri::{
   async_runtime::{JoinHandle, spawn},
   ipc::Channel,
 };
-use tauri_plugin_http::reqwest::header::AUTHORIZATION;
+use tauri_plugin_http::reqwest::header::{AUTHORIZATION, USER_AGENT};
 use tokio::{
   net::TcpStream,
   sync::{Mutex, Notify},
@@ -122,6 +122,9 @@ impl NoteState {
     request
       .headers_mut()
       .append(AUTHORIZATION, format!("Bearer {}", token).parse()?);
+    request
+      .headers_mut()
+      .append(USER_AGENT, crate::api::USER_AGENT.parse()?);
 
     let (stream, _) = connect_async(request).await?;
     let (write, mut read) = stream.split();

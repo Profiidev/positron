@@ -70,9 +70,11 @@ impl Client {
   }
 }
 
+pub const USER_AGENT: &str = concat!("Positron App v", env!("CARGO_PKG_VERSION"));
+
 pub fn client() -> reqwest::Client {
   reqwest::Client::builder()
-    .user_agent(format!("Positron App v{}", env!("CARGO_PKG_VERSION")))
+    .user_agent(USER_AGENT)
     .timeout(Duration::from_secs(10))
     .connect_timeout(Duration::from_secs(10))
     .build()
