@@ -1,6 +1,8 @@
 image:
   magick -density 4096 -background none static/positron.svg -resize 4096x4096 -bordercolor none -border 1500 static/positron.png
-  npm run tauri icon static/positron.png
+  magick -background none static/positron-bg.svg -alpha off static/positron-bg.png
+  magick static/positron.png -fill '#9db6ed' -colorize 100 static/positron-fg.png
+  npm run tauri icon static/icon.json
 
 gcp-id-pool PID:
   gcloud iam workload-identity-pools create "github" --project="{{PID}}" --location="global" --display-name="GitHub Actions Pool"

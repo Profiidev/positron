@@ -1,0 +1,5 @@
+{
+  "default": "positron-bg.png",
+  "bg_color": "#121318",
+  "android_fg": "positron-fg.png"
+}
