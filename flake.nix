@@ -60,7 +60,6 @@
 
           buildInputs = with pkgs; [
             webkitgtk_4_1
-            openssl
             glib-networking
             gsettings-desktop-schemas
             gtk-layer-shell
