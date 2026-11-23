@@ -147,6 +147,17 @@ export const restartAndroidApp = async (port = 4445): Promise<void> => {
 };
 
 /**
+ * Prints the emulator's crash buffer and recent warnings/errors to the test
+ * log. Called when a test or hook fails so CI shows why the app (or its
+ * WebDriver server) went away instead of only a socket error.
+ */
+export const dumpAndroidLogcat = (): void => {
+  const crash = runAdb(['logcat', '-d', '-b', 'crash']).output;
+  const recent = runAdb(['logcat', '-d', '-t', '500', '*:W']).output;
+  console.log(`[logcat crash]\n${crash}\n[logcat]\n${recent}`);
+};
+
+/**
  * Ensures the Android app (and its embedded WebDriver server) is up before a
  * worker creates its session. The app is started once in `onPrepare`, but in CI
  * it can crash during a cold restart and never come back; without this every

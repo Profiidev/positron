@@ -5,6 +5,7 @@ import {
   byButton,
   getRoute,
   isMobile,
+  reloadApp,
   resetAppData,
   resetMockState,
   seedSetup,
@@ -54,8 +55,7 @@ describe('Main page (authenticated)', () => {
   });
 
   it('keeps the user authenticated across a reload', async () => {
-    await browser.execute(() => window.location.reload());
-    await browser.pause(500);
+    await reloadApp();
 
     // A persisted, still-valid token must not bounce the user back to /auth.
     await expect(byButton('Logout')).toBeDisplayed();

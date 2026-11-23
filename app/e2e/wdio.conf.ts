@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  dumpAndroidLogcat,
   ensureAndroidAppRunning,
   startApp,
   stopApp
@@ -105,5 +106,18 @@ export const config: WebdriverIO.Config = {
 
     // Wait a bit for any lingering state to clear
     await new Promise((resolve) => setTimeout(resolve, 500));
+  },
+
+  // Most Android failures happen in `beforeEach` (app reset), so dump on hooks too.
+  afterHook: (_test, _context, { error }) => {
+    if (error && process.env.TAURI_TEST_PLATFORM === 'android') {
+      dumpAndroidLogcat();
+    }
+  },
+
+  afterTest: (_test, _context, { passed }) => {
+    if (!passed && process.env.TAURI_TEST_PLATFORM === 'android') {
+      dumpAndroidLogcat();
+    }
   }
 };

@@ -167,7 +167,12 @@ export const waitForAppReady = async (timeout = 15_000): Promise<void> => {
 
 /** Hard-reloads the webview and waits for the SPA to come back up. */
 export const reloadApp = async (): Promise<void> => {
-  await browser.execute(() => window.location.reload());
+  // Defer the reload so `execute` returns before the page tears down. A reload
+  // inside the evaluated script races the Android WebView's result callback and
+  // can take the app's WebDriver server down (UND_ERR_SOCKET on every request).
+  await browser.execute(() => {
+    setTimeout(() => window.location.reload(), 0);
+  });
   // Let the webview tear down before polling for the fresh document.
   await browser.pause(500);
   await waitForAppReady();
