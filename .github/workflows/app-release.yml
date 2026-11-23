@@ -45,7 +45,7 @@ jobs:
           version: 1.2
 
       - name: install frontend dependencies
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@20216767ca67f0f7b4d095dc5859c5700a6581cb # v1.12.1
 
       - name: Cache cargo and rust files
         id: rust_cache
