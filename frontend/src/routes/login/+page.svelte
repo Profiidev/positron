@@ -56,9 +56,7 @@
   });
 
   let errorToasted = false;
-
-  afterNavigate(({ shallow, type }) => {
-    if (shallow && type === 'goto') return;
+  afterNavigate(() => {
     if (!data.error) return;
 
     if (!errorToasted) {
