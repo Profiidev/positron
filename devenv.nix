@@ -14,6 +14,8 @@ let
     gdk-pixbuf
     libsoup_3
     cairo
+    # liblzma, loaded by the @tauri-apps/cli native binary
+    xz
   ];
 in
 {

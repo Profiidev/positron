@@ -193,18 +193,18 @@ pub mod test {
   }
 
   /// Inserts an RSA private key row under the name `jwt` (the name the JWT
-  /// states load). A small 512-bit key keeps test runtime low and pre-seeding
+  /// states load). A small 1024-bit key (the rsa minimum) keeps test runtime low and pre-seeding
   /// it stops `JwtState::init` from generating a slow 4096-bit key; it is never
   /// used to protect anything real.
   pub async fn insert_jwt_key(conn: &Connection) {
     use entity::key;
+    use rand::rngs::SysRng;
     use rsa::{
-      RsaPrivateKey,
+      PrivateKey,
       pkcs1::{EncodeRsaPrivateKey, LineEnding},
-      rand_core::OsRng,
     };
 
-    let private_key = RsaPrivateKey::new(&mut OsRng, 512).expect("Failed to generate RSA key");
+    let private_key = PrivateKey::new(&mut SysRng, 1024).expect("Failed to generate RSA key");
     let pem = private_key
       .to_pkcs1_pem(LineEnding::LF)
       .expect("Failed to encode key")
@@ -255,12 +255,13 @@ pub mod test {
 
   /// Builds a `PasswordState` with a small RSA key and a short pepper. The real
   /// `init_pw_state` generates a 2048+-bit key which is far too slow for the
-  /// (unoptimized) test build; a 512-bit key behaves identically for hashing.
+  /// (unoptimized) test build; a 1024-bit key behaves identically for hashing.
   pub async fn password_state() -> centaurus::backend::auth::pw_state::PasswordState {
     use centaurus::backend::auth::pw_state::PasswordState;
-    use rsa::{RsaPrivateKey, rand_core::OsRng};
+    use rand::rngs::SysRng;
+    use rsa::PrivateKey;
 
-    let key = RsaPrivateKey::new(&mut OsRng, 512).expect("Failed to generate RSA key");
+    let key = PrivateKey::new(&mut SysRng, 1024).expect("Failed to generate RSA key");
     PasswordState::init(b"test-pepper".to_vec(), key).await
   }
 

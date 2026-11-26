@@ -26,8 +26,8 @@ struct Key {
 }
 
 async fn jwks(state: JwtStateOther) -> Json<JwtRes> {
-  let n = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.n().to_bytes_be());
-  let e = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.e().to_bytes_be());
+  let n = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.n_bytes());
+  let e = BASE64_URL_SAFE_NO_PAD.encode(state.public_key.e_bytes());
 
   Json(JwtRes {
     keys: vec![Key {
@@ -46,10 +46,10 @@ mod test {
   use super::jwks;
   use crate::{auth::jwt::JwtStateOther, config::Config, db::test::test_db};
   use entity::key;
+  use rand::rngs::SysRng;
   use rsa::{
-    RsaPrivateKey,
+    PrivateKey,
     pkcs1::{EncodeRsaPrivateKey, LineEnding},
-    rand_core::OsRng,
   };
   use sea_orm::{ActiveValue::Set, EntityTrait};
   use uuid::Uuid;
@@ -57,7 +57,7 @@ mod test {
   #[tokio::test]
   async fn jwks_exposes_single_rsa_signing_key() {
     let db = test_db().await;
-    let private_key = RsaPrivateKey::new(&mut OsRng, 512).unwrap();
+    let private_key = PrivateKey::new(&mut SysRng, 1024).unwrap();
     let pem = private_key
       .to_pkcs1_pem(LineEnding::LF)
       .unwrap()

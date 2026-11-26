@@ -19,7 +19,7 @@
 //! handles the JWT session cookie as well as the short-lived "special access"
 //! and TOTP cookies.
 //!
-//! Run with the `test` feature so centaurus uses fast (512-bit) RSA keys:
+//! Run with the `test` feature so centaurus uses fast (1024-bit) RSA keys:
 //!
 //! ```text
 //! cargo nextest run --features test
@@ -38,7 +38,7 @@ use std::{
 use backend::App;
 use base64::{Engine, prelude::BASE64_STANDARD};
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
-use rsa::{Pkcs1v15Encrypt, RsaPublicKey, pkcs1::DecodeRsaPublicKey, rand_core::OsRng};
+use rsa::{PublicKey, pkcs1::DecodeRsaPublicKey};
 use serde_json::Value;
 use testcontainers_modules::{
   postgres::Postgres,
@@ -284,9 +284,9 @@ impl TestServer {
     let key: Value = resp.json().await.expect("key json");
     let pem = key["key"].as_str().expect("key pem");
 
-    let public_key = RsaPublicKey::from_pkcs1_pem(pem).expect("parse rsa pub key");
+    let public_key = PublicKey::from_pkcs1_pem(pem).expect("parse rsa pub key");
     let ciphertext = public_key
-      .encrypt(&mut OsRng, Pkcs1v15Encrypt, plaintext.as_bytes())
+      .pkcs1v15_encrypt(plaintext.as_bytes())
       .expect("rsa encrypt");
     BASE64_STANDARD.encode(ciphertext)
   }

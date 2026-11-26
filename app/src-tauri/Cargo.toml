@@ -28,24 +28,24 @@ serde_json = "1"
 tauri-plugin-deep-link = "2"
 # rust-ini 0.21.3 added fields to ParseOption, breaking tauri-plugin-deep-link 2.6.2; drop once deep-link is fixed
 rust-ini = "=0.21.1"
-tokio = "1.53.1"
+tokio = "1.54.1"
 tauri-plugin-store = "2"
-anyhow = "1.0.104"
-uuid = { version = "1.24.0", features = ["v4"] }
+anyhow = "1.0.105"
+uuid = { version = "1.29.3", features = ["v4"] }
 dashmap = "6.2.1"
-rand = "0.10.2"
-sha2 = "0.11.0"
-base64 = "0.23.0"
-cookie = "0.18.1"
+rand = "0.10.4"
+sha2 = "0.11.2"
+base64 = "0.23.1"
+cookie = "0.18.3"
 tauri-plugin-http = { version = "2", features = ["json"] }
 tauri-plugin-webdriver = { version = "0.2", optional = true }
 tokio-tungstenite = { version = "0.30.0", features = [
   "rustls-tls-webpki-roots",
   "url"
 ] }
-futures-util = "0.3.33"
+futures-util = "0.3.34"
 chrono = { version = "0.4.45", features = ["serde"] }
-yrs = { version = "0.28.0", features = ["sync"] }
+yrs = { version = "0.28.2", features = ["sync"] }
 
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
 tauri-plugin-barcode-scanner = "2"
@@ -54,9 +54,9 @@ tauri-plugin-barcode-scanner = "2"
 gtk = "0.18.2"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 async-channel = "2.5.0"
-tokio = { version = "1.53.1", features = ["net", "io-util"] }
-rustix = { version = "1.1.5", features = ["process"] }
-clap = { version = "4.6.5", features = ["derive"] }
+tokio = { version = "1.54.1", features = ["net", "io-util"] }
+rustix = { version = "1.1.6", features = ["process"] }
+clap = { version = "4.6.10", features = ["derive"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

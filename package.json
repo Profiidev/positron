@@ -7,13 +7,14 @@
     "build": "DESKTOP_APP_TARGET=true npm run sync -w frontend && cd app && npm run build"
   },
   "dependencies": {
-    "y-websocket": "^3.0.0"
+    "y-websocket": "^3.1.0"
   },
   "devDependencies": {
-    "oxfmt": "0.75.0",
-    "oxlint": "1.90.0",
-    "oxlint-tsgolint": "7.0.2005",
-    "prettier-plugin-svelte": "4.1.1",
+    "cookie": "0.7.2",
+    "oxfmt": "0.80.0",
+    "oxlint": "1.95.0",
+    "oxlint-tsgolint": "7.0.2008",
+    "prettier-plugin-svelte": "4.2.0",
     "prettier-plugin-tailwindcss": "0.8.1"
   },
   "allowScripts": {
