@@ -32,7 +32,7 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage rec {
           pname = "positron";
-          version = "0.3.6";
+          version = "0.3.7";
 
           src = ./.;
 
