@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import { editorStub } from '$test_helpers/editor';
-import Headings from '$lib/components/tiptap/toolbar/headings.svelte';
-import Alignment from '$lib/components/tiptap/toolbar/alignment.svelte';
-import Link from '$lib/components/tiptap/toolbar/link.svelte';
-import ColorHighlight from '$lib/components/tiptap/toolbar/color-and-highlight.svelte';
+import { editorStub } from '#test_helpers/editor.ts';
+import Headings from '#lib/components/tiptap/toolbar/headings.svelte';
+import Alignment from '#lib/components/tiptap/toolbar/alignment.svelte';
+import Link from '#lib/components/tiptap/toolbar/link.svelte';
+import ColorHighlight from '#lib/components/tiptap/toolbar/color-and-highlight.svelte';
 
 describe('headings overflow trigger label', () => {
   it('reads "Normal" when no heading is active', () => {

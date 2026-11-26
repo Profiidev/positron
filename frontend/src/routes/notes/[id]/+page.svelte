@@ -22,15 +22,15 @@
     type SharedUserInfo,
     type SimpleUserInfo,
     type UserInfo
-  } from '$lib/client';
-  import TipTab from '$lib/components/tiptap/TipTab.svelte';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
-  import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
-  import NoteTransferOwnerControl from '$lib/components/notes/NoteTransferOwnerControl.svelte';
-  import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
-  import type { NoteActiveEditor } from '$lib/components/notes/types';
+  } from '#lib/client/index.ts';
+  import TipTab from '#lib/components/tiptap/TipTab.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
+  import NoteShareControl from '#lib/components/notes/NoteShareControl.svelte';
+  import NoteTransferOwnerControl from '#lib/components/notes/NoteTransferOwnerControl.svelte';
+  import NoteActiveEditorsIndicator from '#lib/components/notes/NoteActiveEditorsIndicator.svelte';
+  import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
   import { Input } from '@profidev/pleiades/components/ui/input';
-  import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
+  import NoteSnapshot from '#lib/components/notes/NoteSnapshot.svelte';
 
   const { data } = $props();
 
@@ -65,7 +65,9 @@
   );
 
   let errorToasted = false;
-  afterNavigate(() => {
+
+  afterNavigate(({ shallow, type }) => {
+    if (shallow && type === 'goto') return;
     if (!data.error) return;
 
     if (!errorToasted) {

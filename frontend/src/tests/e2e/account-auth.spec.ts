@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e-fixture';
-import { seedSpecialAccess, setupSession } from '$test_helpers/session';
-import { gotoReady } from '$test_helpers/layout';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { seedSpecialAccess, setupSession } from '#test_helpers/session.ts';
+import { gotoReady } from '#test_helpers/layout.ts';
 
 // `special_valid` is seeded so the re-auth ("Confirm Access") dialog is skipped
 // And the account auth actions open directly.

@@ -4,7 +4,7 @@
   import { information } from './schema.svelte';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
   import FormSwitch from '@profidev/pleiades/components/form/form-switch.svelte';
-  import type { SimpleOAuthScopeInfo } from '$lib/client';
+  import type { SimpleOAuthScopeInfo } from '#lib/client/index.ts';
   import FormSelect from '@profidev/pleiades/components/form/form-select.svelte';
 
   let {

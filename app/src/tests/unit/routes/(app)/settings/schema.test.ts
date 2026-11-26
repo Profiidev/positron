@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   HorizontalLayout,
   VerticalLayout
-} from '$lib/commands/settings.svelte';
-import { settings } from '$routes/(app)/settings/schema.svelte';
+} from '#lib/commands/settings.svelte.ts';
+import { settings } from '#routes/(app)/settings/schema.svelte.ts';
 
 const valid = {
   height: 600,

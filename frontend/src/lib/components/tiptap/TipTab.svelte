@@ -7,7 +7,7 @@
   import type { WebsocketProvider } from 'y-websocket';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { cn } from '@profidev/pleiades/utils';
-  import type { NoteActiveEditor } from '$lib/components/notes/types';
+  import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
 
   type AwarenessUser = {
     name?: string;

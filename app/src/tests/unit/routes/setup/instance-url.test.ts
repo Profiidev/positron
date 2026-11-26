@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createRawSnippet } from 'svelte';
 import { render, screen } from '@testing-library/svelte';
-import InstanceUrl from '$routes/setup/InstanceUrl.svelte';
+import InstanceUrl from '#routes/setup/InstanceUrl.svelte';
 
 const footer = createRawSnippet(() => ({
   render: () => '<div data-testid="footer">footer</div>'

@@ -19,13 +19,13 @@ import {
   shareNote,
   shareNotePublic,
   transferNote
-} from '$lib/commands/notes.svelte';
-import type { NoteInfo, ShareEntry } from '$lib/commands/notes-types';
+} from '#lib/commands/notes.svelte.ts';
+import type { NoteInfo, ShareEntry } from '#lib/commands/notes-types.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 const noteFixture: NoteInfo = {
   can_edit: true,

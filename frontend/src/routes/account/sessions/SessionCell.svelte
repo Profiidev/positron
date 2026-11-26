@@ -2,7 +2,7 @@
   import { Badge } from '@profidev/pleiades/components/ui/badge';
   import Monitor from '@lucide/svelte/icons/monitor';
   import Smartphone from '@lucide/svelte/icons/smartphone';
-  import type { SessionInfo } from '$lib/client';
+  import type { SessionInfo } from '#lib/client/index.ts';
   import { sessionDisplayName, sessionSubtitle } from './session-utils';
 
   interface Props {

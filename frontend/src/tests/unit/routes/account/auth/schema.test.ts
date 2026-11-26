@@ -7,7 +7,7 @@ import {
   passwordChange,
   totpAdd,
   totpRemove
-} from '$routes/account/auth/schema.svelte';
+} from '#routes/account/auth/schema.svelte.ts';
 
 describe('passkey schemas', () => {
   it('requires a non-empty name on create', () => {

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type * as Svelte from 'svelte';
 import type * as SvelteTable from '@tanstack/svelte-table';
-import type { SessionInfo } from '$lib/client';
+import type { SessionInfo } from '#lib/client/index.ts';
 import {
   formatRelativeOptional,
   formatRelativePast
-} from '$routes/account/sessions/session-utils';
+} from '#routes/account/sessions/session-utils.ts';
 
 vi.mock('@tanstack/svelte-table', async (importActual) => ({
   ...(await importActual<typeof SvelteTable>()),
@@ -28,7 +28,7 @@ vi.mock('svelte', async (importOriginal) => {
   };
 });
 
-const { columns } = await import('$routes/account/sessions/table.svelte');
+const { columns } = await import('#routes/account/sessions/table.svelte.ts');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cellProps = (cols: any[], key: string, original: SessionInfo) =>

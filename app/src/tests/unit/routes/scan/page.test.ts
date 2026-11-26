@@ -17,7 +17,7 @@ vi.mock('@tauri-apps/plugin-barcode-scanner', () => ({
 const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
 vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
-const Page = (await import('$routes/scan/+page.svelte')).default;
+const Page = (await import('#routes/scan/+page.svelte')).default;
 
 beforeEach(() => {
   checkPermissions.mockResolvedValue('granted');

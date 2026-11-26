@@ -10,7 +10,8 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({
 // Cleanup can't run before SvelteKit finishes hydration; override the global
 // No-op stub so it actually invokes the callback like a real navigation would.
 vi.mock('$app/navigation', () => ({
-  afterNavigate: (fn: () => void) => fn(),
+  afterNavigate: (fn: (nav: { shallow: boolean; type: string }) => void) =>
+    fn({ shallow: false, type: 'enter' }),
   beforeNavigate: vi.fn(),
   disableScrollHandling: vi.fn(),
   goto: vi.fn(async () => Promise.resolve()),
@@ -20,10 +21,11 @@ vi.mock('$app/navigation', () => ({
   preloadCode: vi.fn(async () => Promise.resolve()),
   preloadData: vi.fn(async () => Promise.resolve()),
   pushState: vi.fn(),
+  refreshAll: vi.fn(async () => Promise.resolve()),
   replaceState: vi.fn()
 }));
 
-const Page = (await import('$routes/login/+page.svelte')).default;
+const Page = (await import('#routes/login/+page.svelte')).default;
 
 const data = (error?: string, redirectTo = '/') =>
   ({

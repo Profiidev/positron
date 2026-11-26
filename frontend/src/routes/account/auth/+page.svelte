@@ -4,7 +4,7 @@
   import type { SvelteComponent } from 'svelte';
   import PasskeyList from './PasskeyList.svelte';
   import Totp2fa from './Totp2fa.svelte';
-  import type { PasskeyInfo, UserInfo } from '$lib/client';
+  import type { PasskeyInfo, UserInfo } from '#lib/client/index.ts';
   import Email from './Email.svelte';
 
   const { data } = $props();

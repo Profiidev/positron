@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidSearchPattern } from '$lib/components/tiptap/extensions/regex-check';
+import { isValidSearchPattern } from '#lib/components/tiptap/extensions/regex-check.ts';
 
 describe('isValidSearchPattern', () => {
   it('treats an empty search string as valid regardless of flags', () => {

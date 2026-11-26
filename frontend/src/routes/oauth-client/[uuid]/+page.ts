@@ -5,7 +5,7 @@ import {
   listScopesOAuthClient,
   listUsersOAuthClient,
   siteUrl
-} from '$lib/client';
+} from '#lib/client/index.ts';
 
 export const load: PageLoad = ({ params, fetch }) => {
   const resPromise = infoOauthClient({

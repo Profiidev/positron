@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/svelte';
-import GroupCreate from '$routes/groups/create/+page.svelte';
-import NoteCreate from '$routes/notes/create/+page.svelte';
-import ClientCreate from '$routes/oauth-client/create/+page.svelte';
-import PolicyCreate from '$routes/oauth-policy/create/+page.svelte';
-import ScopeCreate from '$routes/oauth-scope/create/+page.svelte';
-import UserCreate from '$routes/users/create/+page.svelte';
-import ApodDate from '$routes/apod/[date]/+page.svelte';
+import GroupCreate from '#routes/groups/create/+page.svelte';
+import NoteCreate from '#routes/notes/create/+page.svelte';
+import ClientCreate from '#routes/oauth-client/create/+page.svelte';
+import PolicyCreate from '#routes/oauth-policy/create/+page.svelte';
+import ScopeCreate from '#routes/oauth-scope/create/+page.svelte';
+import UserCreate from '#routes/users/create/+page.svelte';
+import ApodDate from '#routes/apod/[date]/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 

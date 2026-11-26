@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { resetSetup, setup, setupStatus } from '$lib/commands/setup.svelte';
+import { resetSetup, setup, setupStatus } from '#lib/commands/setup.svelte.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 describe('setup', () => {
   it('forwards the url and returns true on success', async () => {

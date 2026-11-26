@@ -5,7 +5,7 @@
   import type { Stage } from '@profidev/pleiades/components/form/types';
   import MultiStepForm from '@profidev/pleiades/components/form/multistep-form.svelte';
   import Information from './Information.svelte';
-  import { createNote } from '$lib/client';
+  import { createNote } from '#lib/client/index.ts';
 
   const { data } = $props();
 

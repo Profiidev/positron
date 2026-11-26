@@ -1,4 +1,4 @@
-import { getApodImageInfo } from '$lib/client';
+import { getApodImageInfo } from '#lib/client/index.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ fetch, params }) => {

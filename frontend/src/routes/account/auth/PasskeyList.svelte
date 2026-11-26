@@ -22,7 +22,7 @@
     removePasskey,
     startRegistration,
     type PasskeyInfo
-  } from '$lib/client';
+  } from '#lib/client/index.ts';
   import {
     type PublicKeyCredentialCreationOptionsJSON,
     type RegistrationResponseJSON

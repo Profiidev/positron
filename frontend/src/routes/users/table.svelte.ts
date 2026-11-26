@@ -3,9 +3,9 @@ import {
   type TableColumnDef,
   createColumn
 } from '@profidev/pleiades/components/table/helpers.svelte';
-import type { SimpleGroupInfo, UserListInfo } from '$lib/client';
+import type { SimpleGroupInfo, UserListInfo } from '#lib/client/index.ts';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
-import UserAvatar from '$lib/components/UserAvatar.svelte';
+import UserAvatar from '#lib/components/UserAvatar.svelte';
 
 export const columns = ({
   deleteUser,

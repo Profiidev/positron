@@ -14,12 +14,12 @@
     noteSnapshotInfo,
     restoreNoteSnapshot,
     type NoteSnapshotDetail
-  } from '$lib/commands/notes.svelte';
-  import Nav from '$lib/components/Nav.svelte';
-  import TipTabReadonly from '$lib/components/tiptap/TipTabReadonly.svelte';
+  } from '#lib/commands/notes.svelte.ts';
+  import Nav from '#lib/components/Nav.svelte';
+  import TipTabReadonly from '#lib/components/tiptap/TipTabReadonly.svelte';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
   import { onMount } from 'svelte';
-  import { onNotesUpdate } from '$lib/updater/state.svelte';
+  import { onNotesUpdate } from '#lib/updater/state.svelte.ts';
 
   const id = $derived(page.params.id ?? '');
   const snapshotId = $derived(page.params.snapshot ?? '');

@@ -2,13 +2,20 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
+import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig(() => ({
   define: {
     __version__: JSON.stringify(process.env.npm_package_version)
   },
-  plugins: [enhancedImages(), tailwindcss(), sveltekit(), svelteTesting()],
+  plugins: [
+    enhancedImages(),
+    tailwindcss(),
+    sveltekit({ adapter: adapter(), preprocess: vitePreprocess() }),
+    svelteTesting()
+  ],
   resolve: process.env.VITEST
     ? {
         conditions: ['browser']

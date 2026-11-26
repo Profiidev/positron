@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e-fixture';
-import { seedPublicShareVisitor, setupSession } from '$test_helpers/session';
-import { gotoReady } from '$test_helpers/layout';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { seedPublicShareVisitor, setupSession } from '#test_helpers/session.ts';
+import { gotoReady } from '#test_helpers/layout.ts';
 
 test.describe('public share page (anonymous visitor)', () => {
   test('renders a view-only public note for an anonymous visitor', async ({

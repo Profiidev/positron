@@ -7,8 +7,12 @@
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { afterNavigate, invalidate } from '$app/navigation';
-  import { Permission } from '$lib/permissions.svelte';
-  import { deleteGroup, type GroupInfo, type UserInfo } from '$lib/client';
+  import { Permission } from '#lib/permissions.svelte.ts';
+  import {
+    deleteGroup,
+    type GroupInfo,
+    type UserInfo
+  } from '#lib/client/index.ts';
 
   const { data } = $props();
 
@@ -35,7 +39,9 @@
   });
 
   let errorToasted = false;
-  afterNavigate(() => {
+
+  afterNavigate(({ shallow, type }) => {
+    if (shallow && type === 'goto') return;
     if (!data.error) return;
 
     if (!errorToasted) {

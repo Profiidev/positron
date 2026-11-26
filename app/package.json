@@ -4,6 +4,11 @@
   "description": "",
   "license": "GPL-2.0-only",
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*",
+    "#routes/*": "./src/routes/*",
+    "#test_helpers/*": "./src/tests/_helpers/*"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -47,8 +52,8 @@
   "devDependencies": {
     "@fontsource-variable/geist": "5.3.0",
     "@lucide/svelte": "1.81.0",
-    "@sveltejs/adapter-static": "3.0.11",
-    "@sveltejs/kit": "2.70.4",
+    "@sveltejs/adapter-static": "4.0.1",
+    "@sveltejs/kit": "3.4.1",
     "@sveltejs/vite-plugin-svelte": "7.3.2",
     "@tailwindcss/vite": "4.3.5",
     "@tauri-apps/cli": "2.12.6",

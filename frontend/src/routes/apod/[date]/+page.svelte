@@ -11,9 +11,9 @@
     type DateValue
   } from '@profidev/pleiades/util/time.svelte';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import type { GetInfoRes } from '$lib/client/types.gen.js';
-  import { apodImageUrl } from '$lib/permissions.svelte.js';
-  import { setGoodApod } from '$lib/client';
+  import type { GetInfoRes } from '#lib/client/types.gen.js';
+  import { apodImageUrl } from '#lib/permissions.svelte.js';
+  import { setGoodApod } from '#lib/client/index.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { goto } from '$app/navigation';
   import { cn } from '@profidev/pleiades/utils';

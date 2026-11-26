@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import UserAvatar from '$lib/components/UserAvatar.svelte';
+import UserAvatar from '#lib/components/UserAvatar.svelte';
 
 describe('UserAvatar', () => {
   it('shows two-letter uppercase initials from the username', () => {

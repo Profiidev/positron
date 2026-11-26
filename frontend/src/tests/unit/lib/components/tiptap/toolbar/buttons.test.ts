@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import { editorStub } from '$test_helpers/editor';
-import Bold from '$lib/components/tiptap/toolbar/bold.svelte';
-import Italic from '$lib/components/tiptap/toolbar/italic.svelte';
-import Underline from '$lib/components/tiptap/toolbar/underline.svelte';
-import Strikethrough from '$lib/components/tiptap/toolbar/strikethrough.svelte';
-import Blockquote from '$lib/components/tiptap/toolbar/blockquote.svelte';
-import BulletList from '$lib/components/tiptap/toolbar/bullet-list.svelte';
-import OrderedList from '$lib/components/tiptap/toolbar/ordered-list.svelte';
-import CodeBlock from '$lib/components/tiptap/toolbar/code-block.svelte';
-import Undo from '$lib/components/tiptap/toolbar/undo.svelte';
-import Redo from '$lib/components/tiptap/toolbar/redo.svelte';
+import { editorStub } from '#test_helpers/editor.ts';
+import Bold from '#lib/components/tiptap/toolbar/bold.svelte';
+import Italic from '#lib/components/tiptap/toolbar/italic.svelte';
+import Underline from '#lib/components/tiptap/toolbar/underline.svelte';
+import Strikethrough from '#lib/components/tiptap/toolbar/strikethrough.svelte';
+import Blockquote from '#lib/components/tiptap/toolbar/blockquote.svelte';
+import BulletList from '#lib/components/tiptap/toolbar/bullet-list.svelte';
+import OrderedList from '#lib/components/tiptap/toolbar/ordered-list.svelte';
+import CodeBlock from '#lib/components/tiptap/toolbar/code-block.svelte';
+import Undo from '#lib/components/tiptap/toolbar/undo.svelte';
+import Redo from '#lib/components/tiptap/toolbar/redo.svelte';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const buttons: [string, Component<any>][] = [

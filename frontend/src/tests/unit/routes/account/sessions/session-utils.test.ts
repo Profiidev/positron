@@ -9,7 +9,7 @@ import {
   otherSessionCount,
   sessionDisplayName,
   sessionSubtitle
-} from '$routes/account/sessions/session-utils';
+} from '#routes/account/sessions/session-utils.ts';
 
 const now = new Date('2024-06-01T12:00:00Z');
 

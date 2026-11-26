@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import General from '$routes/account/general/+page.svelte';
-import Settings from '$routes/account/settings/+page.svelte';
-import Auth from '$routes/account/auth/+page.svelte';
-import Sessions from '$routes/account/sessions/+page.svelte';
+import General from '#routes/account/general/+page.svelte';
+import Settings from '#routes/account/settings/+page.svelte';
+import Auth from '#routes/account/auth/+page.svelte';
+import Sessions from '#routes/account/sessions/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 const user = {

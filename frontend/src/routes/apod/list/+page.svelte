@@ -3,8 +3,8 @@
   import * as ScrollArea from '@profidev/pleiades/components/ui/scroll-area';
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
-  import type { ApodInfo } from '$lib/client';
-  import { apodImageUrl } from '$lib/permissions.svelte.js';
+  import type { ApodInfo } from '#lib/client/index.ts';
+  import { apodImageUrl } from '#lib/permissions.svelte.js';
   import { goto } from '$app/navigation';
 
   const { data } = $props();

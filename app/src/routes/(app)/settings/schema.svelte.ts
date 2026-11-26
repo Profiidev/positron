@@ -1,7 +1,7 @@
 import {
   HorizontalLayout,
   VerticalLayout
-} from '$lib/commands/settings.svelte';
+} from '#lib/commands/settings.svelte.ts';
 import z from 'zod';
 
 export const settings = z.object({

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
-import NoteCreate from '$routes/notes/create/+page.svelte';
-import type { NoteInfo } from '$lib/client';
+import NoteCreate from '#routes/notes/create/+page.svelte';
+import type { NoteInfo } from '#lib/client/index.ts';
 
 const ownedNote = (id: string): NoteInfo => ({
   can_edit: true,

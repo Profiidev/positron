@@ -1,10 +1,14 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { anyUserAvatar, userAvatar, userInfo } from '$lib/commands/user.svelte';
+import {
+  anyUserAvatar,
+  userAvatar,
+  userInfo
+} from '#lib/commands/user.svelte.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 beforeAll(() => {
   // Jsdom has no object-URL implementation; userAvatar builds one from the

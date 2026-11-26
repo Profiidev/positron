@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { information } from '$routes/(app)/notes/create/schema.svelte';
+import { information } from '#routes/(app)/notes/create/schema.svelte.ts';
 
 describe('information schema', () => {
   it('accepts a non-empty title', () => {

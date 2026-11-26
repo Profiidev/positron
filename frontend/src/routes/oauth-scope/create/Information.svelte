@@ -3,7 +3,7 @@
   import { type StageProps } from '@profidev/pleiades/components/form/types';
   import { information } from './schema.svelte';
   import FormInput from '@profidev/pleiades/components/form/form-input.svelte';
-  import type { SimpleOAuthPolicyInfo } from '$lib/client';
+  import type { SimpleOAuthPolicyInfo } from '#lib/client/index.ts';
   import FormSelect from '@profidev/pleiades/components/form/form-select.svelte';
 
   let {

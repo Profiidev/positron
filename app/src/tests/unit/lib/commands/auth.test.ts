@@ -4,12 +4,12 @@ import {
   confirmCode,
   logout,
   startAuth
-} from '$lib/commands/auth.svelte';
+} from '#lib/commands/auth.svelte.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 describe('authStatus', () => {
   it('returns the backend boolean', async () => {

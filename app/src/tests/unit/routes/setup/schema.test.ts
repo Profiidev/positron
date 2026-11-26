@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { instanceUrl } from '$routes/setup/schema.svelte';
+import { instanceUrl } from '#routes/setup/schema.svelte.ts';
 
 describe('instanceUrl schema', () => {
   it('accepts a valid https url', () => {

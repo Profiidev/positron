@@ -3,15 +3,15 @@
   import BaseForm from '@profidev/pleiades/components/form/base-form.svelte';
   import { interval } from '@profidev/pleiades/util/interval.svelte';
   import * as Dialog from '@profidev/pleiades/components/ui/dialog';
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { confirmSchema } from './schema.svelte';
-  import { getEncrypt } from '$lib/backend/auth.svelte';
+  import { getEncrypt } from '#lib/backend/auth.svelte.ts';
   import {
     finishSpecialAccess,
     passwordSpecialAccess,
     startSpecialAccess
-  } from '$lib/client';
+  } from '#lib/client/index.ts';
   import {
     type AuthenticationResponseJSON,
     type PublicKeyCredentialRequestOptionsJSON
@@ -155,6 +155,7 @@
         />
       {/snippet}
     </BaseForm>
+
     <LoginOtherOptions {isLoading} {passkeyError} {passkeyClick} />
   </Dialog.Content>
 </Dialog.Root>

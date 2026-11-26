@@ -11,7 +11,7 @@
     noteContent,
     saveNoteContent,
     TauriWebsocketProvider
-  } from '$lib/commands/notes.svelte';
+  } from '#lib/commands/notes.svelte.ts';
   import { extensions } from './config';
   import Collaboration from '@tiptap/extension-collaboration';
   import CollaborationCaret from '@tiptap/extension-collaboration-caret';

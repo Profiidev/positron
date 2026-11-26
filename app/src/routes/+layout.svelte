@@ -6,10 +6,13 @@
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { authStatusState, setupStatusState } from '$lib/updater/state.svelte';
-  import { setOnline, startListener } from '$lib/updater/updater.svelte';
+  import {
+    authStatusState,
+    setupStatusState
+  } from '#lib/updater/state.svelte.ts';
+  import { setOnline, startListener } from '#lib/updater/updater.svelte.ts';
   import { online } from 'svelte/reactivity/window';
-  import { IS_DESKTOP } from '$lib/env';
+  import { IS_DESKTOP } from '#lib/env.ts';
 
   const setupStatus = $derived(setupStatusState.value);
   const authStatus = $derived(authStatusState.value);

@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import { infoOAuthPolicy, listGroupsOAuthPolicy } from '$lib/client';
+import { infoOAuthPolicy, listGroupsOAuthPolicy } from '#lib/client/index.ts';
 
 export const load: PageLoad = ({ params, fetch }) => {
   const resPromise = infoOAuthPolicy({

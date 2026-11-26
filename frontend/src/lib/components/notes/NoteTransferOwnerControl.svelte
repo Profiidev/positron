@@ -3,7 +3,7 @@
   import * as Command from '@profidev/pleiades/components/ui/command';
   import { cn } from '@profidev/pleiades/utils';
   import LockOpen from '@lucide/svelte/icons/lock-open';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import type { NoteUserInfo } from './types';
 

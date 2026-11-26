@@ -1,5 +1,5 @@
 import type { LayoutLoad } from './$types';
-import { type UserInfo, info, isSetup } from '$lib/client';
+import { type UserInfo, info, isSetup } from '#lib/client/index.ts';
 
 // oxlint-disable-next-line no-underscore-dangle
 export const _UNKNOWN_EMAIL = 'unknown@example.com';

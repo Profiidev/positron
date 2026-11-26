@@ -7,10 +7,10 @@
   import InstanceUrl from './InstanceUrl.svelte';
   import Check from '@lucide/svelte/icons/check';
   import type { instanceUrl } from './schema.svelte';
-  import { setup } from '$lib/commands/setup.svelte';
+  import { setup } from '#lib/commands/setup.svelte.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
   import { goto } from '$app/navigation';
-  import { setupStatusState } from '$lib/updater/state.svelte';
+  import { setupStatusState } from '#lib/updater/state.svelte.ts';
 
   const setupStatus = $derived(setupStatusState.value);
 

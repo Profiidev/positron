@@ -12,8 +12,8 @@
     deleteNote,
     listNotesStore,
     type NoteInfo
-  } from '$lib/commands/notes.svelte';
-  import { notesConfigState, notesState } from '$lib/updater/state.svelte';
+  } from '#lib/commands/notes.svelte.ts';
+  import { notesConfigState, notesState } from '#lib/updater/state.svelte.ts';
 
   const notesRemote = $derived(notesState.value ?? undefined);
   const maxPerUser = $derived(notesConfigState.value?.max_per_user);

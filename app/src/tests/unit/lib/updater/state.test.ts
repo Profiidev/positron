@@ -10,13 +10,13 @@ import {
   setupStatusState,
   triggerUpdates,
   userInfoState
-} from '$lib/updater/state.svelte';
-import { UpdateMessageType } from '$lib/updater/types.svelte';
+} from '#lib/updater/state.svelte.ts';
+import { UpdateMessageType } from '#lib/updater/types.svelte.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 describe('updater state', () => {
   it('starts at null before any update', () => {

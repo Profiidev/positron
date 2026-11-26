@@ -3,9 +3,9 @@
   import * as Card from '@profidev/pleiades/components/ui/card';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import type { UserInfo } from '$lib/client';
+  import type { UserInfo } from '#lib/client/index.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
 
   let { data } = $props();
 

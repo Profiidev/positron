@@ -9,7 +9,7 @@ vi.mock('@tanstack/svelte-table', async (importActual) => ({
   })
 }));
 
-const { columns } = await import('$routes/users/table.svelte');
+const { columns } = await import('#routes/users/table.svelte.ts');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cellProps = (cols: any[], key: string, original: unknown) =>

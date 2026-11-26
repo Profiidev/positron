@@ -3,15 +3,15 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 
 const setup = vi.fn();
-vi.mock('$lib/commands/setup.svelte', () => ({ setup }));
+vi.mock('#lib/commands/setup.svelte.ts', () => ({ setup }));
 
 const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
 vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
 const setupStatusState = { value: undefined as unknown };
-vi.mock('$lib/updater/state.svelte', () => ({ setupStatusState }));
+vi.mock('#lib/updater/state.svelte.ts', () => ({ setupStatusState }));
 
-const Page = (await import('$routes/setup/+page.svelte')).default;
+const Page = (await import('#routes/setup/+page.svelte')).default;
 
 const okResponse = {
   headers: { get: (k: string) => (k === 'X-Api-Version' ? '1' : null) },

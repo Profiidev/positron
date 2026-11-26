@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/svelte';
-import GroupDetail from '$routes/groups/[uuid]/+page.svelte';
-import PolicyDetail from '$routes/oauth-policy/[uuid]/+page.svelte';
-import ScopeDetail from '$routes/oauth-scope/[uuid]/+page.svelte';
-import ClientDetail from '$routes/oauth-client/[uuid]/+page.svelte';
-import UserDetail from '$routes/users/[uuid]/+page.svelte';
+import GroupDetail from '#routes/groups/[uuid]/+page.svelte';
+import PolicyDetail from '#routes/oauth-policy/[uuid]/+page.svelte';
+import ScopeDetail from '#routes/oauth-scope/[uuid]/+page.svelte';
+import ClientDetail from '#routes/oauth-client/[uuid]/+page.svelte';
+import UserDetail from '#routes/users/[uuid]/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 const ok = async <T>(d: T) => pr({ data: d, response: { status: 200 } });

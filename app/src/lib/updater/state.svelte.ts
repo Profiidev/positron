@@ -1,14 +1,14 @@
 import { tick } from 'svelte';
 import { UpdateMessageType } from './types.svelte';
-import { setupStatus } from '$lib/commands/setup.svelte';
-import { authStatus } from '$lib/commands/auth.svelte';
-import { userAvatar, userInfo } from '$lib/commands/user.svelte';
+import { setupStatus } from '#lib/commands/setup.svelte.ts';
+import { authStatus } from '#lib/commands/auth.svelte.ts';
+import { userAvatar, userInfo } from '#lib/commands/user.svelte.ts';
 import {
   listNotes,
   listUsersNote,
   notesConfig
-} from '$lib/commands/notes.svelte';
-import { getSettings } from '$lib/commands/settings.svelte';
+} from '#lib/commands/notes.svelte.ts';
+import { getSettings } from '#lib/commands/settings.svelte.ts';
 
 const updater_cbs = new Map<UpdateMessageType, Map<string, () => void>>();
 

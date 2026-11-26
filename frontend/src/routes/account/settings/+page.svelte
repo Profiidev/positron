@@ -6,7 +6,7 @@
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import Save from '@lucide/svelte/icons/save';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { saveAccountSettings } from '$lib/client';
+  import { saveAccountSettings } from '#lib/client/index.ts';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import FormSwitch from '@profidev/pleiades/components/form/form-switch.svelte';
 

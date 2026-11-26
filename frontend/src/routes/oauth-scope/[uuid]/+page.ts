@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import { infoOAuthScope, listPoliciesOAuthScope } from '$lib/client';
+import { infoOAuthScope, listPoliciesOAuthScope } from '#lib/client/index.ts';
 
 export const load: PageLoad = ({ params, fetch }) => {
   const resPromise = infoOAuthScope({

@@ -12,8 +12,8 @@
     getNoteSnapshotContent,
     restoreNoteSnapshot,
     type NoteSnapshotDetail
-  } from '$lib/client';
-  import TipTabReadonly from '$lib/components/tiptap/TipTabReadonly.svelte';
+  } from '#lib/client/index.ts';
+  import TipTabReadonly from '#lib/components/tiptap/TipTabReadonly.svelte';
   import { DateTime as D } from '@profidev/pleiades/util/time.svelte';
 
   const { data } = $props();

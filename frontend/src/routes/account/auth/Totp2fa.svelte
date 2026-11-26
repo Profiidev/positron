@@ -15,7 +15,7 @@
     totpRemove,
     totpStartSetup,
     type UserInfo
-  } from '$lib/client';
+  } from '#lib/client/index.ts';
 
   interface Props {
     valid: boolean;

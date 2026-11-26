@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import TransferControl from '$lib/components/notes/NoteTransferOwnerControl.svelte';
-import type { SimpleUserInfo } from '$lib/client';
+import TransferControl from '#lib/components/notes/NoteTransferOwnerControl.svelte';
+import type { SimpleUserInfo } from '#lib/client/index.ts';
 
 const owner: SimpleUserInfo = { id: 'owner-1', name: 'Alice Owner' };
 

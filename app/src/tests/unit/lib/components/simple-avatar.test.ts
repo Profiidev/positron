@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+import SimpleAvatar from '#lib/components/SimpleAvatar.svelte';
 
 describe('SimpleAvatar', () => {
   it('applies the passed class to the avatar root', () => {

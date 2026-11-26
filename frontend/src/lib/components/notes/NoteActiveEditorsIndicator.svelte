@@ -1,8 +1,8 @@
 <script lang="ts">
   import * as Popover from '@profidev/pleiades/components/ui/popover';
   import { cn } from '@profidev/pleiades/utils';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
-  import type { NoteActiveEditor } from '$lib/components/notes/types';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
+  import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
 
   let { editors }: { editors: NoteActiveEditor[] } = $props();
 

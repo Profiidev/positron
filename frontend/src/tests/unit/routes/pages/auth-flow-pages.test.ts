@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import Forgot from '$routes/password/forgot/+page.svelte';
-import Reset from '$routes/password/reset/+page.svelte';
-import Oauth from '$routes/oauth/+page.svelte';
-import AuthApp from '$routes/auth/app/+page.svelte';
-import Logout from '$routes/oauth/logout/+page.svelte';
+import Forgot from '#routes/password/forgot/+page.svelte';
+import Reset from '#routes/password/reset/+page.svelte';
+import Oauth from '#routes/oauth/+page.svelte';
+import AuthApp from '#routes/auth/app/+page.svelte';
+import Logout from '#routes/oauth/logout/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

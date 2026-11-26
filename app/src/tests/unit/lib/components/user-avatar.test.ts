@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 
 const anyUserAvatar = vi.fn(async (_uuid: string) => 'blob:avatar');
-vi.mock('$lib/commands/user.svelte', () => ({ anyUserAvatar }));
+vi.mock('#lib/commands/user.svelte.ts', () => ({ anyUserAvatar }));
 
-const UserAvatar = (await import('$lib/components/UserAvatar.svelte')).default;
+const UserAvatar = (await import('#lib/components/UserAvatar.svelte')).default;
 
 afterEach(() => vi.clearAllMocks());
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { load as authLoad } from '$routes/account/auth/+page';
-import { load as sessionsLoad } from '$routes/account/sessions/+page';
-import { load as settingsLoad } from '$routes/account/settings/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as authLoad } from '#routes/account/auth/+page.ts';
+import { load as sessionsLoad } from '#routes/account/sessions/+page.ts';
+import { load as settingsLoad } from '#routes/account/settings/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 describe('account auth load', () => {
   it('resolves passkeys and derives mailActive', async () => {
