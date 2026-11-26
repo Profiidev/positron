@@ -2,7 +2,7 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import Lock from '@lucide/svelte/icons/lock';
   import LogOut from '@lucide/svelte/icons/log-out';
-  import type { SessionInfo } from '$lib/client';
+  import type { SessionInfo } from '#lib/client/index.ts';
 
   interface Props {
     session: SessionInfo;

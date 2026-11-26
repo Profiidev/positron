@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { load as listLoad } from '$routes/oauth-policy/+page';
-import { load as detailLoad } from '$routes/oauth-policy/[uuid]/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as listLoad } from '#routes/oauth-policy/+page.ts';
+import { load as detailLoad } from '#routes/oauth-policy/[uuid]/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 describe('oauth-policy list load', () => {
   it('resolves policies and exposes the error param', async () => {

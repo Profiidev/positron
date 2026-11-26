@@ -3,12 +3,12 @@ import {
   type TableColumnDef,
   createColumn
 } from '@profidev/pleiades/components/table/helpers.svelte';
-import { DEFAULT_SCOPES, Permission } from '$lib/permissions.svelte';
+import { DEFAULT_SCOPES, Permission } from '#lib/permissions.svelte.ts';
 import type {
   OAuthScopeInfo,
   SimpleOAuthPolicyInfo,
   UserInfo
-} from '$lib/client';
+} from '#lib/client/index.ts';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
 
 export const columns = ({

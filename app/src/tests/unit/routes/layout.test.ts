@@ -6,16 +6,16 @@ import { page } from '$app/state';
 
 const startListener = vi.fn(async () => () => {});
 const setOnline = vi.fn(async () => true);
-vi.mock('$lib/updater/updater.svelte', () => ({ setOnline, startListener }));
+vi.mock('#lib/updater/updater.svelte.ts', () => ({ setOnline, startListener }));
 
 const setupStatusState = { value: undefined as unknown };
 const authStatusState = { value: undefined as unknown };
-vi.mock('$lib/updater/state.svelte', () => ({
+vi.mock('#lib/updater/state.svelte.ts', () => ({
   authStatusState,
   setupStatusState
 }));
 
-const Layout = (await import('$routes/+layout.svelte')).default;
+const Layout = (await import('#routes/+layout.svelte')).default;
 
 const children = createRawSnippet(() => ({
   render: () => '<div data-testid="child">child</div>'
@@ -23,7 +23,7 @@ const children = createRawSnippet(() => ({
 const renderLayout = () => render(Layout, { children });
 
 beforeEach(() => {
-  page.route.id = '/';
+  page.route.id = '/(app)';
   setupStatusState.value = { url: 'https://example.com' };
   authStatusState.value = true;
 });

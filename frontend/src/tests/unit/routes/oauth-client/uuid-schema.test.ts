@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   clientSettings,
   formatData
-} from '$routes/oauth-client/[uuid]/schema.svelte';
-import type { OAuthClientInfo } from '$lib/client';
+} from '#routes/oauth-client/[uuid]/schema.svelte.ts';
+import type { OAuthClientInfo } from '#lib/client/index.ts';
 
 describe('clientSettings schema', () => {
   it('applies defaults when fields are absent', () => {

@@ -4,12 +4,12 @@ import { goto } from '$app/navigation';
 
 const requestAppCode = vi.fn();
 const logout = vi.fn();
-vi.mock('$lib/client', () => ({ logout, requestAppCode }));
+vi.mock('#lib/client/index.ts', () => ({ logout, requestAppCode }));
 
 const toast = { error: vi.fn(), success: vi.fn() };
 vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
-const Page = (await import('$routes/auth/app/+page.svelte')).default;
+const Page = (await import('#routes/auth/app/+page.svelte')).default;
 
 const user = {
   email: 'ada@example.com',

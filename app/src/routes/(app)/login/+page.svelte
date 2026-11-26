@@ -3,16 +3,16 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
-  import SimpleAvatar from '$lib/components/SimpleAvatar.svelte';
+  import SimpleAvatar from '#lib/components/SimpleAvatar.svelte';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { confirmCode, logout } from '$lib/commands/auth.svelte';
+  import { confirmCode, logout } from '#lib/commands/auth.svelte.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
   import {
     setupStatusState,
     userAvatarState,
     userInfoState
-  } from '$lib/updater/state.svelte.js';
-  import { isConnected } from '$lib/updater/updater.svelte.js';
+  } from '#lib/updater/state.svelte.js';
+  import { isConnected } from '#lib/updater/updater.svelte.js';
   import { Badge } from '@profidev/pleiades/components/ui/badge';
   import { openUrl } from '@tauri-apps/plugin-opener';
 

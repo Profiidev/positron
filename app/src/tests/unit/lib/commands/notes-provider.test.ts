@@ -19,7 +19,8 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke
 }));
 
-const { TauriWebsocketProvider } = await import('$lib/commands/notes.svelte');
+const { TauriWebsocketProvider } =
+  await import('#lib/commands/notes.svelte.ts');
 
 const calls = (cmd: string) =>
   invoke.mock.calls.filter(([name]) => name === cmd);

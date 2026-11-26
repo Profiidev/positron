@@ -2,6 +2,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
+import adapter from '@sveltejs/adapter-static';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -15,7 +17,18 @@ export default defineConfig(() => ({
     __desktop__: process.env.DESKTOP_APP_TARGET === 'true',
     __version__: JSON.stringify(process.env.npm_package_version)
   },
-  plugins: [enhancedImages(), tailwindcss(), sveltekit()],
+  plugins: [
+    enhancedImages(),
+    tailwindcss(),
+    sveltekit({
+      // Tauri doesn't have a Node.js server to do proper SSR
+      // So we use adapter-static with a fallback to index.html to put the site in SPA mode
+      // See: https://svelte.dev/docs/kit/single-page-apps
+      // See: https://v2.tauri.app/start/frontend/sveltekit/ for more info
+      adapter: adapter({ fallback: 'index.html' }),
+      preprocess: vitePreprocess()
+    })
+  ],
   resolve: process.env.VITEST
     ? {
         conditions: ['browser']

@@ -1,8 +1,8 @@
 import { expect } from '@playwright/test';
 import { HttpResponse } from 'msw';
-import * as gen from '$lib/client/msw.gen';
-import { test } from '$test_helpers/e2e-fixture';
-import { gotoReady } from '$test_helpers/layout';
+import * as gen from '#lib/client/msw.gen.ts';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { gotoReady } from '#test_helpers/layout.ts';
 
 // Token as it would appear in the link a user clicks from the password-reset
 // Email: `https://<app>/password/reset?token=<token>`.

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import Groups from '$routes/groups/+page.svelte';
-import Notes from '$routes/notes/+page.svelte';
-import Users from '$routes/users/+page.svelte';
-import Clients from '$routes/oauth-client/+page.svelte';
-import Scopes from '$routes/oauth-scope/+page.svelte';
-import Policies from '$routes/oauth-policy/+page.svelte';
+import Groups from '#routes/groups/+page.svelte';
+import Notes from '#routes/notes/+page.svelte';
+import Users from '#routes/users/+page.svelte';
+import Clients from '#routes/oauth-client/+page.svelte';
+import Scopes from '#routes/oauth-scope/+page.svelte';
+import Policies from '#routes/oauth-policy/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 

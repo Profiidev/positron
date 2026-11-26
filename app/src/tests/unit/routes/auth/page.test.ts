@@ -4,8 +4,8 @@ import { goto } from '$app/navigation';
 
 const startAuth = vi.fn();
 const resetSetup = vi.fn();
-vi.mock('$lib/commands/auth.svelte.js', () => ({ startAuth }));
-vi.mock('$lib/commands/setup.svelte.js', () => ({ resetSetup }));
+vi.mock('#lib/commands/auth.svelte.js', () => ({ startAuth }));
+vi.mock('#lib/commands/setup.svelte.js', () => ({ resetSetup }));
 
 const openUrl = vi.fn(async (_url: URL | string) => {});
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl }));
@@ -14,12 +14,12 @@ const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
 vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 
 const setupStatusState = { value: undefined as unknown };
-vi.mock('$lib/updater/state.svelte', () => ({ setupStatusState }));
+vi.mock('#lib/updater/state.svelte.ts', () => ({ setupStatusState }));
 
 const isConnected = vi.fn(() => true);
-vi.mock('$lib/updater/updater.svelte', () => ({ isConnected }));
+vi.mock('#lib/updater/updater.svelte.ts', () => ({ isConnected }));
 
-const Page = (await import('$routes/auth/+page.svelte')).default;
+const Page = (await import('#routes/auth/+page.svelte')).default;
 
 beforeEach(() => {
   setupStatusState.value = { url: 'https://example.com' };

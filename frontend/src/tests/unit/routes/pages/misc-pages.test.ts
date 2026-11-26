@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import Mail from '$routes/settings/mail/+page.svelte';
-import ApodList from '$routes/apod/list/+page.svelte';
-import Setup from '$routes/setup/+page.svelte';
+import Mail from '#routes/settings/mail/+page.svelte';
+import ApodList from '#routes/apod/list/+page.svelte';
+import Setup from '#routes/setup/+page.svelte';
 
 const pr = async <T>(v: T) => Promise.resolve(v);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

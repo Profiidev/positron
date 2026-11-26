@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generalSettings } from '$routes/account/settings/schema.svelte';
+import { generalSettings } from '#routes/account/settings/schema.svelte.ts';
 
 describe('account settings schema', () => {
   it('defaults o_auth_instant_confirm to false', () => {

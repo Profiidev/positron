@@ -17,6 +17,7 @@ vi.mock('$app/navigation', () => ({
   preloadCode: vi.fn(async () => Promise.resolve()),
   preloadData: vi.fn(async () => Promise.resolve()),
   pushState: vi.fn(),
+  refreshAll: vi.fn(async () => Promise.resolve()),
   replaceState: vi.fn()
 }));
 

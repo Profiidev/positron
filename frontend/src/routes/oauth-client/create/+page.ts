@@ -1,4 +1,4 @@
-import { listScopesOAuthClient } from '$lib/client';
+import { listScopesOAuthClient } from '#lib/client/index.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ fetch }) => {

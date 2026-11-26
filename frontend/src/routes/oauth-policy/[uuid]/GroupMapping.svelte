@@ -4,7 +4,10 @@
   import Trash from '@lucide/svelte/icons/trash';
   import Plus from '@lucide/svelte/icons/plus';
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
-  import { type OAuthPolicyContent, type SimpleGroupInfo } from '$lib/client';
+  import {
+    type OAuthPolicyContent,
+    type SimpleGroupInfo
+  } from '#lib/client/index.ts';
   import { Input } from '@profidev/pleiades/components/ui/input';
 
   interface Props {

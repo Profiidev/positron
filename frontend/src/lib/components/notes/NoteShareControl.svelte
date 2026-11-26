@@ -14,7 +14,7 @@
     NoteSharedUserInfo,
     NoteUserInfo
   } from './types';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
   import { ScrollArea } from '@profidev/pleiades/components/ui/scroll-area';
   import { page } from '$app/state';
 

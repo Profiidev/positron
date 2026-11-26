@@ -4,7 +4,7 @@ import {
   Permission,
   apodImageUrl,
   avatarUrl
-} from '$lib/permissions.svelte';
+} from '#lib/permissions.svelte.ts';
 
 describe('Permission enum', () => {
   it('maps every member to a `resource:action` string', () => {

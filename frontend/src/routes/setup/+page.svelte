@@ -7,9 +7,9 @@
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import type { adminUser } from './schema.svelte';
   import { goto, invalidate } from '$app/navigation';
-  import { connectWebsocket } from '$lib/backend/updater.svelte';
-  import { completeSetup } from '$lib/client';
-  import { getEncrypt } from '$lib/backend/auth.svelte';
+  import { connectWebsocket } from '#lib/backend/updater.svelte.ts';
+  import { completeSetup } from '#lib/client/index.ts';
+  import { getEncrypt } from '#lib/backend/auth.svelte.ts';
   import { getSessionMeta } from '@profidev/pleiades/util/info.svelte';
 
   let { data } = $props();

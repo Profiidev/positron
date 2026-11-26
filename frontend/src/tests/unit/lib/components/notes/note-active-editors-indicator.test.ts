@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import Indicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
-import type { NoteActiveEditor } from '$lib/components/notes/types';
+import Indicator from '#lib/components/notes/NoteActiveEditorsIndicator.svelte';
+import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
 
 const editors = (n: number): NoteActiveEditor[] =>
   Array.from({ length: n }, (_, i) => ({

@@ -26,20 +26,20 @@
     type NoteSnapshotInfo,
     type SharedUserInfo,
     type SimpleUserInfo
-  } from '$lib/commands/notes.svelte';
+  } from '#lib/commands/notes.svelte.ts';
   import {
     noteUsersState,
     onNotesUpdate,
     setupStatusState,
     userInfoState
-  } from '$lib/updater/state.svelte';
-  import TipTab from '$lib/components/tiptap/TipTab.svelte';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
-  import NoteShareControl from '$lib/components/notes/NoteShareControl.svelte';
-  import NoteTransferOwnerControl from '$lib/components/notes/NoteTransferOwnerControl.svelte';
-  import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
-  import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
-  import type { NoteActiveEditor } from '$lib/components/notes/types';
+  } from '#lib/updater/state.svelte.ts';
+  import TipTab from '#lib/components/tiptap/TipTab.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
+  import NoteShareControl from '#lib/components/notes/NoteShareControl.svelte';
+  import NoteTransferOwnerControl from '#lib/components/notes/NoteTransferOwnerControl.svelte';
+  import NoteActiveEditorsIndicator from '#lib/components/notes/NoteActiveEditorsIndicator.svelte';
+  import NoteSnapshot from '#lib/components/notes/NoteSnapshot.svelte';
+  import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
 
   const id = $derived(page.params.id ?? '');
   const userInfo = $derived(userInfoState.value);

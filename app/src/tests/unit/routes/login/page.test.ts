@@ -4,7 +4,7 @@ import { goto } from '$app/navigation';
 
 const confirmCode = vi.fn();
 const logout = vi.fn(async () => true);
-vi.mock('$lib/commands/auth.svelte', () => ({ confirmCode, logout }));
+vi.mock('#lib/commands/auth.svelte.ts', () => ({ confirmCode, logout }));
 
 const openUrl = vi.fn(async () => {});
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl }));
@@ -15,16 +15,16 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 const userInfoState = { value: undefined as unknown };
 const userAvatarState = { value: undefined as unknown };
 const setupStatusState = { value: undefined as unknown };
-vi.mock('$lib/updater/state.svelte.js', () => ({
+vi.mock('#lib/updater/state.svelte.js', () => ({
   setupStatusState,
   userAvatarState,
   userInfoState
 }));
 
 const isConnected = vi.fn(() => true);
-vi.mock('$lib/updater/updater.svelte.js', () => ({ isConnected }));
+vi.mock('#lib/updater/updater.svelte.js', () => ({ isConnected }));
 
-const Page = (await import('$routes/(app)/login/+page.svelte')).default;
+const Page = (await import('#routes/(app)/login/+page.svelte')).default;
 
 const data = (code?: string, redirect?: string) => ({ code, redirect });
 

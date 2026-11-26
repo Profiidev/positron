@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e-fixture';
-import { gotoReady } from '$test_helpers/layout';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { gotoReady } from '#test_helpers/layout.ts';
 
 test.describe('app login', () => {
   test('shows the QR code and offers to cancel', async ({ page }) => {

@@ -4,11 +4,11 @@
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { Spinner } from '@profidev/pleiades/components/ui/spinner';
   import { openUrl } from '@tauri-apps/plugin-opener';
-  import { startAuth } from '$lib/commands/auth.svelte.js';
+  import { startAuth } from '#lib/commands/auth.svelte.js';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { resetSetup } from '$lib/commands/setup.svelte.js';
+  import { resetSetup } from '#lib/commands/setup.svelte.js';
   import { goto } from '$app/navigation';
-  import { setupStatusState } from '$lib/updater/state.svelte';
+  import { setupStatusState } from '#lib/updater/state.svelte.ts';
 
   type AuthStatus = 'Start' | 'Error';
 

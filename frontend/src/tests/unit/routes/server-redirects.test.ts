@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { load as authLoad } from '$routes/auth/+page.server';
-import { load as accountLoad } from '$routes/account/+page.server';
-import { load as passwordLoad } from '$routes/password/+page.server';
-import { load as settingsLoad } from '$routes/settings/+page.server';
-import { load as oauthLogoutLoad } from '$routes/oauth/logout/+page.server';
-import { catchRedirect, runLoad } from '$test_helpers/load';
+import { load as authLoad } from '#routes/auth/+page.server.ts';
+import { load as accountLoad } from '#routes/account/+page.server.ts';
+import { load as passwordLoad } from '#routes/password/+page.server.ts';
+import { load as settingsLoad } from '#routes/settings/+page.server.ts';
+import { load as oauthLogoutLoad } from '#routes/oauth/logout/+page.server.ts';
+import { catchRedirect, runLoad } from '#test_helpers/load.ts';
 
 describe('index redirects', () => {
   it.each([

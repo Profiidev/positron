@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import type * as SettingsCommands from '$lib/commands/settings.svelte';
+import type * as SettingsCommands from '#lib/commands/settings.svelte.ts';
 
 const saveSettings = vi.fn();
-vi.mock('$lib/commands/settings.svelte', async () => {
+vi.mock('#lib/commands/settings.svelte.ts', async () => {
   const actual = await vi.importActual<typeof SettingsCommands>(
-    '$lib/commands/settings.svelte'
+    '#lib/commands/settings.svelte.ts'
   );
   return { ...actual, saveSettings };
 });
@@ -20,9 +20,9 @@ const sonnerToast = { error: vi.fn() };
 vi.mock('svelte-sonner', () => ({ toast: sonnerToast }));
 
 const appSettingsState = { value: undefined as unknown };
-vi.mock('$lib/updater/state.svelte', () => ({ appSettingsState }));
+vi.mock('#lib/updater/state.svelte.ts', () => ({ appSettingsState }));
 
-const Page = (await import('$routes/(app)/settings/+page.svelte')).default;
+const Page = (await import('#routes/(app)/settings/+page.svelte')).default;
 
 beforeEach(() => {
   appSettingsState.value = undefined;

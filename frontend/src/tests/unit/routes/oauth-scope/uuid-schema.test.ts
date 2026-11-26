@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatData,
   scopeSettings
-} from '$routes/oauth-scope/[uuid]/schema.svelte';
-import type { OAuthScopeInfo } from '$lib/client';
+} from '#routes/oauth-scope/[uuid]/schema.svelte.ts';
+import type { OAuthScopeInfo } from '#lib/client/index.ts';
 
 describe('scopeSettings schema', () => {
   it('applies defaults when fields are absent', () => {

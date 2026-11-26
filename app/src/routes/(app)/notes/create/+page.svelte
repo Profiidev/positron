@@ -4,8 +4,8 @@
   import type { Stage } from '@profidev/pleiades/components/form/types';
   import MultiStepForm from '@profidev/pleiades/components/form/multistep-form.svelte';
   import Information from './Information.svelte';
-  import { createNote } from '$lib/commands/notes.svelte';
-  import { notesConfigState, notesState } from '$lib/updater/state.svelte';
+  import { createNote } from '#lib/commands/notes.svelte.ts';
+  import { notesConfigState, notesState } from '#lib/updater/state.svelte.ts';
 
   const notes = $derived(notesState.value ?? undefined);
   const maxPerUser = $derived(notesConfigState.value?.max_per_user);

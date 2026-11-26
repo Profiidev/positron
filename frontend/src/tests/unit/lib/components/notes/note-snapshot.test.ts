@@ -6,8 +6,8 @@ import {
   waitFor,
   within
 } from '@testing-library/svelte';
-import NoteSnapshot from '$lib/components/notes/NoteSnapshot.svelte';
-import type { NoteSnapshotInfo } from '$lib/client';
+import NoteSnapshot from '#lib/components/notes/NoteSnapshot.svelte';
+import type { NoteSnapshotInfo } from '#lib/client/index.ts';
 
 // `D.DateTime` is loaded lazily from luxon only in the browser, so it stays
 // Undefined under jsdom. Stub it with a deterministic formatter so the snapshot

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { openAppLoginDeepLink } from '$lib/backend/auth.svelte';
+import { openAppLoginDeepLink } from '#lib/backend/auth.svelte.ts';
 
 describe('openAppLoginDeepLink', () => {
   afterEach(() => vi.restoreAllMocks());

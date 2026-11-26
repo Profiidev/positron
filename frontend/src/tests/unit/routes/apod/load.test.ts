@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { load as datePageLoad } from '$routes/apod/[date]/+page';
-import { load as listPageLoad } from '$routes/apod/list/+page';
-import { load as redirectLoad } from '$routes/apod/+page.server';
-import { catchRedirect, jsonFetch, runLoad } from '$test_helpers/load';
+import { load as datePageLoad } from '#routes/apod/[date]/+page.ts';
+import { load as listPageLoad } from '#routes/apod/list/+page.ts';
+import { load as redirectLoad } from '#routes/apod/+page.server.ts';
+import { catchRedirect, jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ev = (props: Record<string, unknown>) => props as any;

@@ -9,9 +9,9 @@ vi.mock('@tanstack/svelte-table', async (importActual) => ({
   })
 }));
 
-const { columns } = await import('$routes/groups/table.svelte');
-import { Permission } from '$lib/permissions.svelte';
-import type { GroupInfo, UserInfo } from '$lib/client';
+const { columns } = await import('#routes/groups/table.svelte.ts');
+import { Permission } from '#lib/permissions.svelte.ts';
+import type { GroupInfo, UserInfo } from '#lib/client/index.ts';
 
 const actionsProps = (
   args: Parameters<typeof columns>[0],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { load as shareLoad } from '$routes/notes/share/[id]/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as shareLoad } from '#routes/notes/share/[id]/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 describe('note public share load', () => {
   it('passes the id through and resolves the public note info', async () => {

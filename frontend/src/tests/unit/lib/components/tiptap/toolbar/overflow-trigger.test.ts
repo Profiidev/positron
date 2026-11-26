@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import BoldIcon from '@lucide/svelte/icons/bold';
-import OverflowTrigger from '$lib/components/tiptap/toolbar/toolbar-overflow-trigger.svelte';
+import OverflowTrigger from '#lib/components/tiptap/toolbar/toolbar-overflow-trigger.svelte';
 
 describe('ToolbarOverflowTrigger', () => {
   it('renders its label and forwards clicks', async () => {

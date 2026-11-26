@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { information } from '$routes/oauth-policy/create/schema.svelte';
+import { information } from '#routes/oauth-policy/create/schema.svelte.ts';
 
 describe('oauth-policy create information schema', () => {
   it('defaults claim, default and name to empty strings when absent', () => {

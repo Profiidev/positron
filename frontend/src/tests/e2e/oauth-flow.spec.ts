@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e-fixture';
-import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
-import { setupSession } from '$test_helpers/session';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { expectNoHorizontalOverflow, gotoReady } from '#test_helpers/layout.ts';
+import { setupSession } from '#test_helpers/session.ts';
 
 test.beforeEach(async ({ context }) => setupSession(context));
 

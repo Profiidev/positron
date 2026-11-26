@@ -4,7 +4,7 @@ import { page } from '$app/state';
 import {
   type UpdateMessage,
   UpdateMessageType
-} from '$lib/updater/types.svelte';
+} from '#lib/updater/types.svelte.ts';
 
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('@profidev/pleiades/components/util/general', () => ({ toast }));
 // Its type to `triggerUpdates`. Mock the state module so both are controllable.
 const authStatusState = vi.hoisted(() => ({ value: true }));
 const triggerUpdates = vi.hoisted(() => vi.fn());
-vi.mock('$lib/updater/state.svelte', () => ({
+vi.mock('#lib/updater/state.svelte.ts', () => ({
   authStatusState,
   triggerUpdates
 }));
@@ -41,13 +41,13 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 const { startListener, isConnected, setOnline } =
-  await import('$lib/updater/updater.svelte');
+  await import('#lib/updater/updater.svelte.ts');
 
 const send = (message: UpdateMessage) => channels.at(-1)!.onmessage!(message);
 
 beforeEach(() => {
   channels.length = 0;
-  page.route.id = '/';
+  page.route.id = '/(app)';
   authStatusState.value = true;
 });
 

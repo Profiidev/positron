@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import { isSetup } from '$lib/client';
+import { isSetup } from '#lib/client/index.ts';
 
 export const load: PageLoad = async ({ fetch }) => {
   const { data: status } = await isSetup({ fetch });

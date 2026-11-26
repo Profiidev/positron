@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { information } from '$routes/oauth-client/create/schema.svelte';
+import { information } from '#routes/oauth-client/create/schema.svelte.ts';
 
 describe('oauth-client create information schema', () => {
   it('applies defaults when fields are absent', () => {

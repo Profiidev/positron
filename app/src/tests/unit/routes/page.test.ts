@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import type { NoteInfo, NotesConfig } from '$lib/commands/notes.svelte';
+import type { NoteInfo, NotesConfig } from '#lib/commands/notes.svelte.ts';
 
 const deleteNote = vi.fn<() => Promise<boolean>>(async () => true);
 const listNotesStore = vi.fn<() => Promise<NoteInfo[] | undefined>>(
   async () => undefined
 );
-vi.mock('$lib/commands/notes.svelte', () => ({ deleteNote, listNotesStore }));
+vi.mock('#lib/commands/notes.svelte.ts', () => ({
+  deleteNote,
+  listNotesStore
+}));
 
 const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
 vi.mock('@profidev/pleiades/components/util/general', async (orig) => ({
@@ -30,7 +33,10 @@ const notesConfigState = {
     return notesConfigValue;
   }
 };
-vi.mock('$lib/updater/state.svelte', () => ({ notesConfigState, notesState }));
+vi.mock('#lib/updater/state.svelte.ts', () => ({
+  notesConfigState,
+  notesState
+}));
 
 const note = (title: string, id: string, isOwner = true): NoteInfo => ({
   can_edit: true,
@@ -42,7 +48,7 @@ const note = (title: string, id: string, isOwner = true): NoteInfo => ({
   title
 });
 
-const Page = (await import('$routes/(app)/+page.svelte')).default;
+const Page = (await import('#routes/(app)/+page.svelte')).default;
 
 beforeEach(() => {
   notesValue = null;

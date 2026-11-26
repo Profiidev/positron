@@ -4,7 +4,7 @@
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Trash from '@lucide/svelte/icons/trash';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
-  import { Permission } from '$lib/permissions.svelte';
+  import { Permission } from '#lib/permissions.svelte.ts';
   import FormDialog from '@profidev/pleiades/components/form/form-dialog.svelte';
   import { z } from 'zod';
   import { toast } from '@profidev/pleiades/components/util/general';
@@ -25,7 +25,7 @@
     type SimpleOAuthScopeInfo,
     type SimpleUserInfo,
     type UserInfo
-  } from '$lib/client';
+  } from '#lib/client/index.ts';
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { clientSettings, formatData } from './schema.svelte.js';
   import FormTags from '@profidev/pleiades/components/form/form-tags.svelte';

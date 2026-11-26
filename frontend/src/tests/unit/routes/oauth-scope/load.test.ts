@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { load as listLoad } from '$routes/oauth-scope/+page';
-import { load as createLoad } from '$routes/oauth-scope/create/+page';
-import { load as detailLoad } from '$routes/oauth-scope/[uuid]/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as listLoad } from '#routes/oauth-scope/+page.ts';
+import { load as createLoad } from '#routes/oauth-scope/create/+page.ts';
+import { load as detailLoad } from '#routes/oauth-scope/[uuid]/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 describe('oauth-scope list load', () => {
   it('resolves scopes and exposes the error param', async () => {

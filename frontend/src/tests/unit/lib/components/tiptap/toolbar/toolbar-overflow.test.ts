@@ -4,7 +4,7 @@ import {
   calculateVisibleCount,
   cleanupSeparatorVisibility,
   totalWidth
-} from '$lib/components/tiptap/toolbar/toolbar-overflow';
+} from '#lib/components/tiptap/toolbar/toolbar-overflow.ts';
 
 describe('totalWidth', () => {
   it('returns 0 for a non-positive count', () => {

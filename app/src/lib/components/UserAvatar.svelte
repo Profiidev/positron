@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { anyUserAvatar } from '$lib/commands/user.svelte';
+  import { anyUserAvatar } from '#lib/commands/user.svelte.ts';
   import * as Avatar from '@profidev/pleiades/components/ui/avatar';
 
   let {

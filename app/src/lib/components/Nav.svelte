@@ -2,13 +2,13 @@
   import { Button } from '@profidev/pleiades/components/ui/button';
   import { Badge } from '@profidev/pleiades/components/ui/badge';
   import { goto } from '$app/navigation';
-  import { logout } from '$lib/commands/auth.svelte';
-  import { isConnected } from '$lib/updater/updater.svelte';
+  import { logout } from '#lib/commands/auth.svelte.ts';
+  import { isConnected } from '#lib/updater/updater.svelte.ts';
   import NotebookPen from '@lucide/svelte/icons/notebook-pen';
   import ScanLine from '@lucide/svelte/icons/scan-line';
   import LogOut from '@lucide/svelte/icons/log-out';
   import Settings from '@lucide/svelte/icons/settings';
-  import { IS_MOBILE } from '$lib/env';
+  import { IS_MOBILE } from '#lib/env.ts';
 </script>
 
 <nav class="mb-1 flex items-center gap-1 border-b p-2 pb-1">

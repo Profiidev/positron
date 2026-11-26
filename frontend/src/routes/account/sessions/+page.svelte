@@ -4,7 +4,7 @@
   import { toast } from '@profidev/pleiades/components/util/general';
   import LogOut from '@lucide/svelte/icons/log-out';
   import Table from '@profidev/pleiades/components/table/clean-table.svelte';
-  import { revokeSession, type SessionInfo } from '$lib/client';
+  import { revokeSession, type SessionInfo } from '#lib/client/index.ts';
   import { z } from 'zod';
   import { columns } from './table.svelte';
   import { otherSessionCount, sessionDisplayName } from './session-utils';

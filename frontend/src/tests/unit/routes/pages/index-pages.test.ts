@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/svelte';
-import Account from '$routes/account/+page.svelte';
-import Password from '$routes/password/+page.svelte';
-import Settings from '$routes/settings/+page.svelte';
-import Apod from '$routes/apod/+page.svelte';
+import Account from '#routes/account/+page.svelte';
+import Password from '#routes/password/+page.svelte';
+import Settings from '#routes/settings/+page.svelte';
+import Apod from '#routes/apod/+page.svelte';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mounts = (Cmp: any) => {

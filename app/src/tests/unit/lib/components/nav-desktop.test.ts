@@ -3,18 +3,18 @@ import { render, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 
 const logout = vi.fn(async () => true);
-vi.mock('$lib/commands/auth.svelte', () => ({ logout }));
+vi.mock('#lib/commands/auth.svelte.ts', () => ({ logout }));
 
 const isConnected = vi.fn(() => true);
-vi.mock('$lib/updater/updater.svelte', () => ({ isConnected }));
+vi.mock('#lib/updater/updater.svelte.ts', () => ({ isConnected }));
 
 // Desktop builds set the __desktop__ Vite define at build time; a plain
 // Static import can't flip that per-test the way `mockCommand` flips a Tauri
 // Command, so this module (unlike nav.test.ts's plain mobile-default import)
-// Gets its own file overriding `$lib/env` to isolate the desktop branch.
-vi.mock('$lib/env', () => ({ IS_DESKTOP: true, IS_MOBILE: false }));
+// Gets its own file overriding `#lib/env.ts` to isolate the desktop branch.
+vi.mock('#lib/env.ts', () => ({ IS_DESKTOP: true, IS_MOBILE: false }));
 
-const Nav = (await import('$lib/components/Nav.svelte')).default;
+const Nav = (await import('#lib/components/Nav.svelte')).default;
 
 afterEach(() => vi.clearAllMocks());
 

@@ -5,9 +5,13 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { authorizeConfirm, logout, type UserInfo } from '$lib/client';
+  import {
+    authorizeConfirm,
+    logout,
+    type UserInfo
+  } from '#lib/client/index.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
 
   let { data } = $props();
 

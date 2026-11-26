@@ -1,18 +1,18 @@
 <script lang="ts">
   import Lock from '@lucide/svelte/icons/lock';
-  import { type NoteInfoPublic } from '$lib/client';
-  import TipTab from '$lib/components/tiptap/TipTab.svelte';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
-  import NoteActiveEditorsIndicator from '$lib/components/notes/NoteActiveEditorsIndicator.svelte';
-  import type { NoteActiveEditor } from '$lib/components/notes/types';
+  import { type NoteInfoPublic } from '#lib/client/index.ts';
+  import TipTab from '#lib/components/tiptap/TipTab.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
+  import NoteActiveEditorsIndicator from '#lib/components/notes/NoteActiveEditorsIndicator.svelte';
+  import type { NoteActiveEditor } from '#lib/components/notes/types.ts';
   import { Input } from '@profidev/pleiades/components/ui/input';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import { _UNKNOWN_EMAIL } from '$routes/+layout.js';
+  import { _UNKNOWN_EMAIL } from '#routes/+layout.ts';
   import { goto } from '$app/navigation';
   import {
     connectPublicNoteUpdater,
     disconnectPublicNoteUpdater
-  } from '$lib/backend/public-note-updater.svelte.js';
+  } from '#lib/backend/public-note-updater.svelte.js';
   import { onDestroy } from 'svelte';
 
   const { data } = $props();

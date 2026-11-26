@@ -9,9 +9,9 @@ vi.mock('@tanstack/svelte-table', async (importActual) => ({
   })
 }));
 
-const { columns } = await import('$routes/oauth-client/table.svelte');
-import { Permission } from '$lib/permissions.svelte';
-import type { UserInfo } from '$lib/client';
+const { columns } = await import('#routes/oauth-client/table.svelte.ts');
+import { Permission } from '#lib/permissions.svelte.ts';
+import type { UserInfo } from '#lib/client/index.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const actions = (cols: any[], original: unknown) =>

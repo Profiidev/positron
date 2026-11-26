@@ -15,7 +15,7 @@ vi.mock('@profidev/pleiades/backend', () => ({
 }));
 
 const { connectPublicNoteUpdater, disconnectPublicNoteUpdater } =
-  await import('$lib/backend/public-note-updater.svelte');
+  await import('#lib/backend/public-note-updater.svelte.ts');
 
 type Handler = () => void;
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatData,
   policySettings
-} from '$routes/oauth-policy/[uuid]/schema.svelte';
-import type { OAuthPolicyInfo } from '$lib/client';
+} from '#routes/oauth-policy/[uuid]/schema.svelte.ts';
+import type { OAuthPolicyInfo } from '#lib/client/index.ts';
 
 describe('policySettings schema', () => {
   it('defaults claim, default and name to empty strings', () => {

@@ -3,14 +3,14 @@ import {
   type TableColumnDef,
   createColumn
 } from '@profidev/pleiades/components/table/helpers.svelte';
-import { Permission } from '$lib/permissions.svelte';
+import { Permission } from '#lib/permissions.svelte.ts';
 import type {
   OAuthClientInfo,
   SimpleGroupInfo,
   SimpleOAuthScopeInfo,
   SimpleUserInfo,
   UserInfo
-} from '$lib/client';
+} from '#lib/client/index.ts';
 import Actions from '@profidev/pleiades/components/table/actions.svelte';
 
 export const columns = ({

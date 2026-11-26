@@ -4,9 +4,9 @@
   import { Skeleton } from '@profidev/pleiades/components/ui/skeleton';
   import { goto } from '$app/navigation';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-  import { logout, requestAppCode, type UserInfo } from '$lib/client';
+  import { logout, requestAppCode, type UserInfo } from '#lib/client/index.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
 
   let { data } = $props();
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { load as listLoad } from '$routes/notes/+page';
-import { load as createLoad } from '$routes/notes/create/+page';
-import { load as detailLoad } from '$routes/notes/[id]/+page';
-import { load as snapshotLoad } from '$routes/notes/[id]/[snapshot]/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as listLoad } from '#routes/notes/+page.ts';
+import { load as createLoad } from '#routes/notes/create/+page.ts';
+import { load as detailLoad } from '#routes/notes/[id]/+page.ts';
+import { load as snapshotLoad } from '#routes/notes/[id]/[snapshot]/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 const urlOf = (input: RequestInfo | URL): string => {
   if (typeof input === 'string') {

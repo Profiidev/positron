@@ -8,8 +8,8 @@
     HorizontalLayout,
     saveSettings,
     VerticalLayout
-  } from '$lib/commands/settings.svelte';
-  import { appSettingsState } from '$lib/updater/state.svelte';
+  } from '#lib/commands/settings.svelte.ts';
+  import { appSettingsState } from '#lib/updater/state.svelte.ts';
   import Save from '@lucide/svelte/icons/save';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { toast } from '@profidev/pleiades/components/util/general';

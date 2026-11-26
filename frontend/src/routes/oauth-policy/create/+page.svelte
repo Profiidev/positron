@@ -7,7 +7,7 @@
   } from '@profidev/pleiades/components/form/types';
   import MultiStepForm from '@profidev/pleiades/components/form/multistep-form.svelte';
   import Information from './Information.svelte';
-  import { createOAuthPolicy } from '$lib/client';
+  import { createOAuthPolicy } from '#lib/client/index.ts';
   import type { information } from './schema.svelte';
 
   let stages: Stage[] = [

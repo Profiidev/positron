@@ -3,15 +3,15 @@ import { render, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 
 const logout = vi.fn(async () => true);
-vi.mock('$lib/commands/auth.svelte', () => ({ logout }));
+vi.mock('#lib/commands/auth.svelte.ts', () => ({ logout }));
 
 const isConnected = vi.fn(() => true);
-vi.mock('$lib/updater/updater.svelte', () => ({ isConnected }));
+vi.mock('#lib/updater/updater.svelte.ts', () => ({ isConnected }));
 
 // The __desktop__ Vite define defaults to false under vitest (DESKTOP_APP_TARGET
-// Is unset), so `$lib/env`'s IS_MOBILE is true here; the desktop-only branch
+// Is unset), so `#lib/env`'s IS_MOBILE is true here; the desktop-only branch
 // Is covered separately in nav-desktop.test.ts.
-const Nav = (await import('$lib/components/Nav.svelte')).default;
+const Nav = (await import('#lib/components/Nav.svelte')).default;
 
 afterEach(() => vi.clearAllMocks());
 

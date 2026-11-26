@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { load as oauthLoad } from '$routes/oauth/+page';
-import { load as resetLoad } from '$routes/password/reset/+page';
-import { load as mailLoad } from '$routes/settings/mail/+page';
-import { jsonFetch, runLoad } from '$test_helpers/load';
+import { load as oauthLoad } from '#routes/oauth/+page.ts';
+import { load as resetLoad } from '#routes/password/reset/+page.ts';
+import { load as mailLoad } from '#routes/settings/mail/+page.ts';
+import { jsonFetch, runLoad } from '#test_helpers/load.ts';
 
 describe('oauth consent load', () => {
   it('resolves the account settings', async () => {

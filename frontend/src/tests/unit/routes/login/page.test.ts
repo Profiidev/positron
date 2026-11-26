@@ -20,10 +20,11 @@ vi.mock('$app/navigation', () => ({
   preloadCode: vi.fn(async () => Promise.resolve()),
   preloadData: vi.fn(async () => Promise.resolve()),
   pushState: vi.fn(),
+  refreshAll: vi.fn(async () => Promise.resolve()),
   replaceState: vi.fn()
 }));
 
-const Page = (await import('$routes/login/+page.svelte')).default;
+const Page = (await import('#routes/login/+page.svelte')).default;
 
 const data = (error?: string, redirectTo = '/') =>
   ({

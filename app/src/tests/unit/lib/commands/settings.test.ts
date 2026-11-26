@@ -4,12 +4,12 @@ import {
   VerticalLayout,
   getSettings,
   saveSettings
-} from '$lib/commands/settings.svelte';
+} from '#lib/commands/settings.svelte.ts';
 import {
   mockCommand,
   mockCommandError,
   mockCommands
-} from '$test_helpers/tauri';
+} from '#test_helpers/tauri.ts';
 
 const settings = {
   height: 500,

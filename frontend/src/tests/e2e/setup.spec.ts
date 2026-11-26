@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
-import { test } from '$test_helpers/e2e-fixture';
-import { seedSetupPending } from '$test_helpers/session';
-import { expectNoHorizontalOverflow, gotoReady } from '$test_helpers/layout';
+import { test } from '#test_helpers/e2e-fixture.ts';
+import { seedSetupPending } from '#test_helpers/session.ts';
+import { expectNoHorizontalOverflow, gotoReady } from '#test_helpers/layout.ts';
 
 test.describe('first-run setup', () => {
   test.beforeEach(async ({ context }) => seedSetupPending(context));

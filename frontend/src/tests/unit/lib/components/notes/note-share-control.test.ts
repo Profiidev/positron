@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import CopyButtonStub from '$test_helpers/copy-button-stub.svelte';
-import ShareControl from '$lib/components/notes/NoteShareControl.svelte';
-import type { SharedUserInfo, SimpleUserInfo } from '$lib/client';
+import CopyButtonStub from '#test_helpers/copy-button-stub.svelte';
+import ShareControl from '#lib/components/notes/NoteShareControl.svelte';
+import type { SharedUserInfo, SimpleUserInfo } from '#lib/client/index.ts';
 
 // Bits-ui's CopyButton click handling doesn't drive under jsdom fireEvent, so
 // Swap it for a stub that simply renders the share `text` it receives.

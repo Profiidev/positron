@@ -1,4 +1,8 @@
-import { infoNote, listNoteSnapshots, listUsersNote } from '$lib/client';
+import {
+  infoNote,
+  listNoteSnapshots,
+  listUsersNote
+} from '#lib/client/index.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ params, fetch, url }) => ({

@@ -7,7 +7,10 @@
   } from '@profidev/pleiades/components/form/types';
   import MultiStepForm from '@profidev/pleiades/components/form/multistep-form.svelte';
   import Information from './Information.svelte';
-  import { createOAuthScope, type SimpleOAuthPolicyInfo } from '$lib/client';
+  import {
+    createOAuthScope,
+    type SimpleOAuthPolicyInfo
+  } from '#lib/client/index.ts';
   import type { information } from './schema.svelte';
 
   const { data } = $props();

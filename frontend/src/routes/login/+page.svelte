@@ -8,7 +8,7 @@
   import { login, totpSchema } from './schema.svelte';
   import type { FormValue } from '@profidev/pleiades/components/form/types';
   import { afterNavigate, goto, invalidate } from '$app/navigation';
-  import { connectWebsocket } from '$lib/backend/updater.svelte';
+  import { connectWebsocket } from '#lib/backend/updater.svelte.ts';
   import { toast } from '@profidev/pleiades/components/util/general';
   import FormInputPassword from '@profidev/pleiades/components/form/form-input-password.svelte';
   import {
@@ -16,19 +16,20 @@
     cancelAppLogin,
     getEncrypt,
     openAppLoginDeepLink
-  } from '$lib/backend/auth.svelte';
+  } from '#lib/backend/auth.svelte.ts';
   import { getSessionMeta } from '@profidev/pleiades/util/info.svelte';
   import {
     generateCodeChallenge,
     generateCodeVerifier
   } from '@profidev/pleiades/util/crypto.svelte';
+
   import {
     finishAuthentication,
     passwordAuthenticate,
     retrieveAppToken,
     startAuthentication,
     totpConfirm
-  } from '$lib/client';
+  } from '#lib/client/index.ts';
   import {
     type AuthenticationResponseJSON,
     type PublicKeyCredentialRequestOptionsJSON

@@ -3,7 +3,7 @@ import {
   type TableColumnDef,
   createColumn
 } from '@profidev/pleiades/components/table/helpers.svelte';
-import type { SessionInfo } from '$lib/client';
+import type { SessionInfo } from '#lib/client/index.ts';
 import { formatRelativeOptional, formatRelativePast } from './session-utils';
 import SessionCell from './SessionCell.svelte';
 import SessionTypeCell from './SessionTypeCell.svelte';
