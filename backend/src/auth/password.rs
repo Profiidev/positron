@@ -161,7 +161,7 @@ mod test {
     db::init::Connection,
   };
   use entity::user;
-  use rsa::{Pkcs1v15Encrypt, RsaPublicKey, pkcs1::DecodeRsaPublicKey, rand_core::OsRng};
+  use rsa::{PublicKey, pkcs1::DecodeRsaPublicKey};
   use sea_orm::{ActiveValue::Set, EntityTrait};
   use serde_json::{Value, json};
   use tower::ServiceExt;
@@ -172,10 +172,8 @@ mod test {
   /// Encrypts `plaintext` with the password state's public key and base64
   /// encodes it, mirroring what the frontend sends.
   fn encrypt(pw: &PasswordState, plaintext: &str) -> String {
-    let key = RsaPublicKey::from_pkcs1_pem(&pw.pub_key).unwrap();
-    let ciphertext = key
-      .encrypt(&mut OsRng, Pkcs1v15Encrypt, plaintext.as_bytes())
-      .unwrap();
+    let key = PublicKey::from_pkcs1_pem(&pw.pub_key).unwrap();
+    let ciphertext = key.pkcs1v15_encrypt(plaintext.as_bytes()).unwrap();
     BASE64_STANDARD.encode(ciphertext)
   }
 

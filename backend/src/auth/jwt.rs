@@ -17,7 +17,7 @@ use chrono::{Duration, Utc};
 use http::request::Parts;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rsa::{
-  RsaPrivateKey, RsaPublicKey,
+  PrivateKey, PublicKey,
   pkcs1::{DecodeRsaPrivateKey, EncodeRsaPublicKey},
   pkcs8::LineEnding,
 };
@@ -105,7 +105,7 @@ pub struct JwtStateOther {
   validation: Validation,
   pub iss: String,
   pub exp: i64,
-  pub public_key: RsaPublicKey,
+  pub public_key: PublicKey,
   pub kid: String,
 }
 
@@ -163,8 +163,8 @@ impl JwtStateOther {
     let kid = key.id.to_string();
     let key = key.private_key;
 
-    let private_key = RsaPrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
-    let public_key = RsaPublicKey::from(private_key);
+    let private_key = PrivateKey::from_pkcs1_pem(&key).expect("Failed to load public key");
+    let public_key = PublicKey::from(private_key);
     let public_key_pem = public_key
       .to_pkcs1_pem(LineEnding::CRLF)
       .expect("Failed to export public key");
@@ -199,10 +199,10 @@ mod test {
   use axum_extra::extract::cookie::SameSite;
   use chrono::Utc;
   use entity::key;
+  use rand::rngs::SysRng;
   use rsa::{
-    RsaPrivateKey,
+    PrivateKey,
     pkcs1::{EncodeRsaPrivateKey, LineEnding},
-    rand_core::OsRng,
   };
   use sea_orm::{ActiveValue::Set, EntityTrait};
   use serde::{Deserialize, Serialize};
@@ -210,7 +210,7 @@ mod test {
 
   async fn state() -> JwtStateOther {
     let db = test_db().await;
-    let private_key = RsaPrivateKey::new(&mut OsRng, 512).unwrap();
+    let private_key = PrivateKey::new(&mut SysRng, 1024).unwrap();
     let pem = private_key
       .to_pkcs1_pem(LineEnding::LF)
       .unwrap()
