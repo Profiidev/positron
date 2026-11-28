@@ -22,15 +22,10 @@
       flake-utils,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-        };
-      in
-      {
-        packages.default = pkgs.rustPlatform.buildRustPackage rec {
+    let
+      mkPositron =
+        pkgs:
+        pkgs.rustPlatform.buildRustPackage rec {
           pname = "positron";
           version = "0.3.7";
 
@@ -73,6 +68,19 @@
           # Compile fails due to perl missing
           doCheck = false;
         };
+    in
+    (flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        packages.default = mkPositron pkgs;
       }
-    );
+    ))
+    // {
+      overlays.default = final: _: {
+        positron = mkPositron final;
+      };
+    };
 }
