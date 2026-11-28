@@ -27,7 +27,7 @@
         pkgs:
         pkgs.rustPlatform.buildRustPackage rec {
           pname = "positron";
-          version = "0.3.7";
+          version = "0.3.8";
 
           src = ./.;
 
@@ -61,7 +61,7 @@
             aws-lc
           ];
 
-          cargoHash = "sha256-rWOfMg8qAMnMEXCr3Pey4nKDTnEK8gVAzMGAuVbatJQ=";
+          cargoHash = "sha256-cHeSd1DfnK7pjmi9ysL1sJEkhN4WzWGCOd3TQpvOSjo=";
 
           # Compile fails due to perl missing
           doCheck = false;
