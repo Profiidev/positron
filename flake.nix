@@ -61,9 +61,7 @@
             aws-lc
           ];
 
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
+          cargoHash = "sha256-rWOfMg8qAMnMEXCr3Pey4nKDTnEK8gVAzMGAuVbatJQ=";
 
           # Compile fails due to perl missing
           doCheck = false;
